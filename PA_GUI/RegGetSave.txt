@@ -1,0 +1,114 @@
+// Compare registry operation between PAM and PAG this is PAG
+// Read the registry to determine the hardware configuration of the SCM
+void CTscanDlg::GetServerConnectionManagementInfo(void)
+	{
+	int i;
+	CString szPort, szIp, szI;
+	gnMaxServers = m_ptheApp->GetProfileIntW(_T("ServerConnectionManagement"),_T("_MaxServers"), MAX_SERVERS);
+	gnMaxClientsPerServer = m_ptheApp->GetProfileIntW(_T("ServerConnectionManagement"),_T("_MaxClientsPerServer"), MAX_CLIENTS_PER_SERVER);
+	szI.Format(_T("gnMaxClientsPerServer = %d\n"), gnMaxClientsPerServer );
+	TRACE(szI);
+	for ( i = 0; i < gnMaxServers; i++)
+		{
+		szI.Format(_T("IP Addr[%d]="), i);
+		szIp = m_ptheApp->GetProfileStringW(_T("ServerConnectionManagement"),szI, _T("192.168.10.10"));
+		szI += _T("  ") + szIp + _T("\n");
+		//TRACE(szI);
+		CstringToChar(szIp,gServerArray[i].Ip);
+
+		// The server's port that listens for clients to connect
+		szI.Format(_T("IP Port[%d]="), i);
+		gServerArray[i].uPort =  m_ptheApp->GetProfileIntW(_T("ServerConnectionManagement"),szI, 7501);
+		szI.Format(_T("Packet Size[%d]="), i);
+		gServerArray[i].nPacketSize = m_ptheApp->GetProfileIntW(_T("ServerConnectionManagement"),szI,MASTER_PACKET_SIZE);
+
+		szI.Format(_T("Client Base IP[%d]="), i);
+		szIp = m_ptheApp->GetProfileStringW(_T("ServerConnectionManagement"),szI, _T("192.168.10.10"));
+		CstringToChar(szIp,gServerArray[i].ClientBaseIp);
+		}
+	}
+
+// Save the hardware configuration information for the SCM to the registry
+void CTscanDlg::SaveServerConnectionManagementInfo(void)
+	{
+	int i;
+	CString szPort, szIp, szI;
+	m_ptheApp->WriteProfileInt(_T("ServerConnectionManagement"),_T("_MaxServers"), gnMaxServers);
+	m_ptheApp->WriteProfileInt(_T("ServerConnectionManagement"),_T("_MaxClientsPerServer"), gnMaxClientsPerServer);
+	for ( i = 0; i < gnMaxServers; i++)
+		{
+		szI.Format(_T("IP Addr[%d]="), i);
+		szIp = gServerArray[i].Ip;
+		m_ptheApp->WriteProfileStringW(_T("ServerConnectionManagement"),szI, szIp);
+
+		szI.Format(_T("IP Port[%d]="), i);
+		m_ptheApp->WriteProfileInt(_T("ServerConnectionManagement"),szI, gServerArray[i].uPort);
+		szI.Format(_T("Packet Size[%d]="), i);
+		m_ptheApp->WriteProfileInt(_T("ServerConnectionManagement"),szI,gServerArray[i].nPacketSize);
+
+		szI.Format(_T("Client Base IP[%d]="), i);
+		szIp = gServerArray[i].ClientBaseIp;
+		m_ptheApp->WriteProfileStringW(_T("ServerConnectionManagement"),szI, szIp);
+		}
+	}
+
+// Read the registry to determine the hardware configuration of the CCM
+void CTscanDlg::GetClientConnectionManagementInfo(void)
+	{
+	int i;
+	CString szPort, szIp, szI;
+	gnMaxClients = m_ptheApp->GetProfileIntW(_T("ClientConnectionManagement"),_T("_MaxClients"), MAX_CLIENTS);
+	for ( i = 0; i < gnMaxClients; i++)
+		{
+		szI.Format(_T("ClientName[%d]="), i);	// url of the client machine
+		stSocketNames[i].sClientName =  m_ptheApp->GetProfileStringW(_T("ClientConnectionManagement"),szI, _T("localhost"));
+		szI.Format(_T("ClientIP4[%d]="), i);	// dotted IP 192.168.10.10 etc
+		stSocketNames[i].sClientIP4 =  m_ptheApp->GetProfileStringW(_T("ClientConnectionManagement"),szI, _T(""));
+
+		szI.Format(_T("ServerName[%d]="), i);	// url of the client machine
+		stSocketNames[i].sServerName =  m_ptheApp->GetProfileStringW(_T("ClientConnectionManagement"),szI, _T("mc-scp"));
+		szI.Format(_T("ServerIP4[%d]="), i);	// dotted IP 192.168.10.10 etc
+		stSocketNames[i].sServerIP4 =  m_ptheApp->GetProfileStringW(_T("ClientConnectionManagement"),szI, _T(""));
+
+		// choose the defult SysCp port for Windows 7
+		szI.Format(_T("ListenPort[%d]="), i);
+		stSocketNames[i].nPort = m_ptheApp->GetProfileIntW(_T("ClientConnectionManagement"),szI, MC_SYSCP_LISTENPORT_WIN7);
+
+		szI.Format(_T("Packet Size[%d]="), i);
+		stSocketNames[i].nPacketSize = m_ptheApp->GetProfileIntW(_T("ClientConnectionManagement"),szI, MASTER_PACKET_SIZE);
+
+		szI.Format(_T("Win Version[%d]="), i);
+		stSocketNames[i].nWinVersion = m_ptheApp->GetProfileIntW(_T("ClientConnectionManagement"),szI, 7);
+
+		}	
+	}
+
+// Save the hardware configuration information for the CCM to the registry
+void CTscanDlg::SaveClientConnectionManagementInfo(void)
+	{
+	int i;
+	CString szPort, szIp, szI;
+	m_ptheApp->WriteProfileInt(_T("ClientConnectionManagement"),_T("_MaxClients"), gnMaxClients);
+	for ( i = 0; i < gnMaxClients; i++)
+		{
+		szI.Format(_T("ClientName[%d]="), i);	// url of the client machine
+		m_ptheApp->WriteProfileStringW (_T("ClientConnectionManagement"),szI, stSocketNames[i].sClientName);
+		szI.Format(_T("ClientIP4[%d]="), i);	// dotted IP 192.168.10.10 etc
+		m_ptheApp->WriteProfileStringW(_T("ClientConnectionManagement"),szI, stSocketNames[i].sClientIP4);
+
+		szI.Format(_T("ServerName[%d]="), i);	// url of the client machine
+		m_ptheApp->WriteProfileStringW(_T("ClientConnectionManagement"),szI, stSocketNames[i].sServerName);
+		szI.Format(_T("ServerIP4[%d]="), i);	// dotted IP 192.168.10.10 etc
+		m_ptheApp->WriteProfileStringW(_T("ClientConnectionManagement"),szI, stSocketNames[i].sServerIP4);
+
+		szI.Format(_T("ListenPort[%d]="), i);
+		m_ptheApp->WriteProfileInt(_T("ClientConnectionManagement"),szI, stSocketNames[i].nPort);
+
+		szI.Format(_T("Packet Size[%d]="), i);
+		m_ptheApp->WriteProfileInt(_T("ClientConnectionManagement"),szI, stSocketNames[i].nPacketSize);
+
+		szI.Format(_T("Win Version[%d]="), i);
+		m_ptheApp->WriteProfileInt(_T("ClientConnectionManagement"),szI, stSocketNames[i].nWinVersion);
+
+		}
+	}

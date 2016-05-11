@@ -17,7 +17,7 @@
 #include "ServerConnectionManagement.h"
 #endif
 #include "HwTimer.h"
-
+class CServerConnectionManagement;
 
 #define MAX_PAM_BYTES	1260*8			
 // expected msg size is 1260*8 = 10080
@@ -45,7 +45,7 @@ public:
 
 	int InitListeningSocket(CServerConnectionManagement * pSCM);
 	void SetSCM(CServerConnectionManagement *pSCM)		{	m_pSCM = pSCM;	}
-	(CServerConnectionManagement *)GetSCM(void)		{ return (CServerConnectionManagement *) m_pSCM; }
+	CServerConnectionManagement *GetSCM(void)			{	return (CServerConnectionManagement *) m_pSCM; 		}
 
 	void OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex);
 	void KillpClientConnectionStruct(void);

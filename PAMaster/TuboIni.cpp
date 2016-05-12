@@ -83,6 +83,7 @@ bool CTuboIni::LoadIniFile(bool bMerge)
 bool CTuboIni::LoadIniFile(CString szFileName, bool bMerge)
 	{
 	if (NULL == m_pIniFILE)	return FALSE;
+	CString s = szFileName.GetString();	// debug/testing
 	return m_pIniFILE->Load(szFileName.GetString(), bMerge);
 	}
 
@@ -92,6 +93,7 @@ UINT CTuboIni::GetProfileInt(LPCTSTR lpszSection, LPCTSTR lpszKey, int nDefault)
 	{
 	UINT uReturn = 0;
 	CString s = GetProfileString(lpszSection, lpszKey);
+	if (_T("") == s) return nDefault;
 	uReturn = (unsigned)std::stoi(s.GetString());
 	return uReturn;
 	}

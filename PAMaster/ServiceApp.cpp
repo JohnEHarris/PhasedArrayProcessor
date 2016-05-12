@@ -458,32 +458,32 @@ Here, ClientBaseIp[16] = 192.168.10.201
 void CServiceApp::GetServerConnectionManagementInfo(void)
 	{
 	int i;
-	CString szPort, szIp, szI;
+	CString szPort, szIp, szI, sSrvSection;
 	if (gDlg.pTuboIni == NULL)	return;
-	//if (m_pTuboIni->m_pDictionary == NULL)	return;
+	sSrvSection = _T("[ServerConnectionManagement]");
 
-	gnMaxServers = gDlg.pTuboIni->GetProfileInt(_T("ServerConnectionManagement"),_T("MaxServers"), MAX_SERVERS);
+	gnMaxServers = gDlg.pTuboIni->GetProfileInt(sSrvSection,_T("MaxServers"), MAX_SERVERS);
 	//gnMaxServers = m_ptheApp->GetProfileIntA(_T("ServerConnectionManagement"),_T("[-]MaxServers"), MAX_SERVERS);
-	gnMaxClientsPerServer = gDlg.pTuboIni->GetProfileInt(_T("ServerConnectionManagement"),_T("MaxClientsPerServer"), MAX_CLIENTS_PER_SERVER);
+	gnMaxClientsPerServer = gDlg.pTuboIni->GetProfileInt(sSrvSection,_T("MaxClientsPerServer"), MAX_CLIENTS_PER_SERVER);
 	szI.Format(_T("gnMaxClientsPerServer = %d\n"), gnMaxClientsPerServer );
 	TRACE(szI);
 	for ( i = 0; i < gnMaxServers; i++)
 		{
 		szI.Format(_T("%d-IP Addr"), i);
-		szIp = gDlg.pTuboIni->GetProfileString(_T("ServerConnectionManagement"),szI, _T("192.168.10.10"));
+		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection, szI, _T("192.168.10.10"));
 		szI += _T("  ") + szIp + _T("\n");
 		//TRACE(szI);
 		CstringToChar(szIp,gServerArray[i].Ip);
 
 		// The server's port that listens for clients to connect
 		szI.Format(_T("%d-IP Port"), i);
-		gServerArray[i].uPort =  gDlg.pTuboIni->GetProfileInt(_T("ServerConnectionManagement"),szI, 7502);
+		gServerArray[i].uPort =  gDlg.pTuboIni->GetProfileInt(sSrvSection,szI, 7502);
 
 		szI.Format(_T("%d-Packet Size"), i);
-		gServerArray[i].nPacketSize = gDlg.pTuboIni->GetProfileInt(_T("ServerConnectionManagement"),szI,INSTRUMENT_PACKET_SIZE);
+		gServerArray[i].nPacketSize = gDlg.pTuboIni->GetProfileInt(sSrvSection,szI,INSTRUMENT_PACKET_SIZE);
 
 		szI.Format(_T("%d-Client Base IP"), i);
-		szIp = gDlg.pTuboIni->GetProfileString(_T("ServerConnectionManagement"),szI, _T("192.168.10.201"));
+		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection,szI, _T("192.168.10.201"));
 		CstringToChar(szIp,gServerArray[i].ClientBaseIp);
 		}
 	}
@@ -551,32 +551,33 @@ MAX_CLIENTS
 // Client 0 should be the connection to the PAG server.
 void CServiceApp::GetClientConnectionManagementInfo(void)
 	{
-	int i;
-	CString szPort, szIp, szI;
 	if (gDlg.pTuboIni == NULL)	return;
-	//if (m_pTuboIni->m_pDictionary == NULL)	return;
 
-	gnMaxClients = gDlg.pTuboIni->GetProfileInt(_T("ClientConnectionManagement"),_T("MaxClients"), MAX_CLIENTS);
+	int i;
+	CString szPort, szIp, szI, sClientSection;
+	sClientSection = _T("[ClientConnectionManagement]");
+
+	gnMaxClients = gDlg.pTuboIni->GetProfileInt(sClientSection,_T("# MaxClients"), MAX_CLIENTS);
 	for ( i = 0; i < gnMaxClients; i++)
 		{
 		szI.Format(_T("%d-ClientName"), i);	// url of the client machine
-		stSocketNames[i].sClientName =  gDlg.pTuboIni->GetProfileString(_T("ClientConnectionManagement"),szI, _T("localhost"));
+		stSocketNames[i].sClientName =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T("localhost"));
 		szI.Format(_T("%d-ClientIP4"), i);	// dotted IP 192.168.10.10 etc
-		stSocketNames[i].sClientIP4 =  gDlg.pTuboIni->GetProfileString(_T("ClientConnectionManagement"),szI, _T(""));
+		stSocketNames[i].sClientIP4 =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T(""));
 
 		szI.Format(_T("%d-ServerName"), i);	// url of the client machine
-		stSocketNames[i].sServerName =  gDlg.pTuboIni->GetProfileString(_T("ClientConnectionManagement"),szI, _T(""));
+		stSocketNames[i].sServerName =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T(""));
 		szI.Format(_T("%d-ServerIP4"), i);	// dotted IP 192.168.10.10 etc
-		stSocketNames[i].sServerIP4 =  gDlg.pTuboIni->GetProfileString(_T("ClientConnectionManagement"),szI, _T("192.168.10.10"));
+		stSocketNames[i].sServerIP4 =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T("192.168.10.10"));
 
-		szI.Format(_T("%d-ListenPort"), i);
-		stSocketNames[i].nPort = gDlg.pTuboIni->GetProfileInt(_T("ClientConnectionManagement"),szI, 7501);
+		szI.Format(_T("%d-ServerListenPort"), i);
+		stSocketNames[i].nPort = gDlg.pTuboIni->GetProfileInt(sClientSection,szI, 7501);
 
-		szI.Format(_T("%d-Packet Size"), i);
-		stSocketNames[i].nPacketSize = gDlg.pTuboIni->GetProfileInt(_T("ClientConnectionManagement"),szI, sizeof(MMI_CMD));
+		szI.Format(_T("%d-ServerCmdPacket Size"), i);
+		stSocketNames[i].nPacketSize = gDlg.pTuboIni->GetProfileInt(sClientSection,szI, sizeof(MMI_CMD));
 
 		szI.Format(_T("%d-Win Version"), i);
-		stSocketNames[i].nWinVersion = gDlg.pTuboIni->GetProfileInt(_T("ClientConnectionManagement"),szI, 7);
+		stSocketNames[i].nWinVersion = gDlg.pTuboIni->GetProfileInt(sClientSection,szI, 7);
 
 		}	
 	}
@@ -914,6 +915,9 @@ Size of SRawDataPacket is 1040
 	InitializeServerConnectionManagement();	// crashes if ServerConnect called after ClientConnect
 	Sleep(200);
 	InitializeClientConnectionManagement();
+	// For debugging, write ini file to see changes
+	if (gDlg.pTuboIni)
+		gDlg.pTuboIni->SaveIniFile();
 
 #endif
 

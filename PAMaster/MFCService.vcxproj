@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -15,18 +15,19 @@
     <ProjectGuid>{D91686D0-B387-4DA2-A484-7FAE55E01383}</ProjectGuid>
     <RootNamespace>MFCService</RootNamespace>
     <Keyword>MFCProj</Keyword>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>Dynamic</UseOfMfc>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>Dynamic</UseOfMfc>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -56,7 +57,7 @@
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">PhasedArrayMasterVS2013</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">PhasedArrayMasterVS2013</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">PhasedArrayMasterVS2015</TargetName>
     <RunCodeAnalysis Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</RunCodeAnalysis>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -151,18 +152,21 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\Include\CFG100.H" />
-    <ClInclude Include="..\Include\GLOBAL.H" />
+    <ClInclude Include="..\Include\global.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="CCM_PAG.h" />
     <ClInclude Include="ClientCommunicationThread.h" />
     <ClInclude Include="ClientConnectionManagement.h" />
     <ClInclude Include="ClientSocket.h" />
     <ClInclude Include="CmdProcessThread.h" />
-    <ClInclude Include="dictionary.h" />
     <ClInclude Include="HwTimer.h" />
-    <ClInclude Include="iniparser.h" />
+    <ClInclude Include="inifile.h" />
+    <ClInclude Include="inifile_mb_wide_mfc_vs.h" />
     <ClInclude Include="InspState.h" />
     <ClInclude Include="InstMsgProcess.h" />
     <ClInclude Include="..\Include\nios_msg.h" />
+    <ClInclude Include="MainModuleGlobal.h" />
     <ClInclude Include="NTService.h" />
     <ClInclude Include="NTServiceEventLogMsg.h" />
     <ClInclude Include="RunningAverage.h" />
@@ -176,7 +180,9 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="..\Include\Udp_msg.h" />
     <ClInclude Include="..\Include\UT_MSG.H" />
+    <ClInclude Include="targetver.h" />
     <ClInclude Include="TestThread.h" />
+    <ClInclude Include="tstdlibs.h" />
     <ClInclude Include="TuboIni.h" />
   </ItemGroup>
   <ItemGroup>
@@ -185,10 +191,9 @@
     <ClCompile Include="ClientConnectionManagement.cpp" />
     <ClCompile Include="ClientSocket.cpp" />
     <ClCompile Include="CmdProcessThread.cpp" />
+    <ClCompile Include="inifile.cpp" />
     <ClCompile Include="TuboIni.cpp" />
-    <ClCompile Include="dictionary.cpp" />
     <ClCompile Include="HwTimer.cpp" />
-    <ClCompile Include="iniparser.cpp" />
     <ClCompile Include="InspState.cpp" />
     <ClCompile Include="InstMsgProcess.cpp" />
     <ClCompile Include="MFCNTService.cpp">

@@ -1,5 +1,5 @@
 /***
-Purpose:	A Tuboscope wrapper around the MIT developed ANSI C IniParser program
+Purpose:	A Tuboscope wrapper around the Code Project ini handler code
 Author:		jeh
 Date:		12-Feb-2013
 
@@ -7,139 +7,163 @@ Date:		12-Feb-2013
 ***/
 
 #include "stdafx.h"
-#include "dictionary.h"
-#include "iniparser.h"
 #include "TuboIni.h"
+#include "..\Include\global.h"
+#include "fcntl.h"
+#include "io.h"
+#include "inifile_mb_wide_mfc_vs.h"
+#include "inifile.h"
+#include "tstdlibs.h"
 
-void CstringToChar(CString s, char *pChar);
+extern  GLOBAL_DLG_PTRS gDlg;
+
 
 CTuboIni::CTuboIni(void)
 	{
+	m_pIniFILE = NULL;
 	}
 
 // Constructor takes a complete path to the INI file 
 // For example D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\HardwareCfg.ini
 // Ini file needs to be where the executable is so that systems installed in the field 
 // will match the development environment. Hence not a good idea to put the ini file with the source code.
+// File must be created manually the first time
+// Windows 10 doesn't seem to support stream file io. Try CFile first and derive
+// stream file from it.
 //
 CTuboIni::CTuboIni(CString szIniFile)
 	{
-	char fn[256];
-	m_pIniFILE = NULL;
-	m_pDictionary = NULL;
-	if (szIniFile.IsEmpty())
-		{
-		ASSERT(0);
-		return;
-		}
 	m_szIniFileName = szIniFile;
-	CstringToChar( szIniFile, fn);
-	m_pIniFILE = fopen(fn, "r+" );
-	m_pDictionary = iniparser_load(fn);
+	m_pIniFILE = new(CIniFile);
+	gDlg.pTuboIni = this;
+	TRACE1("gDlg.pTuboIni = 0x%08x\n", gDlg.pTuboIni);
+	// makes sense to load the ini file into the ini memory structure
+	LoadIniFile(true);
 	}
 
 CTuboIni::~CTuboIni(void)
 	{
-	if (m_pIniFILE)	// save the ini structure back into the file
+	// since we loaded it with the constuctor, may as well save it for good measure on the destructor
+	if (m_pIniFILE)
 		{
-		if (m_pDictionary)
-			{
-
-			// So why would we not want to rewrite the dictionary back into the file?
-			// Because if we edit the file in notepad, we can add comments which are ignored.
-			// When the dictionary is written into the file, the comments are deleted.
-#ifdef CREATE_NEW_INI_FILE
-			iniparser_dump_ini(m_pDictionary,m_pIniFILE);
-#endif
-			iniparser_freedict(m_pDictionary);
-			m_pDictionary = NULL;
-			}
-		fclose(m_pIniFILE);
-		m_pIniFILE = NULL;
+		SaveIniFile();
+		delete m_pIniFILE;
 		}
+	gDlg.pTuboIni = NULL;
 	}
 
-UINT CTuboIni::GetProfileInt(LPCTSTR lpszSection, LPCTSTR lpszEntry, int nDefault)
+// Using the new ini file stream code, save the memory structure to the default ini file.
+// A more descriptive name would be save the memory structure to the default ini disk file.
+bool CTuboIni::SaveIniFile(void)
 	{
-	UINT uReturn;
-	char ch[256];
-	if (NULL == m_pIniFILE)		return 0;
-	if (NULL == m_pDictionary)	return 0;
-	CString s = lpszSection;
-	s += _T(":");
-	s += lpszEntry;		// search is on 'section:keyword' in lower case
-	s.MakeLower();
-	CstringToChar( s, ch);
-	uReturn = iniparser_getint(m_pDictionary, ch, nDefault);
+	CString fn = m_szIniFileName;
+	bool ret;
+	ret = m_pIniFILE->Save(m_szIniFileName.GetString());
+	return ret;
+	}
+
+// Save to another file
+bool CTuboIni::SaveIniFile(CString szFileName)
+	{
+	bool ret;
+	ret = m_pIniFILE->Save(szFileName.GetString());
+	return ret;
+	}
+
+// Good idea to load the ini structure from an existing ini file before changing/ adding sections/keys/values
+// That would be a load and merge operation to initialize the memory structure
+// bMerge false means no merging of file into the ini memory structure
+bool CTuboIni::LoadIniFile(bool bMerge)
+	{
+	if (NULL == m_pIniFILE)	return FALSE;
+	return m_pIniFILE->Load(m_szIniFileName.GetString(), bMerge);
+	}
+
+// Load and merge or not any file name into the ini memory structure
+bool CTuboIni::LoadIniFile(CString szFileName, bool bMerge)
+	{
+	if (NULL == m_pIniFILE)	return FALSE;
+	return m_pIniFILE->Load(szFileName.GetString(), bMerge);
+	}
+
+
+
+UINT CTuboIni::GetProfileInt(LPCTSTR lpszSection, LPCTSTR lpszKey, int nDefault)
+	{
+	UINT uReturn = 0;
+	CString s = GetProfileString(lpszSection, lpszKey);
+	uReturn = (unsigned)std::stoi(s.GetString());
 	return uReturn;
 	}
 
-CString CTuboIni::GetProfileString(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPCTSTR lpszDefault)
+CString CTuboIni::GetProfileString(LPCTSTR lpszSection, LPCTSTR lpszKey, LPCTSTR lpszDefault)
 	{
 	CString s = _T("");
-	char ch[256], def[256];
-	if (NULL == m_pIniFILE)		return s;
-	if (NULL == m_pDictionary)	return s;
-	s = lpszSection;
-	s += _T(":");
-	s += lpszEntry;		// search is on 'section:keyword' in lower case
-	s.MakeLower();
-	CstringToChar( s, ch);
-	s = lpszDefault;
-	CstringToChar( s, def);
-	char *p = iniparser_getstring(m_pDictionary, ch, def);
-	strcpy(ch,p);
-	s = ch;
+	if (NULL == m_pIniFILE) return s;
+	s = (m_pIniFILE->GetKeyValue(lpszSection, lpszKey)).c_str();
+	if (_T("") == s) s = lpszDefault;
 	return s;
 	}
 
 // Write the section header before setting any key values
-BOOL CTuboIni::WriteProfileInt(LPCTSTR lpszSection, LPCTSTR lpszEntry, int nValue)
+BOOL CTuboIni::WriteProfileInt(LPCTSTR lpszSection, LPCTSTR lpszKey, int nValue)
 	{
 	CString s;
-#if 0
-	char ch[256], val[32];
-	int nReturn;
-	if (NULL == m_pIniFILE)		return FALSE;
-	if (NULL == m_pDictionary)	return FALSE;
-	CString s = lpszSection;
-	s += _T(":");
-	s += lpszEntry;		// search is on 'section:keyword' in lower case
-	s.MakeLower();
-	CstringToChar( s, ch);
-#endif
-	s.Format(_T("%d"),nValue);
-	return WriteProfileString(lpszSection, lpszEntry, s.GetString());
-#if 0
-	CstringToChar( s, val);
-	nReturn = iniparser_set(m_pDictionary,ch, val);
-	if (!nReturn)	return FALSE;
+	s.Format(_T("%d"), nValue);
+	WriteProfileString(lpszSection, lpszKey, s);
 	return TRUE;
-#endif
 	}
 
 // Write the section header before setting any key values
-BOOL CTuboIni::WriteProfileString(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPCTSTR lpszValue)
+BOOL CTuboIni::WriteProfileString(LPCTSTR lpszSection, LPCTSTR lpszKey, LPCTSTR lpszValue)
 	{
-	CString s = _T("");
-	CString t = _T("");
-	int nReturn;
-	char ch[256], val[512];
-	if (NULL == m_pIniFILE)		return FALSE;
-	if (NULL == m_pDictionary)	return FALSE;
-	s = lpszSection;
-	t = lpszEntry;
-	// test for section header insertion
-	if (!t.IsEmpty())
+	m_pIniFILE->AddSection(lpszSection)->AddKey(lpszKey)->SetValue(lpszValue);
+	return TRUE;
+	}
+
+void CTuboIni::SaveWindowLastPosition(LPCTSTR lpszSection, LPCTSTR lpszKey, WINDOWPLACEMENT *wp)
+	{
+	// Input is name of dialog to save and last position of window
+	CString s;	// string showing top, bottom, left & right
+	RECT *rect;
+
+	// add a comment which we hope appears at the top of the section
+	CString CommentKey = _T("! format");
+	CString sComment = _T("top, bottom, left, right");
+	WriteProfileString(lpszSection, CommentKey, sComment);
+
+	rect = (RECT *)&wp->rcNormalPosition;
+	s.Format(_T("%4d,%4d,%4d,%4d"), rect->top, rect->bottom,
+		rect->left, rect->right);
+	WriteProfileString(lpszSection, lpszKey, s);
+
+	}
+
+void CTuboIni::GetWindowLastPosition(LPCTSTR lpszSection, LPCTSTR lpszKey, RECT *rect)
+	{
+	// Input is section:entry ascii value
+	CString s;	// string showing top, bottom, left & right
+	//RECT *rect;
+	char t[60];
+	int i;
+	int n;
+
+	s = this->GetProfileString(lpszSection, lpszKey, _T(""));
+	memset(t, 0, 60);
+	n = s.GetLength();
+	if ( n < 4 )
 		{
-		s += _T(":");
-		s += t;			// search is on 'section:keyword' in lower case
+		rect->top = 0;
+		rect->bottom = 2;
+		rect->left = 0;
+		rect->right = 2;
+		return;
 		}
-	//s.MakeLower();
-	CstringToChar( s, ch);
-	s = lpszValue;
-	CstringToChar( s, val);
-	nReturn = iniparser_set(m_pDictionary,ch, val);	// 0 retrun means no error
-	if (!nReturn)	return TRUE;
-	return FALSE;
+	for ( i = 0; i < s.GetLength(); i++ ) t[i] = (char)s.GetAt(i);
+	t[i] = 0;
+	//	_tcscpy(t,s);
+	//	sscanf(t, _T("%d,%d,%d,%d"), &rect->top, &rect->bottom, 
+	sscanf(t, "%d,%d,%d,%d", &rect->top, &rect->bottom,
+		&rect->left, &rect->right);
+
 	}

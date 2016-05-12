@@ -15,6 +15,7 @@ managed classes.
 **********************/
 
 #include "stdafx.h"
+#include "MainModuleGlobal.h"
 #include "ServiceApp.h"
 #include "winsock2.h"
 #include "math.h"
@@ -458,31 +459,31 @@ void CServiceApp::GetServerConnectionManagementInfo(void)
 	{
 	int i;
 	CString szPort, szIp, szI;
-	if (m_pTuboIni == NULL)	return;
-	if (m_pTuboIni->m_pDictionary == NULL)	return;
+	if (gDlg.pTuboIni == NULL)	return;
+	//if (m_pTuboIni->m_pDictionary == NULL)	return;
 
-	gnMaxServers = m_pTuboIni->GetProfileInt(_T("ServerConnectionManagement"),_T("MaxServers"), MAX_SERVERS);
+	gnMaxServers = gDlg.pTuboIni->GetProfileInt(_T("ServerConnectionManagement"),_T("MaxServers"), MAX_SERVERS);
 	//gnMaxServers = m_ptheApp->GetProfileIntA(_T("ServerConnectionManagement"),_T("[-]MaxServers"), MAX_SERVERS);
-	gnMaxClientsPerServer = m_pTuboIni->GetProfileInt(_T("ServerConnectionManagement"),_T("MaxClientsPerServer"), MAX_CLIENTS_PER_SERVER);
+	gnMaxClientsPerServer = gDlg.pTuboIni->GetProfileInt(_T("ServerConnectionManagement"),_T("MaxClientsPerServer"), MAX_CLIENTS_PER_SERVER);
 	szI.Format(_T("gnMaxClientsPerServer = %d\n"), gnMaxClientsPerServer );
 	TRACE(szI);
 	for ( i = 0; i < gnMaxServers; i++)
 		{
 		szI.Format(_T("%d-IP Addr"), i);
-		szIp = m_pTuboIni->GetProfileString(_T("ServerConnectionManagement"),szI, _T("192.168.10.10"));
+		szIp = gDlg.pTuboIni->GetProfileString(_T("ServerConnectionManagement"),szI, _T("192.168.10.10"));
 		szI += _T("  ") + szIp + _T("\n");
 		//TRACE(szI);
 		CstringToChar(szIp,gServerArray[i].Ip);
 
 		// The server's port that listens for clients to connect
 		szI.Format(_T("%d-IP Port"), i);
-		gServerArray[i].uPort =  m_pTuboIni->GetProfileInt(_T("ServerConnectionManagement"),szI, 7502);
+		gServerArray[i].uPort =  gDlg.pTuboIni->GetProfileInt(_T("ServerConnectionManagement"),szI, 7502);
 
 		szI.Format(_T("%d-Packet Size"), i);
-		gServerArray[i].nPacketSize = m_pTuboIni->GetProfileInt(_T("ServerConnectionManagement"),szI,INSTRUMENT_PACKET_SIZE);
+		gServerArray[i].nPacketSize = gDlg.pTuboIni->GetProfileInt(_T("ServerConnectionManagement"),szI,INSTRUMENT_PACKET_SIZE);
 
 		szI.Format(_T("%d-Client Base IP"), i);
-		szIp = m_pTuboIni->GetProfileString(_T("ServerConnectionManagement"),szI, _T("192.168.10.201"));
+		szIp = gDlg.pTuboIni->GetProfileString(_T("ServerConnectionManagement"),szI, _T("192.168.10.201"));
 		CstringToChar(szIp,gServerArray[i].ClientBaseIp);
 		}
 	}
@@ -493,14 +494,14 @@ void CServiceApp::SaveServerConnectionManagementInfo(void)
 	{
 	int i;
 	CString szPort, szIp, szI;
-	if (m_pTuboIni == NULL)	return;
-	if (m_pTuboIni->m_pDictionary == NULL)	return;
+	if (gDlg.pTuboIni == NULL)	return;
+	//if (m_pTuboIni->m_pDictionary == NULL)	return;
 
 	// Write the section header -- utilize empty-string Key and empty-string value
-	m_pTuboIni->WriteProfileString(_T("ServerConnectionManagement"),_T(""), _T(""));
+	gDlg.pTuboIni->WriteProfileString(_T("ServerConnectionManagement"),_T(""), _T(""));
 
-	m_pTuboIni->WriteProfileInt(_T("ServerConnectionManagement"),_T("MaxServers"), gnMaxServers);
-	m_pTuboIni->WriteProfileInt(_T("ServerConnectionManagement"),_T("MaxClientsPerServer"), gnMaxClientsPerServer);
+	gDlg.pTuboIni->WriteProfileInt(_T("ServerConnectionManagement"),_T("MaxServers"), gnMaxServers);
+	gDlg.pTuboIni->WriteProfileInt(_T("ServerConnectionManagement"),_T("MaxClientsPerServer"), gnMaxClientsPerServer);
 	for ( i = 0; i < gnMaxServers; i++)
 		{
 		switch (i)
@@ -508,7 +509,7 @@ void CServiceApp::SaveServerConnectionManagementInfo(void)
 		case 0:
 			szI.Format(_T("%d-Server Description"), i);
 			szIp = _T("PAM Server for Instruments 1-N");
-			m_pTuboIni->WriteProfileString(_T("ServerConnectionManagement"),szI, szIp);
+			gDlg.pTuboIni->WriteProfileString(_T("ServerConnectionManagement"),szI, szIp);
 			break;
 		default:
 			break;
@@ -516,15 +517,15 @@ void CServiceApp::SaveServerConnectionManagementInfo(void)
 		szI.Format(_T("%d-IP Addr"), i);
 		szIp = gServerArray[i].Ip;
 
-		m_pTuboIni->WriteProfileString(_T("ServerConnectionManagement"),szI, szIp);
+		gDlg.pTuboIni->WriteProfileString(_T("ServerConnectionManagement"),szI, szIp);
 		szI.Format(_T("%d-IP Port"), i);
-		m_pTuboIni->WriteProfileInt(_T("ServerConnectionManagement"),szI, gServerArray[i].uPort);
+		gDlg.pTuboIni->WriteProfileInt(_T("ServerConnectionManagement"),szI, gServerArray[i].uPort);
 		szI.Format(_T("%d-Packet Size"), i);
-		m_pTuboIni->WriteProfileInt(_T("ServerConnectionManagement"),szI,gServerArray[i].nPacketSize);
+		gDlg.pTuboIni->WriteProfileInt(_T("ServerConnectionManagement"),szI,gServerArray[i].nPacketSize);
 		
 		szI.Format(_T("%d-Client Base IP"), i);
 		szIp = gServerArray[i].ClientBaseIp;
-		m_pTuboIni->WriteProfileString(_T("ServerConnectionManagement"),szI, szIp);
+		gDlg.pTuboIni->WriteProfileString(_T("ServerConnectionManagement"),szI, szIp);
 		}
 	}
 
@@ -552,30 +553,30 @@ void CServiceApp::GetClientConnectionManagementInfo(void)
 	{
 	int i;
 	CString szPort, szIp, szI;
-	if (m_pTuboIni == NULL)	return;
-	if (m_pTuboIni->m_pDictionary == NULL)	return;
+	if (gDlg.pTuboIni == NULL)	return;
+	//if (m_pTuboIni->m_pDictionary == NULL)	return;
 
-	gnMaxClients = m_pTuboIni->GetProfileInt(_T("ClientConnectionManagement"),_T("MaxClients"), MAX_CLIENTS);
+	gnMaxClients = gDlg.pTuboIni->GetProfileInt(_T("ClientConnectionManagement"),_T("MaxClients"), MAX_CLIENTS);
 	for ( i = 0; i < gnMaxClients; i++)
 		{
 		szI.Format(_T("%d-ClientName"), i);	// url of the client machine
-		stSocketNames[i].sClientName =  m_pTuboIni->GetProfileString(_T("ClientConnectionManagement"),szI, _T("localhost"));
+		stSocketNames[i].sClientName =  gDlg.pTuboIni->GetProfileString(_T("ClientConnectionManagement"),szI, _T("localhost"));
 		szI.Format(_T("%d-ClientIP4"), i);	// dotted IP 192.168.10.10 etc
-		stSocketNames[i].sClientIP4 =  m_pTuboIni->GetProfileString(_T("ClientConnectionManagement"),szI, _T(""));
+		stSocketNames[i].sClientIP4 =  gDlg.pTuboIni->GetProfileString(_T("ClientConnectionManagement"),szI, _T(""));
 
 		szI.Format(_T("%d-ServerName"), i);	// url of the client machine
-		stSocketNames[i].sServerName =  m_pTuboIni->GetProfileString(_T("ClientConnectionManagement"),szI, _T(""));
+		stSocketNames[i].sServerName =  gDlg.pTuboIni->GetProfileString(_T("ClientConnectionManagement"),szI, _T(""));
 		szI.Format(_T("%d-ServerIP4"), i);	// dotted IP 192.168.10.10 etc
-		stSocketNames[i].sServerIP4 =  m_pTuboIni->GetProfileString(_T("ClientConnectionManagement"),szI, _T("192.168.10.10"));
+		stSocketNames[i].sServerIP4 =  gDlg.pTuboIni->GetProfileString(_T("ClientConnectionManagement"),szI, _T("192.168.10.10"));
 
 		szI.Format(_T("%d-ListenPort"), i);
-		stSocketNames[i].nPort = m_pTuboIni->GetProfileInt(_T("ClientConnectionManagement"),szI, 7501);
+		stSocketNames[i].nPort = gDlg.pTuboIni->GetProfileInt(_T("ClientConnectionManagement"),szI, 7501);
 
 		szI.Format(_T("%d-Packet Size"), i);
-		stSocketNames[i].nPacketSize = m_pTuboIni->GetProfileInt(_T("ClientConnectionManagement"),szI, sizeof(MMI_CMD));
+		stSocketNames[i].nPacketSize = gDlg.pTuboIni->GetProfileInt(_T("ClientConnectionManagement"),szI, sizeof(MMI_CMD));
 
 		szI.Format(_T("%d-Win Version"), i);
-		stSocketNames[i].nWinVersion = m_pTuboIni->GetProfileInt(_T("ClientConnectionManagement"),szI, 7);
+		stSocketNames[i].nWinVersion = gDlg.pTuboIni->GetProfileInt(_T("ClientConnectionManagement"),szI, 7);
 
 		}	
 	}
@@ -585,34 +586,34 @@ void CServiceApp::SaveClientConnectionManagementInfo(void)
 	{
 	int i;
 	CString szPort, szIp, szI;
-	if (m_pTuboIni == NULL)	return;
-	if (m_pTuboIni->m_pDictionary == NULL)	return;
+	if (gDlg.pTuboIni == NULL)	return;
+	//if (m_pTuboIni->m_pDictionary == NULL)	return;
 
 	// Write the section header
-	m_pTuboIni->WriteProfileString(_T("ClientConnectionManagement"),_T(""), _T(""));
+	gDlg.pTuboIni->WriteProfileString(_T("ClientConnectionManagement"),_T(""), _T(""));
 
-	m_pTuboIni->WriteProfileInt(_T("ClientConnectionManagement"),_T("MaxClients"), gnMaxClients);
+	gDlg.pTuboIni->WriteProfileInt(_T("ClientConnectionManagement"),_T("MaxClients"), gnMaxClients);
 	for ( i = 0; i < gnMaxClients; i++)
 		{
 
 		szI.Format(_T("%d-ClientName"), i);	// url of the client machine
-		m_pTuboIni->WriteProfileString(_T("ClientConnectionManagement"),szI, stSocketNames[i].sClientName);
+		gDlg.pTuboIni->WriteProfileString(_T("ClientConnectionManagement"),szI, stSocketNames[i].sClientName);
 		szI.Format(_T("%d-ClientIP4"), i);	// dotted IP 192.168.10.10 etc
-		m_pTuboIni->WriteProfileString(_T("ClientConnectionManagement"),szI, stSocketNames[i].sClientIP4);
+		gDlg.pTuboIni->WriteProfileString(_T("ClientConnectionManagement"),szI, stSocketNames[i].sClientIP4);
 
 		szI.Format(_T("%d-ServerName"), i);	// url of the client machine
-		m_pTuboIni->WriteProfileString(_T("ClientConnectionManagement"),szI, stSocketNames[i].sServerName);
+		gDlg.pTuboIni->WriteProfileString(_T("ClientConnectionManagement"),szI, stSocketNames[i].sServerName);
 		szI.Format(_T("%d-ServerIP4"), i);	// dotted IP 192.168.10.10 etc
-		m_pTuboIni->WriteProfileString(_T("ClientConnectionManagement"),szI, stSocketNames[i].sServerIP4);
+		gDlg.pTuboIni->WriteProfileString(_T("ClientConnectionManagement"),szI, stSocketNames[i].sServerIP4);
 
 		szI.Format(_T("%d-ListenPort"), i);
-		m_pTuboIni->WriteProfileInt(_T("ClientConnectionManagement"),szI, stSocketNames[i].nPort);
+		gDlg.pTuboIni->WriteProfileInt(_T("ClientConnectionManagement"),szI, stSocketNames[i].nPort);
 
 		szI.Format(_T("%d-Packet Size"), i);
-		m_pTuboIni->WriteProfileInt(_T("ClientConnectionManagement"),szI, stSocketNames[i].nPacketSize);
+		gDlg.pTuboIni->WriteProfileInt(_T("ClientConnectionManagement"),szI, stSocketNames[i].nPacketSize);
 
 		szI.Format(_T("%d-Win Version"), i);
-		m_pTuboIni->WriteProfileInt(_T("ClientConnectionManagement"),szI, stSocketNames[i].nWinVersion);
+		gDlg.pTuboIni->WriteProfileInt(_T("ClientConnectionManagement"),szI, stSocketNames[i].nWinVersion);
 
 		}
 	}
@@ -668,7 +669,9 @@ BOOL CServiceApp :: InitInstance()
 
 	SetRegistryKey(_T("Tuboscope"));	// gen HKEY_CUR_USR\Software\Tuboscope\  key
 	// Use a custom Tubo INI file reader/writer to configure the PAM
-	m_pTuboIni = new CTuboIni(t);
+	if ( gDlg.pTuboIni == NULL )
+		gDlg.pTuboIni = new CTuboIni(t);	
+	//m_pTuboIni = new CTuboIni(t);
 
 	RegisterService(__argc, __argv);	
 
@@ -770,10 +773,10 @@ void CServiceApp :: Run( DWORD, LPTSTR *)
 	// If no registry entry exists, the user will get the development defaults.
 	// Probably won't work in a real system.
 	// access to our custom ini files	
-	// m_pTuboIni = new CTuboIni(_T("D:\\PhasedArrayGenerator\\PA_Master_VS2010\\Debug\\HardwareConfig.ini"));
-	if (m_pTuboIni)
+	// gDlg.pTuboIni = new CTuboIni(_T("D:\\PhasedArrayGenerator\\PA_Master_VS2010\\Debug\\HardwareConfig.ini"));
+	if (gDlg.pTuboIni)
 		{
-		if (m_pTuboIni->m_pDictionary)
+		//if (m_pTuboIni->m_pDictionary)
 			{
 			GetServerConnectionManagementInfo();
 			GetClientConnectionManagementInfo();
@@ -789,7 +792,7 @@ void CServiceApp :: Run( DWORD, LPTSTR *)
 			SaveClientConnectionManagementInfo();
 #endif
 			}
-		delete m_pTuboIni;	// this will rewrite the ini file
+		delete gDlg.pTuboIni;	// this will rewrite the ini file
 		}
 #endif
 

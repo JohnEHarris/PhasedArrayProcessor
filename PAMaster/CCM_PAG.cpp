@@ -94,10 +94,11 @@ extern int nBufcnt;				/* image buffer management */
 extern int nPreviousX;	// =0;
 extern int nFlush;
 extern int nMaxX;
+extern int gChannel, gGate;
 
 #define I_AM_CCM_PAG
 #include "CCM_PAG.h"
-
+CCCM_PAG *pCCM_PAG;
 // nMyConnection selects which one of MAX_CLIENTS connections we are managing with this instance
 // This class is a child of the base class CClientConnectionManagement. It was crafted specifically
 // for handling communications with the PAG

@@ -45,7 +45,7 @@ public:
 
 	int InitListeningSocket(CServerConnectionManagement * pSCM);
 	void SetSCM(CServerConnectionManagement *pSCM)		{	m_pSCM = pSCM;	}
-	(CServerConnectionManagement *) GetSCM(void)		{	return m_pSCM;	}
+	CServerConnectionManagement * GetSCM(void)		{	return m_pSCM;	}
 
 	void OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex);
 	void KillpClientConnectionStruct(void);

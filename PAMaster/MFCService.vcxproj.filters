@@ -16,13 +16,7 @@
     <ClCompile Include="CmdProcessThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dictionary.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="HwTimer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="iniparser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="InspState.cpp">
@@ -70,6 +64,7 @@
     <ClCompile Include="TuboIni.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="inifile.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CCM_PAG.h">
@@ -90,16 +85,7 @@
     <ClInclude Include="ClientSocket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dictionary.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Include\GLOBAL.H">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="HwTimer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="iniparser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="InspState.h">
@@ -154,6 +140,24 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Include\UT_MSG.H">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inifile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inifile_mb_wide_mfc_vs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tstdlibs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\global.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MainModuleGlobal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -28,6 +28,7 @@
 #include "ClientConnectionManagement.h"	// 21-Jan-13 jeh
 #include "TestThread.h"
 #include "TuboIni.h"					//12-Feb-2013
+#include "CCM_PAG.h"					//12-May-16 jeh
 
 
 // THE user interface (MMI) acts as a server to the Phased Array Master
@@ -72,7 +73,7 @@ public:
 	CServiceApp();
 	virtual ~CServiceApp();
 	CTestThread *m_pTestThread;
-	CTuboIni *m_pTuboIni;
+	//CTuboIni *m_pTuboIni;
 
 	void GetServerConnectionManagementInfo(void);
 	void SaveServerConnectionManagementInfo(void);

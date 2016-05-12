@@ -23,7 +23,7 @@ Revised:	20-Jan-13
 #define PubExt1	extern
 #endif
 
-PubExt1 CClientConnectionManagement *pCCM[MAX_CLIENTS];
+//PubExt1 CClientConnectionManagement *pCCM[MAX_CLIENTS];
 
 class CCCM_PAG: public CClientConnectionManagement
 	{

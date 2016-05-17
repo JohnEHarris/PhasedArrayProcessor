@@ -1,15 +1,58 @@
-#ifndef NIOS_MSG_H
-#define NIOS_MSG_H
+/*
+Define structures and definitions for PhasedArray2 project
+jeh
+2016-05-17
 
-#ifndef _BYTE_DEFINED
-#define _BYTE_DEFINED
-typedef byte BYTE;
-#endif // !_BYTE_DEFINED
-#ifndef _WORD_DEFINED
-#define _WORD_DEFINED
-typedef unsigned short WORD;
-#endif // !_WORD_DEFINED
-typedef unsigned int UINT;
+*/
+
+#ifndef PA2_STRUCTS_H
+
+#ifndef BYTE
+typedef BYTE	BYTE;
+#endif
+#ifndef WORD
+typedef WORD	WORD;
+#endif
+
+#ifndef UINT
+typedef unsigned int	UINT;
+#endif
+
+typedef struct 
+	{
+    BYTE bMsgID;
+    BYTE bSpare1; 
+    BYTE bSeq; //sequence number (zero-based) of the first data point
+    BYTE bDin; //digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+    WORD wMsgSeqCnt;
+    WORD wLocation; //x location in motion pulses
+    WORD wClock; //unit in .2048ms
+    WORD wPeriod; //unit in .2048ms
+    BYTE bSpare2[4];
+	} SDataHead; //16 bytes
+
+
+typedef struct 
+	{
+    WORD wTof4;     //time of flight of Gate 4
+    WORD wGateFlag;  //Gate flag bits, BIT0=Gate 1
+    WORD wTof2;  //time of flight of Gate 2
+    BYTE bAmp3;   //Gate 3 amplitude (0-255)
+    BYTE bAmp2;   //Gate 2 amplitude (0-255)
+	} SRawData; //8 bytes
+
+typedef struct 
+	{
+    SDataHead DataHead; // 16 bytes
+    SRawData RawData[128];  // raw data of 128 consecutive pulses 128*8=1024
+	} SRawDataPacket; //1040 bytes
+
+typedef struct 
+	{
+    SDataHead DataHead;
+    WORD wData[512];
+	} SCmdPacket; //1040 bytes
+
 
 #define TEST_UT                          20
 #define SET_INSPECT_MODE                 21
@@ -127,68 +170,6 @@ typedef unsigned int UINT;
 #define AscanPacketLength 1040
 #define CmdPacketLength 1040
 
-typedef struct 
-	{
-    unsigned char bMsgID;
-    unsigned char bSpare1; 
-    unsigned char bSeq; //sequence of the first data
-    unsigned char bDin; //digital input
-
-    unsigned short wMsgSeqCnt;
-    unsigned short wLocation; //x location motion pulse
-    unsigned short wClock; //unit in .2048ms
-    unsigned short wPeriod; //.2048ms
-    unsigned char bSpare2[4];
-	} SDataHead; //16
-
-typedef struct 
-	{
-	unsigned char bMsgID;
-	unsigned char bSpare1;
-	unsigned char bSeq;
-	unsigned char bDin;
-
-	unsigned short wMsgSeqCnt;
-	unsigned short wLocation;
-	unsigned short wClock; //unit in .2048ms
-	unsigned short wPeriod; //.2048ms
-	unsigned char bSpare2[4]; //more spare
-	} SAscanHead; //16
-
-typedef struct {
-    unsigned short wTof4;
-    unsigned short wTof3;
-    unsigned short wTof2;
-    unsigned char bAmp3;
-    unsigned char bAmp2;
-} SRawData; //8
-
-typedef struct {
-    unsigned char bAmp[4];
-    unsigned short wTofPeak[2];
-} SData; //8 bytes
-
-typedef struct 
-	{
-    SDataHead DataHead;
-    SRawData RawData[128];
-	} SRawDataPacket; //1040 bytes
-
-typedef struct {
-    SDataHead DataHead;
-    SData Data;
-} SDataPacket; //24 bytes
-
-typedef struct 
-	{
-    SAscanHead AscanHead;
-    char Ascan[1024];
-	} SAscanPacket; //1040 bytes
-
-typedef struct {
-    SDataHead DataHead;
-    unsigned short wData[512];
-} SCmdPacket; //1040 bytes
 
 
-#endif  //one time through
+#endif	// PA2_STRUCTS_H

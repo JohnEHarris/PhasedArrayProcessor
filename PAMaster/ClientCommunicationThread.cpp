@@ -269,7 +269,8 @@ void CClientCommunicationThread::StartTCPCommunication()
 	m_pMyCCM->SetConnectionState(0);	// now assume we are not connected
 
 	EnterCriticalSection(m_pstCCM->pCSRcvPkt);
-	if (m_pSocket)
+	if (m_pstCCM->pSocket != NULL)
+	//if (m_pSocket)
 		{
 		TRACE1("[%03d] Client socket already exists.... close and destroy before recreating\n", m_nConnectionRestartCounter++);
 		m_pSocket->Close();

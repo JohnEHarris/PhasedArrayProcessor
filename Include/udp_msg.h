@@ -140,7 +140,8 @@ typedef struct
 // Num_of_Beams is the number of readings (or bars for display) across the array.
 // Num_of_Scans is how many times the array has been scanned.
 // The total valid readings stored in the Wall[] will be Num_of_Beams x Num_of_Scans, 
-// e.g., if Num_of_Beams=25 and Num_of_Scans=20, the total number of readings in Wall[] will be 500.  The total number of valid readings may be smaller than 500, but it cannot be bigger than 500.
+// e.g., if Num_of_Beams=25 and Num_of_Scans=20, the total number of readings in Wall[] will be 500.  
+//	The total number of valid readings may be smaller than 500, but it cannot be bigger than 500.
 
 
 typedef struct 

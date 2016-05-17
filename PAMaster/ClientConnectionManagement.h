@@ -40,7 +40,9 @@ Revised:	12-Jun-12 Abandon 'C' worker threads in favor of using a class method f
 
 
 #ifdef THIS_IS_SERVICE_APP
-#define	MAX_CLIENTS				4		
+// 2016-05-17 the PAM/Receiver is connected only to the PT as a client
+// The PAG was connected to the database, the SysCp and the GDP
+#define	MAX_CLIENTS				1		
 // edit this value if more client connections to servers are needed
 #else
 #define THE_APP_CLASS	CTscanApp

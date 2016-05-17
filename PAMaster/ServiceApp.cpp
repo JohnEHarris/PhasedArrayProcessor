@@ -553,6 +553,7 @@ MAX_CLIENTS
 // Read the registry to determine the hardware configuration of the CCM
 // PAM clients connect to the PAG server which is listening at port 7501
 // Client 0 should be the connection to the PAG server.
+// 2016-05-17 The PAM now called the Receiver is a client to only the PT
 void CServiceApp::GetClientConnectionManagementInfo(void)
 	{
 	if (gDlg.pTuboIni == NULL)	return;
@@ -572,7 +573,7 @@ void CServiceApp::GetClientConnectionManagementInfo(void)
 		szI.Format(_T("%d-Server_Name"), i);	// url of the client machine
 		stSocketNames[i].sServerName =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T(""));
 		szI.Format(_T("%d-Server_IP4"), i);	// dotted IP 192.168.10.10 etc
-		stSocketNames[i].sServerIP4 =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T("192.168.10.10"));
+		stSocketNames[i].sServerIP4 =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T("192.168.10.20"));
 
 		szI.Format(_T("%d-Server_Listen_Port"), i);
 		stSocketNames[i].nPort = gDlg.pTuboIni->GetProfileInt(sClientSection,szI, 7501);
@@ -2718,7 +2719,7 @@ UINT ProcessMmiMsg(void *dummy)
 *
 */
 BOOL SendSlaveMsg(int nWhichSlave, MMI_CMD *pSendBuf)
-{
+	{
 	WORD *pWArg;
 	int rc, data, i;
 	BYTE buf[CmdPacketLength], value;
@@ -3073,7 +3074,7 @@ BOOL SendSlaveMsg(int nWhichSlave, MMI_CMD *pSendBuf)
 	}
 	//printf("Master - Connection not established with Slave %d.\n\n", nWhichSlave+1);
 	return FALSE;
-}
+	}
 #endif
 
 /**************************************************************************** 

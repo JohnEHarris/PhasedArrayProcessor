@@ -155,6 +155,7 @@
     <ClInclude Include="..\Include\global.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="..\Include\PA2Struct.h" />
     <ClInclude Include="CCM_PAG.h" />
     <ClInclude Include="ClientCommunicationThread.h" />
     <ClInclude Include="ClientConnectionManagement.h" />
@@ -165,7 +166,6 @@
     <ClInclude Include="inifile_mb_wide_mfc_vs.h" />
     <ClInclude Include="InspState.h" />
     <ClInclude Include="InstMsgProcess.h" />
-    <ClInclude Include="..\Include\nios_msg.h" />
     <ClInclude Include="MainModuleGlobal.h" />
     <ClInclude Include="NTService.h" />
     <ClInclude Include="NTServiceEventLogMsg.h" />

@@ -74,6 +74,7 @@ How it is intended to work:
 #include "ServiceApp.h"
 
 #else
+// build/run the legacy Truscan MMI
 #include "Truscan.h"
 #include "TscanDlg.h"
 //#include "MC_SysCPTestClient.h"
@@ -159,7 +160,7 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 
 
 CClientConnectionManagement::~CClientConnectionManagement(void)
-{
+	{
 	void *pV;
 	int i, n;
 
@@ -220,10 +221,10 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	LockRcvPktList();
 	n = m_pstCCM->pRcvPktPacketList->GetCount();
 	while (!m_pstCCM->pRcvPktPacketList->IsEmpty())
-	{
+		{
 		pV = (void *) m_pstCCM->pRcvPktPacketList->RemoveHead();
 		delete pV;
-	}
+		}
 	delete m_pstCCM->pRcvPktPacketList;
 	UnLockRcvPktList();
 	if (m_pstCCM->pCSRcvPkt)		delete m_pstCCM->pCSRcvPkt;
@@ -232,10 +233,10 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	LockSendPktList();
 	n = m_pstCCM->pSendPktList->GetCount();
 	while (!m_pstCCM->pSendPktList->IsEmpty())
-	{
+		{
 		pV = (void *) m_pstCCM->pSendPktList->RemoveHead();
 		delete pV;
-	}
+		}
 	delete m_pstCCM->pSendPktList;
 	UnLockSendPktList();
 	if (m_pstCCM->pCSSendPkt)		delete m_pstCCM->pCSSendPkt;
@@ -244,10 +245,10 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	LockDebugIn();
 	n = m_pstCCM->pInDebugMessageList->GetCount();
 	while (!m_pstCCM->pInDebugMessageList->IsEmpty())
-	{
+		{
 		pV = (void *) m_pstCCM->pInDebugMessageList->RemoveHead();
 		delete pV;
-	}
+		}
 	delete m_pstCCM->pInDebugMessageList;
 	UnLockDebugIn();
 	if (m_pstCCM->pCSDebugIn)		delete m_pstCCM->pCSDebugIn;
@@ -256,10 +257,10 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	LockDebugOut();
 	n = m_pstCCM->pOutDebugMessageList->GetCount();
 	while (!m_pstCCM->pOutDebugMessageList->IsEmpty())
-	{
+		{
 		pV = (void *) m_pstCCM->pOutDebugMessageList->RemoveHead();
 		delete pV;
-	}
+		}
 	delete m_pstCCM->pOutDebugMessageList;
 	UnLockDebugOut();
 	if (m_pstCCM->pCSDebugOut)		delete m_pstCCM->pCSDebugOut;
@@ -269,7 +270,7 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	m_pstCCM->pSendThread		= NULL;
 	//if (m_pstCCM->pClientIdentity)	delete m_pstCCM->pClientIdentity;
 
-}
+	}
 
 // Begin the Receive Thread
 void CClientConnectionManagement::CreateReceiveThread(void)
@@ -333,7 +334,7 @@ void CClientConnectionManagement::CreateCmdProcessThread(void)
 										RUNTIME_CLASS(CCmdProcessThread),
 										m_pstCCM->nCmdProcessPriority,
 										0,	// stack size
-										CREATE_SUSPENDED,	// create flag, run on start
+										CREATE_SUSPENDED,	// create flag, do not run on start
 										NULL);	// security ptr
 	TRACE3("SenderThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstCCM->pCmdProcessThread, 
 		m_pstCCM->pCmdProcessThread->m_hThread, m_pstCCM->pCmdProcessThread->m_nThreadID);

@@ -462,27 +462,27 @@ void CServiceApp::GetServerConnectionManagementInfo(void)
 	CString szPort, szIp, szI, sSrvSection;
 	sSrvSection = _T("ServerConnectionManagement");
 
-	gnMaxServers = gDlg.pTuboIni->GetProfileInt(sSrvSection, _T("; MaxServers"), MAX_SERVERS);
+	gnMaxServers = gDlg.pTuboIni->GetProfileInt(sSrvSection, _T("! MaxServers"), MAX_SERVERS);
 	//gnMaxServers = m_ptheApp->GetProfileIntA(_T("ServerConnectionManagement"),_T("[-]MaxServers"), MAX_SERVERS);
-	gnMaxClientsPerServer = gDlg.pTuboIni->GetProfileInt(sSrvSection,_T("! MaxClientsPerServer"), MAX_CLIENTS_PER_SERVER);
+	gnMaxClientsPerServer = gDlg.pTuboIni->GetProfileInt(sSrvSection,_T("# MaxClientsPerServer"), MAX_CLIENTS_PER_SERVER);
 	szI.Format(_T("gnMaxClientsPerServer = %d\n"), gnMaxClientsPerServer );
 	TRACE(szI);
 	for ( i = 0; i < gnMaxServers; i++)
 		{
-		szI.Format(_T("%d-Server IP Addr"), i);
+		szI.Format(_T("%d-Server_IP_Addr"), i);
 		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection, szI, _T("192.168.10.10"));
 		szI += _T("  ") + szIp + _T("\n");
 		//TRACE(szI);
 		CstringToChar(szIp,gServerArray[i].Ip);
 
 		// The server's port that listens for clients to connect
-		szI.Format(_T("%d-Server IP Port"), i);
+		szI.Format(_T("%d-Server_IP_Port"), i);
 		gServerArray[i].uPort =  gDlg.pTuboIni->GetProfileInt(sSrvSection,szI, 7502);
 
-		szI.Format(_T("%d-Packet Size"), i);
+		szI.Format(_T("%d-Client_Packet_Size"), i);
 		gServerArray[i].nPacketSize = gDlg.pTuboIni->GetProfileInt(sSrvSection,szI,INSTRUMENT_PACKET_SIZE);
 
-		szI.Format(_T("%d-Client Base IP"), i);
+		szI.Format(_T("%d-Client_Base_IP"), i);
 		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection,szI, _T("192.168.10.201"));
 		CstringToChar(szIp,gServerArray[i].ClientBaseIp);
 		}
@@ -511,23 +511,23 @@ void CServiceApp::SaveServerConnectionManagementInfo(void)
 		switch (i)
 			{
 		case 0:
-			szI.Format(_T("%d-Server Description"), i);
+			szI.Format(_T("%d-Server_Description"), i);
 			szIp = _T("PAM Server for Instruments 1-N");
 			gDlg.pTuboIni->WriteProfileString(sSrvSection,szI, szIp);
 			break;
 		default:
 			break;
 			}
-		szI.Format(_T("%d-Server IP Addr"), i);
+		szI.Format(_T("%d-Server_IP_Addr"), i);
 		szIp = gServerArray[i].Ip;
 
 		gDlg.pTuboIni->WriteProfileString(sSrvSection,szI, szIp);
-		szI.Format(_T("%d-Server IP Port"), i);
+		szI.Format(_T("%d-Server_IP_Port"), i);
 		gDlg.pTuboIni->WriteProfileInt(sSrvSection,szI, gServerArray[i].uPort);
-		szI.Format(_T("%d-Packet Size"), i);
+		szI.Format(_T("%d-Client_Packet_Size"), i);
 		gDlg.pTuboIni->WriteProfileInt(sSrvSection,szI,gServerArray[i].nPacketSize);
 		
-		szI.Format(_T("%d-Client Base IP"), i);
+		szI.Format(_T("%d-Client_Base_IP"), i);
 		szIp = gServerArray[i].ClientBaseIp;
 		gDlg.pTuboIni->WriteProfileString(sSrvSection,szI, szIp);
 		}
@@ -564,23 +564,23 @@ void CServiceApp::GetClientConnectionManagementInfo(void)
 	gnMaxClients = gDlg.pTuboIni->GetProfileInt(sClientSection,_T("! MaxClients"), MAX_CLIENTS);
 	for ( i = 0; i < gnMaxClients; i++)
 		{
-		szI.Format(_T("%d-ClientName"), i);	// url of the client machine
+		szI.Format(_T("%d-Client_Name"), i);	// url of the client machine
 		stSocketNames[i].sClientName =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T("localhost"));
-		szI.Format(_T("%d-ClientIP4"), i);	// dotted IP 192.168.10.10 etc
+		szI.Format(_T("%d-Client_IP4"), i);	// dotted IP 192.168.10.10 etc
 		stSocketNames[i].sClientIP4 =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T(""));
 
-		szI.Format(_T("%d-ServerName"), i);	// url of the client machine
+		szI.Format(_T("%d-Server_Name"), i);	// url of the client machine
 		stSocketNames[i].sServerName =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T(""));
-		szI.Format(_T("%d-ServerIP4"), i);	// dotted IP 192.168.10.10 etc
+		szI.Format(_T("%d-Server_IP4"), i);	// dotted IP 192.168.10.10 etc
 		stSocketNames[i].sServerIP4 =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T("192.168.10.10"));
 
-		szI.Format(_T("%d-ServerListenPort"), i);
+		szI.Format(_T("%d-Server_Listen_Port"), i);
 		stSocketNames[i].nPort = gDlg.pTuboIni->GetProfileInt(sClientSection,szI, 7501);
 
-		szI.Format(_T("%d-ServerCmdPacket Size"), i);
+		szI.Format(_T("%d-Server_Cmd_Packet_Size"), i);
 		stSocketNames[i].nPacketSize = gDlg.pTuboIni->GetProfileInt(sClientSection,szI, sizeof(MMI_CMD));
 
-		szI.Format(_T("%d-Win Version"), i);
+		szI.Format(_T("%d-Win_Version"), i);
 		stSocketNames[i].nWinVersion = gDlg.pTuboIni->GetProfileInt(sClientSection,szI, 7);
 
 		}	
@@ -604,23 +604,23 @@ void CServiceApp::SaveClientConnectionManagementInfo(void)
 	for ( i = 0; i < gnMaxClients; i++)
 		{
 
-		szI.Format(_T("%d-ClientName"), i);	// url of the client machine
+		szI.Format(_T("%d-Client_Name"), i);	// url of the client machine
 		gDlg.pTuboIni->WriteProfileString(sClientSection,szI, stSocketNames[i].sClientName);
-		szI.Format(_T("%d-ClientIP4"), i);	// dotted IP 192.168.10.10 etc
+		szI.Format(_T("%d-Client_IP4"), i);	// dotted IP 192.168.10.10 etc
 		gDlg.pTuboIni->WriteProfileString(sClientSection,szI, stSocketNames[i].sClientIP4);
 
-		szI.Format(_T("%d-ServerName"), i);	// url of the client machine
+		szI.Format(_T("%d-Server_Name"), i);	// url of the client machine
 		gDlg.pTuboIni->WriteProfileString(sClientSection,szI, stSocketNames[i].sServerName);
-		szI.Format(_T("%d-ServerIP4"), i);	// dotted IP 192.168.10.10 etc
+		szI.Format(_T("%d-Server_IP4"), i);	// dotted IP 192.168.10.10 etc
 		gDlg.pTuboIni->WriteProfileString(sClientSection,szI, stSocketNames[i].sServerIP4);
 
-		szI.Format(_T("%d-ListenPort"), i);
+		szI.Format(_T("%d-Server_Listen_Port"), i);
 		gDlg.pTuboIni->WriteProfileInt(sClientSection,szI, stSocketNames[i].nPort);
 
-		szI.Format(_T("%d-Packet Size"), i);
+		szI.Format(_T("%d-Server_Cmd_Packet_Size"), i);
 		gDlg.pTuboIni->WriteProfileInt(sClientSection,szI, stSocketNames[i].nPacketSize);
 
-		szI.Format(_T("%d-Win Version"), i);
+		szI.Format(_T("%d-Win_Version"), i);
 		gDlg.pTuboIni->WriteProfileInt(sClientSection,szI, stSocketNames[i].nWinVersion);
 
 		}
@@ -790,7 +790,8 @@ void CServiceApp :: Run( DWORD, LPTSTR *)
 			GetClientConnectionManagementInfo();
 			//Sleep(500);
 
-//#ifdef CREATE_NEW_INI_FILE
+#define CREATE_NEW_INI_FILE
+#ifdef CREATE_NEW_INI_FILE
 			// do we need a new ini file because of architecture changes?
 			// generate a default file by including these opeartions. Otherwise
 			// change an existing ini file with notepad and let it configure the PAM
@@ -799,8 +800,7 @@ void CServiceApp :: Run( DWORD, LPTSTR *)
 			SaveServerConnectionManagementInfo();	
 			SaveClientConnectionManagementInfo();
 
-			gDlg.pTuboIni->SaveIniFile();
-//#endif
+#endif
 			}
 		delete gDlg.pTuboIni;	// this will rewrite the ini file
 		}
@@ -1371,7 +1371,7 @@ Consider some hypothetical cases.
 1 Pc with 1 Nic servicing 16 instruments. Assume we want a "server" class instance for every 8 instruments.
 This would mean we would have 2 instances of a server in one machine using one NIC. This would require
 a different listening port for each server. Clearly, all the TCP/IP traffic would have to go thru one NIC.
-Thus there probably be no advantage to doing this. We could just as well put all 16 instrument into one "server"instance.
+Thus there is probably be no advantage to doing this. We could just as well put all 16 instrument into one "server"instance.
 
 Consider 1 PC with 2 NIC's. The NIC's would have to have different IP addresses. This would require the instrument
 to know what the IP address of their NIC was. This introduces configuration complexities into the deployment of 
@@ -1394,7 +1394,12 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 	UINT uPort;
 	int nError;
 
-	for ( i = 0; i < MAX_SERVERS; i++)
+	if (gnMaxServers > MAX_SERVERS)
+		{
+		TRACE1("gnMaxServers = %d greater than MAX_SERVERS\n", gnMaxServers);
+		gnMaxServers = MAX_SERVERS;
+		}
+	for ( i = 0; i < gnMaxServers; i++)
 		{
 
 		if (pSCM[i])	continue;	// instance already exists
@@ -1402,11 +1407,11 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 		switch (i)
 			{
 		case 0:		// There are multiple client instrument looking for the PAM server. This is the only server
-					// for instrument in this application.
+					// for instruments in this application.
 			pSCM[i] = new CServerConnectionManagement(i);
 			if (pSCM[i])
 				{
-				s = gServerArray[i].Ip;			// a global static table of ip addresses
+				s = gServerArray[i].Ip;			// a global static table of ip addresses define by an ini file
 				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.10"));
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7502);

@@ -57,7 +57,8 @@ CTuboIni::~CTuboIni(void)
 bool CTuboIni::SaveIniFile(void)
 	{
 	CString fn = m_szIniFileName;
-	bool ret;
+	bool ret = FALSE;
+	if (fn.GetLength() < 5) return ret;	// assumes x.ini at minimum
 	ret = m_pIniFILE->Save(m_szIniFileName.GetString());
 	return ret;
 	}
@@ -65,7 +66,8 @@ bool CTuboIni::SaveIniFile(void)
 // Save to another file
 bool CTuboIni::SaveIniFile(CString szFileName)
 	{
-	bool ret;
+	bool ret = FALSE;
+	if (szFileName.GetLength() < 5) return ret;	// assumes x.ini at minimum
 	ret = m_pIniFILE->Save(szFileName.GetString());
 	return ret;
 	}

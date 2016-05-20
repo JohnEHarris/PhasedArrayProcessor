@@ -18,9 +18,11 @@ typedef WORD	WORD;
 typedef unsigned int	UINT;
 #endif
 
+enum IdataTypes {eRawInsp=10, eAscan=12, eKeepAlive=0xff};
+
 typedef struct 
 	{
-    BYTE bMsgID;
+    BYTE bMsgID;	// = eIdataTypes
     BYTE bSpare1; 
     BYTE bSeq; //sequence number (zero-based) of the first data point
     BYTE bDin; //digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)

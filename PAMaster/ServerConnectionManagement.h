@@ -150,7 +150,7 @@ typedef struct
 	CRITICAL_SECTION *pCSSendPkt;	// control access to output (send) list
 	CPtrList* pSendPktList;			// list containing packets to send
 	CRITICAL_SECTION *pCSRcvPkt;	// control access to input (receive) list
-	CPtrList* pRcvPktList;			// list containing packets received
+	CPtrList* pRcvPktList;			// list containing packets received from client
 	CServerSocket * pSocket;		// ASync socket fills RcvPktList with OnReceive method.
 									// same socket is used to send packets to CLIENT
 									// This socket is owned by ServerSocketOwnerThread
@@ -159,7 +159,7 @@ typedef struct
 	int nSSOwnerThreadPriority;
 	int nSSRcvListThreadPriority;	// THREAD_PRIORITY_NORMAL
 
-	DWORD ServerRcvListThreadID;		// the ID of the rcv thread... allows posting messages w/o thread ptr
+	DWORD ServerRcvListThreadID;	// the ID of the rcv thread... allows posting messages w/o thread ptr
 	int m_nMyThreadIndex;			// which instance of this we are?
 	BYTE bStopSendRcv;				// have socket throw away all input/output data
 

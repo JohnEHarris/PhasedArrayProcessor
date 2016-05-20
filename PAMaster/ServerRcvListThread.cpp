@@ -465,7 +465,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 
 						if ( (pSendBuf->InspHdr.xloc >= 0)  && g_bAnyShoeDown )
 							{
-							/* send the IData to MMI */
+							/* send the IData to MMI --jeh modified to use theApp.PamSendToPag */
 							if ( SendMmiMsg (g_nMmiSocket, pSendBuf) == FALSE )
 								break;//return ERROR;
 							}
@@ -504,7 +504,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 								//printf("SegWallMin[25] = %d, SegMinChnl[25] = %d\n\n", pSendBuf->UtInsp.SegWallMin[25],pSendBuf->UtInsp.SegMinChnl[25]);
 								/* send the IData to MMI */
 
-								if ( SendMmiMsg (g_nMmiSocket, pSendBuf) == FALSE )
+								if ( SendMmiMsg (g_nMmiSocket, pSendBuf) == FALSE ) /*jeh modified to use theApp.PamSendToPag*/
 									break;//return ERROR;
 
 								for (i=0; i<MAX_SHOES; i++)
@@ -533,7 +533,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 
 				memcpy ((void *) &SendCalBuf, (void *) &CalBuf, sizeof(I_MSG_CAL));
 
-				/* send the calibration data to MMI */
+				/* send the calibration data to MMI jeh modified to use theApp.PamSendToPag */
 				SendMmiMsg (g_nMmiSocket, &SendCalBuf); // <-- change this
 
 				/* clear CalBuf */

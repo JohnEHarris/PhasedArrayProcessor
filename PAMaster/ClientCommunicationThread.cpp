@@ -335,10 +335,12 @@ void CClientCommunicationThread::StartTCPCommunication()
 		}
 
 	   BOOL rtn;
-	   stmp = m_pstCCM->sServerName;
+	   // Try server IP4 address before server name
+	   stmp = m_pstCCM->sServerIP4;
+	   
 	   if (stmp.IsEmpty())
 			{
-			stmp = m_pstCCM->sServerIP4;
+			stmp = stmp = m_pstCCM->sServerName;
 			if (stmp.IsEmpty())
 				{
 				s = _T("Could not find Server name or IP Address... Aborting\n");

@@ -1002,6 +1002,7 @@ repeat_serverinit_WD:
 
 #endif
 
+	// bypass all this code if line 960 got0 WHILE_TARGET executes 
 	g_nRunClientSocketInitThread = 1;
 	g_pThreadClientSocketInit = AfxBeginThread(ClientSocketInit, NULL, THREAD_PRIORITY_NORMAL);
 

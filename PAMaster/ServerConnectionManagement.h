@@ -283,6 +283,9 @@ public:
 	void SetServerType(int t)		{ if (m_pstSCM)	m_pstSCM->nServerType = t;	}
 	int GetServerType(void)			{ return ( m_pstSCM ? m_pstSCM->nServerType : -1 );	}
 
+	void SetClientBaseIp(CString s) { if (m_pstSCM)	m_pstSCM->sClientBaseIP = s; }
+	CString GetClientBaseIp(void)	{return ( m_pstSCM ? m_pstSCM->sClientBaseIP : _T("") );}
+
 	void LockDebugIn(void)			{ EnterCriticalSection(m_pstSCM->pCSDebugIn );	}
 	//void AddTailDebugIn(CString s)	{ m_pstCCM->pInDebugMessageList->AddTail(&s);	}
 	void UnLockDebugIn(void)		{ LeaveCriticalSection(m_pstSCM->pCSDebugIn );	}

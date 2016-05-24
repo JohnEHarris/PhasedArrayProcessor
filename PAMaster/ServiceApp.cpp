@@ -4,7 +4,8 @@
 // For debugging, run this service as manual start.
 // Start the program/debugging session before powering up the instrument
 // Run the MMI last of all
-
+//2016-05-24 CNTService constructor runs as a result of being the base class of the service app
+// CServiceApp::CServiceApp() : CNTService
 
 /**********************
 First step in converting from Yanming's c array based structure to my class structure is to
@@ -682,7 +683,8 @@ BOOL CServiceApp :: InitInstance()
 		gDlg.pTuboIni = new CTuboIni(t);	
 	//m_pTuboIni = new CTuboIni(t);
 
-	RegisterService(__argc, __argv);	
+	RegisterService(__argc, __argv);
+	printf("Starting the Service/n");
 
 
 	return FALSE;
@@ -1418,6 +1420,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7502);
 				pSCM[i]->SetServerType(eInstrument);
+				pSCM[i]->SetClientBaseIp(gServerArray[i].ClientBaseIp);
 				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
 				// start the listen thread which will create a listener socket
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
@@ -5872,7 +5875,7 @@ void ShutDownSystem(  )
 	if( 1 )
 	{
 		//if( FALSE == InitiateSystemShutdown( pRemoteName, pMessage, pDlg->m_timeOut, FALSE, FALSE ) )
-		if( FALSE == InitiateSystemShutdown( NULL, NULL, 0, TRUE, FALSE ) )
+		if( FALSE == InitiateSystemShutdownEx( NULL, _T("Norman Exit"), 0, TRUE, FALSE,0 ) )
 		{
 			RevertToSelf();
 			return;

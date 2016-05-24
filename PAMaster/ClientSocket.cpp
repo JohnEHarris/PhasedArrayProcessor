@@ -237,6 +237,7 @@ void CClientSocket::MyMessageBox(CString s)
 void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from CAsyncSocket
   {
 	  CString s, s0, s1;
+	  char txt[64];
 	  UINT uSPort, uCPort;	// temp to hold port numbers discovered
 	  if (m_pCCM)
 		{
@@ -335,7 +336,8 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 #ifdef THIS_IS_SERVICE_APP
 		char buffer [80];
 		strcpy(buffer,GetTimeStringPtr());
-		printf("PAM client connected to PAG server on connection %s:%d at %s\n",s1,uCPort, buffer);
+		CstringToChar(s1, txt);
+		printf("PAM client connected to PAG server on connection %s:%d at %s\n",txt,uCPort, buffer);
 #endif
 		int nSize;
 		int nSizeOf = sizeof(int);

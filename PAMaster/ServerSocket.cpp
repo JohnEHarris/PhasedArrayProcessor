@@ -366,9 +366,10 @@ void CServerSocket::OnAccept(int nErrorCode)
 	s.Format(_T("Client accepted to server on socket %s : %d\n"), Ip4, uPort);
 	TRACE(s);
 		
-	char buffer [80];
+	char buffer [80], txt[64];
 	strcpy(buffer,GetTimeStringPtr());
-	printf("Instrument Client[%d] accepted to server on socket %s : %d at %s\n", nClientPortIndex, Ip4, uPort, buffer);
+	CstringToChar(Ip4, txt);
+	printf("Instrument Client[%d] accepted to server on socket %s : %d at %s\n", nClientPortIndex, txt, uPort, buffer);
 	Sleep(10);
 			
 	// Asocket.Close();	not necessary. Since Asocket on stack, when this routine ends, Asocket deletes
@@ -488,7 +489,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)	return;
 	if (m_pSCC == NULL)							return;
 #if 1
-	if (m_pSCC->uPacketsReceived < 8)
+	//if (m_pSCC->uPacketsReceived < 8)
 		{
 		s.Format(_T("[%4d]Server[%d]Socket[%d] got %d bytes\n"), 
 		m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, n);

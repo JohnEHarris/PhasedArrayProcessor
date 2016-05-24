@@ -183,7 +183,7 @@ int CServerConnectionManagement::StartListenerThread(int nMyServer)
 										RUNTIME_CLASS(CServerListenThread),
 										m_pstSCM->nListenThreadPriority,	//	THREAD_PRIORITY_NORMAL,
 										0,	// stack size
-										0,	// create flag, run on start//CREATE_SUSPENDED,	// runstate
+										0,	// create flag, 0=run on start//CREATE_SUSPENDED,	// runstate
 										NULL);	// security ptr
 	TRACE3("ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", pThread, pThread->m_hThread, pThread->m_nThreadID);
 
@@ -202,7 +202,7 @@ int CServerConnectionManagement::StopListenerThread(int nMyServer)
 	if (NULL == m_pstSCM)			return 3;
 	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
 		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);	
-	// post a message to init the listener thread. Feed in a pointer to this instancec of SCM
+	// post a message to init the listener thread. Feed in a pointer to this instance of SCM
 	//m_pstSCM->pServerListenThread->PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
 	PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID,WM_QUIT, 0L, 0L);
 	Sleep(20);
@@ -237,7 +237,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 
 	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
 		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);	
-	// post a message to init the listener thread. Feed in a pointer to this instancec of SCM
+	// post a message to init the listener thread. Feed in a pointer to this instance of SCM
 	//m_pstSCM->pServerListenThread->PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
 	//Sleep(20);
 
@@ -559,5 +559,11 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 CString CServerConnectionManagement::GetConnectedClientIp4(int nClient)
 	{
 	CString s = "";
+	if (m_pstSCM == NULL)
+		{
+		TRACE(_T("SCM::SendPacket - no m_pstSCM for this client\n"));
+		return s;
+		}
+	s = m_pstSCM->pClientConnection[nClient]->sClientIP4;
 	return s;
 	}

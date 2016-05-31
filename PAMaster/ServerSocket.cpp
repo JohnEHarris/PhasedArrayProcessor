@@ -499,10 +499,10 @@ void CServerSocket::OnReceive(int nErrorCode)
 
 
 	if (m_pSCC->bStopSendRcv)
-		{
-		n = -1;	// forced exit
-		m_pSCC->bConnected = (BYTE) eNotConnected;
-		}
+			{
+			n = -1;	// forced exit
+			m_pSCC->bConnected = (BYTE) eNotConnected;
+			}
 
 
 	if ( n > 0)

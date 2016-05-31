@@ -684,7 +684,7 @@ BOOL CServiceApp :: InitInstance()
 	//m_pTuboIni = new CTuboIni(t);
 
 	RegisterService(__argc, __argv);
-	printf("Starting the Service/n");
+	//printf("Starting the Service/n"); // causes an exception 
 
 
 	return FALSE;
@@ -3185,6 +3185,13 @@ UINT tInstMsgProcess (void *pCInstMsgProcess)
 			{
 				//NiosRawData_to_PeakData(pNiosRawData, &ReadBuf, nInspectMode);
 				SlvData.PeakData = ReadBuf;	// how can this copy from ReadBuf to .PeakData
+#if 0
+00419FCC  mov         ecx,18h 
+00419FD1  lea         esi,[ebp-84h] 
+00419FD7  lea         edi,[ebp-4F4h] 
+00419FDD  rep movs    dword ptr es:[edi],dword ptr [esi] 
+#endif
+
 
 				if (nSlave == 0)
 				{	// (nSlave == 0)

@@ -152,9 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\Include\CFG100.H" />
-    <ClInclude Include="..\Include\global.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
-    </ClInclude>
+    <ClInclude Include="..\Include\global.h" />
     <ClInclude Include="..\Include\PA2Struct.h" />
     <ClInclude Include="CCM_PAG.h" />
     <ClInclude Include="ClientCommunicationThread.h" />

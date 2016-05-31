@@ -151,13 +151,13 @@
     <ClInclude Include="tstdlibs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\global.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MainModuleGlobal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Include\PA2Struct.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\global.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

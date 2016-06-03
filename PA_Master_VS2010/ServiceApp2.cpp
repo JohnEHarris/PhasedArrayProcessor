@@ -1,26 +1,11 @@
 // ServiceApp.cpp: implementation of the CServiceApp class.
 //
 //////////////////////////////////////////////////////////////////////
-// For debugging, run this service as manual start.
-// Start the program/debugging session before powering up the instrument
-// Run the MMI last of all
-//2016-05-24 CNTService constructor runs as a result of being the base class of the service app
-// CServiceApp::CServiceApp() : CNTService
-
-/**********************
-First step in converting from Yanming's c array based structure to my class structure is to
-replace the server connection from the master to the instruments. This means replace 
-ServerSocketInit() and ServerSocketThread() with code from ServerConnectionManagement and its
-managed classes.
-
-**********************/
 
 #include "stdafx.h"
-#include "MainModuleGlobal.h"
 #include "ServiceApp.h"
 #include "winsock2.h"
 #include "math.h"
-#include "time.h"
 
 #include <windows.h>
 #include <process.h>
@@ -35,74 +20,30 @@ managed classes.
 #include "InstMsgProcess.h"
 #include "RunningAverage.h"
 #include "HwTimer.h"
-#include "InspState.h"
-#include "ClientConnectionManagement.h"	// 21-Jan-13 jeh
-#include "CCM_PAG.h"					// 22-Jan-13 jeh
-#include "ClientSocket.h"
 
-
-#define CURRENT_VERSION		"Version 1.0"
-#define BUILD_VERSION			1
-
-#define VERSION_MAJOR           1
-#define VERSION_MINOR           0
-#define VERSION_BUILD           BUILD_VERSION
-
-
-#if 0
-1.0.001			12-Mar-2013	Add Timer Tick to PAM to restart PAG connection attempt if not connected. PAM and PAG code the same almost
-							Steers commands with MMI_CMD variables PAM_Number and Inst_Number_In_PAM
-#endif
-
-
-#undef YANMING_CODE
-// HYBRID_CODE used my instrument server (ServerConnectionManagement), legacy connection to mmi
-
-CServiceApp theApp;		// the persistent instance of the application
-UINT uAppTimerTick;		// approximately 50 ms
+CServiceApp theApp;
 
 UINT CheckKey( void *dummy );
+UINT ClientSocketInit(void *dummy);
 int readn( int fd, char *bp, int len);
-
-// Thread code
-// CLIENTS
-UINT ClientSocketInit(void *dummy);				// a thread to connect to the MMI
-UINT tRcvrProcessMmiMsg(void *dummy);			// a thread to receive and queue msg from the MMI
-												// queues msg's are dequeued by ProcessMmiMsg thread
-UINT ProcessMmiMsg(void *dummy);				// a thread to process messages from the MMI
-UINT tSendRawFlawToMMI(void *dummy);
-
-// SERVER BASED OR RELATED
-//UINT tcpServerWorkTask(void *pSlave);			// a thread to receive and process data from an
-												// instrument. There is one instance of this thead
-												// for every instrument
+UINT tRcvrProcessMmiMsg(void *dummy);
+UINT ProcessMmiMsg(void *dummy);
+UINT tcpServerWorkTask(void *pSlave);
 UINT tInstMsgProcess (void *pCInstMsgProcess);	// swap this for tcpServerWorkTask above
 UINT tcpServerWorkTask_WD(void *pSlave);
-
-#ifdef  YANMING_CODE
 BOOL ServerSocketInit();
-UINT ServerSocketThread(void *dummy);			// a thread that allows client inspection machines (slaves)
-												// to connect to this application
-#endif
+UINT ServerSocketThread(void *dummy);
 BOOL ServerSocketInit_WallDisplay();
 UINT ServerSocketThread_WallDisplay(void *dummy);
-UINT tSendWallDisplayMsg(void *dummy);
-
-// NEITHER SERVER NOR CLIENT BASED THREADS
+UINT tSendRawFlawToMMI(void *dummy);
 UINT tWriteWallDataToFile (void *dummy);
+UINT tSendWallDisplayMsg(void *dummy);
 
 
 void ShutDownSystem();
 
-/*  Begin Globals */
-
 BOOL repeat = TRUE;     /* Global repeat flag and video variable */
-// global flags to regulate how often or 'if' a thread is created/run
-#ifdef  YANMING_CODE
 int  g_nServerSocket=-1;
-#endif
-
-
 int  g_nServerSocketWD=-1;
 int  g_nMmiSocket=-1;
 int  g_nRunClientSocketInitThread = 1;
@@ -113,19 +54,14 @@ int  g_nRunWriteWallDataToFileThread= 1;
 int  g_nRunSendWallDisplayMsgThread = 1;
 
 // Encapsulate the processing of data from inspection instruments in this class
-CInstMsgProcess* g_pInstMsgProcess[NUM_OF_SLAVES];	// typically supports 32 'slave' instruments
-
-CInspState InspState;		// one instance of a state keeping class.. not a pointer!
-
+CInstMsgProcess* g_pInstMsgProcess[32];
 
 CWinThread* g_pThreadClientSocketInit;
 CWinThread* g_pThreadRcvrProcessMmiMsg;
 CWinThread* g_pThreadProcessMmiMsg;
-#ifdef  YANMING_CODE
 CWinThread* g_pThreadServerSocket;
-#endif
 CWinThread* g_pThreadServerSocket_WD;
-CWinThread* g_pThreadSlave[NUM_OF_SLAVES];	// a server task for every client instrument employing tcpServerWorkTask
+CWinThread* g_pThreadSlave[MAX_SHOES];	// a server task for every client instrument employing tcpServerWorkTask
 CWinThread* g_pThreadSendRawFlawToMMI;
 CWinThread* g_pThreadWriteWallDataToFile;
 CWinThread* g_pThreadWallDisplay;
@@ -133,13 +69,14 @@ CWinThread* g_pThreadSendWallDisplayMsg;
 
 int  g_nSlave[NUM_OF_SLAVES];
 int  g_nWD=0;
-int  g_hPipeMmiMsg[2];		// pipes could be replace with linked lists!!
+int  g_hPipeMmiMsg[2];
 int  g_hPipeWallDisplay[2];
 enum PIPES { READ, WRITE }; /* Constants 0 and 1 for READ and WRITE */
 
+/*  Begin Globals */
 
 int    g_SocketSlave[NUM_OF_SLAVES];    /* TCP sockets for communicating with slaves */
-int    g_socketWallDisplay = -1;		/* TCP socket for communicating with wall display program */
+int    g_socketWallDisplay = -1;    /* TCP socket for communicating with wall display program */
 int    g_nRcvrIdataCnt;
 int    g_nAuxClkIntCnt = 0;
 int    g_nAuxClkIntCnt2 = 0;
@@ -232,20 +169,19 @@ void FlushImageBufArray(void);
 BOOL SendSlaveMsg(int nWhichSlave, MMI_CMD *pSendBuf);
 void PipeInProcess (void);
 void PipeOutProcess (void);
-//void SetGetInspectMode_M (int nSetGet/* 0=SET, 1=GET */, int *nMode, int *nMotionTime);
+void SetGetInspectMode_M (int nSetGet/* 0=SET, 1=GET */, int *nMode, int *nMotionTime);
 void Inspection_Process_Control();
 
-//void SetGetChannelCfg (int nSetGet /* 0=SET, 1=Get */, CHANNEL_CONFIG2 *pChnlCfg, int nSlave);
-//void SetGetSiteDefaults (int nSetGet /* 0=SET, 1=Get */, SITE_SPECIFIC_DEFAULTS *pSiteDef);
+void SetGetChannelCfg (int nSetGet /* 0=SET, 1=Get */, CHANNEL_CONFIG2 *pChnlCfg, int nSlave);
+void SetGetSiteDefaults (int nSetGet /* 0=SET, 1=Get */, SITE_SPECIFIC_DEFAULTS *pSiteDef);
 void InitImageBufArray(void);
 int GetMaxXOffset(void);
 int GetMinXOffset(void);
 int GetMaxXSpan(void);
 
-//void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, int nInspectMode); before 2-14-2013
-void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CServerRcvListThread *pServerRcvListThread);
+void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, int nInspectMode);
 void NC_Process (BYTE *RcvrSequence, BYTE *AmpID, BYTE *AmpOD, BYTE *FlawID, BYTE *FlawOD, CHANNEL_INFO *ChannelInfo, int nSlave, int nTick, int nSeq);
-void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, float ascan_delta_t, CHANNEL_INFO *ChannelInfo, BOOL bFirstAscan, int nSlave, int nTick, int nXloc, int nSeq);
+void NX_Process (BYTE *RcvrSequence, WORD *InputWallReading, WORD *WallMin, WORD *WallMax, float ascan_delta_t, CHANNEL_INFO *ChannelInfo, BOOL bFirstAscan, int nSlave, int nTick, int nXloc, int nSeq);
 
 BOOL PipeIsPresent() {return g_nPipeStatus;};
 BOOL SendMmiMsg(int socketFD, I_MSG_RUN *pSendBuf);
@@ -262,96 +198,44 @@ int FindWhichSlave(int nChannel);
 int FindSlaveChannel(int nChannel);
 int FindDisplayChannel(int nArray, int nArrayCh);
 void ComputeTranFocusDelay(float thickness, float zf_value, float water_path, float incident_angle, WORD *td);
-void CstringToTChar(CString &s, _TCHAR *p, int nSizeOfArray);
-void CstringToChar(CString &s, char *p, int nSizeOfArray);
-
-/*************** END FUNCTION PROTOTYPES ******************/
-
-
-
-// To fix the Unicode wreck, convert CStrings to char's for 
-// operation such as sscanf and printf
-// Lose significance when really using 16 bit character - but
-// not when reading values from registry or other numeric ascii
-// conversions.  Make sure the character array is big enough to 
-// take the bytes.
-
-void CstringToTChar(CString &s, _TCHAR *p, int nSizeOfArray)
-{
-	int i;
-	int nLen = s.GetLength();
-	_TCHAR c;
-	memset(p, 0, nSizeOfArray);
-	if (nLen >= nSizeOfArray)	nLen = nSizeOfArray - 1;
-	for (i = 0; i < nLen; i++)
-	{
-		p[i] = (_TCHAR)s.GetAt(i);
-		c = (_TCHAR)s.GetAt(i);
-	}
-}
-
-void CstringToChar(CString &s, char *p, int nSizeOfArray)
-{
-	int i;
-	int nLen = s.GetLength();
-	char c;
-	memset(p, 0, nSizeOfArray);
-	if (nLen >= nSizeOfArray)	nLen = nSizeOfArray - 1;
-	for (i = 0; i < nLen; i++)
-	{
-		p[i] = (char)s.GetAt(i);
-		c = (char)s.GetAt(i);
-	}
-}
-
 
 /*************** END FUNCTION PROTOTYPES ******************/					
-//CServiceApp *pTheApp;
+
+
+
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
+
 CServiceApp::CServiceApp()
 	: CNTService(TEXT("PhasedArray_Master"), TEXT("Phased Array Master"))
 	, m_hStop(0)
-	{
-//	WSADATA wsaData;
-//	int rv, 
+{
 	int i;
-	//pTheApp = this;
-
-	AfxSocketInit();
-	// unnecessary. Program nulls all that can be nulled on start
-#if 0
-	for ( i = 0; i < MAX_SERVERS; i++)
-		{
-		pSCM[i] = NULL;
-		//memset((void *) &stSCM[i], 0, sizeof(ST_SERVER_CONNECTION_MANAGEMENT));
-		}
-#endif
 
 	for (i=0; i<NUM_OF_SLAVES; i++)
-		{
+	{
 		g_SocketSlave[i] = -1;   /* initialized to an invalid socket. */
 		g_nSlave[i] = i;
 		g_nWD = 0;
 		g_bConnected[i+1] = 0;
-		}
+	}
 
-	for ( i = 0; i < NUM_OF_SLAVES; i++)	g_pInstMsgProcess[i] = NULL;
+	for ( i = 0; i < 32; i++)	g_pInstMsgProcess[i] = NULL;
 //	g_pInstMsgProcess[0] = new CInstMsgProcess(0);	// DEBUGGING
 	g_NcNx.Long[0] = 1;
-	g_NcNx.Long[1] = 1;
+	g_NcNx.Long[0] = 1;
 	g_NcNx.Tran[0] = 1;
-	g_NcNx.Tran[1] = 1;
+	g_NcNx.Tran[0] = 1;
 	g_NcNx.Oblq1[0] = 1;
-	g_NcNx.Oblq1[1] = 1;
+	g_NcNx.Oblq1[0] = 1;
 	g_NcNx.Oblq2[0] = 1;
-	g_NcNx.Oblq2[1] = 1;
+	g_NcNx.Oblq2[0] = 1;
 	g_NcNx.Oblq3[0] = 1;
-	g_NcNx.Oblq3[1] = 1;
+	g_NcNx.Oblq3[0] = 1;
 	g_NcNx.Lamin[0] = 1;
-	g_NcNx.Lamin[1] = 1;
+	g_NcNx.Lamin[0] = 1;
 	g_NcNx.Wall[0] = 1;
 
 #if 0
@@ -361,63 +245,46 @@ CServiceApp::CServiceApp()
 	// for n== 2, 20 loops = 10 ticks
 	// for n== 4, 20 loops = 10 ticks
 	// for n== 8, 20 loops = 12 ticks  12/3.58 = 3.4 uSec on Dual Pentium 1.8 Ghz system
-	// for n== 8, 20 loops = 17 ticks  with avg and search for min wall range 4. 17/3.6 = 4.7 uSec  19-apr-2012
-	// for n== 8, 20 loops = 18 ticks  with avg and search for min wall range 8. 18/3.6 = 5 uSec  19-apr-2012
-	// 
 #endif
-
 #if 0
 	CHwTimer *pTimer;
 	pTimer = new CHwTimer();
 	int nDeltaT[20];
-	WORD wResult[20], wMin[20];
+	WORD wResult[20];
 	WORD dbgWall = 100;
 	CRunningAverage *pRunAvg = new CRunningAverage(8);
 	pRunAvg->SetDropOutThreshold(30);	// allow us to see the wall filtered value roll off
 	pRunAvg->SetLowWallLimit(0);		// ignore the lower limit for this test
-	pRunAvg->SetMinWallSearchRange(8);
 	pTimer->HwStartTime();
 	for ( i = 0; i < 20; i++)
 		{
 		wResult[i] = pRunAvg->Input(dbgWall);
-		wMin[i] = pRunAvg->GetMinWallOfLastN(dbgWall--);
 		if (i > 10) dbgWall = 1;
 		}
 	pTimer->HwStopTime();
 
 	pTimer->GetDeltaTimeArray(nDeltaT);
 	pRunAvg->DefaultLowWallLimit();
-	delete pTimer;
 #endif
-	
-	for (i=0; i<MAX_SHOES; i++)	// max shoes may be a problem 19-apr-12 jeh
-		{
+
+	for (i=0; i<MAX_SHOES; i++)
+	{
 		g_WallCoef.fWallSlope[i] = 1.0f;
 		g_WallCoef.WallOffset[i] = 0;
-		}
+	}
 
 	for (i=0; i<NUM_OF_SLAVES; i++)
-		{
+	{
 		g_ArrayScanNum[i] = 3;
 		g_SequenceLength[i] = 24;
-		g_nPhasedArrayScanType[i] = 2;	// default is THREE_SCAN_LRW_8_BEAM
-		}
-
-
+		g_nPhasedArrayScanType[i] = 2;
 	}
+
+}
 
 CServiceApp::~CServiceApp()
 {
 int i;
-//Stop();
-
-	if( m_hStop )
-		::SetEvent(m_hStop);
-	
-	Sleep(6000);	// long enough to break out of Run infinite loop.. leave in for Yanming code
-
-	ReportStatus(SERVICE_STOP_PENDING, 11000);
-
 for ( i = 0; i < 32; i++)
 	{
 	if ( g_pInstMsgProcess[i])	delete g_pInstMsgProcess[i];
@@ -426,346 +293,15 @@ for ( i = 0; i < 32; i++)
 }
 
 
-// Next 4 registry operations copied from TscanDlg.cpp
-/***********
-GetServerConnectionManagementInfo()
-SaveServerConnectionManagementInfo()
-GetClientConnectionManagementInfo()
-SaveClientConnectionManagementInfo()
-
-This big comment was a # if 0 but made Visual Studio miss the definition of GetServerConnectionManagementInfo()
-			
-typedef struct
-	{
-	char Ip[16];	// dotted address eg., "192.168.10.10"
-	UINT uPort;		// port to listen on
-	int nPacketSize;	// Expected packet size from client...ie. how many bytes to receive in a packet
-	char ClientBaseIp[16];
-	}	SRV_SOCKET_INFO;	// Element of a server listener socket
-
-MAX_SERVERS				// how many servers supported by this application program
-MAX_CLIENTS_PER_SERVER	// how many client connection on each server
-
-PAM server that Instruments connects to:
-192.168.10.10 : 7502
-During development,Instruments at 192.168.10.201+ connect to PAG at 192.168.10.10 on port 7502
-IP Port is the port the server listens on. 
-The Client Base IP is the IP of the 1st element in the 
-ST_SERVERS_CLIENT_CONNECTION *pClientConnection[MAX_CLIENTS_PER_SERVER];
-Here, ClientBaseIp[16] = 192.168.10.201
-*****/
-
-// Read the registry to determine the hardware configuration of the SCM
-void CServiceApp::GetServerConnectionManagementInfo(void)
-	{
-	if (gDlg.pTuboIni == NULL)	return;
-	int i;
-	CString szPort, szIp, szI, sSrvSection;
-	sSrvSection = _T("ServerConnectionManagement");
-
-	gnMaxServers = gDlg.pTuboIni->GetProfileInt(sSrvSection, _T("! MaxServers"), MAX_SERVERS);
-	//gnMaxServers = m_ptheApp->GetProfileIntA(_T("ServerConnectionManagement"),_T("[-]MaxServers"), MAX_SERVERS);
-	gnMaxClientsPerServer = gDlg.pTuboIni->GetProfileInt(sSrvSection,_T("# MaxClientsPerServer"), MAX_CLIENTS_PER_SERVER);
-	szI.Format(_T("gnMaxClientsPerServer = %d\n"), gnMaxClientsPerServer );
-	TRACE(szI);
-	for ( i = 0; i < gnMaxServers; i++)
-		{
-		szI.Format(_T("%d-Server_IP_Addr"), i);
-		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection, szI, _T("192.168.10.10"));
-		szI += _T("  ") + szIp + _T("\n");
-		//TRACE(szI);
-		CstringToChar(szIp,gServerArray[i].Ip);
-
-		// The server's port that listens for clients to connect
-		szI.Format(_T("%d-Server_IP_Port"), i);
-		gServerArray[i].uPort =  gDlg.pTuboIni->GetProfileInt(sSrvSection,szI, 7502);
-
-		szI.Format(_T("%d-Client_Packet_Size"), i);
-		gServerArray[i].nPacketSize = gDlg.pTuboIni->GetProfileInt(sSrvSection,szI,INSTRUMENT_PACKET_SIZE);
-
-		szI.Format(_T("%d-Client_Base_IP"), i);
-		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection,szI, _T("192.168.10.201"));
-		CstringToChar(szIp,gServerArray[i].ClientBaseIp);
-		}
-	}
-
-// Save the hardware configuration information for the SCM to the registry
-// When using the CTuboIni class, write the section header by itself before writing any key values
-// Only for previous MIT version of TuboIni
-//
-// character order space ! # $ & * + - before numbers.
-void CServiceApp::SaveServerConnectionManagementInfo(void)
-	{
-	if (gDlg.pTuboIni == NULL)	return;
-	int i;
-	CString szPort, szIp, szI, sSrvSection;
-	sSrvSection = _T("ServerConnectionManagement");
-	//if (m_pTuboIni->m_pDictionary == NULL)	return;
-
-	// Write the section header -- utilize empty-string Key and empty-string value
-	// gDlg.pTuboIni->WriteProfileString(_T("ServerConnectionManagement"),_T(""), _T(""));
-
-	gDlg.pTuboIni->WriteProfileInt(sSrvSection, _T("! MaxServers"), gnMaxServers);
-	gDlg.pTuboIni->WriteProfileInt(sSrvSection,_T("# MaxClientsPerServer"), gnMaxClientsPerServer);
-	for ( i = 0; i < gnMaxServers; i++)
-		{
-		switch (i)
-			{
-		case 0:
-			szI.Format(_T("%d-Server_Description"), i);
-			szIp = _T("PAM Server for Instruments 1-N");
-			gDlg.pTuboIni->WriteProfileString(sSrvSection,szI, szIp);
-			break;
-		default:
-			break;
-			}
-		szI.Format(_T("%d-Server_IP_Addr"), i);
-		szIp = gServerArray[i].Ip;
-
-		gDlg.pTuboIni->WriteProfileString(sSrvSection,szI, szIp);
-		szI.Format(_T("%d-Server_IP_Port"), i);
-		gDlg.pTuboIni->WriteProfileInt(sSrvSection,szI, gServerArray[i].uPort);
-		szI.Format(_T("%d-Client_Packet_Size"), i);
-		gDlg.pTuboIni->WriteProfileInt(sSrvSection,szI,gServerArray[i].nPacketSize);
-		
-		szI.Format(_T("%d-Client_Base_IP"), i);
-		szIp = gServerArray[i].ClientBaseIp;
-		gDlg.pTuboIni->WriteProfileString(sSrvSection,szI, szIp);
-		}
-	}
-
-	/***************** CLIENT CONNECTION MANAGEMENT ***************/
-
-#if 0
-typedef struct
-	{
-	CString sClientName;			// symbolic name of the client network address,  eg., MC_ACP_HOSTNAME = "mc-acp"
-	CString sClientIP4;				// IP4 dotted address of client, normally this computers NIC address, eg., 192.168.10.10
-	CString sServerName;			// symbolic name of the server network address we want to connect to with this connection, eg., mc-scp 
-	CString sServerIP4;				// IP4 dotted address of server eg., 192.168.10.50
-	short nPort;					// added in PAM - port the server is listenin on.
-	int nPacketSize;				// added in PAM
-	int nWinVersion;
-
-	}	ST_SOCKET_NAMES;
-MAX_CLIENTS
-#endif
-
-// Read the registry to determine the hardware configuration of the CCM
-// PAM clients connect to the PAG server which is listening at port 7501
-// Client 0 should be the connection to the PAG server.
-// 2016-05-17 The PAM now called the Receiver is a client to only the PT
-void CServiceApp::GetClientConnectionManagementInfo(void)
-	{
-	if (gDlg.pTuboIni == NULL)	return;
-
-	int i;
-	CString szPort, szIp, szI, sClientSection;
-	sClientSection = _T("ClientConnectionManagement");
-
-	gnMaxClients = gDlg.pTuboIni->GetProfileInt(sClientSection,_T("! MaxClients"), MAX_CLIENTS);
-	for ( i = 0; i < gnMaxClients; i++)
-		{
-		szI.Format(_T("%d-Client_Name"), i);	// url of the client machine
-		stSocketNames[i].sClientName =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T("localhost"));
-		szI.Format(_T("%d-Client_IP4"), i);	// dotted IP 192.168.10.10 etc
-		stSocketNames[i].sClientIP4 =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T(""));
-
-		szI.Format(_T("%d-Server_Name"), i);	// url of the client machine
-		stSocketNames[i].sServerName =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T(""));
-		szI.Format(_T("%d-Server_IP4"), i);	// dotted IP 192.168.10.10 etc
-		stSocketNames[i].sServerIP4 =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T("192.168.10.20"));
-
-		szI.Format(_T("%d-Server_Listen_Port"), i);
-		stSocketNames[i].nPort = gDlg.pTuboIni->GetProfileInt(sClientSection,szI, 7501);
-
-		szI.Format(_T("%d-Server_Cmd_Packet_Size"), i);
-		stSocketNames[i].nPacketSize = gDlg.pTuboIni->GetProfileInt(sClientSection,szI, sizeof(MMI_CMD));
-
-		szI.Format(_T("%d-Win_Version"), i);
-		stSocketNames[i].nWinVersion = gDlg.pTuboIni->GetProfileInt(sClientSection,szI, 7);
-
-		}	
-	}
-
-// Save the hardware configuration information for the CCM to the registry
-void CServiceApp::SaveClientConnectionManagementInfo(void)
-	{
-	int i;
-	if (gDlg.pTuboIni == NULL)	return;
-
-	CString szPort, szIp, szI, sClientSection;
-	sClientSection = _T("ClientConnectionManagement");	
-	//if (m_pTuboIni->m_pDictionary == NULL)	return;
-
-	// Write the section header
-	//gDlg.pTuboIni->WriteProfileString(sClientSection,_T(""), _T(""));
-
-	// force max clients key to top of section
-	gDlg.pTuboIni->WriteProfileInt(sClientSection,_T("! MaxClients"), gnMaxClients);
-	for ( i = 0; i < gnMaxClients; i++)
-		{
-
-		szI.Format(_T("%d-Client_Name"), i);	// url of the client machine
-		gDlg.pTuboIni->WriteProfileString(sClientSection,szI, stSocketNames[i].sClientName);
-		szI.Format(_T("%d-Client_IP4"), i);	// dotted IP 192.168.10.10 etc
-		gDlg.pTuboIni->WriteProfileString(sClientSection,szI, stSocketNames[i].sClientIP4);
-
-		szI.Format(_T("%d-Server_Name"), i);	// url of the client machine
-		gDlg.pTuboIni->WriteProfileString(sClientSection,szI, stSocketNames[i].sServerName);
-		szI.Format(_T("%d-Server_IP4"), i);	// dotted IP 192.168.10.10 etc
-		gDlg.pTuboIni->WriteProfileString(sClientSection,szI, stSocketNames[i].sServerIP4);
-
-		szI.Format(_T("%d-Server_Listen_Port"), i);
-		gDlg.pTuboIni->WriteProfileInt(sClientSection,szI, stSocketNames[i].nPort);
-
-		szI.Format(_T("%d-Server_Cmd_Packet_Size"), i);
-		gDlg.pTuboIni->WriteProfileInt(sClientSection,szI, stSocketNames[i].nPacketSize);
-
-		szI.Format(_T("%d-Win_Version"), i);
-		gDlg.pTuboIni->WriteProfileInt(sClientSection,szI, stSocketNames[i].nWinVersion);
-
-		}
-	}
-
-
-/******************************************************************/
-
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-BOOL CServiceApp :: InitInstance() 
-	{
-	// Since the service has no user interface, we will store information about hardware setting
-	// for TCP/IP in an INI file. This info copied from AGS3 project startup application
-	// The ini file will be store in the folder which has the executable code
-
-	int i;
-	CString s;
-
-	// ths didn't work with 2010 compiler. Might have with vs2005
-	CString t = AfxGetAppName();	// shows AGS3
-	CString AppName = t+ _T(".exe");
-	CString ch;	// trim characters
-	t = GetCommandLine();	// shows ""D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\PhasedArrayMasterVS2010.exe" -i -d"
-	i = t.Find(_T(".exe"));
-	if ( i > 0)
-		t.Delete(i+4,32);	// leaves ""D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\PhasedArrayMasterVS2010.exe"
-	ch = _T('"');		// double quote
-	ch += _T(" ");		// space
-	t.TrimLeft(ch);		// leading double quote shows "D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\PhasedArrayMasterVS2010.exe"
-	t.TrimRight(ch);	// trailing double quote shows "D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\PhasedArrayMasterVS2010.exe"
-
-
-	i = t.Find(AppName);		// we know the name of the program
-	t.Delete(i,32);				// t has path to 'exe' w/o the exe file name
-	// shows "D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\"
-	// The name of the App becomes an implicit part of the key
-	// We only write Tuboscope, but clever windows makes a subregistry entry of AdpMMI
-	// SetRegistryKey Causes application settings to be stored in the registry instead of .INI files.
-	// SetRegistryKey(_T("Tuboscope"));	// gen HKEY_CUR_USR\Software\Tuboscope\AdpMMI  key
-
-	// To use an INI file instead, set m_pszProfileName to the ini file path
-	// First free the string allocated by MFC at CWinApp startup.
-	// The string is allocated before InitInstance is called.
-	// free((void*)m_pszProfileName);
-	//Change the name to the .INI file.
-	//The CWinApp destructor will free the memory.
-	t += _T("HardwareConfig.ini"); // shows "D:\PhasedArrayGenerator\PA_Master_VS2010\.\Debug\HardwareConfig.ini"
-	// t = _T("D:\\PhasedArrayGenerator\\PA_Master_VS2010\\Debug\\HardwareConfig.ini");
-	// m_pszProfileName=_tcsdup(t); // File in the exe directory
-
-	//SetRegistryKey(_T("Tuboscope"));	// gen HKEY_CUR_USR\Software\Tuboscope\  key
-
-
-	SetRegistryKey(_T("Tuboscope"));	// gen HKEY_CUR_USR\Software\Tuboscope\  key
-	// Use a custom Tubo INI file reader/writer to configure the PAM
-	if ( gDlg.pTuboIni == NULL )
-		gDlg.pTuboIni = new CTuboIni(t);	
-	//m_pTuboIni = new CTuboIni(t);
-
+BOOL CServiceApp :: InitInstance() {
 	RegisterService(__argc, __argv);
-	//printf("Starting the Service/n"); // causes an exception 
-
-
 	return FALSE;
-	}
-
-
-int CServiceApp::ExitInstance()
-	{
-#if 0
-	if (m_pMySampleMem)
-		delete m_pMySampleMem;
-  
-	DoCleanup();
-#endif
-	return CWinApp::ExitInstance();
-	}
-
-// If the service could exit normally, this routine would be called. Normally does not happen when
-// debugging as the cmd line window is close and the whole program aborts.
-// use a local variable in Run() to be set by the debugger to force a "graceful" shutdown
-void CServiceApp::ShutDown(void)
-	{
-	ReportStatus(SERVICE_STOP_PENDING, 11000);
-	if( m_hStop )
-		::SetEvent(m_hStop);
-	m_hStop = 0;
-
-	if (m_pTestThread)
-		{
-		::SetEvent(m_pTestThread->m_hTimerTick);
-		Sleep(5);
-		m_pTestThread->PostThreadMessage(WM_QUIT,0,0L);
-		Sleep(20);
-		}
-	m_pTestThread = 0;
-
-	Sleep(300);
-	// This code taken from void CTscanDlg::OnCancel() - the PAG
-	int i;
-	CString s;
-
-	for ( i = 0; i < MAX_CLIENTS; i++)
-		{
-		if (pCCM[i])	delete pCCM[i];
-		pCCM[i] = NULL;
-		Sleep(10);
-		}
-	i = 14;
-	s = _T("Here we are");
-	//if (pCCM_SysCp)
-	if (pCCM_PAG)
-		{		delete pCCM_PAG;	pCCM_PAG = NULL;		}
-
-	for ( i = 0; i < MAX_SERVERS; i++)
-		{
-		if (pSCM[i])
-			{
-			pSCM[i]->ServerShutDown(i);
-			Sleep(200);
-			delete pSCM[i];
-			}
-		pSCM[i] = NULL;
-		Sleep(10);
-		}
-	}
-
-
-
-/********************************* RUN ******************************/
-/********************************* RUN ******************************/
-/********************************* RUN ******************************/
+}
 
 
 void CServiceApp :: Run( DWORD, LPTSTR *) 
-	{	// args not used in this small example
-		// report to the SCM that we're about to start
-	int i;
-	CString s;
-	int nDebugShutdown = 0;		// manual way to shut down when running the debugger
-	// To shutdown in debugger, set nDebugShutdown = 1 inside the Run() infinite loop
-
+{		// args not used in this small example
+	// report to the SCM that we're about to start
 	ReportStatus(SERVICE_START_PENDING);
 	
 	m_hStop = ::CreateEvent(0, TRUE, FALSE, 0);
@@ -776,38 +312,6 @@ void CServiceApp :: Run( DWORD, LPTSTR *)
 	// report SERVICE_RUNNING immediately before you enter the main-loop
 	// DON'T FORGET THIS!
 	ReportStatus(SERVICE_RUNNING);
-
-
-	m_ptheApp = (CServiceApp *) AfxGetApp();
-
-#if 1
-	// If no registry entry exists, the user will get the development defaults.
-	// Probably won't work in a real system.
-	// access to our custom ini files	
-	// gDlg.pTuboIni = new CTuboIni(_T("D:\\PhasedArrayGenerator\\PA_Master_VS2010\\Debug\\HardwareConfig.ini"));
-	if (gDlg.pTuboIni)
-		{
-		//if (m_pTuboIni->m_pDictionary)
-			{
-			GetServerConnectionManagementInfo();
-			GetClientConnectionManagementInfo();
-			//Sleep(500);
-
-#define CREATE_NEW_INI_FILE
-#ifdef CREATE_NEW_INI_FILE
-			// do we need a new ini file because of architecture changes?
-			// generate a default file by including these opeartions. Otherwise
-			// change an existing ini file with notepad and let it configure the PAM
-			// when the 2 Get functions above execute.
-			//
-			SaveServerConnectionManagementInfo();	
-			SaveClientConnectionManagementInfo();
-
-#endif
-			}
-		delete gDlg.pTuboIni;	// this will rewrite the ini file
-		}
-#endif
 
 #if 0
 /*
@@ -827,7 +331,6 @@ void CServiceApp :: Run( DWORD, LPTSTR *)
 #endif
 
 #if 0
-//ifdef _DEBUG
 printf("Size of PACKET_STATS is %d\r\n", sizeof(PACKET_STATS));
 printf("Size of UDP_CMD_HDR is %d\r\n", sizeof(UDP_CMD_HDR));
 printf("Size of SLAVE_HDR is %d\r\n", sizeof(SLAVE_HDR));
@@ -847,129 +350,63 @@ printf("Size of I_MSG_CAL is %d\r\n", sizeof(I_MSG_CAL));
 printf("Size of I_MSG_PKT is %d\r\n", sizeof(I_MSG_PKT));
 printf("Size of I_MSG_NET is %d\r\n", sizeof(I_MSG_NET));
 printf("Size of SITE_SPECIFIC_DEFAULTS is %d\r\n", sizeof(SITE_SPECIFIC_DEFAULTS));
-printf("Size of MAX_CLIENTS is %d\r\n", MAX_CLIENTS);
-printf("Size of ST_CLIENT_CONNECTION_MANAGEMENT is %d\r\n", sizeof(ST_CLIENT_CONNECTION_MANAGEMENT));
-printf("Size of CAsyncSocket is %d\r\n", sizeof(CAsyncSocket));
-printf("Size of MAX_CLIENTS_PER_SERVER is %d\r\n", MAX_CLIENTS_PER_SERVER);
-printf("Size of MAX_SERVERS is %d\r\n", MAX_SERVERS);
-printf("Size of ST_SERVERS_CLIENT_CONNECTION is %d\r\n", sizeof(ST_SERVERS_CLIENT_CONNECTION));
-printf("Size of ST_SERVER_CONNECTION_MANAGEMENT is %d\r\n", sizeof(ST_SERVER_CONNECTION_MANAGEMENT));
-printf("Size of SRawDataPacket is %d\r\n", sizeof(SRawDataPacket));	// 1040
-
-
-
 #if 0
 Debugging Phased Array Master.
-	Summer 2012
+Size of PACKET_STATS is 20
+Size of UDP_CMD_HDR is 72
+Size of SLAVE_HDR is 116
+Size of UDP_CMD is 916
+Size of UDP_SLAVE_DATA is 212
+Size of INST_DATA is 1282
+Size of IPXHEADER is 30
+Size of PACKET_DATA is 1328
+Size of INST_CMD_DATA is 78
+Size of MMI_CMD is 872
+Size of UT_SHOE is 80
 Size of INSP_HDR is 72
+Size of UT_INSP is 1120
+Size of PEAK_DATA is 96
 Size of I_MSG_RUN is 1264
 Size of I_MSG_CAL is 1104
 Size of I_MSG_PKT is 408
 Size of I_MSG_NET is 1248
 Size of SITE_SPECIFIC_DEFAULTS is 108
 
-
-31-Jan-13
-Debugging Phased Array Master.
-Size of PACKET_STATS is 20
-Size of UDP_CMD_HDR is 72
-Size of SLAVE_HDR is 116
-Size of UDP_CMD is 1316
-Size of UDP_SLAVE_DATA is 212
-Size of INST_DATA is 1282
-Size of IPXHEADER is 30
-Size of PACKET_DATA is 1328
-Size of INST_CMD_DATA is 78
-Size of MMI_CMD is 1272
-Size of UT_SHOE is 80
-Size of INSP_HDR is 68   vs 72
-Size of UT_INSP is 1120
-Size of PEAK_DATA is 96
-Size of I_MSG_RUN is 1260   vs 1264
-Size of I_MSG_CAL is 1100   vs 1104
-Size of I_MSG_PKT is 400   vs 408
-Size of I_MSG_NET is 1239   vs 1248
-Size of SITE_SPECIFIC_DEFAULTS is 108
-Size of MAX_CLIENTS is 4
-Size of ST_CLIENT_CONNECTION_MANAGEMENT is 145
-Size of CAsyncSocket is 8
-Size of MAX_CLIENTS_PER_SERVER is 8
-Size of MAX_SERVERS is 1
-Size of ST_SERVERS_CLIENT_CONNECTION is 102
-Size of ST_SERVER_CONNECTION_MANAGEMENT is 140
-Size of SRawDataPacket is 1040
-
-
 #endif
 
 
 #endif
 
-	uAppTimerTick = 0;	// crude tick to be used by CCM and SCM for keep alive messages
-
-// Test thread creation and thread message posting
-	m_pTestThread = (CTestThread *) AfxBeginThread(
-										RUNTIME_CLASS(CTestThread),
-										THREAD_PRIORITY_NORMAL,
-										0,	// stack size
-										0,	// create flag, run on start//CREATE_SUSPENDED,	// runstate
-										NULL);	// security ptr
-
-	Sleep(50);
-	// Test posting a message to newly created thread
-	if (m_pTestThread)
-		m_pTestThread->PostThreadMessage(WM_USER_THREAD_HELLO_WORLD,1,5L);
-
-	//original legacy code will run if YANMING_CODE is defined
-
-#ifndef	YANMING_CODE
-	GetAllIP4AddrForThisMachine();
-	InitializeServerConnectionManagement();	// crashes if ServerConnect called after ClientConnect
-	Sleep(200);
-	InitializeClientConnectionManagement();
-	// For debugging, write ini file to see changes
-	if (gDlg.pTuboIni)
-		gDlg.pTuboIni->SaveIniFile();
-
-#endif
-
-
-// pipes could be replaced by linked lists. Receiving data could be done with ASync OnReceive and added to linked list
-// Then windows or thread messages could be posted to have another thread process the linked list.
-#ifdef  YANMING_CODE
 	if ( _pipe( g_hPipeMmiMsg, sizeof(MMI_CMD) * 1000, O_BINARY ) == -1 )
 	{
-		printf("Failed creating g_hPipeMmiMsg.\n");
+		//printf("Failed creating pipe.\n");
 		goto service_exit;
 	}
 
 	if ( _pipe( g_hPipeWallDisplay, 1000 * 1000, O_BINARY ) == -1 )
-		{
-		printf("Failed creating g_hPipeWallDisplay.\n");
+	{
+		//printf("Failed creating pipe.\n");
 		goto service_exit;
-		}
-#endif
+	}
 
-
-	CHwTimer *pInitTimer = new CHwTimer();
-	pInitTimer->Start();
 	InitRawWallBuf();
-	int nInitTime = pInitTimer->Stop();
-	printf("InitRawWallBuf elpase time in uSec = %d\n", nInitTime);
-	delete pInitTimer;
 
-#ifndef YANMING_CODE
-	goto WHILE_TARGET;	// for hybrid model with my SCM but YG's client connection, comment out the goto
-#endif
+	WSADATA wsaData;
+	int rv, i;
 
-//	WSADATA wsaData;
-//	int rv, 
-
+	rv = WSAStartup(0x0202, &wsaData);   //  Must be 1st fcn call
+	if (rv)
+	{ 
+		//ErrMsgSockStartup(rv);
+		//AfxMessageBox(_T("This program will not run without Winsock 2"));
+		//printf("Can't start Winsock 2.\n");
+		goto service_exit;
+	}
 
     /* Launch CheckKey thread to check for terminating keystroke. */
     //_beginthread( CheckKey, 0, NULL );
 	// This program is a server to the inspection machine clients
-#ifdef YANMING_CODE
+
 repeat_serverinit:
 
 	if ( ServerSocketInit() )
@@ -987,9 +424,7 @@ repeat_serverinit:
 		goto repeat_serverinit;
 	}
 
-#endif
 // This program is a server to the program to display wall readings as a bar chart (WallDisplay.exe)
-#if 0
 repeat_serverinit_WD:
 
 	if ( ServerSocketInit_WallDisplay() )
@@ -1002,14 +437,9 @@ repeat_serverinit_WD:
 		goto repeat_serverinit_WD;
 	}
 
-#endif
-
-	// bypass all this code if line 960 got0 WHILE_TARGET executes 
 	g_nRunClientSocketInitThread = 1;
 	g_pThreadClientSocketInit = AfxBeginThread(ClientSocketInit, NULL, THREAD_PRIORITY_NORMAL);
 
-	// receive cmds from mmi and move to a buffer. Then send the buffer thru a pipe
-	// ProcessMmiMsg is a thread reading the other end of the pipe
 	g_nRunRcvrProcessMmiMsgThread = 1;
 	g_pThreadRcvrProcessMmiMsg = AfxBeginThread(tRcvrProcessMmiMsg, NULL, THREAD_PRIORITY_NORMAL);
 
@@ -1025,8 +455,6 @@ repeat_serverinit_WD:
 	g_nRunSendWallDisplayMsgThread = 1;
 	g_pThreadSendWallDisplayMsg = AfxBeginThread(tSendWallDisplayMsg, NULL, THREAD_PRIORITY_NORMAL);
 
-WHILE_TARGET:
-	// jeh code for Run()
 	int rc;
 	I_MSG_RUN sendBuf;
 	I_MSG_NET *pNetBuf;
@@ -1034,143 +462,9 @@ WHILE_TARGET:
 	pNetBuf->MstrHdr.MsgId = NET_MODE;
 	pNetBuf->bConnected[0] = 1;
 
-	// testing only
-#if 0
-	Sleep(500);
-	if (m_pTestThread)
-		{
-		m_pTestThread->PostThreadMessageA(WM_QUIT,0,0L);
-		TRACE(_T("Posted	WM_QUIT to TestThread\n"));
-		printf("Posted	WM_QUIT to TestThread\n");
-		}
-#endif
-
-	int j;
-	void *pv;
-
-	// for hybrid code of my server and Yangming's client connections, jump to the old while() loop
-	// goto YG_RUN;
-	// IF WE bypass the loop below, must not store Instrument data in linked lists.
-	// change ServerSocket::OnReceive()
-
-
-#ifndef YANMING_CODE
-// JEH code for infinite while loop in Run()
-//	while (1)
-	while( ::WaitForSingleObject(m_hStop, 10) != WAIT_OBJECT_0 )
-		{	// the jeh do nothing main loop
-		Sleep(50);
-		uAppTimerTick++;
-		if (nDebugShutdown)	break;
-		// attempt to make a connection attempted when the server was busy/non responsive
-#if 0
-		if (pCCM_PAG)
-			{
-			if (pCCM_PAG->GetConnectionState() == 0)
-				{
-				pCCM_PAG->m_pstCCM->nNotConnectedTick++;
-				if (pCCM_PAG->m_pstCCM->nNotConnectedTick > 50)
-					{	// cancel the client socket and attempt to connect again
-					}
-				}
-			}
-#endif
-		// for testing only, throw away all collected data
-#if 0
-		for ( i = 0; i < MAX_SERVERS; i++)
-			{
-			if (stSCM[i].pSCM)
-				{
-				// for each server in the system, empyt the linked list created by the instruments
-				// Server 0 by convention is the server receiving data packets from the instruments
-				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
-					{
-					if(stSCM[i].pClientConnection[j])
-						{	// empty the linked lists
-						if ( (stSCM[i].pClientConnection[j]->pSocket)	) // && (stSCM[i].nComThreadExited[J] == 0))
-							{
-							// received data
-							stSCM[i].pClientConnection[j]->pSocket->LockRcvPktList();
-							//while (stSCM[i].pClientConnection[j]->pRcvPktList->GetCount())
-								{
-								//pv = stSCM[i].pClientConnection[j]->pRcvPktList->RemoveHead();
-								//delete pv;
-								}
-							stSCM[i].pClientConnection[j]->pSocket->UnLockRcvPktList();
-							// data to be sent
-							stSCM[i].pClientConnection[j]->pSocket->LockSendPktList();
-							//while (stSCM[i].pClientConnection[j]->pSendPktList->GetCount())
-								{
-								//pv = stSCM[i].pClientConnection[j]->pSendPktList->RemoveHead();
-								//delete pv;
-								}
-							stSCM[i].pClientConnection[j]->pSocket->UnLockSendPktList();
-							}
-						}	// pClientConnection[j]
-					Sleep(10);
-					}	// j loop
-				}
-			}
-#endif
-		}		// the jeh do nothing main loop
-
-	// ASSUMINMG WE GOT HERE WITH THE DEBUGGER BY FORCING A CALL TO Shutdown()
-	ShutDown();
-	ReportStatus(SERVICE_STOPPED);
-	return;
-
-	// Now clean up the application
-	TRACE(_T("Exit the inifinte loop in RUN\n"));
-	if( m_hStop )
-		{
-		::CloseHandle(m_hStop);
-		m_hStop = 0;
-		}
-
-	// This code taken from void CTscanDlg::OnCancel() - the PAG
-
-
-	for ( i = 0; i < MAX_CLIENTS; i++)
-		{
-		if (pCCM[i])	delete pCCM[i];
-		pCCM[i] = NULL;
-		Sleep(10);
-		}
-	i = 14;
-	s = _T("Here we are");
-	//if (pCCM_SysCp)
-	if (pCCM_PAG)
-		{		delete pCCM_PAG;	pCCM_PAG = NULL;		}
-
-	for ( i = 0; i < MAX_SERVERS; i++)
-		{
-		if (pSCM[i])
-			{
-			pSCM[i]->ServerShutDown(i);
-			Sleep(200);
-			delete pSCM[i];
-			}
-		pSCM[i] = NULL;
-		Sleep(10);
-		}
-
-	Sleep(10);
-
-
-
-	// WHILE vestiges of YG code may still be in project
-	goto YG_END;
-
-
-#endif
 	// enter main-loop
 	// If the Stop() method sets the event, then we will break out of
 	// this loop.
-	// wait for event m_hStop for 10 milliseconds. If it times out, we do the loop
-
-	/*********************************************************************************/
-	/*********************************************************************************/
-YG_RUN:
 	while( ::WaitForSingleObject(m_hStop, 10) != WAIT_OBJECT_0 ) 
 	{
 		// popup a small message box every 10 seconds
@@ -1185,7 +479,6 @@ YG_RUN:
 			pNetBuf->InspHdr.NextJointNum = g_nJointNum;
 
 			rc = send( g_nMmiSocket, (char *) &sendBuf, sizeof(I_MSG_RUN), 0 );
-			// this can potentially collide with SendMmiMsg() which also sends using g_nMmiSocket
 			if ( rc <= 0 )
 			{
 				//AfxMessageBox(_T("send call failed.\nMessage ID = "+str));
@@ -1196,15 +489,14 @@ YG_RUN:
 			{
 				g_bConnected[i+1] = 0;
 			}
-		}	// if (g_nMmiSocket >= 0).. if  we are connected to the MMI
+		}
 
-		::Sleep( 3000 );	// sleep for dwMilliseconds... 3 seconds
+		::Sleep( 3000 );
 		//AfxMessageBox(sip);
 	}	// while waiting for stop
 
 	/**********  SHUT DOWN SEQUENCE ************/
 
-YG_END:
 
 	if( m_hStop )
 		::CloseHandle(m_hStop);
@@ -1244,11 +536,9 @@ YG_END:
 		::WaitForSingleObject(g_pThreadSendWallDisplayMsg->m_hThread, 10000);
 	}
 
-#ifdef  YANMING_CODE
 	closesocket(g_nServerSocket);
 	g_nServerSocket = -1;
 	::WaitForSingleObject(g_pThreadServerSocket->m_hThread, INFINITE);
-#endif
 
 	closesocket(g_nServerSocketWD);
 	g_nServerSocketWD = -1;
@@ -1285,12 +575,6 @@ YG_END:
 service_exit:
 
 	//_getch();
-	for ( i = 0; i < 32; i++)
-		{
-		if ( g_pInstMsgProcess[i])	delete g_pInstMsgProcess[i];
-		g_pInstMsgProcess[i] = NULL;
-		}
-//	delete pInitTimer;
 
 	WSACleanup();  //  Free resources allocated by WSAStartup()	
 
@@ -1301,7 +585,8 @@ service_exit:
     _close( g_hPipeWallDisplay[WRITE] );
 
 	ReportStatus(SERVICE_STOPPED);
-	}	// void CServiceApp :: Run( DWORD, LPTSTR *)
+
+}
 
 
 void CServiceApp :: Stop() {
@@ -1310,425 +595,12 @@ void CServiceApp :: Stop() {
 	// the SCM
 	//	"The next operation may take me up to 11 seconds. Please be patient."
 	ReportStatus(SERVICE_STOP_PENDING, 11000);
+
 	if( m_hStop )
 		::SetEvent(m_hStop);
 	
 }
-/**************************************** Nov 20120 ************************************/
-/****** Add components from the GUI for running the server portion of the master  ******/
 
-
-// c routine to convert CString to char array
-// make sure the ptr to the char array is big enough to hold the converted string
-// converted string is null terminated.
-void CstringToChar(CString s, char *pChar)
-	{
-	char c;
-	int i = 0;
-	while (c = (char)s.GetAt(i))	{ pChar[i++] = c; }
-	pChar[i] = 0;
-	}
-
-void CstringToTChar(CString s, TCHAR *pChar)
-	{
-	TCHAR c;
-	int i = 0;
-	while (c = (TCHAR)s.GetAt(i))	{ pChar[i++] = c; }
-	pChar[i] = 0;
-	}
-
-// global/universal time string generator
-CString GetTimeString(void)
-	{
-	CString s = GetTimeStringPtr();
-	return s;
-	}
-
-char *GetTimeStringPtr(void)
-	{
-	static char buffer[128];
-	time_t now;
-	struct tm * timeinfo;
-	time ( &now );
-	timeinfo = localtime ( &now );
-	strftime (buffer,80,"%Y_%m_%d %H:%M:%S",timeinfo);
-	return &buffer[0];
-	}
-
-// A ServicApp class memeber to initialize the server portion of the master code.
-// The Master process/computer which acts as a server to its connected instruments 
-// is assumed to always have the same IP address and port listening number no matter
-// how many Master computers there may be. Thus the instrument does not have to have
-// special knowledge about the Master or in some way be configured for a specific
-// master instrument. This means (1) that multiple master will have to be implemented
-// as individual machines. (2) Each master will connect to its instruments thru a switch
-// and (3) all the masters will connect to the User interface (PAG - Phased Array GUI) thru
-// another switch. Thus for multiple masters, each master will have to have a NIC which 
-// faces the instruments and another NIC which faces the PAG.
-
-// Initialize the Server subsystems of the Phased Array Master.
-// This windows program receives inspection data from the Instruments of which there
-// may be several. 
-//
-/*
-Consider some hypothetical cases.
-1 Pc with 1 Nic servicing 16 instruments. Assume we want a "server" class instance for every 8 instruments.
-This would mean we would have 2 instances of a server in one machine using one NIC. This would require
-a different listening port for each server. Clearly, all the TCP/IP traffic would have to go thru one NIC.
-Thus there is probably be no advantage to doing this. We could just as well put all 16 instrument into one "server"instance.
-
-Consider 1 PC with 2 NIC's. The NIC's would have to have different IP addresses. This would require the instrument
-to know what the IP address of their NIC was. This introduces configuration complexities into the deployment of 
-instruments and would likely lead to problems in the field when personnel begin to swap boards/systems when trouble
-shooting a problem.
-
-Consider 2 PC's each with 1 NIC. Both PC's can present the same IP address and port number to their instrument as long
-as the 16 instruments are in 2 groups, each group connected thru a switch to its PC and NIC. The processing load
-and network traffic are cut in half by having duplicate hardware. There is no configuration required of the 
-instrument since the IP address and port are the same for both groups of instruments. This last scenario means that
-on a given machine, there is only one server involved. Hence MAX_SERVERS = 1.
-
-*/
-// Adapted from Pharse Array GUI TruscanDlg.cpp code.
-//
-void CServiceApp::InitializeServerConnectionManagement(void)
-	{
-	int i;
-	CString s;
-	UINT uPort;
-	int nError;
-	i = _MSC_VER;	// 1900
-
-	if (gnMaxServers > MAX_SERVERS)
-		{
-		TRACE1("gnMaxServers = %d greater than MAX_SERVERS\n", gnMaxServers);
-		gnMaxServers = MAX_SERVERS;
-		}
-	for ( i = 0; i < gnMaxServers; i++)
-		{
-
-		if (pSCM[i])	continue;	// instance already exists
-
-		switch (i)
-			{
-		case 0:		// There are multiple client instrument looking for the PAM server. This is the only server
-					// for instruments in this application.
-			pSCM[i] = new CServerConnectionManagement(i);
-			if (pSCM[i])
-				{
-				s = gServerArray[i].Ip;			// a global static table of ip addresses define by an ini file
-				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.10"));
-				uPort = gServerArray[i].uPort;
-				pSCM[i]->SetServerPort(uPort);	// 7502);
-				pSCM[i]->SetServerType(eInstrument);
-				pSCM[i]->SetClientBaseIp(gServerArray[i].ClientBaseIp);
-				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
-				// start the listen thread which will create a listener socket
-				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
-				// the connection socket's OnReceive will populate the input data linked list and post messages
-				// to the main dlg/application to process the data.
-				nError = pSCM[i]->StartListenerThread(i);
-				if (nError)
-					{
-					s.Format(_T("Failed to start listener Thread[%d], ERROR = %d\n"), i, nError);
-					TRACE(s);
-					delete pSCM[i];
-					pSCM[i] = NULL;
-					}
-				}
-			break;
-		default:
-			pSCM[i] = NULL;
-			break;
-			}
-		}
-		s.Format(_T("\nSERVER CONNECTION MANAGEMENT has completed for MAX_SERVERS = %d \n"), MAX_SERVERS);
-		TRACE(s);
-	}
-
-
-// Call this routine once during OnInitDialog and possibly avoid calling GetIPv4(void)
-// It finds all the host, ie, network interfaces attached to this machine
-// including wireless and virtual if a virtual machine is installed.
-// From this list we can determine what servers can be reached by which NIC's
-// assuming we are not using routers.
-// -- copied from TScanDlg.cpp
-void CServiceApp::GetAllIP4AddrForThisMachine(void)
-	{
-	USES_CONVERSION;
-	CString s;
-	char t[128];
-
-	TCHAR sFQDN [MAX_FQDN_LENGTH + 1];		// fully qualified domain name string
-	DWORD dwFQDN = MAX_FQDN_LENGTH + 1;		// buffer for sFQDN
-
-	// because we are running a system using DHCP, DNS,
-	// and dynamic IP addresses, we have no prior knowledge
-	// about any given host's IP address so we have to
-	// fish for it
-
-	// find out where we are
-	CString sComputerName = _T("");		// FQDN of this host
-	CString theIP = _T("");				// the stringized ip
-
-    ::GetComputerNameEx(ComputerNameDnsFullyQualified,
-		                (LPTSTR) sFQDN, 
-		                &dwFQDN);
-
-	sComputerName = T2A(sFQDN);
-
-
-	// make sure we're searching for something real
-    if (sComputerName.IsEmpty())
-		return;		// theIP;
-
-    //struct sockaddr_in theHost;	// structure used in the conversion
-	struct in_addr addr;		// jeh from help system
-	HOSTENT * hostent;			// structure returned by gethostbyname
-	int i;
-	for ( i = 0; i < 20; i++) sThisMachineIP4Addr[i].Empty();
-	i = 0;
-
-    // do the lookup
-	hostent = gethostbyname(CT2A(sComputerName));
-	// Note  The gethostbyname function has been deprecated by the introduction of the getaddrinfo function. 
-	// Developers creating Windows Sockets 2 applications are urged to use the getaddrinfo function instead of gethostbyname. 
-	// getaddrinfo() is preferred way to get this info... but realy complex. Use help to find getaddrinfo
-	// Developers are encouraged to use the GetAddrInfoW Unicode function rather than the getaddrinfo ANSI function.
-
-	// make sure we found something
-	if (hostent != NULL)
-		{
-		// jeh code to show all hosts.. from help system for hostent structure
-		if (hostent->h_addrtype == AF_INET)
-			{
-			while (hostent->h_addr_list[i] != 0)
-				{
-				uThisMachineIP4Addr[i] = addr.s_addr = *(u_long *) hostent->h_addr_list[i];
-				s = inet_ntoa(addr);
-				TRACE1("Host IP4 addr = %s\n",s);
-				sThisMachineIP4Addr[i++] = s;
-#ifdef _DEBUG
-				CstringToChar(s,t);
-				printf("Host IP4 addr = %s\n",t);
-#endif
-				}
-			uThisMachineIP4Addr[i]		= 0x0100007f;
-			sThisMachineIP4Addr[i++]	= _T("127.0.0.1");
-			}
-		}
-	}
-
-// Start the system which connects client TCP/IP routines in this application to servers.
-// There is one instance of the ClientConnectionManagement class for each client connection
-// The primary connection for the PAM is to the Phased Array GUI (PAG) which is a server
-// to each Phased Array Master machine in the system
-//
-// Adapted from PAG which is called TruscanDlg.cpp
-// Redefine the IP finding routines here to look like the scheme used by the
-// ServerConnectionManagement system
-//
-void CServiceApp::InitializeClientConnectionManagement(void)
-	{
-	int i;
-#if 1
-	// Instantiate all CCM instances for as many client connections as are going to be supported
-	// Convention is for case 0 to be Phased Array GUI - PAG
-	// Convention is for case 1 to be the PLC
-	// Assume IP addresses will be assigned via ini file or array. Set without dhcp searches
-	// 	All these connections are tcp/ip clients and the other end is a tcp/ip server.
-	CString sClientIP,  sServerIp, sServerName, s;	// sServerName use the url for this server
-	UINT uServerPort;
-
-	for ( i = 0; i < MAX_CLIENTS; i++)
-		{
-		if (pCCM[i])	continue;	// instance already exists
-
-		switch (i)
-			{
-		case 0:		// assume connecting to PAG
-
-#if 0
-			if ( 0 == FindClientSideIP(i) )
-				{	// find client side connection for 1st connection... probably the same IP for all 
-					// client side connections unless more than one NIC
-				break;
-				}
-			FindServerSideIP(i);
-#endif
-			sClientIP = GetClientIP(i);
-			sServerIp = GetServerIP(i);
-			sServerName = GetServerName(i);
-			uServerPort = GetServerPort(i) & 0xffff;	// port on the PAG server that we will try to connect to
-			// Make a specific child class of CCM to handle the Phased Array GUI - PAG
-			pCCM_PAG = (CCCM_PAG *) new CCCM_PAG(i);
-			if (NULL == pCCM_PAG)
-				{
-				TRACE1("pCCM_PAG[%d] is NULL\n", i);
-				break;
-				}
-			if (pCCM_PAG->m_pstCCM == NULL) 
-				{
-				TRACE1("pCCM_PAG[%d]->m_pstCCM is NULL\n", i);
-				break;
-				}
-			//pCCM[i] = pCCM_SysCp; causes problem on shut down
-
-			pCCM_PAG->UniqueProc();	// JUST FOR DEBUG
-			pCCM_PAG->SetSocketName(_T("CCM_PAG"));
-			//pCCM_PAG->SetWinVersion(theApp.m_iWinVer);
-			pCCM_PAG->SetClientIp(sClientIP);
-			pCCM_PAG->SetServerIp(sServerIp);
-			pCCM_PAG->SetServerName(sServerName);	// url of server, e.g. srvhouapp67
-			pCCM_PAG->SetServerPort(uServerPort);
-			
-						
-			pCCM_PAG->m_pstCCM->nReceivePriority	= THREAD_PRIORITY_ABOVE_NORMAL;
-			pCCM_PAG->m_pstCCM->nSendPriority		= THREAD_PRIORITY_BELOW_NORMAL;
-			pCCM_PAG->m_pstCCM->nCmdProcessPriority	= THREAD_PRIORITY_BELOW_NORMAL;
-			pCCM_PAG->CreateReceiveThread();		Sleep(50);
-			pCCM_PAG->CreateSendThread();			Sleep(50);
-			pCCM_PAG->InitReceiveThread();			Sleep(50); 
-			// causes CClientCommunicationThread::InitTcpThread(WPARAM w, LPARAM lParam) to run
-			pCCM_PAG->InitSendThread();				Sleep(50);
-			pCCM_PAG->CreateCmdProcessThread();		Sleep(50);
-
-#if 0
-
-			if (pCCM_SysCp->m_pstCCM->sClientIP4.GetLength() > 6)	// copy found IP for client into identity struct
-				pCCM_SysCp->SetClientIp(pCCM_SysCp->m_pstCCM->sClientIP4);
-			if (pCCM_SysCp->m_pstCCM->sServerIP4.GetLength() > 6)	// copy found IP for server into identity struct
-				pCCM_SysCp->SetServerIp(pCCM_SysCp->m_pstCCM->sServerIP4);
-
-			// Set thread priorities for send and receive threads
-			pCCM_SysCp->m_pstCCM->nReceivePriority	= THREAD_PRIORITY_ABOVE_NORMAL;
-			pCCM_SysCp->m_pstCCM->nSendPriority		= THREAD_PRIORITY_BELOW_NORMAL;
-			pCCM_SysCp->CreateReceiveThread();		Sleep(50);
-			pCCM_SysCp->CreateSendThread();			Sleep(50);
-			pCCM_SysCp->InitReceiveThread();		Sleep(50);
-			pCCM_SysCp->InitSendThread();			Sleep(50);
-			break;	// case 0
-
-
-		case 1:		// assume connectiong to THE PLC
-			// FindClientSideIP(i);	// assume syscp found the ip for this client for all other servers. If not
-			// craft CODE in FindClientSideIP to find another ip address to link with the database.
-			if (stCCM[0].sClientIP4.GetLength() > 6)
-				sClientIP = stCCM[0].sClientIP4;	// use case 0 for syscp
-			else
-				{	// try something else. If that fails, abort since we can't hook up with the data base
-				}
-
-			if (!FindServerSideIP(i))
-				{
-				TRACE("Could not find server IP for Database.. we are toast\n");
-				break;
-				}
-			sServerIp = stCCM[i].sServerIP4;
-
-#endif
-
-			break;	// case 1
-
-		default:
-			pCCM[i] = NULL;
-			break;
-
-			}
-		}	// for ( i
-
-#endif	
-	s.Format(_T("\nCLIENT CONNECTION MANAGEMENT has completed for MAX_CLIENTS = %d \n"), MAX_CLIENTS);
-	TRACE(s);
-
-	}
-
-// When it is time to create the thread that services the client's data received into the RcvPacketList
-// Call back to the top level of the application and choose the correct thread type base on knowing 
-// the function of the server itself.
-// This call returns the thread ptr of the thread created.
-// The thread created will have custom processing of the RcvPacketList based on which server/client pair
-// is being processed. For Phased Array Master, the primary client on the other end is the PA Instrument.
-// It sends inspection data packets which are processed in a manner dictated by the Message ID of the packet.
-//
-//ifdef SERVER_RCVLIST_THREADBASE		// DEFINE in project defines under C/C++ | Preprocessor
-CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNumber, int nPriority)
-	{
-	CString s;
-	CServerRcvListThreadBase *pThread = NULL;
-
-	if (nServerNumber >= MAX_SERVERS)
-		{
-		s.Format(_T("CServiceApp::CreateReceiverThread invalid server index = %d\n"), nServerNumber);
-		TRACE(s);
-		return pThread;	// NULL is invalid for a thread ptr
-		}
-	switch (nServerNumber)
-		{
-		// AfxBeginThread(RUNTIME_CLASS (), priority, stack_size, suspended-or-run, security)
-	case 0:
-		// Case 0 is instrument data serviced by a custom thread class named CServerRcvListThread.
-		// Other types of service offered to other types of clients would likely have a different
-		// custom thread to process the data which came from the client.
-		pThread = 
-			
-				(CServerRcvListThreadBase *) AfxBeginThread(
-					RUNTIME_CLASS (CServerRcvListThread),
-					nPriority,	0, CREATE_SUSPENDED, NULL);		// normally normal priority
-		break;
-	default:
-
-		break;
-		}
-	return pThread;
-	}
-
-// Data comes to the PAM (Phased Array Master) from instruments. The data is processed into new messages types
-// and forwarded to the PAG (Phased Array GUI). INPUT data to PAM comes thru a sockets associated with the 
-// Server Connection Management class. In particular, this data is associated with SCM instance 0.
-// PAM's connection to the PAG is via a Client Connection Management socket, specifically CCM[0] instance
-// CCM[0] instance has a child class of CCM, namely CCM_PAG
-// NOTE!!! PamSendToPag DOES NOT DELETE THE MEMORY pointed to by pBuf
-void CServiceApp::PamSendToPag(void *pBuf, int nLen)
-	{
-	CString s;
-	int i = ePAM_Client_Of_PAG_Server;	// normally 0
-	if (nLen < 1) 
-		{
-		TRACE(_T("ERROR - CServiceApp::PamSendToPag(nLen < 1)\n"));
-		return;
-		}
-	ASSERT(i<=MAX_CLIENTS);
-//	CClientConnectionManagement *pccm = pCCM[i];
-	CClientConnectionManagement *pccm = pCCM_PAG;
-	if ( NULL == pccm)
-		{
-		TRACE(_T("CServiceApp::PamSendToPag pccm is NULL\n"));
-		return;
-		}
-	CClientSocket *pSocket = pccm->GetSocketPtr();
-	ASSERT(pSocket);
-	ASSERT(pBuf);
-#if 0
-	stSEND_PACKET *pNew = (stSEND_PACKET *) pBuf;
-	if (pNew->nLength != nLen)
-		{
-		s.Format(_T("CServiceApp::PamSendToPag nLen != nLength\n"), nLen, pNew->nLength);
-		TRACE(s);
-		}
-	i = pSocket->Send(&pNew->Msg, pNew->nLength, 0);
-#endif
-	i = pSocket->Send(pBuf, nLen, 0);
-	if ( i != nLen)
-		{
-		s.Format(_T("CServiceApp::PamSendToPag requested to send %d bytes, sent %d\n"), nLen, i);
-		TRACE(s);
-		}
-
-	}
-
-/**************************************** Nov 20120 ************************************/
-/**************************************** Nov 20120 ************************************/
 
 /* CheckKey - Thread to wait for a keystroke, then clear repeat flag. */
 UINT CheckKey( void *dummy )
@@ -1745,14 +617,12 @@ UINT CheckKey( void *dummy )
 }
 
 // Try to connect to the TruWall MMI control program
-// Rest of PA Master will not run until we connect to the MMI
 UINT ClientSocketInit(void *dummy)
 {
 	struct sockaddr_in serverAddr;
 	int sockAddrSize;
 	int socketFD;
-	unsigned short nPortNumber = 7501;	// PAG is listening at 7501
-	char *pIP;
+	unsigned short nPortNumber = 7501;
 
 	/* Set up the server address */
 	sockAddrSize = sizeof (struct sockaddr_in);
@@ -1775,21 +645,18 @@ UINT ClientSocketInit(void *dummy)
 		closesocket (socketFD);
 		g_nMmiSocket = -1;
 
-		if (g_nRunClientSocketInitThread == 0)	// if we are shutting down, then quit without making a new socket
+		if (g_nRunClientSocketInitThread == 0)
 			return 0;
-		// create a new socket
+
 		if ((socketFD = socket( AF_INET, SOCK_STREAM, 0 )) == ERROR )
 		{
-			puts("Phased Array Master - socket( AF_INET, SOCK_STREAM, 0 ) call failed.");
+			//AfxMessageBox("Phased Array Master - socket call failed.");
 			return 0;
 		}
-		::Sleep(5000);	// wait 5 seconds and then try to connect to the server
+		::Sleep(5000);
 		/* return FALSE; */
 	}
-	// if we are here, the connect was successful
-	pIP = inet_ntoa((IN_ADDR) serverAddr.sin_addr);
-	printf("PA Master connected to PA MMI at address %s \n", pIP);
-	
+
 	g_nMmiSocket = socketFD;
 	g_nRunClientSocketInitThread = 0;  //signify the thread has exited.
 
@@ -1798,7 +665,6 @@ UINT ClientSocketInit(void *dummy)
 
 // create a server socket so that instruments can connect to this command line program (PhasedArray_Master.exe)
 // via tcp/ip. Address is usually 192.168.10.10 port 7502
-#ifdef  YANMING_CODE
 BOOL ServerSocketInit()
 {
 	struct sockaddr_in local;
@@ -1825,13 +691,7 @@ BOOL ServerSocketInit()
 		closesocket(nSocket);
 		return FALSE;
 		}
-	rc = setsockopt( nSocket, SOL_SOCKET, TCP_NODELAY,	(char*)&optval, sizeof(BOOL) );
-	if ( 0 != rc)
-		{
-		rc = WSAGetLastError();
-		closesocket(nSocket);
-		return FALSE;
-		}
+
 
 	rc = bind( nSocket, ( struct sockaddr * )&local, sizeof( local ) );
 	// associates a local address with a socket
@@ -1853,15 +713,6 @@ BOOL ServerSocketInit()
 		When bind is called with a wildcard address (involving ADDR_ANY), a WSAEADDRINUSE error 
 		could be delayed until the specific address is committed. This could happen with a call 
 		to another function later, including connect, listen, WSAConnect, or WSAJoinLeaf.
-
-		WSAEADDRNOTAVAIL
-		10049
-		The requested address is not valid in its context. This normally results from an attempt 
-		to bind to an address that is not valid for the local computer. This can also result from 
-		connect, sendto, WSAConnect, WSAJoinLeaf, or WSASendTo when the remote address or port 
-		is not valid for a remote computer (for example, address or port 0). 
-
-		OR you just haven't connected the pa master to a switch!
  
 		if (nCnt < 5)
 		{
@@ -1885,20 +736,14 @@ BOOL ServerSocketInit()
 
 	//StartServerSocketThread();
 	g_nServerSocket = nSocket;
-#if 1
-	printf("Master Server listening with socket %d\n", g_nServerSocket);
-
-#endif
 
 	return TRUE;
-}	// BOOL ServerSocketInit()
-#endif
+}
 
-// This thread only starts if the ServerSocketInit succeeded in creating a listening socket.
-// It creates a connection for as many clients as are listening at the time it is called
-// but not more than NUM_OF_SLAVES. These are instrument clients
+// This thread only starts if the ServerSocketInit succeeded in creating a listening socket
+// creates a connection for as many clients as are listening at the time it is called
+// but not more than MAX_SHOES. These are instrument clients
 //
-#ifdef  YANMING_CODE
 UINT ServerSocketThread(void *dummy)
 {
 	int nClientSocket, nTmpSocket;
@@ -1907,7 +752,6 @@ UINT ServerSocketThread(void *dummy)
     int                 sockAddrSize;  /* size of socket address structure */ 
 	int                 nWhichSlave;
 	CWinThread *pThread;
-	char *pIP;
 
 	sockAddrSize = sizeof (struct sockaddr_in);
 
@@ -1917,39 +761,23 @@ UINT ServerSocketThread(void *dummy)
 		// the accept function returns as soon as it receives a CONNECT ACK message
 
 		if ( nClientSocket < 0 )
-			{
-			printf("ServerSocketThread::accept() has failed, return value = 0x%08x\n", nClientSocket);
-			//AfxMessageBox(_T("accept call failed"));
+		{
+			AfxMessageBox(_T("accept call failed"));
 			return 0;
-			}
+		}
 		else
-			{
-			// The first allowed client address for an inspection instrument is 192.168.10.201
-			// for diagnostics, show the address of the connecting maching
-			nWhichSlave = ntohl (clientAddr.sin_addr.s_addr);
-			pIP = inet_ntoa((IN_ADDR) clientAddr.sin_addr);
-#if 1
-			time_t now;
-			struct tm * timeinfo;
-			char buffer [80];
-
-			time ( &now );
-			timeinfo = localtime ( &now );
-
-			strftime (buffer,80,"%Y_%m_%d %H:%M:%S",timeinfo);
-			printf("Client instrument at address %s has connected on %s\n", pIP, buffer);
-#endif
-			nWhichSlave -= 0xC0A80AC9;   /* 0xC0A808C9 = 192.168.10.201, slaves range from.201 to .232 */
+		{
+			nWhichSlave = ntohl (clientAddr.sin_addr.s_addr) - 0xC0A80AC9;   /* 0xC0A808C9 = 192.168.10.201 */
 			if (nWhichSlave >= 0 && nWhichSlave < NUM_OF_SLAVES)
 			{
 			// CHANGE from global arrays to handle connections to instance of InstMsgProcess class
-#ifdef OLD_CODE
+#if 0
 				if (g_SocketSlave[nWhichSlave] >= 0)
 				{	// it had a previous connection associated with it
 					closesocket(g_SocketSlave[nWhichSlave]);
 					::Sleep(200);
 				}
-#else
+#endif
 				if (g_pInstMsgProcess[nWhichSlave])	// class instance already servicing this connection
 					{
 					nTmpSocket = g_pInstMsgProcess[nWhichSlave]->GetSocket();
@@ -1958,15 +786,14 @@ UINT ServerSocketThread(void *dummy)
 					g_pInstMsgProcess[nWhichSlave] = NULL;
 					::Sleep(200);
 					}
-#endif
-#ifdef OLD_CODE
+#if 0
 				g_SocketSlave[nWhichSlave] = nClientSocket;   /* for Slave 1, nWhichSlave = 0. */
 
 				// Start a tcpip connection and thread for every client instrument
 				// When the instrument sends data, this thread processes the data and ships it to 
 				// other threads as needed for further processing
 				g_pThreadSlave[nWhichSlave] = AfxBeginThread(tcpServerWorkTask, &g_nSlave[nWhichSlave], THREAD_PRIORITY_NORMAL);
-#else
+#endif
 			// create a new instance of the class and use the socket which has just been made
 				g_pInstMsgProcess[nWhichSlave] = new CInstMsgProcess(nWhichSlave);
 				if (g_pInstMsgProcess[nWhichSlave])
@@ -1975,16 +802,14 @@ UINT ServerSocketThread(void *dummy)
 					g_SocketSlave[nWhichSlave] = nClientSocket;	// debug feature
 					g_pInstMsgProcess[nWhichSlave]->m_bConnected = 1;
 					pThread = AfxBeginThread(tInstMsgProcess, g_pInstMsgProcess[nWhichSlave], THREAD_PRIORITY_NORMAL);
-					g_pThreadSlave[nWhichSlave] = pThread;	//legacy
-					g_pInstMsgProcess[nWhichSlave]->SetThreadPtr(pThread);
-					g_pInstMsgProcess[nWhichSlave]->SetChannelInfo();	// default initialization of channels in instrument
+					g_pThreadSlave[nWhichSlave] = pThread;
 					}
 				else
 					{	// fatal error
 					AfxMessageBox("Fatal Error - failed to create new CInstMsgProcess");
 					return 0;
 					}
-#endif
+
 				// legacy code
 				/*setsockopt(
 					g_SocketSlave[nWhichSlave],
@@ -1994,14 +819,13 @@ UINT ServerSocketThread(void *dummy)
 					sizeof(optval)
 					);*/
 			}
-			}
+		}
 		//AfxMessageBox(_T("Master connected to MMI successfully."));
 		//AfxBeginThread(ServerSocketThread, nSocket, THREAD_PRIORITY_NORMAL);
 	}	// while (1)
 	
 	return 0;
 }
-#endif
 
 
 // Waits for a connection attempt by the Wall Bar Display client (WallDisplay.exe)
@@ -2113,7 +937,6 @@ UINT ServerSocketThread_WallDisplay(void *dummy)
 
 /***************************************************
    readn - read exactly n bytes from Tcp socket fd
-   called from tRcvrProcessMmiMsg(), tInstMsgProcess(), tcpServerWorkTask_WD()
 ****************************************************/
 int readn( int fd, char *bp, int len)
 {
@@ -2159,8 +982,7 @@ UINT tRcvrProcessMmiMsg(void *dummy)
 
 	    if (g_nMmiSocket >= 0)
 	    {
-		rc = readn (g_nMmiSocket, (char *) &rcvrBuf, sizeof(MMI_CMD));
-			if ( rc <= 0)	//1272 bytes
+			if (readn (g_nMmiSocket, (char *) &rcvrBuf, sizeof(MMI_CMD)) <= 0)
 			{
 				closesocket (g_nMmiSocket);
 				g_nMmiSocket = -1;
@@ -2171,8 +993,7 @@ UINT tRcvrProcessMmiMsg(void *dummy)
 			}
 			else
 			{
-				// Send the buffer thru a pipe to a waiting thread on the other end which is
-				// ProcessMmiMsg(&rcvrBuf);
+				//ProcessMmiMsg(&rcvrBuf);
 				rc = _write ( g_hPipeMmiMsg[WRITE], (void *) &rcvrBuf, sizeof(MMI_CMD));
 				//if (rc <0)
 					//printf("write pipe failed.");
@@ -2242,7 +1063,7 @@ UINT ProcessMmiMsg(void *dummy)
 	WALL_COEF *pWallCoef;
 	SITE_SPECIFIC_DEFAULTS *pSiteDef;
 	CHANNEL_CONFIG2 ChannelCfg;
-//	static int  nInspectMode = NOP_MODE;
+	static int  nInspectMode = NOP_MODE;
 	int nMotionTime;
 	MMI_CMD  tempCmd;
 	WORD nEnableAscan = 0;
@@ -2264,7 +1085,6 @@ UINT ProcessMmiMsg(void *dummy)
 			return 0;
 		}
 
-		// block on a pipe read until the tRcvrProcessMmiMsg sends the message thru the pipe
 		rc = readnpipe(g_hPipeMmiMsg[READ], (char *) &readBuf, sizeof(MMI_CMD));
 
 		if (rc  == sizeof(MMI_CMD))
@@ -2275,7 +1095,6 @@ UINT ProcessMmiMsg(void *dummy)
 			//nWhichSlave = nChannel / g_NumberOfScans;
 			nWhichSlave = FindWhichSlave(nChannel);
 
-#if 1
 			switch(MsgId)
 			{
 			case CHANNEL_SELECT:
@@ -2285,8 +1104,8 @@ UINT ProcessMmiMsg(void *dummy)
 				nWhichSlave = FindWhichSlave(nChannel);
 				//pWArg[0] = nChannel % g_NumberOfScans;
 				pWArg[0] = FindSlaveChannel(nChannel);
-//				SetGetInspectMode_M (1 /* GET */, &nInspectMode, &nMotionTime);
-				if (InspState.GetInspectMode() != PKT_MODE)
+				SetGetInspectMode_M (1 /* GET */, &nInspectMode, &nMotionTime);
+				if (nInspectMode != PKT_MODE)
 					SendSlaveMsg (nWhichSlave, pMmiCmd);
 				else
 				{
@@ -2341,14 +1160,13 @@ UINT ProcessMmiMsg(void *dummy)
 				break;
 
 			case RUN_MODE:  /* inspection run mode */
+				nInspectMode = RUN_MODE;
 				nMotionTime = (int) pWArg[0];
 				g_nXloc = 0;
 				g_nXloc_S2 = 0;
 				g_nTick = 0;
 				g_nOldMotionBus = 0;
-				InspState.SetInspectMode(RUN_MODE);
-				InspState.SetMotionMode(nMotionTime);
-				//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
+				SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
 				g_nAuxClkIntCnt = -10;
 				for (i=0; i<NUM_OF_SLAVES; i++)
 				{
@@ -2357,8 +1175,8 @@ UINT ProcessMmiMsg(void *dummy)
 				break;
 
 			case CAL_MODE:  /* calibration mode */
-				InspState.SetInspectMode(CAL_MODE);
-				//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
+				nInspectMode = CAL_MODE;
+				SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
 				for (i=0; i<NUM_OF_SLAVES; i++)
 				{
 					SendSlaveMsg (i, pMmiCmd);
@@ -2366,14 +1184,14 @@ UINT ProcessMmiMsg(void *dummy)
 				break;
 
 			case PKT_MODE:  /* calibration mode */
-				InspState.SetInspectMode(PKT_MODE);
-				//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
+				nInspectMode = PKT_MODE;
+				SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
 				SendSlaveMsg (nWhichSlave, pMmiCmd);
 				break;
 
 			case PLC_MODE:  /*  */
-				InspState.SetInspectMode(PLC_MODE);
-				//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
+				nInspectMode = PLC_MODE;
+				SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
 
 				g_nPlcOfWho = (BYTE) pWArg[0];
 
@@ -2393,9 +1211,8 @@ UINT ProcessMmiMsg(void *dummy)
 		#if 1
 				InitImageBufArray ();
 		#endif
-  	  			//nInspectMode = NOP_MODE;
-				InspState.SetInspectMode(NOP_MODE);
-   	 			//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
+  	  			nInspectMode = NOP_MODE;
+   	 			SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
     			g_nXloc = 0;
     			g_nXloc_S2 = 0;
     			g_nTick = 0;
@@ -2428,9 +1245,7 @@ UINT ProcessMmiMsg(void *dummy)
   	  				ChannelCfg.Ch[nWhichSlave][i].cWOffset = pShCfg->Ch[i].cWOffset;
    	 			}
     			//ChannelCfg.cClockOffset = pChnlCfg->cClockOffset;
-    			//SetGetChannelCfg (0 /* SET */, &ChannelCfg, nWhichSlave);
-				InspState.SetChannelConfig(&ChannelCfg, nWhichSlave);
-				if (g_pInstMsgProcess[nWhichSlave]) g_pInstMsgProcess[nWhichSlave]->SetChannelInfo();
+    			SetGetChannelCfg (0 /* SET */, &ChannelCfg, nWhichSlave);
     			g_nMaxXSpan = GetMaxXSpan();
 				InitImageBufArray ();
   	  			SendSlaveMsg (nWhichSlave, pMmiCmd);		
@@ -2442,14 +1257,11 @@ UINT ProcessMmiMsg(void *dummy)
     				SendSlaveMsg (i, pMmiCmd);
 				}
  	   			memcpy ( (void *) &g_AllTholds, (void *) pThold, sizeof(C_MSG_ALL_THOLD) );
-				InspState.SetChannelConfig(&ChannelCfg, nWhichSlave);
-				if (g_pInstMsgProcess[nWhichSlave]) g_pInstMsgProcess[nWhichSlave]->SetChannelInfo();
   	  			break;
 
 			case SITE_SPECIFIC_MSG:
 				pSiteDef = (SITE_SPECIFIC_DEFAULTS *) pMmiCmd->CmdBuf;
- 	   			//SetGetSiteDefaults(0 /*SET*/, pSiteDef);
-				InspState.SetSiteDefaults(pSiteDef);	// load the site defaults from file in MMI
+ 	   			SetGetSiteDefaults(0 /*SET*/, pSiteDef);
   	  			g_nRecordWallData = pSiteDef->nRecordWallData;
 
    	 			if (pSiteDef->nDefaultLineSpeed > 0)
@@ -2484,6 +1296,8 @@ UINT ProcessMmiMsg(void *dummy)
    	 			g_WallDropTime = pWArg[0] / 1000.f;
 
 				g_NumberOfScans = 0;
+				// a slave = an instrument processor. It has a tcpip link associated
+				// a slave can only produce one type of inspection scan
 				for (i=0; i<NUM_OF_SLAVES; i++)
 				{
 					switch(pSiteDef->nPhasedArrayScanType[i])
@@ -2547,8 +1361,6 @@ UINT ProcessMmiMsg(void *dummy)
 					}
 
 					g_nPhasedArrayScanType[i] = pSiteDef->nPhasedArrayScanType[i];
-					InspState.SetChannelConfig(&ChannelCfg, nWhichSlave);
-					if (g_pInstMsgProcess[nWhichSlave]) g_pInstMsgProcess[nWhichSlave]->SetChannelInfo();
 				}
 					
 				
@@ -2560,13 +1372,10 @@ UINT ProcessMmiMsg(void *dummy)
     			{
     				SendSlaveMsg (i, pMmiCmd);
 				}
-				InspState.SetChannelConfig(&ChannelCfg, nWhichSlave);
-				if (g_pInstMsgProcess[nWhichSlave]) g_pInstMsgProcess[nWhichSlave]->SetChannelInfo();
  	   			break;
 
 			case SET_WALL_COEFS:
     			pWallCoef = (WALL_COEF *) pMmiCmd->CmdBuf;
-    			memcpy( (void *) &g_WallCoef, (void *) pWallCoef, sizeof (WALL_COEF) );
     			for (i=0; i<MAX_SHOES; i++)
     			{
 	    			pWallCoef->fWallSlope[0] = pWallCoef->fWallSlope[i];
@@ -2574,8 +1383,7 @@ UINT ProcessMmiMsg(void *dummy)
 
   	  				SendSlaveMsg (i, pMmiCmd);
    	 			}
-				InspState.SetChannelConfig(&ChannelCfg, nWhichSlave);
-				if (g_pInstMsgProcess[nWhichSlave]) g_pInstMsgProcess[nWhichSlave]->SetChannelInfo();
+    			memcpy( (void *) &g_WallCoef, (void *) pWallCoef, sizeof (WALL_COEF) );
     			break;
 
 			case 0x69:   /* sequence length */
@@ -2699,9 +1507,7 @@ UINT ProcessMmiMsg(void *dummy)
 			default:
     			SendSlaveMsg (nWhichSlave, pMmiCmd);
     			break;
-			}	// end switch()
-#endif
-
+			}
 		}
 		else if (rc >= 0)
 		{
@@ -2724,7 +1530,7 @@ UINT ProcessMmiMsg(void *dummy)
 *
 */
 BOOL SendSlaveMsg(int nWhichSlave, MMI_CMD *pSendBuf)
-	{
+{
 	WORD *pWArg;
 	int rc, data, i;
 	BYTE buf[CmdPacketLength], value;
@@ -2742,24 +1548,23 @@ BOOL SendSlaveMsg(int nWhichSlave, MMI_CMD *pSendBuf)
 	static int nOldSlave;
 	WORD td[16];  //focusing time delays
 
-	if (nWhichSlave >= NUM_OF_SLAVES)	return FALSE;
+
 	if ( (pSendBuf->MsgId == SET_ASCAN_READ_SEQ) || (pSendBuf->MsgId == SET_ASCAN_READ_BEAM) )
-		{
-		// if eiter command, stop sending Ascan data from all instruments
+	{
 		pCmd->DataHead.bMsgID = SET_ASCAN_SEQ_REG_CMD_ID;
 
 		if (nWhichSlave != nOldSlave)
-			{
+		{
 			for (i=0; i<NUM_OF_SLAVES; i++)
-				{
+			{
 				pCmd->wData[3] = 0;   //turn off Ascan send
 				if (g_SocketSlave[i] >= 0)
 					rc = send( g_SocketSlave[i], (char *) pCmd, CmdPacketLength, 0 );
-				}
 			}
+		}
 
 		nOldSlave = nWhichSlave;
-		}
+	}
 
 	pWArg = (WORD *) pSendBuf->CmdBuf;
 
@@ -3079,29 +1884,22 @@ BOOL SendSlaveMsg(int nWhichSlave, MMI_CMD *pSendBuf)
 	}
 	//printf("Master - Connection not established with Slave %d.\n\n", nWhichSlave+1);
 	return FALSE;
-	}
+}
 #endif
 
 /**************************************************************************** 
 * 
 * tInstMsgProcess - receive and process slave data .. formerly called tcpServerWorkTask
-* passes a pointer to CInstMsgProcess class instance, ie which class instance is servicing instrument n
+* passes pointer to CInstMsgProcess class instance, ie which class instance is servicing instrument n
 * 
 * RETURNS: 0 or 1. 
-* This is a C function which is passed a ptr to a void. How do we get class functionality out
-* of this thread function? We pass a pointer to the instantiating class instance and store 
-* a copy of the pointer in the thread's stack. Since the thread never terminates until the 
-* program terminates and since each thread instances is unique, we can convert 'c' functions
-* called by the original c code into class methods using the saved class instance pointer.
 */ 
 
 UINT tInstMsgProcess (void *pCInstMsgProcess)
 {
 	CInstMsgProcess *pInstMsgProcess = (CInstMsgProcess *) pCInstMsgProcess;	// copy in ptr to the particular instance
-	// pInstMsgProcess stays in the stack for each thread and is thus "static" as long
-	// as the thread does not return.
-//	int tmpdbg = pInstMsgProcess->GetInstNumber();
-//	int *pSlave = &tmpdbg;
+	int tmpdbg = pInstMsgProcess->GetInstNumber();
+	int *pSlave = &tmpdbg;
 	int nSocket = pInstMsgProcess->GetSocket();
 /**************************************************************************** 
 * 
@@ -3111,12 +1909,12 @@ UINT tInstMsgProcess (void *pCInstMsgProcess)
 */ 
 // change task name from tcpServerWorkTask to tInstMsgProcess
 #if 0
-//UINT tcpServerWorkTask (void *pSlave)
+UINT tcpServerWorkTask (void *pSlave)
 {
 #endif
 	I_MSG_RUN *pSendBuf;
 	PEAK_DATA  ReadBuf;
-	BYTE recvBuf[RAW_DATA_PACKET_LENGTH];
+	BYTE recvBuf[RawDataPacketLength];
 	UDP_SLAVE_DATA SlvData;
 	int i, ic;
 	int nInspectMode;
@@ -3140,27 +1938,13 @@ UINT tInstMsgProcess (void *pCInstMsgProcess)
 	I_MSG_ASCAN *pAscanMsg = (I_MSG_ASCAN *) &SendBuf;
 	pAscanMsg->MstrHdr.MsgId = ASCAN_MODE;
 
-	// create a processing class instance for each wall channel
-	CRunningAverage *pRunAvg[MAX_WALL_CHANNELS]; // localize to avoid using pInstMsgProcess
-	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
-		{
-		// constructor sets default values for running average.
-		pRunAvg[i] = pInstMsgProcess->m_pRunningAvg[i] = new CRunningAverage(NX_TOTAL);	// default max len
-		pRunAvg[i]->SetMyInstMsgProcess(pInstMsgProcess);	// who's your daddy
-		pRunAvg[i]->SetSlaveNumber(nSlave);
-		// figure out which channel I belong to
-		// pRunAvg[i]->SetChannelNumber(??);
-		// changes when config file changes chnl type
-		}
-
 
 	while (1)
-	{	// begin thread loop
+	{
 		if (nSocket >= 0)		// g_SocketSlave[nSlave] >= 0)
 		{
-			//if (readn(g_SocketSlave[nSlave], (char *) recvBuf, RAW_DATA_PACKET_LENGTH) <= 0)..RAW_DATA_PACKET_LENGTH = 1040
-			// wait for expected data lenght data packet. If packet not ready, this thread sleeps
-			if (readn(nSocket, (char *) recvBuf, RAW_DATA_PACKET_LENGTH) <= 0)
+			//if (readn(g_SocketSlave[nSlave], (char *) recvBuf, RawDataPacketLength) <= 0)
+			if (readn(nSocket, (char *) recvBuf, RawDataPacketLength) <= 0)
 			{
 #if 0
 				closesocket (g_SocketSlave[nSlave]);
@@ -3172,30 +1956,22 @@ UINT tInstMsgProcess (void *pCInstMsgProcess)
 				return 0;
 			}
 
-			//SetGetInspectMode_M (1 /* GET */, &nInspectMode, &nMotionTime);
-			nInspectMode = InspState.GetInspectMode();
-			nMotionTime  = InspState.GetMotionMode();
+			SetGetInspectMode_M (1 /* GET */, &nInspectMode, &nMotionTime);
 
 			if (nInspectMode == NOP_MODE)
-			{		nRecvCnt = 0;
+			{
+				nRecvCnt = 0;
 				//g_nOldMotionBus = 0x4010;
 			}
 
 
 			if (recvBuf[0] == RAW_DATA_ID)
 			{
-				//NiosRawData_to_PeakData(pNiosRawData, &ReadBuf, nInspectMode);
-				SlvData.PeakData = ReadBuf;	// how can this copy from ReadBuf to .PeakData
-#if 0
-00419FCC  mov         ecx,18h 
-00419FD1  lea         esi,[ebp-84h] 
-00419FD7  lea         edi,[ebp-4F4h] 
-00419FDD  rep movs    dword ptr es:[edi],dword ptr [esi] 
-#endif
-
+				NiosRawData_to_PeakData(pNiosRawData, &ReadBuf, nInspectMode);
+				SlvData.PeakData = ReadBuf;
 
 				if (nSlave == 0)
-				{	// (nSlave == 0)
+				{
 					nRecvCnt++;
 					if ( (nInspectMode == RUN_MODE) && (nMotionTime == 1) )  //inspect in time mode
 					{
@@ -3255,7 +2031,7 @@ UINT tInstMsgProcess (void *pCInstMsgProcess)
 					}
 
 					Inspection_Process_Control();
-				}	// (nSlave == 0)
+				}
 			}
 			else if (recvBuf[0] == ASCAN_ID)
 			{
@@ -3296,8 +2072,7 @@ UINT tInstMsgProcess (void *pCInstMsgProcess)
 				SlvData.PeakData.xloc = g_nXloc;
 			}
 
-			//SetGetSiteDefaults (1 /*GET*/, &SiteDefault);
-			InspState.GetSiteDefaults(&SiteDefault);	// site defaults copied into SiteDefault
+			SetGetSiteDefaults (1 /*GET*/, &SiteDefault);
 
 #if 1
 			switch (nInspectMode)
@@ -3423,7 +2198,7 @@ UINT tInstMsgProcess (void *pCInstMsgProcess)
 			
 		}
 
-	}	// exit thread loop
+	}
 	
 	return 0;
 }
@@ -3592,17 +2367,15 @@ void Inspection_Process_Control()
 
 /****************************************************************************
 * Helper:  send messages to MMI over TCP socket
-* jeh modified to use theApp.PamSendToPag
+*
 */
 BOOL SendMmiMsg(int socketFD, I_MSG_RUN *pSendBuf)
 {
-
-#if 0
 	if (socketFD < 0)
 	{
 		return FALSE;
 	}
-#endif
+
 
 	if ( (pSendBuf->MstrHdr.MsgId != ASCAN_MODE) && (pSendBuf->MstrHdr.MsgId != RAW_FLAW_MODE) )
 	{
@@ -3612,7 +2385,6 @@ BOOL SendMmiMsg(int socketFD, I_MSG_RUN *pSendBuf)
 
 	int rc;
 	static DWORD nMsgNum = 1;
-	static UINT nPrintQty = 0;
 
 
 	//add IDs
@@ -3620,43 +2392,29 @@ BOOL SendMmiMsg(int socketFD, I_MSG_RUN *pSendBuf)
 	//pSendBuf->UtInsp.TruscanMsgId = TRUSCAN_MSG_ID;
 	pSendBuf->MstrHdr.MsgNum = nMsgNum;
 
-	theApp.PamSendToPag(pSendBuf, sizeof(I_MSG_RUN));
-
-#if 0
 	if (g_nMmiSocket >= 0)
-		{
+	{
 		rc = send( g_nMmiSocket, (char *) pSendBuf, sizeof(I_MSG_RUN), 0 );
-		if ((nPrintQty < 10) || ((nPrintQty & 0xff) == 0xff) )
-			{
-			printf("[%5d] SendMmiMsg sent %d bytes\n", nPrintQty+1, rc);	// only 1st 10 mesages
-			// then every 256th message
-			}
-		nPrintQty++;
-		
 		if ( rc <= 0 )
-			{
-			nMsgNum = 1;
-			//putchar('1');
-			return FALSE;
-			}
-		else if ( rc < sizeof(I_MSG_RUN) )
-			{
-			//putchar('x');
-			return FALSE;
-			}
-		else
-			{
-			nMsgNum++;
-			//putchar('.');
-			}
-
-		}
-	else
 		{
+			nMsgNum = 1;
+			return FALSE;
+		}
+		else if ( rc < sizeof(I_MSG_RUN) )
+		{
+			return FALSE;
+		}
+		else
+		{
+			nMsgNum++;
+		}
+
+	}
+	else
+	{
 		nMsgNum = 1;
 		return FALSE;
-		}
-#endif
+	}
 
 	return TRUE;
 }
@@ -3678,8 +2436,7 @@ void BuildCalMsg(UDP_SLAVE_DATA *pSlvData, int nSlave)
 
 	pCalBuf->InspHdr.NextJointNum = g_nJointNum;
 
-	//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
-	InspState.GetChannelConfig(&ChannelCfg);
+	SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
 
 	for ( ci = 0; ci < g_ArrayScanNum[nSlave]; ci++)
 	{	/* look at all chnls from slave */
@@ -3732,7 +2489,6 @@ void BuildCalMsg(UDP_SLAVE_DATA *pSlvData, int nSlave)
 
 
 
-#if 0
 void SetGetChannelCfg (int nSetGet /* 0=SET, 1=Get */, CHANNEL_CONFIG2 *pChnlCfg, int nSlave)
 {
 	static CHANNEL_CONFIG2 ChannelCfg;
@@ -3748,7 +2504,6 @@ void SetGetChannelCfg (int nSetGet /* 0=SET, 1=Get */, CHANNEL_CONFIG2 *pChnlCfg
 	switch(nSetGet)
 	{
 	case 0:  /* SET */
-		// only sets the values in one instrument 'nSlave'
 		for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
 		{
 			ChannelCfg.Ch[nSlave][i].Type = pChnlCfg->Ch[nSlave][i].Type;
@@ -3758,7 +2513,6 @@ void SetGetChannelCfg (int nSetGet /* 0=SET, 1=Get */, CHANNEL_CONFIG2 *pChnlCfg
 		ChannelCfg.cClockOffset = pChnlCfg->cClockOffset;
 		break;
 	case 1:  /* GET */
-		// GET gets everything for the whole system
 		memcpy ( (void *) pChnlCfg, (void *) &ChannelCfg, sizeof (CHANNEL_CONFIG2) );
 		break;
 	default:
@@ -3766,24 +2520,21 @@ void SetGetChannelCfg (int nSetGet /* 0=SET, 1=Get */, CHANNEL_CONFIG2 *pChnlCfg
 	}
 
 }
-#endif
-
 
 
 /********************************************************
 * Convert phased array Nios raw data packet SRawDataPacket to PEAK_DATA
 * Called from the thread tcpServerWorkTask. Uses pipes to "send" Wall bar data to another thread
 */
-//void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, int nInspectMode); before 2-14-2013
-void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CServerRcvListThread *pServerRcvListThread)
+void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, int nInspectMode)
 {
 	int i, j, k, nSeq;  /* generic looper */
 	BYTE RcvrSequence[MAX_CHANNEL_PER_INSTRUMENT];   /* receiver sequence enable status.  1=enabled, 0=no */
-	BYTE AmpID[MAX_CHANNEL_PER_INSTRUMENT];   /* hold ID amplitude for current A-scan */
-	BYTE AmpOD[MAX_CHANNEL_PER_INSTRUMENT];   /* hold OD amplitude for current A-scan */
+	BYTE AmpID[MAX_CHANNEL_PER_INSTRUMENT];  /* hold ID amplitude for current A-scan */
+	BYTE AmpOD[MAX_CHANNEL_PER_INSTRUMENT];  /* hold OD amplitude for current A-scan */
 	BYTE FlawID[MAX_CHANNEL_PER_INSTRUMENT];  /* hold maximum ID flaw amplitude for current 12 degree segment */
 	BYTE FlawOD[MAX_CHANNEL_PER_INSTRUMENT];  /* hold maximum OD flaw amplitude for current 12 degree segment */
-	WORD Wall[MAX_CHANNEL_PER_INSTRUMENT];    /* hold wall reading for current A-scan */
+	WORD Wall[MAX_CHANNEL_PER_INSTRUMENT];   /* hold wall reading for current A-scan */
 	WORD WallMin[MAX_CHANNEL_PER_INSTRUMENT]; /* hold minimum wall reading for current 12 degree segment */
 	WORD WallMax[MAX_CHANNEL_PER_INSTRUMENT]; /* hold maximum wall reading for current 12 degree segment */
 	static WORD Old_WallMin[NUM_OF_SLAVES][MAX_CHANNEL_PER_INSTRUMENT]; /* hold minimum wall reading for previous 12 degree segment */
@@ -3800,8 +2551,7 @@ void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CS
 	static short nOldClock[NUM_OF_SLAVES];
 	static short nOldTick;
 	BOOL     bTopPipe = FALSE;
-//	int      nDispCh;
-	float fWall;		// a temp value to compute calibrated wall in 0.001 in increments
+	int      nDispCh;
 
 	static WORD  WallDisplay[500];
 	static int   nWD = 0;
@@ -3810,18 +2560,7 @@ void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CS
 	int   nDivider = g_nPulserPRF / (25*40);
 	if (nDivider < 1) nDivider = 1;
 
-	CInspState *pInspState = pServerRcvListThread->GetInspState();
-	//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
-	pInspState->GetChannelConfig(&ChannelCfg);
-	// until and unless this procedure becomes a member of CInstMsgProcess
-	// if (g_pInstMsgProcess[nSlave])
-	if ( NULL != pServerRcvListThread)
-		{
-		//CHANNEL_INFO *pChnlInfo = g_pInstMsgProcess[nSlave]->GetChannelInfoPtr();
-		CHANNEL_INFO *pChnlInfo = pServerRcvListThread->GetChannelInfoPtr();
-		if (pChnlInfo)
-			memcpy((void *) &ChannelInfo, (void *) pChnlInfo, sizeof(CHANNEL_INFO)*MAX_CHANNEL_PER_INSTRUMENT);
-		}
+	SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
 
 	pPeakData->RdpStatus = 1;
 	//pPeakData->RDP_number = nSlave;
@@ -3830,11 +2569,9 @@ void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CS
 	if (nPeriod > 0)
 		pPeakData->ShoeAngle = pInspData->DataHead.wClock * 180 / nPeriod;
 	pPeakData->bNewData = TRUE;
-	nTick = 0;
 
 	for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
 	{
-#if 0
 		nDispCh = FindDisplayChannel(nSlave, i);
 
 		if (i < g_ArrayScanNum[nSlave])
@@ -3887,10 +2624,6 @@ void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CS
 			break;
 		}
 
-#endif
-
-#if 0
-		changed on 2-14-2013 when declaration of NiosRawData_to_PeakData() changed
 		if (nInspectMode == CAL_MODE)
 		{
 			ChannelInfo[i].id_thold = 5;
@@ -3898,7 +2631,6 @@ void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CS
 			ChannelInfo[i].nc_for_id = 1;
 			ChannelInfo[i].nc_for_od = 1;
 		}
-#endif
 	}
 
 	for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
@@ -3911,7 +2643,7 @@ void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CS
 	pPeakData->EchoBit = 0x0000;
 
 	for (j=0; j<128; j++)  /* loop through A-scans */
-	{
+	{	/* loop through A-scans */
 		for (k=0; k<MAX_CHANNEL_PER_INSTRUMENT; k++)
 			RcvrSequence[k] = 0;  //reset
 
@@ -3937,11 +2669,9 @@ void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CS
 		AmpID[i] = pInspData->RawData[j].bAmp2 / 2;
 		AmpOD[i] = pInspData->RawData[j].bAmp3 / 2;
 
-		//Wall[i] = (WORD) ((float) pInspData->RawData[j].wTof4 * 2.904f * 0.5f);  //raw data in 12.5ns
-		fWall = ((float) pInspData->RawData[j].wTof4 * 2.904f * 0.5f);  //raw data in 12.5ns
-		fWall = fWall*fWallSlope;
-		//Wall[i] = (WORD) (  ((float) Wall[i])*fWallSlope + (float) nWallOffset ); 
-		Wall[i] = (WORD)((int) fWall + nWallOffset); 
+		Wall[i] = (WORD) ((float) pInspData->RawData[j].wTof4 * 2.904f * 0.5f);  //raw data in 12.5ns
+
+		Wall[i] = (WORD) (  ((float) Wall[i])*fWallSlope + (float) nWallOffset ); 
 
 		if (nPeriod > 0)
 		{
@@ -4003,10 +2733,11 @@ void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CS
 				nTotalScan++;
 		}
 
+
 		NC_Process (RcvrSequence, AmpID, AmpOD, FlawID, FlawOD, ChannelInfo, nSlave, nTick, nSeq);
 		NX_Process (RcvrSequence, Wall, WallMin, WallMax, ascan_delta_t, ChannelInfo, bFirstAscan, nSlave, nTick, pInspData->DataHead.wLocation, nSeq);
 		bFirstAscan = FALSE;  /* We have done with the first A-scan of this pipe */
-	}	// for (j=0; j<128; j++)  /* loop through A-scans */
+	}	// /* loop through A-scans */
 
 	for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
 	{
@@ -4138,17 +2869,30 @@ void NC_Process (BYTE *RcvrSequence, BYTE *AmpID, BYTE *AmpOD, BYTE *FlawID, BYT
 
 /******************************************************
 * NX process
+// inputs
 *
 * Moving average of wall readings
-*	Wall[MAX_CHANNEL_PER_INSTRUMENT];   // hold wall reading for current A-scan
-*	WallMin[MAX_CHANNEL_PER_INSTRUMENT]; // hold minimum averaged wall reading for current 12 degree segment 
-*	WallMax[MAX_CHANNEL_PER_INSTRUMENT]; // hold maximum averaged wall reading for current 12 degree segment
+*	InputWallReading[MAX_CHANNEL_PER_INSTRUMENT];	 // inputs wall reading for current A-scan
+*	WallMin[MAX_CHANNEL_PER_INSTRUMENT]; // returns minimum averaged wall reading for current 12 degree segment 
+*	WallMax[MAX_CHANNEL_PER_INSTRUMENT]; // returns maximum averaged wall reading for current 12 degree segment
 *	ascan_delta_t;                       // time spanned by one A-scan in seconds.  Should be 1.0/PRF
+BYTE *RcvrSequence
+CHANNEL_INFO *ChannelInfo
+BOOL bFirstAscan
+int nSlave
+int nTick
+int nXloc
+int nSeq
+
+// internal variables
+WORD m_WallAveragingFifo
 */
-void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, float ascan_delta_t, CHANNEL_INFO *ChannelInfo, BOOL bFirstAscan, int nSlave, int nTick, int nXloc, int nSeq)
-{
-	static WORD m_Wall[NUM_OF_SLAVES][MAX_CHANNEL_PER_INSTRUMENT][NX_TOTAL];  /* NX_TOTAL consecutive wall readings */
-	static WORD Wall_Buf[NUM_OF_SLAVES][MAX_CHANNEL_PER_INSTRUMENT][WALL_BUF_SIZE];  /*  consecutive wall readings for finding maximum wall */
+void NX_Process (BYTE *RcvrSequence, WORD *InputWallReading, WORD *WallMin, WORD *WallMax, 
+				 float ascan_delta_t, CHANNEL_INFO *ChannelInfo, BOOL bFirstAscan, 
+				 int nSlave, int nTick, int nXloc, int nSeq)
+	{
+	static WORD m_WallAveragingFifo[NUM_OF_SLAVES][MAX_CHANNEL_PER_INSTRUMENT][NX_TOTAL];  /* NX_TOTAL consecutive wall readings */
+	static WORD m_FindMinWallFifo[NUM_OF_SLAVES][MAX_CHANNEL_PER_INSTRUMENT][WALL_BUF_SIZE];  /*  consecutive wall readings for finding maximum wall */
 	int nChannel;  /* channel looper */
 	int i, j, ic;  /* generic looper */
 	static int ascan_cnt[NUM_OF_SLAVES][MAX_CHANNEL_PER_INSTRUMENT];  /* number of valid wall readings since the last invalid wall readings */
@@ -4182,14 +2926,14 @@ void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, f
 
 			for (i=0; i<NX_TOTAL; i++)
 			{
-				m_Wall[j][nChannel][i] = 0;
+				m_WallAveragingFifo[j][nChannel][i] = 0;
 			}
 
 			for (i=0; i<WALL_BUF_SIZE; i++)
 			{
-				Wall_Buf[j][nChannel][i] = 0;
+				m_FindMinWallFifo[j][nChannel][i] = 0;
 			}
-		}
+		} //for (j=0; j<NUM_OF_SLAVES; j++) & nChannel<MAX_CHANNEL_PER_INSTRUMENT
 	}
 
 	
@@ -4206,11 +2950,11 @@ void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, f
 	    if (RcvrSequence[nChannel] & 0x80)
 	    {
 		switch(ChannelInfo[nChannel].channel_type)
-		{
+		{	// switch on chnl type
 			case IS_WALL:
 				switch (g_nPhasedArrayScanType[nSlave])
 				{
-					case THREE_SCAN_LRW_8_BEAM:	// default at program start
+					case THREE_SCAN_LRW_8_BEAM:
 					case THREE_SCAN_LRW_8_BEAM_FOCUS:
 						nScanType = 1;
 						break;
@@ -4225,34 +2969,34 @@ void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, f
 
 
 				/* If current A-scan is a valid wall reading, do the average and window shifting */
-				if ( ((RcvrSequence[nChannel] & 0x01) == 0) && (Wall[nChannel] > WALL_LOW_LIMIT) && (Wall[nChannel] < WALL_HIGH_LIMIT) )  /* valid wall reading */
-				//if ( (Wall[nChannel] > WALL_LOW_LIMIT) && (Wall[nChannel] < WALL_HIGH_LIMIT) )  /* valid wall reading */
+				if ( ((RcvrSequence[nChannel] & 0x01) == 0) && (InputWallReading[nChannel] > WALL_LOW_LIMIT) && (InputWallReading[nChannel] < WALL_HIGH_LIMIT) )  /* valid wall reading */
+				//if ( (InputWallReading[nChannel] > WALL_LOW_LIMIT) && (InputWallReading[nChannel] < WALL_HIGH_LIMIT) )  /* valid wall reading */
 				//if ( (RcvrSequence[nChannel] & 0x01) == 0 )  /* no wall alarm, valid wall reading */
-				{
-					m_Wall[nSlave][nChannel][nx_for_wall-1] = Wall[nChannel];  /* current A-scan is the last one of nx_for_wall consecutive A-scans */
-					Wall_Buf[nSlave][nChannel][WALL_BUF_SIZE-1] = Wall[nChannel];  /* current A-scan is the last one of WALL_BUF_SIZE consecutive A-scans */
+				{	// case is wall, do averaging
+					m_WallAveragingFifo[nSlave][nChannel][nx_for_wall-1] = InputWallReading[nChannel];  /* current A-scan is the last one of nx_for_wall consecutive A-scans */
+					m_FindMinWallFifo[nSlave][nChannel][WALL_BUF_SIZE-1] = InputWallReading[nChannel];  /* current A-scan is the last one of WALL_BUF_SIZE consecutive A-scans */
 
 					/* moving average */
 					for (i=0; i<nx_for_wall; i++)
 					{
 					
-						sum_wall += (float) m_Wall[nSlave][nChannel][i];
+						sum_wall += (float) m_WallAveragingFifo[nSlave][nChannel][i];
 					
 						/* discard the earliest A-scan and shift the remaining NX_TOTAL-1 A-scans one A-scan toward left */
 						/* Next time we call this function, we already have NX_TOTAL-1 previous A-scans */
 						if (i<nx_for_wall-1)
 						{
-							m_Wall[nSlave][nChannel][i] = m_Wall[nSlave][nChannel][i+1];
+							m_WallAveragingFifo[nSlave][nChannel][i] = m_WallAveragingFifo[nSlave][nChannel][i+1];
 						}
 					}
 
 					/* minimum of g_nMinMaxWallLen consecutive walls for maximum wall traces */
-					min_max_wall = Wall_Buf[nSlave][nChannel][WALL_BUF_SIZE-1];
+					min_max_wall = m_FindMinWallFifo[nSlave][nChannel][WALL_BUF_SIZE-1];
 					for (i=0; i<g_nMaxWallWindowSize; i++)
 					{
 					
-						if ( min_max_wall > Wall_Buf[nSlave][nChannel][WALL_BUF_SIZE-1-i] )
-							min_max_wall = Wall_Buf[nSlave][nChannel][WALL_BUF_SIZE-1-i];
+						if ( min_max_wall > m_FindMinWallFifo[nSlave][nChannel][WALL_BUF_SIZE-1-i] )
+							min_max_wall = m_FindMinWallFifo[nSlave][nChannel][WALL_BUF_SIZE-1-i];
 					
 					}
 					if (WallMax[nChannel] < min_max_wall) WallMax[nChannel] = min_max_wall;
@@ -4260,7 +3004,7 @@ void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, f
 					/* Next time we call this function, we already have WALL_BUF_SIZE-1 previous A-scans */
 					for (i=0; i<WALL_BUF_SIZE-1; i++)
 					{
-						Wall_Buf[nSlave][nChannel][i] = Wall_Buf[nSlave][nChannel][i+1];
+						m_FindMinWallFifo[nSlave][nChannel][i] = m_FindMinWallFifo[nSlave][nChannel][i+1];
 					}
 
 
@@ -4274,14 +3018,14 @@ void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, f
 						if ( (nScanType) && (nSlave == 0) )
 						{
 							if ( (nChannel == 2) && ((iChannelCnt%nScanType) == 0) )
-								AverageWall[iChannelCnt/nScanType] = Wall[nChannel];
+								AverageWall[iChannelCnt/nScanType] = InputWallReading[nChannel];
 						}
 
 					}
 					invalid_wall_t[nSlave][nChannel] = 0.0;
-				}
+				}		// case is wall, do averaging
 				else   /* invalid wall reading */
-				{
+				{	// case is wall, skip averaging
 					if (invalid_wall_t[nSlave][nChannel] > g_WallDropTime)  /* let the chart show zero wall reading */
 					{
 						WallMin[nChannel] = 0;
@@ -4294,14 +3038,15 @@ void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, f
 								AverageWall[iChannelCnt/nScanType] = 0;
 						}
 					}
-				}
+				} // case is wall, skip averaging
 
+			// case is wall, with or without averaging
 				if ( (nScanType) && (nSlave == 0) && (g_nPipeStatus == PIPE_PRESENT) )
-				{
+				{	// (nScanType) && (nSlave == 0) && (g_nPipeStatus == PIPE_PRESENT)
 					if ( (nChannel == 2) && ((iChannelCnt%nScanType) == 0) )
-					{
+					{	// chnl is 2 and chnlcount is multiple of scantype
 						if (iChannelCnt == 0)
-						{
+						{	// (iChannelCnt == 0)
 							if ( (nTick/6) == 0 )
 							{
 								if ( (nTick/6) != (nTickOld/6) )
@@ -4315,7 +3060,7 @@ void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, f
 								}
 							}
 							nTickOld = nTick;
-						}
+						}	//(iChannelCnt == 0)
 
 						switch (iChannelCnt/nScanType)
 						{
@@ -4371,8 +3116,8 @@ void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, f
 								g_RawWallHead.JobRec.nStopXloc = (short) (g_nXlocRevStart + nDeltaRev * (0.31f / 0.5f) + 0.5f);
 							}
 						}
-					}  // if (nChannel == 2)
-				}
+					}  // if // chnl is 2 and chnlcount is multiple of scantype
+				} // (nScanType) && (nSlave == 0) && (g_nPipeStatus == PIPE_PRESENT)
 
 				break;
 
@@ -4386,11 +3131,10 @@ void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, f
 		}
 	    }
 	}
-}
+	}
 
 
 
-#if 0
 void SetGetSiteDefaults (int nSetGet /* 0=SET, 1=Get */, SITE_SPECIFIC_DEFAULTS *pSiteDef)
 {
 	static SITE_SPECIFIC_DEFAULTS SiteDefault;
@@ -4414,7 +3158,6 @@ void SetGetSiteDefaults (int nSetGet /* 0=SET, 1=Get */, SITE_SPECIFIC_DEFAULTS 
 		break;
 	}
 }
-#endif
 
 /**********************************************Build Image Buf***************************************************/
 
@@ -4494,9 +3237,8 @@ void InitImageBufArray(void)
 	nBufin = IMAGE_BUF_OUTPUT_DELAY;
 	nBufcnt = IMAGE_BUF_OUTPUT_DELAY + MaxXOffset + 1;
 
-	//for (nSlave=0; nSlave<4; nSlave++)
-		InspState.GetChannelConfig(&ChannelCfg);
-		//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
+	for (nSlave=0; nSlave<4; nSlave++)
+		SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
 
 	for ( i = 0; i < IMAGE_BUF_DIM; i++)
 	{
@@ -4534,9 +3276,8 @@ void EraseImageBuf(I_MSG_RUN *pIB)
 	int nSlave, ci, ct;
 	WORD *pWord;
 
-	//for (nSlave=0; nSlave<4; nSlave++)
-		InspState.GetChannelConfig(&ChannelCfg);
-		//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
+	for (nSlave=0; nSlave<4; nSlave++)
+		SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
 
 	/* reset/erase a 1 inch segment in the image buf ARRAY*/
 	memset( (void *) pIB, 0, sizeof(I_MSG_RUN));
@@ -4574,9 +3315,8 @@ void BackwardEraseImageBuf(int nBufStart)
 	int nSlave, ci, ct;
 	WORD *pWord;
 
-	//for (nSlave=0; nSlave<4; nSlave++)
-		InspState.GetChannelConfig(&ChannelCfg);
-		//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
+	for (nSlave=0; nSlave<4; nSlave++)
+		SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
 
 	for ( i = nBufStart; i < IMAGE_BUF_DIM; i++)
 	{
@@ -4643,14 +3383,10 @@ int	BuildImageMap(UDP_SLAVE_DATA *pSlvData, int si, BOOL *bStartOfRev)
 	CHANNEL_CONFIG2 ChannelCfg;
 	SITE_SPECIFIC_DEFAULTS SiteDefault;
 
-	//SetGetChannelCfg (1 /* GET */, &ChannelCfg, si);
-	InspState.GetChannelConfig(&ChannelCfg);	//, si);
-	//SetGetSiteDefaults (1 /*GET*/, &SiteDefault);
-	InspState.GetSiteDefaults(&SiteDefault);	// site defaults copied into SiteDefault
+	SetGetChannelCfg (1 /* GET */, &ChannelCfg, si);
+	SetGetSiteDefaults (1 /*GET*/, &SiteDefault);
 	ChannelCfg.cClockOffset = SiteDefault.nDefaultClockOffset * 15;
-	//SetGetInspectMode_M(1 /*GET*/, &nInspectMode, &nMotionTime);
-	nInspectMode = InspState.GetInspectMode();
-	nMotionTime  = InspState.GetMotionMode();
+	SetGetInspectMode_M(1 /*GET*/, &nInspectMode, &nMotionTime);
 	
 	nReturn =  0;
 	if (*bStartOfRev)
@@ -5194,11 +3930,9 @@ int GetMaxXOffset(void)
 	int i;
 	int MaxXOffset = -1000;
 
-	InspState.GetChannelConfig(&ChannelCfg);
 	for (nSlave=0; nSlave<MAX_SHOES; nSlave++)
 	{
-//		InspState.GetChannelConfig(&ChannelCfg);
-		//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
+		SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
 
 		for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
 		{
@@ -5233,14 +3967,12 @@ int GetMinXOffset(void)
 	int i;
 	int MinXOffset = 1000;
 
-	InspState.GetChannelConfig(&ChannelCfg);
 	for (nSlave=0; nSlave<MAX_SHOES; nSlave++)
-		{
-//		InspState.GetChannelConfig(&ChannelCfg);
-		//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
+	{
+		SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
 
 		for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
-			{
+		{
 			switch ( ChannelCfg.Ch[nSlave][i].Type )
 			{
 			case IS_WALL:
@@ -5283,7 +4015,6 @@ int GetMaxXSpan(void)
 *
 *  RUN_MODE, CAL_MODE, PKT_MODE, NOP_MODE
 */
-#if 0
 void SetGetInspectMode_M (int nSetGet/* 0=SET, 1=GET */, int *nMode, int *nMotionTime)
 {
     static int nInspectMode = NOP_MODE;
@@ -5306,7 +4037,6 @@ void SetGetInspectMode_M (int nSetGet/* 0=SET, 1=GET */, int *nMode, int *nMotio
     }
 
 }
-#endif
 
 
 
@@ -5319,15 +4049,13 @@ void FlushImageBufArray (void)
 	int nInspectMode;
 	I_MSG_RUN *pSendBuf;
 	int nFlushCnt = 0;
-	//int nMotionTime;
+	int nMotionTime;
 	SITE_SPECIFIC_DEFAULTS SiteDefault;
 
-	nInspectMode = InspState.GetInspectMode();
-	//SetGetInspectMode_M (1 /* GET */, &nInspectMode, &nMotionTime);
+	SetGetInspectMode_M (1 /* GET */, &nInspectMode, &nMotionTime);
 	if (nInspectMode != RUN_MODE) return;
 
-	//SetGetSiteDefaults (1 /*GET*/, &SiteDefault);
-	InspState.GetSiteDefaults(&SiteDefault);	// site defaults copied into SiteDefault
+	SetGetSiteDefaults (1 /*GET*/, &SiteDefault);
 
 	while ( (pSendBuf = GetNextImageBuf()) != NULL )
 	{
@@ -5380,8 +4108,7 @@ void PipeOutProcess (void)
 	if (!g_bAnyShoeDown)
 		return;
 
-	//SetGetSiteDefaults (1 /*GET*/, &SiteDefault);
-	InspState.GetSiteDefaults(&SiteDefault);	// site defaults copied into SiteDefault
+	SetGetSiteDefaults (1 /*GET*/, &SiteDefault);
 
 	FlushImageBufArray();
 
@@ -5524,7 +4251,6 @@ UINT tWriteWallDataToFile (void *dummy)
 	float       fNumAscan;
 	int         nTryCnt=0;
 	SITE_SPECIFIC_DEFAULTS SiteDefault;
-	CString s;
 
 
 	while (g_nRunWriteWallDataToFileThread == 1)
@@ -5536,15 +4262,11 @@ UINT tWriteWallDataToFile (void *dummy)
 			g_RawWallHead.fOD = g_JobRec.OD;
 			g_RawWallHead.nJointNum = g_nJointNum-1;
 
-			//SetGetSiteDefaults (1 /*GET*/, &SiteDefault);
-			InspState.GetSiteDefaults(&SiteDefault);	// site defaults copied into SiteDefault
-
+			SetGetSiteDefaults (1 /*GET*/, &SiteDefault);
 			g_RawWallHead.JobRec.nHomeXOffset = SiteDefault.nDefaultXOffset * 2;   //two counts per inch
 			g_RawWallHead.JobRec.nAwayXOffset = SiteDefault.nDefaultXOffset2 * 2;   //two counts per inch
 
-			s = _T("TruscanWD200501");
-			CstringToTChar(s, g_RawWallHead.JobRec.Version, sizeof(g_RawWallHead.JobRec.Version));
-			//sprintf(g_RawWallHead.JobRec.Version, "TruscanWD200501");
+			sprintf(g_RawWallHead.JobRec.Version, "TruscanWD200501");
 			g_RawWallHead.JobRec.fMotionPulseLen = g_fMotionPulseLen;  //0.5f;
 
 			g_RawWallHead.JobRec.fChnlOffset[0] = 0.0f;
@@ -5571,9 +4293,8 @@ UINT tWriteWallDataToFile (void *dummy)
 
 			// write wall data to file
 
-			s = g_JobRec.WO;
-			if ( s.GetLength() )
-				sprintf (sFileName, "C:/PhasedArray/WallData/%ls/%lls_%d", g_RawWallHeadCopy.JobRec.WO,g_RawWallHeadCopy.JobRec.WO,g_nJointNum-1);
+			if ( strlen(g_JobRec.WO) )
+				sprintf (sFileName, "C:/PhasedArray/WallData/%s/%s_%d", g_RawWallHeadCopy.JobRec.WO,g_RawWallHeadCopy.JobRec.WO,g_nJointNum-1);
 			else
 				sprintf (sFileName, "C:/PhasedArray/WallData/Unknown_%d", g_nJointNum-1);
 
@@ -5832,12 +4553,12 @@ void ComputeTranFocusDelay(float thickness, float zf_value, float water_path, fl
 void ShutDownSystem(  )
 {
 
-	TCHAR pName[ 128 ] = _T("Celle");
-	TCHAR pPasswd[128] = _T("pxi");
-	TCHAR pDomain[128] = _T("PXI");
+	char pName[ 128 ] = "Celle";
+	char pPasswd[ 128 ] = "pxi";
+	char pDomain[ 128 ] = "PXI";
 
-	TCHAR pRemoteName[260] = _T("PhasedArray");
-	TCHAR pMessage[ 512 ] = { 0 };
+	char pRemoteName[ 260 ] = "PhasedArray";
+	char pMessage[ 512 ] = { 0 };
 
 	HANDLE hLogonToken;
 	HANDLE hAdminToken;
@@ -5883,7 +4604,7 @@ void ShutDownSystem(  )
 	if( 1 )
 	{
 		//if( FALSE == InitiateSystemShutdown( pRemoteName, pMessage, pDlg->m_timeOut, FALSE, FALSE ) )
-		if( FALSE == InitiateSystemShutdownEx( NULL, _T("Norman Exit"), 0, TRUE, FALSE,0 ) )
+		if( FALSE == InitiateSystemShutdown( NULL, NULL, 0, TRUE, FALSE ) )
 		{
 			RevertToSelf();
 			return;

@@ -64,7 +64,12 @@
     <ClCompile Include="TuboIni.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="inifile.cpp" />
+    <ClCompile Include="vChannel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="inifile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CCM_PAG.h">
@@ -158,6 +163,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Include\global.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vChannel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

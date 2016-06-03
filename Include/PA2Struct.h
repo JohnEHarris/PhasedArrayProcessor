@@ -8,10 +8,10 @@ jeh
 #ifndef PA2_STRUCTS_H
 
 #ifndef BYTE
-typedef BYTE	BYTE;
+typedef unsigned char	BYTE;
 #endif
 #ifndef WORD
-typedef WORD	WORD;
+typedef unsigned short	WORD;
 #endif
 
 #ifndef UINT
@@ -20,6 +20,7 @@ typedef unsigned int	UINT;
 
 enum IdataTypes {eRawInsp=10, eAscan=12, eKeepAlive=0xff};
 
+/*****************	STRUCTURES	*********************/
 typedef struct 
 	{
     BYTE bMsgID;	// = eIdataTypes
@@ -55,6 +56,64 @@ typedef struct
     WORD wData[512];
 	} SCmdPacket; //1040 bytes
 
+// If we want 2 out of 3 above threshold for Nc qualified, then bMod = 3. The Fifo is 3 elements deep.
+// Each flaw reading goes into the fifo at location bInput and overwrites the oldest element in the fifo.
+// That is why we call it a FIFO.
+// bInput advances 1 fifo postion modulo bMod. After the input, the fifo is scanned from element 0 to bMod
+// bAboveThld counts the number of readings above Thold. If it is >= bNc we have a bMax flaw.
+// bMaxTemp is the max value in the FIFO w/o regard to Nc. If we have less than Nc AboveThld and bMaxTemp > thold
+// then bMax is set to 80% of bThold. If we meet Nc count above thold then bMax = bMaxTemp and is returned by the 
+// FifoInput() function
+typedef struct
+	{
+	BYTE bCell[16];	// data cell containing input amplitudes 
+	BYTE bInput;	// next location to fill in the FIFO
+	BYTE bNc;		// how many flaw values above threshold
+	BYTE bThold;	// Threshold value 0-127
+	BYTE bMax;		// Max Nc qualified value in FIFO
+	BYTE bMaxTemp;	// Max value in FIFO w/o regard to Nc
+	BYTE bMod;		// active depth of FIFO.
+	BYTE bAboveThld;	// how many FIFO element above thold
+	} Nc_FIFO;
+
+// Each wall reading goes into a wall averaging FIFO. The memory size of the FIFO is selected to be longer 
+// than the expected averaging interval which should be 8 or less (typically 2 to 4 readings).
+// The FIFO output is actually the sum of the values in the FIFO and the bad wall reading count.
+// Values in the FIFO are not summed on each call, but the current location content in the FIFO is subtraced from the
+// sum and then the new value is stored and added to the sum. Then the next location in the FIFO is selected for
+// the next call (input) to the FIFO. This is exactly how a hardware implementation would work
+// Wall reading are 16 bit values. Values less than 0.040 or greater than 2.00 inches are consider to be error.
+// In case of a bad (erroneous) reading a counter is incremented and the FIFO does not advance
+// Consecutive good wall readings above Nx length will reset the bad wall reading counter. 
+// If the bad wall reading reaches a dropout value, the output reading from the FIFO 
+// will be set to size of the averaging length (the average will be 1).
+// The approximate conversion from machine reading to 0.001" increments is 1.452*hardware value
+// Machine hardware readings for bad wall therefore are < 27 or > 1377
+//
+
+typedef struct
+	{
+	WORD wCell[16];	// data cell containing wall thickness readings
+	BYTE bInput;	// next location to fill in the FIFO
+	BYTE bNx;		// how many wall values to average - the divisor
+	UINT uSum;		// sum of all wall values in FIFO
+	WORD wBadWall;	// how many out of range range wall readings
+	WORD wGoodWall;	// consecutive good wall readings
+	WORD wWallMax;	// minimum allowed hardware wall reading
+	WORD wWallMin;	// minimum allowed hardware wall reading
+	WORD wDropOut;	// number of bad readings before drop out occurs
+	} Nx_FIFO;
+
+#if 0
+// The value retured from the Nx function as a pointer to a Nx_FIFO_RETURN structure
+typedef struct
+	{
+	UINT uSum;		// sum of all wall values in FIFO
+	WORD wBadWall;	// how many out of range range wall readings
+	} Nx_FIFO_RETURN;
+#endif
+
+/*****************	STRUCTURES	END *********************/
 
 #define TEST_UT                          20
 #define SET_INSPECT_MODE                 21

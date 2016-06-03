@@ -1397,7 +1397,6 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 	CString s;
 	UINT uPort;
 	int nError;
-	i = _MSC_VER;	// 1900
 
 	if (gnMaxServers > MAX_SERVERS)
 		{

@@ -206,7 +206,7 @@ BOOL CNTService :: RegisterService( int argc, char ** argv )
 	Argv = Argv1 = CommandLineToArgvW(GetCommandLineW(), (int *)&Argc );
 #else
     Argc = (DWORD) argc;
-    Argv = Argv1 = argv;
+    Argv = argv;
 #endif
 
     while( ++Argv, --Argc ) {

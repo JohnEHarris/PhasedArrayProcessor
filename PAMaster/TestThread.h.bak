@@ -31,7 +31,6 @@ public:
 
 	// Testing Nc function
 	void TestNc(void);
-	void TestNx(void);
 
 	HANDLE	m_hTimerTick;
 	ST_CLIENT_CONNECTION_MANAGEMENT *m_pstCCM;	// pointer to my global structure instance 

@@ -55,6 +55,9 @@ class CServiceApp;
 #define	MAX_SERVERS							1
 #define MAX_CLIENTS_PER_SERVER				8
 
+// An instrument client can have up to this many virtual channels
+#define MAX_CHNLS_PER_INSTRUMENT			32
+
 
 #define INSTRUMENT_PACKET_SIZE				1040
 #define MASTER_PACKET_SIZE					1260
@@ -123,11 +126,11 @@ extern SRV_SOCKET_INFO gServerArray[];
 class CServerConnectionManagement;	// we're going to make a ptr to ourselves in the class so we have to define the class here
 class CServerListenThread;			// Thread to listen for connection on a given server port (a given service type)
 class CServerSocket;				// our specific implementation of an ASync socket
-class CServerSocketOwnerThread;	// a thread to control the resource of the management class and the dialog
+class CServerSocketOwnerThread;		// a thread to control the resource of the management class and the dialog
 class CAsyncSocket;
-class CServerRcvListThreadBase;			// a thread to read the linked list filled from the data received from the client
+class CServerRcvListThreadBase;		// a thread to read the linked list filled from the data received from the client
 class CServerRcvListThread;			// a thread to read the linked list filled from the data received from the client
-
+class CvChannel;					// array of ptrs of this type to logically connect channels to instruments
 /** =============================================================================**/
 // A structure to define the operation of the server with one particular client.
 //
@@ -175,7 +178,13 @@ typedef struct
 	UINT uPacketsSent;
 	UINT uUnsentPackets;			// Sending was aborted w/o sending the packet
 
-	UINT uLastTick;			// Use with main app uAppTimerTick value to provide keep alive messages
+	UINT uLastTick;					// Use with main app uAppTimerTick value to provide keep alive messages
+	// 2016-06-06 jeh
+	// initialized in CServerSocket::OnAcceptInitializeConnectionStats
+	CvChannel* pvChannel[MAX_CHNLS_PER_INSTRUMENT];	// array of ptrs to virtual channels associated with each client connection
+	
+	RAW_INSTRUMENT_STATUS InstrumentStatus;	// Status info which comes with each TCPIP packet from an instrument
+
 
 	} ST_SERVERS_CLIENT_CONNECTION;	// Name means for a given server what are the properties of each connected client
 

@@ -28,16 +28,29 @@ Revised:	modeled somewhat like RunningAverage. The two may be merged in the futu
 
 CvChannel::CvChannel(int nInst, int nChnl)
 	{
+	// id/od, Nc, Thold, bMod
 	FifoInit(0,1,0,1);	// id
 	FifoInit(1,1,0,1);	// od
-
+	
 	// Wall processing routines
-	WFifoInit(1,27,1377,8);
+	// Nx, Max allowed, Min, DropOut cnt
+	WFifoInit(1,1377,27,8);
 	};
 
 CvChannel::~CvChannel()
 	{
 	};
+
+
+// Data is collected over a number of frames (typically 16)
+// After data is collected and reported out to the Mill Console system,
+// Sampling states (peak holds and averaging) are reset
+void CvChannel::ResetGatesAndWalls(void)
+	{
+	m_GateID = m_GateOD = 0;	// byte values - range 0-127
+	m_wTOFMaxSum = 0;
+	m_wTOFMinSum = 0xffff;
+	}
 
 /*********************** Flaw processing routines ***********************/
 // Set all parameters necessary to enforce Nc rules
@@ -51,6 +64,7 @@ void CvChannel::FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
 	if ( bThld < 3) bThld = 2;		// 2 % is minimum thold allowed.
 	pFifo->bThold = bThld;
 	pFifo->bMod = bMod;
+	m_GateID = m_GateOD = 0;
 	};
 
 // An amplitued is input and an Nc qualified reading is returned.
@@ -113,12 +127,21 @@ void CvChannel::SetNc(BYTE bIdOd, BYTE bNc)
 
 /*********************** Wall processing routines ***********************/
 
+// bNx limited to 1-8
+// wMax, wMin are allowed wall value limits. Wall outside these limits are discarded
+// as erroneous readings
 void CvChannel::WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut)
 	{
 	memset((void *) &NxFifo,0, sizeof(NxFifo));
+	if (bNx > 8) bNx = 8;
+	else if (bNx < 1) bNx = 1;
 	NxFifo.bNx = bNx;
-	NxFifo.wWallMax = wMax;
-	NxFifo.wWallMin = wMin;
+	NxFifo.wWallMax = wMax;	// maximum allowed value for a wall reading
+	NxFifo.wWallMin = wMin;	// minimum allowed value for a wall reading
+	m_wTOFMaxSum = 0;
+	m_wTOFMinSum = 0xffff;
+	NxFifo.wDropOut = wDropOut;
+	m_fWallScaler = GetWallScaler((WORD)bNx);
 	}
 
 WORD CvChannel::InputWFifo(WORD wWall)
@@ -141,6 +164,39 @@ WORD CvChannel::InputWFifo(WORD wWall)
 	wOldWall = pFifo->wCell[i];		// get oldest wall reading
 	pFifo->wCell[i] = wWall;		// replace oldest element with this one
 	pFifo->uSum += (wWall - wOldWall);	// change in sum is new - old
-	return 0;
+	return pFifo->uSum;
+	}
+
+// the scaler is applied to the wall sum in raw counts to obtain the calibrated wall reading as a word.
+float CvChannel::GetWallScaler(WORD Nx)
+	{
+	float fNx = Nx;
+	if ( Nx == 0)
+		{
+		m_fWallScaler = 1.452f;
+		return m_fWallScaler;
+		}
+	m_fWallScaler = 1.452f/fNx;
+	return m_fWallScaler;
+	}
+
+// Return harware count sums. Let windows apply scale factor and Nx average.
+WORD CvChannel::wGetMaxWall(void)
+	{
+	m_wTOFMax = m_wTOFMaxSum;	//(WORD) ((float)m_wTOFMaxSum * m_fWallScaler );
+	return m_wTOFMax;
+	}
+
+WORD CvChannel::wGetMinWall(void)
+	{
+	m_wTOFMin = m_wTOFMinSum;	//(WORD) ((float)m_wTOFMinSum * m_fWallScaler );
+	return m_wTOFMin;
+	}
+
+void CvChannel::SetNx(BYTE bNx)
+	{
+	if (bNx > 8) bNx = 8;
+	else if (bNx < 1) bNx = 1;
+	NxFifo.bNx = bNx;
 	}
 

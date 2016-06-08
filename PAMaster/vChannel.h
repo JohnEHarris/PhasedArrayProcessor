@@ -35,10 +35,6 @@ public:
 	// bIdOd selects which FIFO id=0, od=1,bAmp is the input to the fifo
 	BYTE InputFifo(BYTE bIdOd,BYTE bAmp);
 
-
-	// Nc_FIFO is defined in PA2Struct.h
-	Nc_FIFO NcFifo[2];	// id=0, od=1
-
 	// bMod = bNc when SetNc called.
 	void SetNc(BYTE bIdOd, BYTE bNc);
 
@@ -47,13 +43,14 @@ public:
 	// bMod is >= Nc
 	void FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod);
 	void FifoClear(BYTE bIdOd);	// zero fifo entries, keep other parameters
+	BYTE bGetIdGateMax(void)	{ return m_GateID;	}
+	BYTE bGetOdGateMax(void)	{ return m_GateOD;	}
 		
 	/*********************** Flaw processing routines ***********************/
 	/*======================================================================*/
 
 	/*********************** Wall processing routines ***********************/
 	Nx_FIFO NxFifo;	// only 1 wall reading per channel
-	//Nx_FIFO_RETURN NxFifoReturn;	// instance of return values from wall FIFO
 
 	WORD InputWFifo(WORD wWall);	// input hw wall reading, returns bad wall count if failure, 0 on success
 	// 0 on success does not mean there have not been bad readings, only that the current one was ok
@@ -65,9 +62,21 @@ public:
 	WORD wGetBadWallCount(void)	{ return NxFifo.wBadWall;	}
 	void ClearBadWallCount(void)	{ NxFifo.wBadWall = 0;	}
 	WORD wGetGoodConsecutiveCount(void)	{ return NxFifo.wGoodWall;	};
+	WORD wGetMaxWall(void);		// resets max wall to 0 in order to find a new max
+	WORD wGetMinWall(void);		// resets min wall to 0xffff in order to find new min
+	void ResetGatesAndWalls(void);	// Initialize max and min for next sampling period
+	float GetWallScaler(WORD Nx);	// return the wall scaler/Nx for deriving Max/Min wall from integer sums
+	void SetNx(BYTE bNx);
+	BYTE bGetNx(void)					{ return NxFifo.bNx;		  }
+	void SetDropCount(WORD wDropOut)	{ NxFifo.wDropOut = wDropOut; }
+	WORD GetDropCount(void)				{ return NxFifo.wDropOut;	  }
 
 	/*********************** Wall processing routines ***********************/
 
+	BYTE m_GateID, m_GateOD;			// Nc qualified max gate value over data sampling period (16 Frames)
+	WORD m_wTOFMaxSum, m_wTOFMinSum;	// Max, min wall sum reading over data sampling period
+	WORD m_wTOFMax, m_wTOFMin;
+	float m_fWallScaler;				// hardware count to 0.001 inch divided by Nx approx 1.452/Nx
 	};	
 
 #endif

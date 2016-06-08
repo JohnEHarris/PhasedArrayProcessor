@@ -182,9 +182,6 @@ typedef struct
 	// 2016-06-06 jeh
 	// initialized in CServerSocket::OnAcceptInitializeConnectionStats
 	CvChannel* pvChannel[MAX_CHNLS_PER_INSTRUMENT];	// array of ptrs to virtual channels associated with each client connection
-	
-	RAW_INSTRUMENT_STATUS InstrumentStatus;	// Status info which comes with each TCPIP packet from an instrument
-
 
 	} ST_SERVERS_CLIENT_CONNECTION;	// Name means for a given server what are the properties of each connected client
 

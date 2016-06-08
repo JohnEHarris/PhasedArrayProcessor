@@ -701,6 +701,7 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
 	{
 	CString s;
+	int i;
 
 	s.Format(_T("Send%d"), nClientPortIndex);
 	pscc->szSocketName	= _T("");
@@ -730,4 +731,9 @@ void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTI
 	pscc->uBytesSent				= 0;
 	pscc->uUnsentPackets			= 0;
 	pscc->uLastTick					= 0;
+
+	for ( i = 0; i < MAX_CHNLS_PER_INSTRUMENT; i++)
+		{
+		pscc->pvChannel[i] = new CvChannel(nClientPortIndex,i);
+		}
 	}

@@ -152,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\Include\CFG100.H" />
+    <ClInclude Include="..\Include\PA2Struct.h" />
     <ClInclude Include="CCM_PAG.h" />
     <ClInclude Include="ClientCommunicationThread.h" />
     <ClInclude Include="ClientConnectionManagement.h" />

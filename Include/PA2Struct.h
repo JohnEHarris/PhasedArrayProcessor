@@ -19,6 +19,7 @@ typedef unsigned int	UINT;
 #endif
 
 enum IdataTypes {eRawInsp=10, eAscan=12, eKeepAlive=0xff};
+enum IdOdTypes {eId, eOd};
 
 /*****************	STRUCTURES	*********************/
 typedef struct 
@@ -104,14 +105,35 @@ typedef struct
 	WORD wDropOut;	// number of bad readings before drop out occurs
 	} Nx_FIFO;
 
-#if 0
-// The value retured from the Nx function as a pointer to a Nx_FIFO_RETURN structure
+// Data structures returned to Robert/PT
 typedef struct
 	{
-	UINT uSum;		// sum of all wall values in FIFO
-	WORD wBadWall;	// how many out of range range wall readings
-	} Nx_FIFO_RETURN;
-#endif
+	BYTE bFlaw[2];		// id = gate 2 /od = gate 3 0-255  
+	WORD wTOFsum[2];	// divide by Nx and multiply by scaling factor for this vChannel
+	}	RESULTS;		// sizeof = 6
+
+typedef struct
+	{
+	BYTE bResultQty;	// How many sets of all channels in this packet. Normally 1
+	BYTE instNumber;	// 0-255. Inst 0 -> base ip address of instruments
+	WORD wStatus;		// tbd
+	WORD wLoc;			// x location in motion pulses relative to 1 packet from instrument
+	WORD wAngle;		// angle in degrees from TOP relative to 1 packet from instrument
+	WORD wPeriod;		// period of rotation in 0.2048 ms
+	UINT uMsgSeqCount;	// counter to uniquely identify each packet
+	UINT uSync;			// 0x5CEBDAAD ... 18 bytes to here
+	RESULTS Results[32];	// Some "channels" at the end may be channel type NONE
+	} DATA_PACKET_1;	// sizeof = 210
+
+typedef struct
+	{
+	WORD wStatus;		// tbd
+	WORD wLoc;			// x location in motion pulses relative to 1 packet from instrument
+	WORD wAngle;		// angle in degrees from TOP relative to 1 packet from instrument
+	WORD wPeriod; //unit in .2048ms
+	} RAW_INSTRUMENT_STATUS;	// status info from Instrument collected to build output msg to Receiver/PAG
+
+
 
 /*****************	STRUCTURES	END *********************/
 

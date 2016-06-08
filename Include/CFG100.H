@@ -132,7 +132,7 @@ of bytes as a config file for a 40 channel system.
 #define	HOME					(WORD) 0x8000
 #define	AWAY					0
 
-//#define	FORWARD					(WORD) 0x0004
+#define	FORWARD					(WORD) 0x0004
 #define	REVERSE					0
 #define	MOTION_BASED			0x100
 #define	TIME_BASED				0

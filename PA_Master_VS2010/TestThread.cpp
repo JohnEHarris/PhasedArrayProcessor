@@ -5,6 +5,7 @@
 #include "ServiceApp.h"
 //#include "TestThread.h"
 //#include "CCM_PAG.h"
+extern CServiceApp theApp;
 
 // 30-Jan-2013 give the test thread some useful work. Let it implement a 10 ms timer tick
 // CTestThread
@@ -54,11 +55,15 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 #ifdef _DEBUG
 	printf("Hello World from Test Thread\n");
 #endif
-	s.Format(_T("Hello World from Test Thread wparam = %x, lparam = %x\n"), w,lParam);
+	s.Format(_T("Hello World from Test Thread wparam = %x, lparam = %x\r\n"), w,lParam);
 	TRACE(s);
+	theApp.SaveFakeData(s);
+	s = _T("Nc=1 Thold=0 m=1, Nx=1 Max Wall=1377 Min Wall=27 Drop=8\r\n");
+	theApp.SaveFakeData(s);
 	m_hTimerTick = ::CreateEvent(0, TRUE, FALSE, 0);
 	Sleep(10);
 	TRACE(_T("Hello World now implements a timer tick function\n"));
+	//theApp.CloseFakeData();
 
 	// Use debugger to test Nc operation
 	//TestNc();

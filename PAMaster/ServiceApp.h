@@ -82,7 +82,11 @@ public:
 	void GetClientConnectionManagementInfo(void);
 	void SaveClientConnectionManagementInfo(void);
 	char m_buffer[128];
-	CServiceApp *m_ptheApp;	
+	CServiceApp *m_ptheApp;
+	CFile m_FakeData;
+	int m_nFakeDataExists;
+	void SaveFakeData(CString& s);
+	void CloseFakeData(void);
 
 public:
 	virtual BOOL InitInstance();

@@ -75,6 +75,8 @@ BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 	Nc_FIFO *pFifo;
 	bIdOd &= 1;	// limit range to 0-1
 	pFifo = &NcFifo[bIdOd];
+	if (bAmp > 0xc0)
+		i = i+3;
 
 	i = pFifo->bInput;		// slot position in the fifo
 	pFifo->bCell[i] = bAmp;	// replace oldest element

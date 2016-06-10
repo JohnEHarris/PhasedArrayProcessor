@@ -31,7 +31,7 @@ CvChannel::CvChannel(int nInst, int nChnl)
 	// id/od, Nc, Thold, bMod
 	FifoInit(0,1,0,1);	// id
 	FifoInit(1,1,0,1);	// od
-
+	
 	// Wall processing routines
 	// Nx, Max allowed, Min, DropOut cnt
 	WFifoInit(1,1377,27,8);
@@ -140,6 +140,7 @@ void CvChannel::WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut)
 	NxFifo.wWallMin = wMin;	// minimum allowed value for a wall reading
 	m_wTOFMaxSum = 0;
 	m_wTOFMinSum = 0xffff;
+	NxFifo.wDropOut = wDropOut;
 	m_fWallScaler = GetWallScaler((WORD)bNx);
 	}
 
@@ -179,15 +180,16 @@ float CvChannel::GetWallScaler(WORD Nx)
 	return m_fWallScaler;
 	}
 
+// Return harware count sums. Let windows apply scale factor and Nx average.
 WORD CvChannel::wGetMaxWall(void)
 	{
-	m_wTOFMax = (WORD) ((float)m_wTOFMaxSum * m_fWallScaler );
+	m_wTOFMax = m_wTOFMaxSum;	//(WORD) ((float)m_wTOFMaxSum * m_fWallScaler );
 	return m_wTOFMax;
 	}
 
 WORD CvChannel::wGetMinWall(void)
 	{
-	m_wTOFMin = (WORD) ((float)m_wTOFMinSum * m_fWallScaler );
+	m_wTOFMin = m_wTOFMinSum;	//(WORD) ((float)m_wTOFMinSum * m_fWallScaler );
 	return m_wTOFMin;
 	}
 

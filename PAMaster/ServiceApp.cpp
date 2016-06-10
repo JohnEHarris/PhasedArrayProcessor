@@ -407,9 +407,13 @@ CServiceApp::CServiceApp()
 	}
 
 CServiceApp::~CServiceApp()
-{
-int i;
+	{
+	int i;
 //Stop();
+
+	if (m_nFakeDataExists)
+		m_FakeData.Close();
+
 
 	if( m_hStop )
 		::SetEvent(m_hStop);
@@ -640,7 +644,7 @@ BOOL CServiceApp :: InitInstance()
 	// The ini file will be store in the folder which has the executable code
 
 	int i;
-	CString s;
+	CString s,Fake;	// fake is a debug file with fake data and fake data msg to PAG
 
 	// ths didn't work with 2010 compiler. Might have with vs2005
 	CString t = AfxGetAppName();	// shows AGS3
@@ -658,6 +662,8 @@ BOOL CServiceApp :: InitInstance()
 
 	i = t.Find(AppName);		// we know the name of the program
 	t.Delete(i,32);				// t has path to 'exe' w/o the exe file name
+	Fake = t;
+	Fake = t + _T("FakeData.txt");
 	// shows "D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\"
 	// The name of the App becomes an implicit part of the key
 	// We only write Tuboscope, but clever windows makes a subregistry entry of AdpMMI
@@ -683,11 +689,67 @@ BOOL CServiceApp :: InitInstance()
 		gDlg.pTuboIni = new CTuboIni(t);	
 	//m_pTuboIni = new CTuboIni(t);
 
+
+	// Open a debugger file for fake data
+	//TCHAR* pszFileName = Fake.GetString();	//_T("c:\\test\\myfile.dat");
+	m_nFakeDataExists = 0;
+	//CFile myFile;
+	CFileException fileException;
+  
+	if ( !m_FakeData.Open( Fake, CFile::modeCreate |   
+			CFile::modeReadWrite, &fileException ) )
+		{
+		TRACE( _T("Can't open file %s, error = %u\n"),
+		Fake, fileException.m_cause );
+		}
+	else m_nFakeDataExists = 1;
+
 	RegisterService(__argc, __argv);
 	//printf("Starting the Service/n"); // causes an exception 
 
 
 	return FALSE;
+	}
+
+// Output fake data to a file
+void CServiceApp::SaveFakeData(CString& s)
+	{
+	char ch[4000];
+	CstringToChar(s,ch,4000);
+	if (0 == m_nFakeDataExists)
+		{
+		TRACE(_T("Fake data file not available\n"));
+		return;
+		}
+	try
+		{
+		m_FakeData.Write(ch,strlen(ch));	// I want to see ASCII in the file
+		}
+	catch (CFileException* e)
+		{
+		e->ReportError();
+		e->Delete();
+		}
+
+	}
+
+void CServiceApp::CloseFakeData(void)
+	{
+	if (0 == m_nFakeDataExists)
+		{
+		TRACE(_T("Fake data file not available\n"));
+		return;
+		}
+	try
+		{
+		m_FakeData.Close();
+		}
+	catch (CFileException* e)
+		{
+		e->ReportError();
+		e->Delete();
+		}
+	m_nFakeDataExists = 0;
 	}
 
 
@@ -1076,7 +1138,7 @@ WHILE_TARGET:
 			}
 #endif
 		// for testing only, throw away all collected data
-#if 0
+#if 1
 		for ( i = 0; i < MAX_SERVERS; i++)
 			{
 			if (stSCM[i].pSCM)

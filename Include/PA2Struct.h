@@ -114,7 +114,7 @@ typedef struct
 
 typedef struct
 	{
-	BYTE bResultQty;	// How many sets of all channels in this packet. Normally 1
+	BYTE bvChannelQty;	// How many channels in this packet.
 	BYTE instNumber;	// 0-255. Inst 0 -> base ip address of instruments
 	WORD wStatus;		// tbd
 	WORD wLoc;			// x location in motion pulses relative to 1 packet from instrument

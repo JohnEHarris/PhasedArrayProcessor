@@ -74,7 +74,7 @@ BOOL  bGetSlaveRev = TRUE;
 SITE_SPECIFIC_DEFAULTS SiteDefault;
 int nSendCnt = 0;
 int nOldXloc=-1;
-
+int nLoc = 20;
 
 /** External function prototypes... mostly in Service.cpp   **/
 extern void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CServerRcvListThread *pServerRcvListThread);
@@ -239,7 +239,9 @@ void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
 
 	pData->DataHead.bDin = FORWARD | PIPE_PRESENT;
 	pData->DataHead.wMsgSeqCnt++;
-	pData->DataHead.wClock = (pData->DataHead.wMsgSeqCnt/4);
+	pData->DataHead.wLocation = nLoc++;
+	if (nLoc > 500) nLoc = 20;
+	pData->DataHead.wClock = nLoc % 12;
 	}
 
 // Random number between 0 and 100
@@ -304,11 +306,35 @@ int CServerRcvListThread::GetSequenceModulo(SRawDataPacket *pData)
 	}
 
 
-// the raw data to het the header info
 // delete the pRaw packet and create a new packet for transmission
 // Fill the new packet with max/min data from each pChannel instance
 void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 	{
+	int i;
+
+	DATA_PACKET_1 *pOutputPacket = new (DATA_PACKET_1);
+	pOutputPacket->bResultQty	= 1;
+	pOutputPacket->wLoc		= m_pSCC->InstrumentStatus.wLoc;
+	pOutputPacket->wAngle	= m_pSCC->InstrumentStatus.wAngle;
+	pOutputPacket->wPeriod	= m_pSCC->InstrumentStatus.wPeriod;
+	pOutputPacket->instNumber= m_pSCC->m_nMyThreadIndex;
+	pOutputPacket->wStatus	= m_pSCC->InstrumentStatus.wStatus;
+	pOutputPacket->uSync	= 0x5CEBDAAD;
+	RESULTS *pR				= &pOutputPacket->Results[0];
+
+	for ( i = 0; i < 32; i++)
+		{
+		pR[i].bFlaw[0] = m_pSCC->pvChannel[i]->bGetIdGateMax();
+		pR[i].bFlaw[1] = m_pSCC->pvChannel[i]->bGetOdGateMax();
+		pR[i].wTOFsum[0] = m_pSCC->pvChannel[i]->wGetMinWall();
+		pR[i].wTOFsum[1] = m_pSCC->pvChannel[i]->wGetMaxWall();
+		}
+	// Put the newly created packet into the linked list for output
+	// For now send this message directly. In future, put into linked list
+	// and signal the sender thread to empty list.
+	theApp.PamSendToPag(pOutputPacket, sizeof(DATA_PACKET_1));
+	delete pOutputPacket;
+
 	}
 
 
@@ -353,6 +379,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 	int nSeqQty;
 	SRawDataPacket *pRaw;
 	int i, j, nFrameQtyPerPacket;
+	int l,m;
 	int k;
 	BYTE bGateTmp;
 	WORD wTOFSum;
@@ -364,7 +391,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
 	if (pBuf->nLength == 1040)
 		{
-		pRaw = (SRawDataPacket *) pBuf->Msg;
+		pRaw = (SRawDataPacket *) &pBuf->Msg;
 		MakeFakeData(pRaw);
 		// Now that we have fake data, process it
 		// How many vChannels?
@@ -372,28 +399,58 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 		// we need 16 frames of data to average/peak hold
 		// a frame occurs when the vChannel repeats
 		nFrameQtyPerPacket = 128/nSeqQty;	// for our synthetic data, nSeqQty is 32 -> 4 frames per packet
+
+		// Capture starting status info regarding pipe location
+		if ( 0 == m_nFrameCount)
+			{
+			m_pSCC->InstrumentStatus.wStatus	= 0;
+			m_pSCC->InstrumentStatus.wLoc		= pRaw->DataHead.wLocation;
+			m_pSCC->InstrumentStatus.wAngle		= pRaw->DataHead.wClock;
+			m_pSCC->InstrumentStatus.wPeriod	= pRaw->DataHead.wPeriod;
+			}
+
 		for ( j = 0; j < nFrameQtyPerPacket; j++)	// Assumes the data packet contains whole frames
 			{
 			for ( i = 0; i < nSeqQty; i++)
 				{
-				k = j*nSeqQty;
+				k = j*nSeqQty;	// k points to beginning of a frame of data
 				pChannel = m_pSCC->pvChannel[i];
 				// Get flaw Nc qualified Max values for this channel
 				bGateTmp = pChannel->InputFifo(eId, pRaw->RawData[i+k].bAmp2);	// output of the Nc peak holder
 				if (pChannel->m_GateID < bGateTmp)		pChannel->m_GateID = bGateTmp;
 				bGateTmp = pChannel->InputFifo(eOd, pRaw->RawData[i+k].bAmp3);
 				if (pChannel->m_GateOD < bGateTmp)		pChannel->m_GateOD = bGateTmp;
+
 				// Get Max and min tof for this channel
 				wTOFSum = pChannel->InputWFifo(pRaw->RawData[i+k].wTof4);
+				// CHECK for bad wall above drop out count
+				l = pChannel->wGetBadWallCount(); // debugging
+				m = pChannel->GetDropCount();
+				if ( pChannel->wGetBadWallCount() >= pChannel->GetDropCount())
+					pChannel->m_wTOFMaxSum = wTOFSum = 1;	// coupling loss
+
+				l = pChannel->wGetGoodConsecutiveCount();
+				m = pChannel->bGetNx();
+				// else
+				if(pChannel->wGetGoodConsecutiveCount() >= pChannel->bGetNx())
+					{
+					// self healing. When Nx or greater good wall readings, clear bad wall reading count
+					// this means we may never know how many bad walls we have as long as they don't exceed
+					// drop out count
+					pChannel->ClearBadWallCount();
+					}
 				if (pChannel->m_wTOFMaxSum < wTOFSum)	pChannel->m_wTOFMaxSum = wTOFSum;
 				if (pChannel->m_wTOFMinSum > wTOFSum)	pChannel->m_wTOFMinSum = wTOFSum;
 				}
 			k = i;
 
 			m_nFrameCount++;
+			// It will take 4 input packets from the instrument in order to get 16 frames of data 
 			if ( (m_nFrameCount & 0xf) == 0) 
 				{
 				BuildOutputPacket(pRaw);		//scavenge location info from input value in header
+				// pRaw is pBuf->Msg
+				delete pData;	// info in pRaw was put into a new structure and sent to the PAG
 				m_nFrameCount = 0;
 				for ( i = 0; i < nSeqQty; i++)
 					{
@@ -406,12 +463,8 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 
 
 
-
-
-
-
-		}
-#endif
+		}	// if (pBuf->nLength == 1040)
+#else
 
 
 	int nPkLength = pBuf->nLength;
@@ -589,7 +642,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 
 	InspState.GetSiteDefaults(&SiteDefault);	// site defaults copied into SiteDefault
 	/***********/
-#if 1
+#if 0
 	switch (m_nInspectMode)
 		{
 	case RUN_MODE:
@@ -731,6 +784,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 	/***********/
 		
 		delete pBuf;		//pData;
+#endif
 	}	// CServerRcvListThread::ProcessInstrumentData(void *pData)
 #endif
 

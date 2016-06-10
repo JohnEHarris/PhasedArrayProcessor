@@ -118,6 +118,7 @@ CServerRcvListThread::CServerRcvListThread()
 	{
 	m_nFakeDataSeqNumber = 0;
 	m_nFrameCount = 0;
+	m_nFakeDataCallCount = 0;
 	srand( (unsigned)time( NULL ) );	// seed random number generator
 	}
 
@@ -258,7 +259,12 @@ BYTE GetRand(void)
 // Make fake data to test Nc and Nx operations
 void CServerRcvListThread::MakeFakeData(SRawDataPacket *pData)
 	{
-	int i, j, offset;
+	int i, j, offset, k;
+	CString s,t;
+
+	s.Format(_T("\r\nFake Data Call = %5d\r\n      ID   OD   TOF2    TOF4\r\n"), m_nFakeDataCallCount++);
+	SaveFakeData(s);
+
 	MakeFakeDataHead(pData);
 	// we could have fewer than 32 channels, ie sequence number could be less than 32
 	// Consider the number of ascans needed to fire all multiplexed channels (say 8)
@@ -273,10 +279,16 @@ void CServerRcvListThread::MakeFakeData(SRawDataPacket *pData)
 		offset = j*32;
 		for ( i = 0; i < MAX_CHNLS_PER_INSTRUMENT; i++)
 			{
-			pData->RawData[offset +i].bAmp2 = 5 + (GetRand()/2);	// 5-55 amplitude
-			pData->RawData[offset +i].bAmp3 = 10 + (GetRand()/2);	// 10-60 amplitude
-			pData->RawData[offset +i].wTof2 = 200 + GetRand();
-			pData->RawData[offset +i].wTof4 = 300 + GetRand();
+			s.Format(_T("\r\n[%3d] "), i+offset);
+			k = pData->RawData[i+offset].bAmp2 = 5 + (GetRand()/2);	// 5-55 amplitude
+			t.Format(_T("%3d  "),k); s += t;
+			k = pData->RawData[i+offset].bAmp3 = 10 + (GetRand()/2);	// 10-60 amplitude
+			t.Format(_T("%3d  "),k); s += t;
+			k = pData->RawData[i+offset].wTof2 = 200 + GetRand();
+			t.Format(_T("%4d    "),k); s += t;
+			k = pData->RawData[i+offset].wTof4 = 300 + GetRand();
+			t.Format(_T("%4d    "),k); s += t;
+			if ( i < 4) SaveFakeData(s);
 			}
 //		m_nFrameCount++;
 //		if ((m_nFrameCount & 0xf) == 0)
@@ -285,6 +297,12 @@ void CServerRcvListThread::MakeFakeData(SRawDataPacket *pData)
 //			// Package up the Max/Min wall and flaw readings for the PAG/Reciever and put in Sender Linked list
 //			}
 		}
+	}
+
+// For debugging, save the fake data and the contents of the output tcpip packet made from fake data
+void CServerRcvListThread::SaveFakeData(CString& s)
+	{
+	theApp.SaveFakeData(s);
 	}
 
 // Not enought info in data structures I am seeing on 6/7/16. Assume 32 chnls 
@@ -310,24 +328,43 @@ int CServerRcvListThread::GetSequenceModulo(SRawDataPacket *pData)
 // Fill the new packet with max/min data from each pChannel instance
 void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 	{
-	int i;
+	int i, k;
+	CString s,t;
+	CvChannel *pChannel;
 
+	s = _T("\r\nPAM Output Data Packet\r\n");
+	SaveFakeData(s);
 	DATA_PACKET_1 *pOutputPacket = new (DATA_PACKET_1);
-	pOutputPacket->bResultQty	= 1;
+	pOutputPacket->bvChannelQty	= 1;
 	pOutputPacket->wLoc		= m_pSCC->InstrumentStatus.wLoc;
 	pOutputPacket->wAngle	= m_pSCC->InstrumentStatus.wAngle;
 	pOutputPacket->wPeriod	= m_pSCC->InstrumentStatus.wPeriod;
 	pOutputPacket->instNumber= m_pSCC->m_nMyThreadIndex;
 	pOutputPacket->wStatus	= m_pSCC->InstrumentStatus.wStatus;
 	pOutputPacket->uSync	= 0x5CEBDAAD;
+
 	RESULTS *pR				= &pOutputPacket->Results[0];
+
+	s.Format(_T("Loc=%3d Angle=%3d Inst=%2d Stat=%04x Sync=0x5CEBDAAD\r\n"),
+		pOutputPacket->wLoc, pOutputPacket->wAngle, pOutputPacket->instNumber, pOutputPacket->wStatus);
+	SaveFakeData(s);
+
+	s.Format(_T("\r\n      ID   OD   MinW    MaxW\r\n"));
+	SaveFakeData(s);
 
 	for ( i = 0; i < 32; i++)
 		{
-		pR[i].bFlaw[0] = m_pSCC->pvChannel[i]->bGetIdGateMax();
-		pR[i].bFlaw[1] = m_pSCC->pvChannel[i]->bGetOdGateMax();
-		pR[i].wTOFsum[0] = m_pSCC->pvChannel[i]->wGetMinWall();
-		pR[i].wTOFsum[1] = m_pSCC->pvChannel[i]->wGetMaxWall();
+		pChannel = m_pSCC->pvChannel[i];
+		s.Format(_T("\r\n[%3d] "), i);
+		k = pR[i].bFlaw[0] = pChannel->bGetIdGateMax();
+		t.Format(_T("%3d  "),k); s += t;
+		k =pR[i].bFlaw[1] = pChannel->bGetOdGateMax();
+		t.Format(_T("%3d  "),k); s += t;
+		k =pR[i].wTOFsum[0] = pChannel->wGetMinWall();
+		t.Format(_T("%4d    "),k); s += t;
+		k =pR[i].wTOFsum[1] = pChannel->wGetMaxWall();
+		t.Format(_T("%4d    "),k); s += t;
+		if ( i < 4) SaveFakeData(s);
 		}
 	// Put the newly created packet into the linked list for output
 	// For now send this message directly. In future, put into linked list

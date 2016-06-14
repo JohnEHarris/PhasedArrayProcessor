@@ -243,6 +243,7 @@ void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
 	pData->DataHead.wLocation = nLoc++;
 	if (nLoc > 500) nLoc = 20;
 	pData->DataHead.wClock = nLoc % 12;
+	pData->DataHead.wPeriod = 1465;	// 300 ms = 200 rpm
 	}
 
 // Random number between 0 and 100
@@ -262,7 +263,7 @@ void CServerRcvListThread::MakeFakeData(SRawDataPacket *pData)
 	int i, j, offset, k;
 	CString s,t;
 
-	s.Format(_T("\r\nFake Data Call = %5d\r\n      ID   OD   TOF2    TOF4\r\n"), m_nFakeDataCallCount++);
+	s.Format(_T("\r\n\r\nFake Data Call = %5d\r\n      ID   OD   TOF2    TOF4\r\n"), m_nFakeDataCallCount++);
 	SaveFakeData(s);
 
 	MakeFakeDataHead(pData);
@@ -281,14 +282,14 @@ void CServerRcvListThread::MakeFakeData(SRawDataPacket *pData)
 			{
 			s.Format(_T("\r\n[%3d] "), i+offset);
 			k = pData->RawData[i+offset].bAmp2 = 5 + (GetRand()/2);	// 5-55 amplitude
-			t.Format(_T("%3d  "),k); s += t;
+			t.Format(_T("%3d  "),(k)); s += t;
 			k = pData->RawData[i+offset].bAmp3 = 10 + (GetRand()/2);	// 10-60 amplitude
-			t.Format(_T("%3d  "),k); s += t;
+			t.Format(_T("%3d  "),(k)); s += t;
 			k = pData->RawData[i+offset].wTof2 = 200 + GetRand();
-			t.Format(_T("%4d    "),k); s += t;
+			t.Format(_T("%4d    "),(k)); s += t;
 			k = pData->RawData[i+offset].wTof4 = 300 + GetRand();
-			t.Format(_T("%4d    "),k); s += t;
-			if ( i < 4) SaveFakeData(s);
+			t.Format(_T("%4d    "),(k)); s += t;
+			if ( i < 1) SaveFakeData(s);
 			}
 //		m_nFrameCount++;
 //		if ((m_nFrameCount & 0xf) == 0)
@@ -349,7 +350,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 		pOutputPacket->wLoc, pOutputPacket->wAngle, pOutputPacket->instNumber, pOutputPacket->wStatus);
 	SaveFakeData(s);
 
-	s.Format(_T("\r\n      ID   OD   MinW    MaxW\r\n"));
+	s.Format(_T("\r\n      ID   OD   MinW    MaxW"));
 	SaveFakeData(s);
 
 	for ( i = 0; i < 32; i++)

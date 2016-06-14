@@ -29,12 +29,12 @@ Revised:	modeled somewhat like RunningAverage. The two may be merged in the futu
 CvChannel::CvChannel(int nInst, int nChnl)
 	{
 	// id/od, Nc, Thold, bMod
-	FifoInit(0,1,0,1);	// id
-	FifoInit(1,1,0,1);	// od
+	FifoInit(0,3,37,5);	// id
+	FifoInit(1,3,37,5);	// od
 	
 	// Wall processing routines
 	// Nx, Max allowed, Min, DropOut cnt
-	WFifoInit(1,1377,27,8);
+	WFifoInit(3,1377,27,8);
 	};
 
 CvChannel::~CvChannel()

@@ -32,11 +32,17 @@
 #include "CCM_PAG.h"					//12-May-16 jeh
 #include "vChannel.h"					//02-Jun-16 jeh
 
+#define SERVICE_APP_VERSION		1.0.01
 
-// THE user interface (MMI) acts as a server to the Phased Array Master
+/*
+1.0.01			2016-06-14 Nc Nx working with fake data input, good output to PAG
+*/
+
+// THE user interface (MMI or Phased Array GUI PAG) acts as a server to the Phased Array Master
 // Define the IP address of the SERVER component associated with the user interface
 // The phased-array master will be a client (connect to) the user interface
 //
+// This information now comes thru an ini file read by CServiceApp::GetClientConnectionManagementInfo
 #define PAG_SERVER_IP_ADDR			"192.168.10.10"
 #define PAG_SERVER_PORT				7501
 #define WALL_BAR_DISPLAY_CLIENT_PORT	7515

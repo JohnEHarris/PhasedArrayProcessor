@@ -58,7 +58,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 	s.Format(_T("Hello World from Test Thread wparam = %x, lparam = %x\r\n"), w,lParam);
 	TRACE(s);
 	theApp.SaveFakeData(s);
-	s = _T("Nc=1 Thold=0 m=1, Nx=1 Max Wall=1377 Min Wall=27 Drop=8\r\n");
+	s = _T("Nc=3 Thold=37 M=5, Nx=3 Max Wall=1377 Min Wall=27 Drop=8\r\n");
 	theApp.SaveFakeData(s);
 	m_hTimerTick = ::CreateEvent(0, TRUE, FALSE, 0);
 	Sleep(10);

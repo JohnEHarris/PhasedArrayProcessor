@@ -97,6 +97,7 @@
       <ProgramDatabaseFile>.\Release/PhasedArray_Master.pdb</ProgramDatabaseFile>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
+      <Version>1.0.01</Version>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>

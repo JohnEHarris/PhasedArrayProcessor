@@ -153,7 +153,7 @@ BOOL CServerRcvListThread::InitInstance()
 			m_ConnectionSocket.m_pSCC->sClientIP4, m_ConnectionSocket.m_pSCC->uClientPort); 
 		TRACE(s);
 		TRACE(m_ConnectionSocket.m_pSCC->szSocketName);
-		InitRunningAverage(0,0);
+		//InitRunningAverage(0,0);
 		return TRUE;
 
 
@@ -176,11 +176,13 @@ int CServerRcvListThread::ExitInstance()
 	CString s;
 	int i;
 #ifdef THIS_IS_SERVICE_APP
+#if 0
 	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
 		{
 		if (m_pRunAvg[i])	delete m_pRunAvg[i];
 		m_pRunAvg[i] = NULL;
 		}
+#endif
 #endif
 	s.Format(_T("CServerRcvListThread, Srv[%d]Instrument[%d] has exited\n"),m_nMyServer, m_nThreadIndex);
 	TRACE(s);

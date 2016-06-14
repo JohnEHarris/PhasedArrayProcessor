@@ -45,6 +45,8 @@ CvChannel::~CvChannel()
 // Data is collected over a number of frames (typically 16)
 // After data is collected and reported out to the Mill Console system,
 // Sampling states (peak holds and averaging) are reset
+// The data within the FIFO's is not disturbed so max/min reading
+// can migrate across 16 frame boundaries
 void CvChannel::ResetGatesAndWalls(void)
 	{
 	m_GateID = m_GateOD = 0;	// byte values - range 0-127

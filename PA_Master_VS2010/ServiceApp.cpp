@@ -413,6 +413,8 @@ CServiceApp::~CServiceApp()
 
 	if (m_nFakeDataExists)
 		m_FakeData.Close();
+	
+	ShutDown(); // first place when closing dos window
 
 
 	if( m_hStop )
@@ -755,6 +757,9 @@ void CServiceApp::CloseFakeData(void)
 
 int CServiceApp::ExitInstance()
 	{
+	int i;
+	i = 1;
+	CloseFakeData();
 #if 0
 	if (m_pMySampleMem)
 		delete m_pMySampleMem;
@@ -769,10 +774,31 @@ int CServiceApp::ExitInstance()
 // use a local variable in Run() to be set by the debugger to force a "graceful" shutdown
 void CServiceApp::ShutDown(void)
 	{
+	int i, j,k;
+
 	ReportStatus(SERVICE_STOP_PENDING, 11000);
 	if( m_hStop )
 		::SetEvent(m_hStop);
 	m_hStop = 0;
+
+
+#if 1
+	for ( j = 0; j < MAX_SERVERS; j++)
+		{
+		if (NULL == &stSCM[j]) continue;
+		for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
+			{
+			if ( NULL == stSCM[j].pClientConnection[i]) continue;
+			for ( k = 0; k < MAX_CHNLS_PER_INSTRUMENT; k++)
+				{
+				if (stSCM[j].pClientConnection[i]->pvChannel[k] )			
+					delete stSCM[j].pClientConnection[i]->pvChannel[k];
+				}
+			if (stSCM[j].pClientConnection[i])
+				delete stSCM[j].pClientConnection[i];
+			}
+		}
+#endif
 
 	if (m_pTestThread)
 		{
@@ -783,9 +809,11 @@ void CServiceApp::ShutDown(void)
 		}
 	m_pTestThread = 0;
 
+
+
+
 	Sleep(300);
 	// This code taken from void CTscanDlg::OnCancel() - the PAG
-	int i;
 	CString s;
 
 	for ( i = 0; i < MAX_CLIENTS; i++)

@@ -162,7 +162,6 @@
     <ClInclude Include="ClientConnectionManagement.h" />
     <ClInclude Include="ClientSocket.h" />
     <ClInclude Include="CmdProcessThread.h" />
-    <ClInclude Include="global.h" />
     <ClInclude Include="HwTimer.h" />
     <ClInclude Include="inifile.h" />
     <ClInclude Include="inifile_mb_wide_mfc_vs.h" />

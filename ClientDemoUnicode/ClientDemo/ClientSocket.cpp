@@ -4,7 +4,8 @@
 #include "stdafx.h"
 #include "ClientDemo.h"
 #include "ClientDemoDlg.h"
-#include "ClientSocket.h"
+//#include "global.h"
+//#include "ClientSocket.h"
 #include ".\clientsocket.h"
 
 extern CCommDemoApp theApp;
@@ -32,6 +33,7 @@ void CClientSocket::OnReceive(int nErrorCode)
 	DUMMY * pRecvBuf;
 	CString s;
 	JOB_INFO * pJobInfo;
+	pJobInfo = NULL;
 
 	pRecvBuf = new DUMMY;
 

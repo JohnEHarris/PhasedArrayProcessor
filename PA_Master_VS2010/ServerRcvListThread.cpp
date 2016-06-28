@@ -174,7 +174,7 @@ int CServerRcvListThread::ExitInstance()
 	// TODO:  perform any per-thread cleanup here
 	// return CServerRcvListThreadBase::ExitInstance();
 	CString s;
-	int i;
+	//int i;
 #ifdef THIS_IS_SERVICE_APP
 #if 0
 	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
@@ -385,6 +385,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 #ifdef THIS_IS_SERVICE_APP
 afx_msg void CServerRcvListThread::InitRunningAverage(WPARAM w, LPARAM lParam)
 	{
+#if 0
 	int i;
 	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
 		{
@@ -396,6 +397,7 @@ afx_msg void CServerRcvListThread::InitRunningAverage(WPARAM w, LPARAM lParam)
 		// pRunAvg[i]->SetChannelNumber(??);
 		// changes when config file changes chnl type
 		}
+#endif
 	}
 #endif
 

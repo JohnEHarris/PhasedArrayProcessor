@@ -2,9 +2,12 @@
 //
 
 #pragma once
-#include "ClientSocket.h"
+#include "global.h"
+//#include "ClientSocket.h"
+//#include "NcNx.h"
 #include "afxcmn.h"
 #include "afxwin.h"
+
 
 // CCommDemoDlg dialog
 class CCommDemoDlg : public CDialog
@@ -12,6 +15,7 @@ class CCommDemoDlg : public CDialog
 // Construction
 public:
 	CCommDemoDlg(CWnd* pParent = NULL);	// standard constructor
+	virtual ~CCommDemoDlg();
 
 // Dialog Data
 	enum { IDD = IDD_CLIENTDEMO_DIALOG };
@@ -41,6 +45,7 @@ public:
 	void AddReceive(CString s);
 	afx_msg void OnBnClickedButtonConnect();
 	CString m_sIPAddr;
+	CString m_sMyIp4;
 	unsigned int m_iSeq;
 	CString m_sUniString;
 	CClientSocket * m_pSocket;
@@ -80,4 +85,10 @@ public:
 	float m_fQuesTholdOD;
 	float m_fRejTholdID;
 	float m_fRejTholdOD;
-};
+	afx_msg void OnBnClickedRb201();
+	int m_nIpSelect;
+	afx_msg void OnBnClickedRb202();
+	afx_msg void OnBnClickedRb203();
+	afx_msg void OnSetupNcnx();
+	};
+

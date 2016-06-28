@@ -1,15 +1,6 @@
 #ifndef NIOS_MSG_H
 #define NIOS_MSG_H
 
-#ifndef _BYTE_DEFINED
-#define _BYTE_DEFINED
-typedef byte BYTE;
-#endif // !_BYTE_DEFINED
-#ifndef _WORD_DEFINED
-#define _WORD_DEFINED
-typedef unsigned short WORD;
-#endif // !_WORD_DEFINED
-typedef unsigned int UINT;
 
 #define TEST_UT                          20
 #define SET_INSPECT_MODE                 21
@@ -124,9 +115,11 @@ typedef unsigned int UINT;
 #define DataHeadLength 16
 #define DataPacketLength 24
 #define RAW_DATA_PACKET_LENGTH 1040
+#define RawDataPacketLength 1040
 #define AscanPacketLength 1040
 #define CmdPacketLength 1040
 
+#if 0
 typedef struct 
 	{
     unsigned char bMsgID;
@@ -140,6 +133,8 @@ typedef struct
     unsigned short wPeriod; //.2048ms
     unsigned char bSpare2[4];
 	} SDataHead; //16
+
+#endif
 
 typedef struct 
 	{
@@ -155,6 +150,8 @@ typedef struct
 	unsigned char bSpare2[4]; //more spare
 	} SAscanHead; //16
 
+
+#if 0
 typedef struct {
     unsigned short wTof4;
     unsigned short wTof3;
@@ -162,17 +159,21 @@ typedef struct {
     unsigned char bAmp3;
     unsigned char bAmp2;
 } SRawData; //8
+#endif
+
 
 typedef struct {
     unsigned char bAmp[4];
     unsigned short wTofPeak[2];
 } SData; //8 bytes
 
+#if 0
 typedef struct 
 	{
     SDataHead DataHead;
     SRawData RawData[128];
 	} SRawDataPacket; //1040 bytes
+#endif
 
 typedef struct {
     SDataHead DataHead;
@@ -185,10 +186,12 @@ typedef struct
     char Ascan[1024];
 	} SAscanPacket; //1040 bytes
 
+#if 0
 typedef struct {
     SDataHead DataHead;
     unsigned short wData[512];
 } SCmdPacket; //1040 bytes
+#endif
 
 
 #endif  //one time through

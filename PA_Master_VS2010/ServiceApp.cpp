@@ -2315,6 +2315,9 @@ int readnpipe( int fd, char *bp, int len)
 */
 UINT ProcessMmiMsg(void *dummy)
 {
+	int i = 5;
+	i = g_nMmiSocket + 1;	// BREAK POINT
+#if 0
 	MMI_CMD readBuf;
 	MMI_CMD *pMmiCmd = (MMI_CMD *) &readBuf;
 
@@ -2806,6 +2809,8 @@ UINT ProcessMmiMsg(void *dummy)
 
 		//::Sleep(2);
 	}
+#endif
+	return i;
 }
 
 
@@ -2815,9 +2820,10 @@ UINT ProcessMmiMsg(void *dummy)
 */
 BOOL SendSlaveMsg(int nWhichSlave, MMI_CMD *pSendBuf)
 	{
+#if 0
 	WORD *pWArg;
 	int rc, data, i;
-	BYTE buf[CmdPacketLength], value;
+//	BYTE buf[CmdPacketLength], value;
 	SCmdPacket *pCmd = (SCmdPacket *) buf;
 	static BYTE GateTrigger[MAX_CHANNEL][4];
 	static BYTE GateDetectMode[MAX_CHANNEL][4];
@@ -2831,346 +2837,9 @@ BOOL SendSlaveMsg(int nWhichSlave, MMI_CMD *pSendBuf)
 	int    nSlaveCh=0;
 	static int nOldSlave;
 	WORD td[16];  //focusing time delays
-
-	if (nWhichSlave >= NUM_OF_SLAVES)	return FALSE;
-	if ( (pSendBuf->MsgId == SET_ASCAN_READ_SEQ) || (pSendBuf->MsgId == SET_ASCAN_READ_BEAM) )
-		{
-		// if eiter command, stop sending Ascan data from all instruments
-		pCmd->DataHead.bMsgID = SET_ASCAN_SEQ_REG_CMD_ID;
-
-		if (nWhichSlave != nOldSlave)
-			{
-			for (i=0; i<NUM_OF_SLAVES; i++)
-				{
-				pCmd->wData[3] = 0;   //turn off Ascan send
-				if (g_SocketSlave[i] >= 0)
-					rc = send( g_SocketSlave[i], (char *) pCmd, CmdPacketLength, 0 );
-				}
-			}
-
-		nOldSlave = nWhichSlave;
-		}
-
-	pWArg = (WORD *) pSendBuf->CmdBuf;
-
-	if (g_SocketSlave[nWhichSlave] >= 0)
-	{
-		switch (pSendBuf->MsgId)
-		{
-		case SET_ASCAN_READ_SEQ:
-			pCmd->DataHead.bMsgID = SET_ASCAN_SEQ_REG_CMD_ID;
-			pCmd->wData[2] = FindSlaveChannel(pWArg[0]);
-			pCmd->wData[3] = 1;  //turn on ascan send
-			rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			//printf("set ascan read seq.\n");
-		
-			break;
-
-		case SET_ASCAN_READ_BEAM:
-			pCmd->DataHead.bMsgID = SET_ASCAN_SEQ_ONE_BEAM_CMD_ID;
-			pCmd->wData[0] = pWArg[1];
-			rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			break;
-			
-		case RECEIVER_GAIN:
-			if (pSendBuf->ChnlNum < g_NumberOfScans)
-			{
-				nSlaveCh = FindSlaveChannel(pSendBuf->ChnlNum);
-				pCmd->DataHead.bMsgID = SET_GAIN_DAC_CMD_ID;
-				pCmd->wData[0] = (WORD) ( (pWArg[0] % 420) * 3 / 10.0f + 0.5f );
-				pCmd->wData[1] = nSlaveCh;
-				if (TcgTrigger[nWhichSlave][nSlaveCh] == 0)
-					rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			}
-			break;
-
-		case TCG_FN:
-			if (pSendBuf->ChnlNum < g_NumberOfScans)
-			{
-				nSlaveCh = FindSlaveChannel(pSendBuf->ChnlNum);
-				pCmd->DataHead.bMsgID = SET_TCG_FN_CMD_ID;
-				pCmd->DataHead.bSpare1 = FindSlaveChannel(pSendBuf->ChnlNum);
-				memcpy ( (void *) pCmd->wData, (void *) pSendBuf->CmdBuf, sizeof(TCG_REC_MSG) );
-				memcpy ( (void *) &TcgRec[nWhichSlave][nSlaveCh], (void *) pSendBuf->CmdBuf, sizeof(TCG_REC_MSG) );
-				if (TcgTrigger[nWhichSlave][nSlaveCh] > 0)
-					rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			}
-			break;
-
-		case TCG_TRIGGER:  //TCG_Trigger, TCG_STEP
-			if (pWArg[1] < g_NumberOfScans)
-			{
-				nSlaveCh = FindSlaveChannel(pWArg[1]);
-				TcgTrigger[nWhichSlave][nSlaveCh] = pWArg[0] & 0x000F;
-				TcgStep[nWhichSlave] = (pWArg[0] & 0x00F0) >> 4;
-				pCmd->DataHead.bMsgID = SET_TCG_STEP_CMD_ID;
-				
-				pCmd->wData[0] = TcgStep[nWhichSlave];  //step: 0, 1, 2, or 3
-				pCmd->wData[1] = nSlaveCh;  //sequence number to set
-
-				for (i=0; i<4; i++)
-					pCmd->wData[2+i] = TcgTrigger[nWhichSlave][i];
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			}
-			break;
-
-		case RECEIVER_RF_VIDEO:
-			if (gChannel < g_NumberOfScans)
-			{
-				pCmd->DataHead.bMsgID = SET_GATE_DATA_MODE_CMD_ID;
-				GateDetectMode[gChannel][gGate] = (BYTE) pWArg[0];
-				value = 0;
-				for (i=0; i<4; i++)
-				{
-					if (GateDetectMode[gChannel][i] == 1)  //Full Wave mode
-						value = value | (1 << (i*2+1));
-					else if (GateDetectMode[gChannel][i] == 0)  //RF mode
-					{
-						if (GatePolarity[gChannel][i] == 1)  //negative
-							value = value  | (1 << (i*2));
-					}
-				}
-				pCmd->wData[0] = value;
-				pCmd->wData[2] = FindSlaveChannel(gChannel);
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-				//::Sleep(2);
-				//Set Ascan to RF (non peak hold) or Full Wave (peak hold) mode
-				//pCmd->DataHead.bMsgID = SET_ASCAN_PEAK_SEL_REG_CMD_ID;
-				//pCmd->wData[0] = (BYTE) (pWArg[0] & 0x1);
-				//rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			}
-			break;
-
-		case SET_ASCAN_PEAK_SEL_REG:
-			if (gChannel < g_NumberOfScans)
-			{
-				pCmd->DataHead.bMsgID = SET_ASCAN_PEAK_SEL_REG_CMD_ID;
-				pCmd->wData[0] = pWArg[0] & 0x1;
-				//if (pCmd->wData[0] == 1) pCmd->wData[0]=2;
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-				//printf("SET_ASCAN_PEAK_SEL_REG pWArg = %d, sel =%d\n", pWArg[0], pCmd->wData[0]);
-			}
-			break;
-
-		case RECEIVER_POLT:
-			if (gChannel < g_NumberOfScans)
-			{
-				pCmd->DataHead.bMsgID = SET_GATE_DATA_MODE_CMD_ID;
-				GatePolarity[gChannel][gGate] = (BYTE) pWArg[0];
-				value = 0;
-				for (i=0; i<4; i++)
-				{
-					if (GateDetectMode[gChannel][i] == 1)  //Full Wave mode
-						value = value | (1 << (i*2+1));
-					else if (GateDetectMode[gChannel][i] == 0)  //RF mode
-					{
-						if (GatePolarity[gChannel][i] == 1)  //negative
-							value = value  | (1 << (i*2));
-					}
-				}
-				pCmd->wData[0] = value;
-				pCmd->wData[2] = FindSlaveChannel(gChannel);
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			}
-			break;
-
-		case GATES_DELAY:
-			if (gChannel < g_NumberOfScans)
-			{
-				nSlaveCh = FindSlaveChannel(gChannel);
-				pCmd->DataHead.bMsgID = SET_GATE_DELAY_CMD_ID;
-				pCmd->wData[0] = gGate;
-				pCmd->wData[1] = 100* (pWArg[0] - 6) / 50;
-				pCmd->wData[2] = nSlaveCh;
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-				
-				if ( (TcgTrigger[nWhichSlave][nSlaveCh] > 0) && (TcgRec[nWhichSlave][nSlaveCh].GateOn[gGate] > 0) )
-				{
-					//::Sleep(2);
-					pCmd->DataHead.bMsgID = SET_TCG_FN_CMD_ID;
-					pCmd->DataHead.bSpare1 = nSlaveCh;
-					memcpy ( (void *) pCmd->wData, (void *) &TcgRec[nWhichSlave][nSlaveCh], sizeof(TCG_REC_MSG) );
-					rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-				}
-			}
-			break;
-
-		case GATES_RANGE:
-			if (gChannel < g_NumberOfScans)
-			{
-				nSlaveCh = FindSlaveChannel(gChannel);
-				pCmd->DataHead.bMsgID = SET_GATE_RANGE_CMD_ID;
-				pCmd->wData[0] = gGate;
-				pCmd->wData[1] = 100* (pWArg[0] + 2) / 50;
-				pCmd->wData[2] = nSlaveCh;
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-
-				if ( (TcgTrigger[nWhichSlave][nSlaveCh] > 0) && (TcgRec[nWhichSlave][nSlaveCh].GateOn[gGate] > 0) )
-				{
-					//::Sleep(2);
-					pCmd->DataHead.bMsgID = SET_TCG_FN_CMD_ID;
-					pCmd->DataHead.bSpare1 = nSlaveCh;
-					memcpy ( (void *) pCmd->wData, (void *) &TcgRec[nWhichSlave][nSlaveCh], sizeof(TCG_REC_MSG) );
-					rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-				}
-			}
-			break;
-
-		case GATES_BLANK:
-			if (gChannel < g_NumberOfScans)
-			{
-				pCmd->DataHead.bMsgID = SET_GATE_BLANK_CMD_ID;
-				pCmd->wData[0] = gGate;
-				pCmd->wData[1] = 100* (pWArg[0] + 2) / 50;
-				pCmd->wData[2] = FindSlaveChannel(gChannel);
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			}
-			break;
-
-		case GATES_TRIGGER:
-			if (gChannel < g_NumberOfScans)
-			{
-				pCmd->DataHead.bMsgID = SET_GATE_CONTROL_CMD_ID;
-				GateTrigger[gChannel][gGate] = (BYTE) pWArg[0];
-				value = 0;
-				for (i=0; i<4; i++)
-				{
-					if (GateTrigger[gChannel][i] > 1)
-						value = value | (1 << (i+4)) | (1 << i);  //interface triggering
-					else if (GateTrigger[gChannel][i] > 0)
-						value = value  | (1 << i);     //initial pulse triggering
-				}
-				pCmd->wData[0] = value;
-				pCmd->wData[2] = FindSlaveChannel(gChannel);
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			}
-			break;
-
-		case GATES_LEVEL:
-			if (gChannel < g_NumberOfScans)
-			{
-				pCmd->DataHead.bMsgID = SET_GATE_THRESHOLD_CMD_ID;
-				pCmd->wData[0] = gGate;
-				pCmd->wData[1] = pWArg[0];
-				pCmd->wData[2] = FindSlaveChannel(gChannel);
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			}
-			break;
-
-		case TOF_TRIGGER:
-			if (gChannel < g_NumberOfScans)
-			{
-				pCmd->DataHead.bMsgID = SET_GATE_TOF_MODE_CMD_ID;
-				GateTofTrigger[gChannel][gGate] = (BYTE) pWArg[0];
-				value = 0;
-				for (i=1; i<4; i++)
-				{
-					if (GateTofTrigger[gChannel][i] > 1)
-						value = value | (1 << (i+2));
-					if (GateTofStop[gChannel][i] > 0)
-						value = value  | (1 << (i-1));
-				}
-				pCmd->wData[0] = value;
-				pCmd->wData[2] = FindSlaveChannel(gChannel);
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			}
-			break;
-
-		case TOF_STOPON:
-			if (gChannel < g_NumberOfScans)
-			{
-				pCmd->DataHead.bMsgID = SET_GATE_TOF_MODE_CMD_ID;
-				GateTofStop[gChannel][gGate] = (BYTE) pWArg[0];
-				value = 0;
-				for (i=1; i<4; i++)
-				{
-					if (GateTofTrigger[gChannel][i] > 1)
-						value = value | (1 << (i+2));
-					if (GateTofStop[gChannel][i] > 0)
-						value = value  | (1 << (i-1));
-				}
-				pCmd->wData[0] = value;
-				pCmd->wData[2] = FindSlaveChannel(gChannel);
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			}
-			break;
-
-		case PULSER_PRF:
-			pCmd->DataHead.bMsgID = SET_PULSE_RATE_CMD_ID;
-			if (pWArg[1] <= 0) pWArg[1] = 100;
-			pCmd->wData[0] = (WORD) ((DWORD) (80000000 / pWArg[1])  & 0x0000FFFF);
-			pCmd->wData[1] = (WORD) (((DWORD) (80000000 / pWArg[1])  & 0x003F0000) >> 16);
-			pCmd->wData[2] = pWArg[1];
-			rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-			break;
-
-		case SET_ASCAN_REGISTERS:
-			if (gChannel < g_NumberOfScans)
-			{
-				pCmd->DataHead.bMsgID = SET_ASCAN_RANGE_CMD_ID;
-				data = (int) pWArg[1] / 10 - 1;
-				if (data < 0) data = 0;
-				pCmd->wData[0] = data;
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-				//::Sleep(2);
-				pCmd->DataHead.bMsgID = SET_ASCAN_DELAY_CMD_ID;
-				data = (pWArg[0] - 250) * 2 + 25;  //add 25 to align gate with signal
-				if (data > 50000) data = 50000;
-				pCmd->wData[0] = data;
-				rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-				//printf("Set ascan registers");
-			}
-			break;
-
-		case SITE_SPECIFIC_MSG:
-			pSiteDef = (SITE_SPECIFIC_DEFAULTS *) pSendBuf->CmdBuf;
-			pCmd->DataHead.bMsgID = SET_SCAN_TYPE_CMD_ID;
-			pCmd->wData[0] = pSiteDef->nPhasedArrayScanType[nWhichSlave];
-			pCmd->wData[1] = (WORD)(1000.0f * sin((double) pSiteDef->nTranAngle / 10.0f * 3.14159f / 180.0f) * 0.6f / 1.483f);
-			pCmd->wData[2] = pSiteDef->nEncoderDivider;
-			pCmd->wData[3] = 35;   //oblique 1 time delay step
-			pCmd->wData[4] = (unsigned short) (g_AllTholds.fOD * 1000.0f + 0.5f);   //OD
-			pCmd->wData[5] = (unsigned short) (pSiteDef->fWaterPath * 1000.0f + 0.5f);   //water path
-			pCmd->wData[6] = (unsigned short) (0.6f * 1000.0f + 0.5f);   //array pitch
-			if ( pSiteDef->nPhasedArrayScanType[nWhichSlave] == THREE_SCAN_LRW_8_BEAM_FOCUS)
-			{
-				ComputeTranFocusDelay(g_AllTholds.fWall, pSiteDef->fFocusPointZf, pSiteDef->fWaterPath, pSiteDef->nTranAngle / 10.0f, td);
-				for (i=0; i<16; i++)
-					pCmd->wData[2+i] = td[i];
-			}
-			rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-
-			//set ad9272 PGA gain
-			pCmd->DataHead.bMsgID = CHANGE_9272_GAIN;
-			pCmd->wData[0] = pSiteDef->nAd9272PgaGain;
-			rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-
-			break;
-
-		case SET_PIPE_PRESENT:
-			pCmd->DataHead.bMsgID = SET_INSPECT_ENABLE;
-			pCmd->wData[0] = pWArg[0];
-			rc = send( g_SocketSlave[nWhichSlave], (char *) pCmd, CmdPacketLength, 0 );
-
-			break;
-
-		default:
-			rc = 1;
-			break;
-		}
-
-
-
-		if ( rc <= 0 )
-		{
-			return FALSE;
-		}
-		return TRUE;
-	}
-	//printf("Master - Connection not established with Slave %d.\n\n", nWhichSlave+1);
+#endif
 	return FALSE;
 	}
-#endif
 
 /**************************************************************************** 
 * 
@@ -3187,6 +2856,7 @@ BOOL SendSlaveMsg(int nWhichSlave, MMI_CMD *pSendBuf)
 
 UINT tInstMsgProcess (void *pCInstMsgProcess)
 {
+#if 0
 	CInstMsgProcess *pInstMsgProcess = (CInstMsgProcess *) pCInstMsgProcess;	// copy in ptr to the particular instance
 	// pInstMsgProcess stays in the stack for each thread and is thus "static" as long
 	// as the thread does not return.
@@ -3514,7 +3184,8 @@ UINT tInstMsgProcess (void *pCInstMsgProcess)
 		}
 
 	}	// exit thread loop
-	
+#endif
+#endif
 	return 0;
 }
 
@@ -3867,6 +3538,7 @@ void SetGetChannelCfg (int nSetGet /* 0=SET, 1=Get */, CHANNEL_CONFIG2 *pChnlCfg
 //void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, int nInspectMode); before 2-14-2013
 void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CServerRcvListThread *pServerRcvListThread)
 {
+#if 0
 	int i, j, k, nSeq;  /* generic looper */
 	BYTE RcvrSequence[MAX_CHANNEL_PER_INSTRUMENT];   /* receiver sequence enable status.  1=enabled, 0=no */
 	BYTE AmpID[MAX_CHANNEL_PER_INSTRUMENT];   /* hold ID amplitude for current A-scan */
@@ -4134,6 +3806,7 @@ void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CS
 	}
 
 	nOldClock[nSlave] = nClock;
+#endif
 }
 
 
@@ -4151,6 +3824,7 @@ void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CS
 */
 void NC_Process (BYTE *RcvrSequence, BYTE *AmpID, BYTE *AmpOD, BYTE *FlawID, BYTE *FlawOD, CHANNEL_INFO *ChannelInfo, int nSlave, int nTick, int nSeq)
 {
+#if 0
 	static BYTE m_AmpID[NUM_OF_SLAVES][MAX_CHANNEL_PER_INSTRUMENT][NC_TOTAL];  /* NC_TOTAL consecutive ID amplitudes */
 	static BYTE m_AmpOD[NUM_OF_SLAVES][MAX_CHANNEL_PER_INSTRUMENT][NC_TOTAL];  /* NC_TOTAL consecutive OD amplitudes */
 	int nChannel;  /* channel looper */
@@ -4222,6 +3896,7 @@ void NC_Process (BYTE *RcvrSequence, BYTE *AmpID, BYTE *AmpOD, BYTE *FlawID, BYT
 			}
 		}
 	}
+#endif
 	
 }
 
@@ -4237,6 +3912,7 @@ void NC_Process (BYTE *RcvrSequence, BYTE *AmpID, BYTE *AmpOD, BYTE *FlawID, BYT
 */
 void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, float ascan_delta_t, CHANNEL_INFO *ChannelInfo, BOOL bFirstAscan, int nSlave, int nTick, int nXloc, int nSeq)
 {
+#if 0
 	static WORD m_Wall[NUM_OF_SLAVES][MAX_CHANNEL_PER_INSTRUMENT][NX_TOTAL];  /* NX_TOTAL consecutive wall readings */
 	static WORD Wall_Buf[NUM_OF_SLAVES][MAX_CHANNEL_PER_INSTRUMENT][WALL_BUF_SIZE];  /*  consecutive wall readings for finding maximum wall */
 	int nChannel;  /* channel looper */
@@ -4476,6 +4152,7 @@ void NX_Process (BYTE *RcvrSequence, WORD *Wall, WORD *WallMin, WORD *WallMax, f
 		}
 	    }
 	}
+#endif
 }
 
 

@@ -34,6 +34,7 @@ Gather configuration file definition into one structure
 
 #define CONFIG_H
 
+#include "PA2Struct.h"
 /* The global declaration may be used in non-windows system which has not 
    BOOL type system declarations, so keep these typedef for convenience
 */
@@ -87,9 +88,7 @@ of bytes as a config file for a 40 channel system.
 #define MAX_WALL_CHANNELS			4
 #define MAX_BOARD_PER_INSTRUMENT	6
 
-#define MAX_CMDS_BEFORE_SLEEP		8		// 4 works and tested with 20 ms sleep after every max_cmds,
-// ok for 10, 16 works for 2 consec downloads in Tscandlg.cpp 
-// but crashed my Dell m6600 when attempting 10 consecutive downloads.
+#define MAX_CMDS_BEFORE_SLEEP		4
 
 #define NC_TOTAL  4
 #define NX_TOTAL  10
@@ -132,7 +131,7 @@ of bytes as a config file for a 40 channel system.
 #define	HOME					(WORD) 0x8000
 #define	AWAY					0
 
-#define	FORWARD					(WORD) 0x0004
+//#define	FORWARD					(WORD) 0x0004
 #define	REVERSE					0
 #define	MOTION_BASED			0x100
 #define	TIME_BASED				0
@@ -797,7 +796,52 @@ typedef struct
 	short spare[24];
 	} calREC;
 
+
+// Assume no more than 8 chnl types per instrument
+// With 32 vChnls, this means every chnl type repeats at least 4 times.
+// If more than 8 chnl types change the dimesion on stNcNx[]
+typedef struct
+	{
+	WORD wMsgID;		// 1
+	WORD wMsgSeqCnt;
+	BYTE bPamNumber;	// Which PAM
+	BYTE bInstNumber;	// Which Instrument connected to the above APAM
+	BYTE bChnlTypes;	// how many different chnl types for each instrument
+	BYTE bChnlRepeats;	// how many times a given chnl type repeats in each instrument
+	BYTE bMaxVChnlPerInst;	// We assume 32 total vChnl per instrument max
+	BYTE bSpare[3];
+	ST_NC_NX stNcNx[32];	// Max unique sets of Nc Nx data per instrument. Size = 16*32 =512
+	} PAM_INST_CHNL_INFO; // SIZEOF() = 136
 	
+// a record for setting the phased array 2 Nc Nx dialog parameters
+// If there are 4 chnls types in an instrument and each type repeats 8 times, then there are 32 virtual channels
+// in that instrument.
+// Here we assume no more than 8 channel types per instrument and a max of 32 vChnls/instrument
+//
+typedef struct
+	{
+	BYTE bPamQty;		// how many Pam's. Assume a max of 4 PAM's
+	BYTE bInst;			// Max instruments per PAM. Assume up to 16 instruments
+	PAM_INST_CHNL_INFO PamInstChnlInfo[4][16]; // [PAMS][INST]    size =64*128 + 2 = 8194
+	}	NcNxPA2REC;
+
+
+typedef struct
+	{
+	WORD wMsgID;		// 1
+	WORD wMsgSeqCnt;
+	BYTE bPamNumber;	// Which PAM
+	BYTE bInstNumber;	// Which Instrument connected to the above APAM
+	BYTE bChnlTypes;	// how many different chnl types for each instrument
+	BYTE bChnlRepeats;	// how many times a given chnl type repeats in each instrument
+	BYTE bMaxVChnlPerInst;	// We assume 32 total vChnl per instrument max
+	BYTE bSpare[3];
+	WORD wSpare[512];	// Max unique sets of Nc Nx data per instrument. Size = 16*32 =512
+	} PAM_GENERIC_MSG; // SIZEOF() = 136
+
+
+
+
 typedef struct
 	{
 	JOB_REC		JobRec;
@@ -814,6 +858,7 @@ typedef struct
 	BYTE bMotionTime;		/* 0 = motion mode, 1 = time for inspect */
 	BYTE bEnglishMetric;	/* 0 = English, 1 = Metric */
 	WORD wOpMode;			/* 0x200=NOP 0x201=RUN, 2=CAL, 3=PKT */
+	NcNxPA2REC	NcNx;		// Phase Array2
 	BYTE spare[126];
 	} CONFIG_REC;		/* the configuration file structure */
 

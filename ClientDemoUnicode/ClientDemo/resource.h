@@ -8,6 +8,8 @@
 #define IDD_CLIENTDEMO_DIALOG           102
 #define IDP_SOCKETS_INIT_FAILED         103
 #define IDR_MAINFRAME                   128
+#define IDD_DLG_NC_NX                   129
+#define IDR_MENU1                       130
 #define IDC_EDIT_IP                     1000
 #define IDC_BUTTON_CONNECT              1002
 #define IDC_BUTTON_SEND                 1003
@@ -50,14 +52,37 @@
 #define IDC_EDIT_SONO_MAG4              1028
 #define IDC_EDIT_REJ_OD                 1029
 #define IDC_STATIC_STATUS               1030
+#define IDC_RB201                       1031
+#define IDC_RB202                       1032
+#define IDC_CB_PAM                      1032
+#define IDC_RB203                       1033
+#define IDC_CB_INST                     1033
+#define IDC_SPCHNL_TYPES                1034
+#define IDC_ED_CH_TYPES                 1035
+#define IDC_SPCHNL_REPEAT               1036
+#define IDC_ED_REPEATS                  1037
+#define IDC_CB_NC_ID                    1038
+#define IDC_CB_THLD_ID                  1039
+#define IDC_CB_M_ID                     1040
+#define IDC_CB_NC_OD                    1041
+#define IDC_CB_THLD_OD                  1042
+#define IDC_CB_M_OD                     1043
+#define IDC_CB_NX                       1044
+#define IDC_CB_MAX_WALL                 1045
+#define IDC_CB_MIN_WALL                 1046
+#define IDC_CB_DROP_CNT                 1047
+#define IDC_LB_NC_NX                    1048
+#define IDC_BUTTON1                     1049
+#define IDC_BN_SEND                     1049
+#define ID_SETUP_NCNX                   32771
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        129
-#define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1031
+#define _APS_NEXT_RESOURCE_VALUE        131
+#define _APS_NEXT_COMMAND_VALUE         32772
+#define _APS_NEXT_CONTROL_VALUE         1050
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

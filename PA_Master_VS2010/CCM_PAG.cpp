@@ -97,7 +97,7 @@ extern int nMaxX;
 extern int gChannel, gGate;
 
 #define I_AM_CCM_PAG
-#include "CCM_PAG.h"
+//#include "CCM_PAG.h"
 CCCM_PAG *pCCM_PAG;
 // nMyConnection selects which one of MAX_CLIENTS connections we are managing with this instance
 // This class is a child of the base class CClientConnectionManagement. It was crafted specifically
@@ -140,42 +140,35 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 	CString s;
 //	BYTE *pB;
 
-	MMI_CMD *pMmiCmd;
-	// local variables copied from ServiceApp.cpp 'c' routine ProcessMmiMsg()
-	// MMI_CMD *pMmiCmd = (MMI_CMD *) &readBuf;
+/****
+typedef struct
+	{
+	WORD wMsgID;		// 1
+	WORD wMsgSeqCnt;
+	BYTE bPamNumber;	// Which PAM
+	BYTE bInstNumber;	// Which Instrument connected to the above APAM
+	BYTE bChnlTypes;	// how many different chnl types for each instrument
+	BYTE bChnlRepeats;	// how many times a given chnl type repeats in each instrument
+	BYTE bMaxVChnlPerInst;	// We assume 32 total vChnl per instrument max
+	BYTE bSpare[3];
+	WORD wSpare[512];	// Max unique sets of Nc Nx data per instrument. Size = 16*32 =512
+	} PAM_GENERIC_MSG; // SIZEOF() = 136
+	****/
 
-	WORD *pWArg;
-	DWORD *pDWArg;
-	float *pFArg;
+			
+	// 2016-06-27 ditch legacy command structure and use PA2 structure
+
+	//MMI_CMD *pMmiCmd;
+	PAM_GENERIC_MSG *pMmiCmd;
+	PAM_INST_CHNL_INFO *pPamChnlInfo;
 	WORD MsgId;
-	int i;		//, rc;  /* generic looper */
-	static int nChannel = 0;
-	static int nGate = 0;
-	static int old_gChannel = 0;
-	//int  nWhichSlave;
-	SHOE_CONFIG  *pShCfg;
-	C_MSG_ALL_THOLD *pThold;
-	WALL_COEF *pWallCoef;
-	SITE_SPECIFIC_DEFAULTS *pSiteDef;
-	CHANNEL_CONFIG2 ChannelCfg;
-//	static int  nInspectMode = NOP_MODE;
-	int nMotionTime;
-	MMI_CMD  *ptempCmd;
-	WORD nEnableAscan = 0;
-	JOB_REC *pJobRec;
-	C_MSG_NC_NX *pNcNx;	// = (C_MSG_NC_NX *) pMmiCmd->CmdBuf;
 
 
-
-	ASSERT(m_pstCCM);
-	if (NULL == m_pstCCM)	return;		// something wrong here
-	if (m_pstCCM->pRcvPktPacketList->IsEmpty())		return;	// shouldn't have been called, but no harm
-	// temp during debug
 
 	while (m_pstCCM->pRcvPktPacketList->GetCount())
 		{
 		LockRcvPktList();
-		pMmiCmd = (MMI_CMD *) m_pstCCM->pRcvPktPacketList->RemoveHead();
+		pMmiCmd = (PAM_GENERIC_MSG *) m_pstCCM->pRcvPktPacketList->RemoveHead();
 		UnLockRcvPktList();
 
 		// use pMmiCmd->Slot to identify PAM's pClientConnection to know which instrument to send to
@@ -184,449 +177,30 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		// while othere may be routed directly to the instruments.
 
 			
-		MsgId = pMmiCmd->MsgId;
-
-		pNcNx = (C_MSG_NC_NX *) pMmiCmd->CmdBuf;
-		pJobRec = (JOB_REC *) pMmiCmd->CmdBuf;
-
-		pWArg = (WORD *) pMmiCmd->CmdBuf;
-		pDWArg = (DWORD *) pMmiCmd->CmdBuf;
-		pFArg = (float *) pMmiCmd->CmdBuf;
-
-		pShCfg = (SHOE_CONFIG *) pMmiCmd->CmdBuf;
-		pThold = (C_MSG_ALL_THOLD *) pMmiCmd->CmdBuf;
+		MsgId = pMmiCmd->wMsgID;
 
 		// big case statement adapted from ServiceApp.cpp 'c' routine ProcessMmiMsg()
-#if 1
 		switch(MsgId)
 			{
-		case CHANNEL_SELECT:
-			nChannel = pWArg[0];
-			gChannel = nChannel;// % MAX_CHANNEL_PER_INSTRUMENT;
-			//nWhichSlave = nChannel / g_NumberOfScans;
-//			pMmiCmd->Slot = m_nWhichInstrument = FindWhichSlave(nChannel);
-			m_nWhichInstrument = pMmiCmd->Inst_Number_In_PAM;
-			//pWArg[0] = nChannel % g_NumberOfScans;
-			pWArg[0] = FindSlaveChannel(nChannel);
-//				SetGetInspectMode_M (1 /* GET */, &nInspectMode, &nMotionTime);
-			if (InspState.GetInspectMode() != PKT_MODE)
-				SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
-			else
-				{
-				/* if active channel is changed from one slave to another */
-				if ( (nChannel/g_NumberOfScans) != (old_gChannel/g_NumberOfScans) )
-					{
-					m_nWhichInstrument = old_gChannel / g_NumberOfScans;
-					ptempCmd = new MMI_CMD;
-					ptempCmd->MsgId = NOP_MODE;
-					ptempCmd->Inst_Number_In_PAM = m_nWhichInstrument;
-					SendSlaveMsg (m_nWhichInstrument, ptempCmd);			// SendSlaveMsg delete Cmd at end of function
-					m_nWhichInstrument = nChannel / g_NumberOfScans;
-					ptempCmd->MsgId = PKT_MODE;
-					ptempCmd->Inst_Number_In_PAM = m_nWhichInstrument;
-					SendSlaveMsg (m_nWhichInstrument, ptempCmd);
-					delete pMmiCmd;
-					}
-				else
-					SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
-				}
-			old_gChannel = nChannel;
-			break;
 
-		case SET_ASCAN_READ_SEQ:
-			m_nWhichInstrument = FindWhichSlave(pWArg[0]);
-			pMmiCmd->Inst_Number_In_PAM = m_nWhichInstrument;
-			SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
-			//printf("set ascan read seq.\n");
-			break;
+		case NC_NX_CMD_ID:
+			// The only message as of 2016-06-27
+			// Does not get sent to instruments, sets Nc and Nx parameters for the PAM to use
 
-		case SET_ASCAN_READ_BEAM:
-			pMmiCmd->Inst_Number_In_PAM = m_nWhichInstrument = pWArg[0];
-			SendSlaveMsg (pWArg[0], pMmiCmd);
-			break;
-
-		case GATE_SELECT:
-			nGate = pWArg[0] % MAX_GATES;
-			gGate = nGate;
-			SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
-			break;
-
-		case PULSER_ONOFF:
-			m_nWhichInstrument = pWArg[0] % MAX_CLIENTS_PER_SERVER;	// JEH 22-Feb-13 need fix
-			pMmiCmd->Inst_Number_In_PAM = m_nWhichInstrument;
-			SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
-			break;
-
-		case PULSER_PRF:
-			g_nPulserPRF = pWArg[1];
-			if (g_nPulserPRF < 1) g_nPulserPRF = 1000;
-			SendSlaveMsgToAll(pMmiCmd);
-			break;
-
-		case SCOPE_TRACE1_MDAC:
-			pMmiCmd->Inst_Number_In_PAM = m_nWhichInstrument = pWArg[0];
-			SendSlaveMsg (pWArg[0], pMmiCmd);
-			break;
-
-		case RUN_MODE:  /* inspection run mode */
-			nMotionTime = (int) pWArg[0];
-			g_nXloc = 0;
-			g_nXloc_S2 = 0;
-			g_nTick = 0;
-			g_nOldMotionBus = 0;
-			InspState.SetInspectMode(RUN_MODE);
-			InspState.SetMotionMode(nMotionTime);
-			//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
-			g_nAuxClkIntCnt = -10;
-			SendSlaveMsgToAll(pMmiCmd);
-			break;
-
-		case CAL_MODE:  /* calibration mode */
-			InspState.SetInspectMode(CAL_MODE);
-			//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
-			SendSlaveMsgToAll(pMmiCmd);
-			break;
-
-		case PKT_MODE:  /* calibration mode */
-			InspState.SetInspectMode(PKT_MODE);
-			//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
-			SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
-			break;
-
-		case PLC_MODE:  /*  */
-			InspState.SetInspectMode(PLC_MODE);
-			//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
-
-			g_nPlcOfWho = (BYTE) pWArg[0];
-			m_nOldInstrument = m_nWhichInstrument;
- 	   		if (pWArg[0] > 0)
- 	   			{
- 	   			pMmiCmd->Inst_Number_In_PAM = m_nWhichInstrument = pWArg[0] - 1;
- 	   			SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
- 	   			}
-			break;
-
-		case ADC_MODE:
-  	  		pMmiCmd->Inst_Number_In_PAM = m_nWhichInstrument = pWArg[0];
-  	  		SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
-  	  		break;
-
-		case NOP_MODE:  /* inspection stop mode */
-	#if 1
-			InitImageBufArray ();
-	#endif
-  	  		//nInspectMode = NOP_MODE;
-			InspState.SetInspectMode(NOP_MODE);
-   	 		//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
-    		g_nXloc = 0;
-    		g_nXloc_S2 = 0;
-    		g_nTick = 0;
-			g_nNextWindow = 0;
-			SendSlaveMsgToAll(pMmiCmd);
-    		break;
-
-		case ASCAN_MODE:
-			//printf("MasterTCPIP -- ASCAN_MODE.\n");
- 	   		nEnableAscan = pWArg[0];
-			m_nOldInstrument = m_nWhichInstrument;
-  	  		for (i=0; i<MAX_CLIENTS_PER_SERVER; i++)
-   	 			{
-    			if ( (i == m_nWhichInstrument) && (nEnableAscan == 1) )		pWArg[0] = 1;
-    			else	    					pWArg[0] = 0;
-
-				ptempCmd = new MMI_CMD;
-				memcpy(ptempCmd,pMmiCmd, sizeof(MMI_CMD));
-				ptempCmd->Inst_Number_In_PAM = i;
-				SendSlaveMsg (i, ptempCmd);
-				}
-			m_nWhichInstrument = m_nOldInstrument;
+			pPamChnlInfo = (PAM_INST_CHNL_INFO *)pMmiCmd;
+			TRACE(_T("Received NC_NX_CMD_ID for Instrument %d from Phased Array GUI - now deleting\n"),pMmiCmd->bInstNumber);
+			SetChannelInfo(pPamChnlInfo);
 			delete pMmiCmd;
-  	  		break;
+			return;
 
-		case CHANNEL_CONFIG_MSG:
-    		m_nWhichInstrument = pShCfg->nSlave;
-    		for ( i = 0; i < MAX_CHANNEL_PER_INSTRUMENT; i++)
-    			{
-	    		ChannelCfg.Ch[m_nWhichInstrument][i].Type = pShCfg->Ch[i].Type;
- 	   			ChannelCfg.Ch[m_nWhichInstrument][i].cXOffset = pShCfg->Ch[i].cXOffset;
-  	  			ChannelCfg.Ch[m_nWhichInstrument][i].cWOffset = pShCfg->Ch[i].cWOffset;
-   	 			}
-    		//ChannelCfg.cClockOffset = pChnlCfg->cClockOffset;
-    		//SetGetChannelCfg (0 /* SET */, &ChannelCfg, m_nWhichInstrument);
-			InspState.SetChannelConfig(&ChannelCfg, m_nWhichInstrument);
-			SetChannelInfo();
-    		g_nMaxXSpan = GetMaxXSpan();
-			InitImageBufArray ();
-  	  		SendSlaveMsg (m_nWhichInstrument, pMmiCmd);		
-   	 		break;
-
-		case SET_ALL_THOLDS:
- 	   		memcpy ( (void *) &g_AllTholds, (void *) pThold, sizeof(C_MSG_ALL_THOLD) );
-			InspState.SetChannelConfig(&ChannelCfg, m_nWhichInstrument);
-			SetChannelInfo();
-			SendSlaveMsgToAll(pMmiCmd);
-  	  		break;
-
-		case SITE_SPECIFIC_MSG:
-			pSiteDef = (SITE_SPECIFIC_DEFAULTS *) pMmiCmd->CmdBuf;
- 	   		//SetGetSiteDefaults(0 /*SET*/, pSiteDef);
-			InspState.SetSiteDefaults(pSiteDef);	// load the site defaults from file in MMI
-  	  		g_nRecordWallData = pSiteDef->nRecordWallData;
-
-   	 		if (pSiteDef->nDefaultLineSpeed > 0)
-    				g_fTimePerInch = 1.0f / ( ((float) pSiteDef->nDefaultLineSpeed)*12.0f/6000.0f );
-    		if (pSiteDef->nDefaultRotateSpeed > 0)
-    			g_fTimePerTurn = 1.0f / ( ((float)pSiteDef->nDefaultRotateSpeed)/6000.0f );
-
-    		if (pSiteDef->n20ChnlPerHead == 0)
-    			g_b20ChnlPerHead = FALSE;
-    		else
-    			g_b20ChnlPerHead = TRUE;
-
-			if ( pSiteDef->fMotionPulseLen > 0.0f)
-				g_fMotionPulseLen = pSiteDef->fMotionPulseLen;
-
-			// 1st msg to all
-			ptempCmd = new MMI_CMD;
-			memcpy(ptempCmd,pMmiCmd, sizeof(MMI_CMD));
-			SendSlaveMsgToAll(ptempCmd);
-
- 	   		g_nMaxWallWindowSize = pSiteDef->nMaxWallWindowSize;
-  	  		if ( (g_nMaxWallWindowSize > WALL_BUF_SIZE) || (g_nMaxWallWindowSize < 1) )
-   	 			g_nMaxWallWindowSize = 10;
-
-    		pMmiCmd->MsgId = WALL_DROP_TIME;
-    		pWArg[0] = pSiteDef->nWallDropTime;
-
-			// 2nd message to all
-			ptempCmd = new MMI_CMD;
-			memcpy(ptempCmd,pMmiCmd, sizeof(MMI_CMD));
-			SendSlaveMsgToAll(ptempCmd);
-
-   	 		g_WallDropTime = pWArg[0] / 1000.f;
-
-			g_NumberOfScans = 0;
-			for (i=0; i<NUM_OF_SLAVES; i++)
-				{
-				switch(pSiteDef->nPhasedArrayScanType[i])
-					{
-				case LINEAR_SCAN_0_DEGREE:
-				case LINEAR_SCAN_37_DEGREE:
-					g_NumberOfScans += 1;
-					g_ArrayScanNum[i] = 1;
-					g_SequenceLength[i] = 49;
-					break;
-
-				default:
-				case THREE_SCAN_LRW_8_BEAM:
-				case THREE_SCAN_LRW_8_BEAM_FOCUS:
-				case THREE_SCAN_LO1LO1R_8_BEAM_12345678:
-				case THREE_SCAN_LO1LO1R_8_BEAM_56781234:
-					g_NumberOfScans += 3;
-					g_ArrayScanNum[i] = 3;
-					g_SequenceLength[i] = 24;
-					break;
-
-				case THREE_SCAN_LRW_16_BEAM:
-					g_NumberOfScans += 3;
-					g_ArrayScanNum[i] = 3;
-					g_SequenceLength[i] = 48;
-					break;
-
-				case TWO_SCAN_LR_8_BEAM:
-					g_NumberOfScans += 2;
-					g_ArrayScanNum[i] = 2;
-					g_SequenceLength[i] = 16;
-					break;
-
-				case TWO_SCAN_LR_16_BEAM:
-					g_NumberOfScans += 2;
-					g_ArrayScanNum[i] = 2;
-					g_SequenceLength[i] = 32;
-					break;
-
-				case LONG_8_BEAM_12345678:
-				case LONG_8_BEAM_56781234:
-					g_NumberOfScans += 1;
-					g_ArrayScanNum[i] = 1;
-					g_SequenceLength[i] = 8;
-					break;
-
-				case LONG_24_BEAM_800:
-				case LONG_24_BEAM_080:
-				case LONG_24_BEAM_12345678:
-				case LONG_24_BEAM_56781234:
-					g_NumberOfScans += 1;
-					g_ArrayScanNum[i] = 1;
-					g_SequenceLength[i] = 24;
-					break;
-
-				case WALL_25_BEAM_90_DEGREE_PROBE:
-					g_NumberOfScans += 1;
-					g_ArrayScanNum[i] = 1;
-					g_SequenceLength[i] = 25;
-					break;
-					}
-
-				g_nPhasedArrayScanType[i] = pSiteDef->nPhasedArrayScanType[i];
-				InspState.SetChannelConfig(&ChannelCfg, m_nWhichInstrument);
-				SetChannelInfo();
-				}
-					
-			delete pMmiCmd;
-    		break;
-
-		case SET_NC_NX:
-    		memcpy ( (void *) &g_NcNx, (void *) pNcNx, sizeof (C_MSG_NC_NX) );
-			InspState.SetChannelConfig(&ChannelCfg, m_nWhichInstrument);
-			SetChannelInfo();
-			SendSlaveMsgToAll(pMmiCmd);
-			break;
-
-		case SET_WALL_COEFS:
-    		pWallCoef = (WALL_COEF *) pMmiCmd->CmdBuf;
-    		memcpy( (void *) &g_WallCoef, (void *) pWallCoef, sizeof (WALL_COEF) );
-			m_nOldInstrument = m_nWhichInstrument;
-			//for (i=0; i<NUM_OF_SLAVES; i++)
-			for (i=0; i<MAX_CLIENTS_PER_SERVER; i++)
-				{
-	    		pWallCoef->fWallSlope[0] = pWallCoef->fWallSlope[i];	// MAX_SHOES not necessarily MAX_CLIENTS_PER_SERVER
- 	   			pWallCoef->WallOffset[0] = pWallCoef->WallOffset[i];
-
-				ptempCmd = new MMI_CMD;
-				memcpy(ptempCmd,pMmiCmd, sizeof(MMI_CMD));
-				ptempCmd->Inst_Number_In_PAM = i;
-				SendSlaveMsg (i, ptempCmd);
-   	 			}
-			InspState.SetChannelConfig(&ChannelCfg, m_nWhichInstrument);
-			SetChannelInfo();
- 			m_nWhichInstrument = m_nOldInstrument;
-			delete pMmiCmd;
-   			break;
-
-		case 0x69:   /* sequence length */
-		case FIRING_SEQ:
-    		pMmiCmd->Inst_Number_In_PAM = m_nWhichInstrument = pWArg[0]/10;
-			pWArg[0] %= 10;
- 			SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
-  			break;
-
-		case JOINT_NUMBER_MSG:
-   			g_nJointNum = pDWArg[0];
-			SendSlaveMsgToAll(pMmiCmd);
-			break;
-
-		case RECEIVER_GAIN:
-		case TCG_FN:
-			m_nWhichInstrument = FindWhichSlave(pMmiCmd->ChnlNum);
-			SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
-   	 		break;
-
-		case RECEIVER_FCNT:   /* receiver offset */
-    		m_nWhichInstrument = FindWhichSlave(pWArg[1]);
-    		SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
-    		break;
-
-		case ENET_STATS_MODE:
-    		g_nNoMmiReplyCnt = 0;
-			SendSlaveMsgToAll(pMmiCmd);
-   	 		break;
-
-		case 0x63:   /* TCG_TRIGGER, TCG_STEP */
-    		m_nWhichInstrument = FindWhichSlave(pWArg[1]);
- 	   		SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
-  	  		break;
-
-		case RUN_CAL_JOINT:
-			if (pWArg[0])
- 	   			g_bRunCalJoint = TRUE;
-  	  		else
-   	 			g_bRunCalJoint = FALSE;
-    		if (g_bRunCalJoint)
-    			{
-    			g_nNextRealJointNum = g_nJointNum;
-    			g_nJointNum = g_nNextCalJointNum;
-				}
- 	   		else
-  	  			{
-   	 			g_nNextCalJointNum = g_nJointNum;
-    			g_nJointNum = g_nNextRealJointNum;
-    			}
-			delete pMmiCmd;
-    		break;
-
-		case LAST_JOINT_NUMBER:
-			g_nNextRealJointNum = pDWArg[0]+1;
- 	   		g_nNextCalJointNum = pDWArg[1]+1;
-  	  		if (g_bRunCalJoint)
-   	 			{
-    			g_nJointNum = g_nNextCalJointNum;
-    			}
-    		else
-				{
-		   		g_nJointNum = g_nNextRealJointNum;
-  	  			}
-			delete pMmiCmd;
-   	 		break;
-
-		case STORE_JOBREC_MSG:
-			g_bShowWallDiff = pJobRec->ShowWallDiff;
-			memcpy( (void *) &g_JobRec, (void *) pJobRec, sizeof (JOB_REC) );
-			// shouldn't there be a break here ????
-			// none present in original code
-			delete pMmiCmd;	// added 2-15-2013 jeh
-   	 		break;			// added 2-15-2013 jeh
-
-		case WALL_DROP_TIME:
-			SendSlaveMsgToAll(pMmiCmd);
-			break;
-
-		case LOAD_CONFIG_FILE:
-			SendSlaveMsgToAll(pMmiCmd);
-    		if (g_AdiStatus != 3)
-    			g_AdiStatus = 1;
-			break;
-
-		case ASCAN_REFRESH_RATE:
-			SendSlaveMsgToAll(pMmiCmd);
-    		break;
-
-		case ASCAN_BROADCAST:
-			g_bBcastAscan = (BYTE) pWArg[0];
-			delete pMmiCmd; 
- 	   		break;
-
-		case SET_X_SCALE:
-			g_nXscale = pWArg[0];
- 	   		if (g_nXscale < 600) g_nXscale = 900;
-  	  		if (g_nXscale > 900) g_nXscale = 900;
-			delete pMmiCmd; 
-   	 		break;
-
-		case SET_PIPE_PRESENT:
-			SendSlaveMsgToAll(pMmiCmd);
-    		break;
-
-		case TURN_OFF_MASTER:
-			//ShutDownSystem();
-			g_nShowWallBars = pWArg[0];
-			delete pMmiCmd; 
 			break;
 
 		default:
-			if (m_nWhichInstrument != pMmiCmd->Inst_Number_In_PAM)
-				{
-				s.Format(_T("CCCM_PAG::ProcessReceivedMessage.default m_nWhichInstrument=%d, pMmiCmd->Inst_Number_In_PAM=%d\n"),
-					m_nWhichInstrument, pMmiCmd->Inst_Number_In_PAM);
-				TRACE(s);
-				m_nWhichInstrument = pMmiCmd->Inst_Number_In_PAM;
-				}
-
-    		SendSlaveMsg (m_nWhichInstrument, pMmiCmd);
-    		break;
+			TRACE(_T("No command recognized\nDeleting command from Phased Array GUI\n"));
+			delete pMmiCmd;
+			return;
 			}	// end switch(MsgId)
 
-#endif
 
 		m_nMsgQty++;
 #if 0
@@ -724,10 +298,55 @@ int CCCM_PAG::FindDisplayChannel(int nArray, int nArrayCh)
 // These function copied from InspMsgProcess class
 
 // usually called when an MMI command is received to set channel config info
-// Then SetChannelInfo will set the channel types for this instrument
+// Then SetChannelInfo will set the channel types for this instrument  -- not for PA2 in 2016
+// Only sets Nc Nx parameters. Knows not what type the channel is
 //void CInstMsgProcess::SetChannelInfo(void)
-void CCCM_PAG::SetChannelInfo(void)
+
+void CCCM_PAG::SetChannelInfo(PAM_INST_CHNL_INFO *pPamInstChnlInfo)
 	{
+	int nPam, nInst, nChnlTypes, nRepeat;
+	int i,j,k;
+	CString s;
+	CvChannel *pChannel;
+
+	nPam		= pPamInstChnlInfo->bPamNumber;
+	nInst		= pPamInstChnlInfo->bInstNumber;
+	nChnlTypes	= pPamInstChnlInfo->bChnlTypes;
+	nRepeat		= pPamInstChnlInfo->bChnlRepeats;
+	ST_NC_NX *pNcNx = pPamInstChnlInfo->stNcNx;
+	// PAM is always the [0] server to the instruments. A second PAM will be in another computer
+	// but will in the software structure still be server[0] in the second computer.
+	// If for some reason PAM needs to be a server to another type client, it will have to be
+	// something other than [0]
+	//
+	ST_SERVERS_CLIENT_CONNECTION *pSCC = stSCM[0].pClientConnection[nInst];
+	if (pSCC == NULL)
+		{
+		s.Format(_T("pSCC = stSCM[0].pClientConnection[%d] is null\n"), nInst);
+		TRACE(s);
+		return;
+		}
+
+	// outter loop is repeat count, inner loop is unique channel type
+	k = 0;
+	for ( j = 0; j < nRepeat; j++)
+		{
+		for ( i = 0; i < nChnlTypes; i++)
+			{
+			pChannel = pSCC->pvChannel[k];
+			pNcNx = &pPamInstChnlInfo->stNcNx[k];
+			pChannel->FifoInit(0, pNcNx->bNcID,pNcNx->bTholdID, pNcNx->bModID); 
+			pChannel->FifoInit(1, pNcNx->bNcOD,pNcNx->bTholdOD, pNcNx->bModOD); 
+			//FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
+			pChannel->WFifoInit((BYTE)pNcNx->wNx, pNcNx->wWallMax, pNcNx->wWallMin, pNcNx->wDropOut);
+			//WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut)
+			k++;
+			}
+
+		}
+
+
+#if 0
 	CHANNEL_CONFIG2 ChannelCfg;
 	int i, nDispCh;
 	int nSlave = GetInstNumber();
@@ -788,6 +407,7 @@ void CCCM_PAG::SetChannelInfo(void)
 			}
 
 		}
+#endif
 	}
 
 // Send the same message to all Instruments

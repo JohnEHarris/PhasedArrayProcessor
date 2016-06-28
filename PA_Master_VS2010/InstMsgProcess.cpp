@@ -43,7 +43,7 @@ CInstMsgProcess::CInstMsgProcess(int nInstrument)
 	m_nInstrumentSocket = -1;
 	m_bConnected = 0;
 	for ( i = 0; i < MAX_WALL_CHANNELS; i++)	m_pRunningAvg[i] = NULL;
-	memset( (void *)&m_ChannelInfo[0],0, sizeof(CHANNEL_INFO)*MAX_CHANNEL_PER_INSTRUMENT);
+	//memset( (void *)&m_ChannelInfo[0],0, sizeof(CHANNEL_INFO)*MAX_CHANNEL_PER_INSTRUMENT);
 #ifdef _DEBUG
 	printf("CInstMsgProcess instance for instrument [%d] created\n", nInstrument);
 #endif

@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "ClientDemo.h"
+#include "MainModuleGlobal.h"
 #include "ClientDemoDlg.h"
 #include ".\clientdemodlg.h"
 
@@ -73,38 +74,51 @@ CCommDemoDlg::CCommDemoDlg(CWnd* pParent /*=NULL*/)
 	, m_fRejTholdID(0)
 	, m_fRejTholdOD(0)
 	, m_pSocket(0)	//jeh
-{
+	, m_nIpSelect(0)
+	{
+	int i;
+	i = sizeof(gDlg);
+	memset( (void *) &gDlg,0,sizeof(gDlg));
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
-}
+	gDlg.pUIDlg = this;
+	}
+
+CCommDemoDlg::~CCommDemoDlg()
+	{
+	gDlg.pUIDlg = NULL;
+	}
 
 void CCommDemoDlg::DoDataExchange(CDataExchange* pDX)
+	
 {
-	CDialog::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_LIST_RECEIVE, m_listReceive);
-	DDX_Text(pDX, IDC_EDIT_IP, m_sIPAddr);
-	DDX_Text(pDX, IDC_EDIT_TCHAR, m_sUniString);
-	DDX_Control(pDX, IDC_BUTTON_CONNECT, m_cbConnect);
-	DDX_Text(pDX, IDC_EDIT_WO2, m_sMsg2WO);
-	DDX_Text(pDX, IDC_EDIT_LOT2, m_sMsg2Lot);
-	DDX_Text(pDX, IDC_EDIT_LOT3, m_sMsg3Lot);
-	DDX_Check(pDX, IDC_CHECK_WATCHDOG, m_bSendWatchdog);
-	DDX_Radio(pDX, IDC_RADIO_UNIT1, m_bUnit1);
-	DDX_Text(pDX, IDC_EDIT_LINE_SPEED, m_iInspSpeed);
-	DDX_Text(pDX, IDC_EDIT_LINE_SPEED_MSG4, m_fLineSpeed);
-	DDV_MinMaxFloat(pDX, m_fLineSpeed, 0, 10000);
-	DDX_Text(pDX, IDC_EDIT_RPM, m_iRpm);
-	DDX_Text(pDX, IDC_EDIT_PIPE_NUM, m_iPipeNum);
-	DDX_Text(pDX, IDC_EDIT_CLASS, m_iClass);
-	DDV_MinMaxInt(pDX, m_iRpm, 0, 1000);
-	DDX_Text(pDX, IDC_EDIT_AMA_MAG, m_fAmaMag);
-	DDX_Text(pDX, IDC_EDIT_SONO_MAG1, m_fSonoMag1);
-	DDX_Text(pDX, IDC_EDIT_SONO_MAG2, m_fSonoMag2);
-	DDX_Text(pDX, IDC_EDIT_SONO_MAG3, m_fSonoMag3);
-	DDX_Text(pDX, IDC_EDIT_SONO_MAG4, m_fSonoMag4);
-	DDX_Text(pDX, IDC_EDIT_QUES_ID, m_fQuesTholdID);
-	DDX_Text(pDX, IDC_EDIT_QUES_OD, m_fQuesTholdOD);
-	DDX_Text(pDX, IDC_EDIT_REJ_ID, m_fRejTholdID);
-	DDX_Text(pDX, IDC_EDIT_REJ_OD, m_fRejTholdOD);
+CDialog::DoDataExchange(pDX);
+DDX_Control(pDX, IDC_LIST_RECEIVE, m_listReceive);
+DDX_Text(pDX, IDC_EDIT_IP, m_sIPAddr);
+DDX_Text(pDX, IDC_EDIT_TCHAR, m_sUniString);
+DDX_Control(pDX, IDC_BUTTON_CONNECT, m_cbConnect);
+DDX_Text(pDX, IDC_EDIT_WO2, m_sMsg2WO);
+DDX_Text(pDX, IDC_EDIT_LOT2, m_sMsg2Lot);
+DDX_Text(pDX, IDC_EDIT_LOT3, m_sMsg3Lot);
+DDX_Check(pDX, IDC_CHECK_WATCHDOG, m_bSendWatchdog);
+DDX_Radio(pDX, IDC_RADIO_UNIT1, m_bUnit1);
+DDX_Text(pDX, IDC_EDIT_LINE_SPEED, m_iInspSpeed);
+DDX_Text(pDX, IDC_EDIT_LINE_SPEED_MSG4, m_fLineSpeed);
+DDV_MinMaxFloat(pDX, m_fLineSpeed, 0, 10000);
+DDX_Text(pDX, IDC_EDIT_RPM, m_iRpm);
+DDX_Text(pDX, IDC_EDIT_PIPE_NUM, m_iPipeNum);
+DDX_Text(pDX, IDC_EDIT_CLASS, m_iClass);
+DDV_MinMaxInt(pDX, m_iRpm, 0, 1000);
+DDX_Text(pDX, IDC_EDIT_AMA_MAG, m_fAmaMag);
+DDX_Text(pDX, IDC_EDIT_SONO_MAG1, m_fSonoMag1);
+DDX_Text(pDX, IDC_EDIT_SONO_MAG2, m_fSonoMag2);
+DDX_Text(pDX, IDC_EDIT_SONO_MAG3, m_fSonoMag3);
+DDX_Text(pDX, IDC_EDIT_SONO_MAG4, m_fSonoMag4);
+DDX_Text(pDX, IDC_EDIT_QUES_ID, m_fQuesTholdID);
+DDX_Text(pDX, IDC_EDIT_QUES_OD, m_fQuesTholdOD);
+DDX_Text(pDX, IDC_EDIT_REJ_ID, m_fRejTholdID);
+DDX_Text(pDX, IDC_EDIT_REJ_OD, m_fRejTholdOD);
+DDX_Radio(pDX, IDC_RB201, m_nIpSelect);
+DDV_MinMaxInt(pDX, m_nIpSelect, 0, 2);
 }
 
 BEGIN_MESSAGE_MAP(CCommDemoDlg, CDialog)
@@ -122,6 +136,10 @@ BEGIN_MESSAGE_MAP(CCommDemoDlg, CDialog)
 	ON_BN_CLICKED(IDC_RADIO_UNIT1, &CCommDemoDlg::OnBnClickedRadioUnit1)
 	ON_BN_CLICKED(IDC_RADIO_UNIT2, &CCommDemoDlg::OnBnClickedRadioUnit2)
 	ON_BN_CLICKED(IDC_CHECK_WATCHDOG, &CCommDemoDlg::OnBnClickedCheckWatchdog)
+	ON_BN_CLICKED(IDC_RB201, &CCommDemoDlg::OnBnClickedRb201)
+	ON_BN_CLICKED(IDC_RB202, &CCommDemoDlg::OnBnClickedRb202)
+	ON_BN_CLICKED(IDC_RB203, &CCommDemoDlg::OnBnClickedRb203)
+	ON_COMMAND(ID_SETUP_NCNX, &CCommDemoDlg::OnSetupNcnx)
 END_MESSAGE_MAP()
 
 
@@ -164,7 +182,7 @@ BOOL CCommDemoDlg::OnInitDialog()
 	SetTimer(TIMER_10_SEC, 3000, NULL);
 	SetTimer(TIMER_11_SEC, 11000, NULL);
 
-	UpdateData( FALSE );
+	UpdateData( FALSE );	// COPY variables to screen
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -271,7 +289,8 @@ void CCommDemoDlg::OnBnClickedButtonConnect()
 		{
 		CClientSocket * pSocket = new CClientSocket;
 		m_pSocket = pSocket;
-		pSocket->Create(0, SOCK_STREAM, _T("192.168.10.203") );
+		//pSocket->Create(0, SOCK_STREAM, _T("192.168.10.202") );
+		pSocket->Create(0, SOCK_STREAM, m_sMyIp4 );
 
 		if( !pSocket->Connect( m_sIPAddr, SERVER_LISTEN_PORT) )
 		{
@@ -410,8 +429,8 @@ void CCommDemoDlg::OnBnClickedButtonSend()
 
 	msg.MessageLength = 228;
 	msg.MessageID = 314902;
+	msg.Sequence = (m_iSeq++) % 32;	// seq 0-31 jeh
 /*	msg.UnitID = m_iUnitID;
-	msg.Sequence = m_iSeq++;
 
 	_stprintf_s( msg.JobID, _T("%s"), m_sMsg2WO );
 	_stprintf_s( msg.Lot, _T("%s"), m_sMsg2Lot );
@@ -514,3 +533,50 @@ void CCommDemoDlg::OnBnClickedCheckWatchdog()
 	// TODO: Add your control notification handler code here
 	UpdateData();
 }
+
+
+void CCommDemoDlg::OnBnClickedRb201()
+	{
+	// TODO: Add your control notification handler code here
+	// SET IP ADDRESS TO .201
+	UpdateData(TRUE);
+	m_sMyIp4 = _T("192.168.10.201");
+	CString s= _T("Inst IP = ");
+	s += m_sMyIp4;
+	SetWindowText(s);
+	}
+
+
+void CCommDemoDlg::OnBnClickedRb202()
+	{
+	// TODO: Add your control notification handler code here
+	// SET IP ADDRESS TO .202
+	UpdateData(TRUE);
+	m_sMyIp4 = _T("192.168.10.202");
+	CString s= _T("Inst IP = ");
+	s += m_sMyIp4;
+	SetWindowText(s);	}
+
+
+void CCommDemoDlg::OnBnClickedRb203()
+	{
+	// TODO: Add your control notification handler code here
+	// SET IP ADDRESS TO .203
+	UpdateData(TRUE);
+	m_sMyIp4 = _T("192.168.10.203");
+	CString s= _T("Inst IP = ");
+	s += m_sMyIp4;
+	SetWindowText(s);
+	}
+
+
+void CCommDemoDlg::OnSetupNcnx()
+	{
+	// TODO: Add your command handler code here
+	if (gDlg.pNcNx == NULL)
+		{
+		gDlg.pNcNx = new (CNcNx);
+		if (gDlg.pNcNx) gDlg.pNcNx->Create(IDD_DLG_NC_NX);
+		}
+	else	gDlg.pNcNx->SetFocus();
+	}

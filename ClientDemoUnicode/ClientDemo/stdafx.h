@@ -42,6 +42,7 @@
 #endif //_AFX_NO_DB_SUPPORT
 
 #include <afxsock.h>            // MFC socket extensions
+#include <afxcontrolbars.h>
 
 
 

@@ -586,12 +586,13 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 	if ( n > 0)
 		{
 		// reduce output to trace. When whole multiples of msg arrive, don't show
-		if ( n % nPacketSize)
+		//if ( n % nPacketSize)
 			{
 			s.Format(_T("CCM OnReceive got %d bytes"), n);
 			DebugOut(s);
 			}
 		// put it in the linked list and let someone else decipher it
+			nPacketSize = n;	// assuming we only have one msg from PAG 2016-06-28 JEH
 		while ( pPacket = GetWholePacket(nPacketSize, &n))	// returns a ptr to void with length nPacketSize
 			{	// get packets
 			BYTE *pB2 = new BYTE[nPacketSize];	// resize the buffer that will actually be used

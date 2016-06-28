@@ -6,6 +6,7 @@ jeh
 */
 
 #ifndef PA2_STRUCTS_H
+#define PA2_STRUCTS_H
 
 #ifndef BYTE
 typedef unsigned char	BYTE;
@@ -20,6 +21,10 @@ typedef unsigned int	UINT;
 
 enum IdataTypes {eRawInsp=10, eAscan=12, eKeepAlive=0xff};
 enum IdOdTypes {eId, eOd};
+
+#define MAX_PAM_QTY			1
+#define MAX_PAM_INSTS_QTY	8
+#define NC_NX_CMD_ID		1
 
 /*****************	STRUCTURES	*********************/
 typedef struct 
@@ -39,11 +44,11 @@ typedef struct
 typedef struct 
 	{
     WORD wTof4;     //time of flight of Gate 4
-    WORD wGateFlag;  //Gate flag bits, BIT0=Gate 1
-    WORD wTof2;  //time of flight of Gate 2
-    BYTE bAmp3;   //Gate 3 amplitude (0-255)
-    BYTE bAmp2;   //Gate 2 amplitude (0-255)
-	} SRawData; //8 bytes
+    WORD wGateFlag; //Gate flag bits, BIT0=Gate 1
+    WORD wTof2;		//time of flight of Gate 2 .. not used 
+    BYTE bAmp3;		//Gate 3 amplitude (0-255)
+    BYTE bAmp2;		//Gate 2 amplitude (0-255)
+	} SRawData;		//8 bytes
 
 typedef struct 
 	{
@@ -58,17 +63,17 @@ typedef struct
 	} SCmdPacket; //1040 bytes
 
 // If we want 2 out of 3 above threshold for Nc qualified, then bMod = 3. The Fifo is 3 elements deep.
-// Each flaw reading goes into the fifo at location bInput and overwrites the oldest element in the fifo.
+// Each flaw reading goes into the fifo at location bInPt and overwrites the oldest element in the fifo.
 // That is why we call it a FIFO.
-// bInput advances 1 fifo postion modulo bMod. After the input, the fifo is scanned from element 0 to bMod
+// bInPt advances 1 fifo postion modulo bMod. After the input, the fifo is scanned from element 0 to bMod
 // bAboveThld counts the number of readings above Thold. If it is >= bNc we have a bMax flaw.
 // bMaxTemp is the max value in the FIFO w/o regard to Nc. If we have less than Nc AboveThld and bMaxTemp > thold
 // then bMax is set to 80% of bThold. If we meet Nc count above thold then bMax = bMaxTemp and is returned by the 
 // FifoInput() function
 typedef struct
 	{
-	BYTE bCell[16];	// data cell containing input amplitudes 
-	BYTE bInput;	// next location to fill in the FIFO
+	BYTE bCell[16];	// data cells containing input amplitudes 
+	BYTE bInPt;		// next location to fill in the FIFO
 	BYTE bNc;		// how many flaw values above threshold
 	BYTE bThold;	// Threshold value 0-127
 	BYTE bMax;		// Max Nc qualified value in FIFO
@@ -95,7 +100,7 @@ typedef struct
 typedef struct
 	{
 	WORD wCell[16];	// data cell containing wall thickness readings
-	BYTE bInput;	// next location to fill in the FIFO
+	BYTE bInPt;		// next location to fill in the FIFO
 	BYTE bNx;		// how many wall values to average - the divisor
 	UINT uSum;		// sum of all wall values in FIFO
 	WORD wBadWall;	// how many out of range range wall readings
@@ -130,12 +135,77 @@ typedef struct
 	WORD wStatus;		// tbd
 	WORD wLoc;			// x location in motion pulses relative to 1 packet from instrument
 	WORD wAngle;		// angle in degrees from TOP relative to 1 packet from instrument
-	WORD wPeriod; //unit in .2048ms
+	WORD wPeriod;		//unit in .2048ms
 	} RAW_INSTRUMENT_STATUS;	// status info from Instrument collected to build output msg to Receiver/PAG
 
+// If Nc = 0, the output value will be 0. This will decrease processing time in the PAM
+// Effectively the associated channel will be a wall channel or nothing
+// If Nx = 0, the output wall value will be 10. This will decrease processing time in the PAM
+// Effectively the associated channel will be a flaw channel or nothing
+//
+typedef struct
+	{
+	// Flaw Nc for ID
+	BYTE bNcID;		// how many flaw values required at or above threshold
+	BYTE bTholdID;	// Threshold value 0-127
+	BYTE bModID;	// active depth of FIFO. This is the 'm' in Nc out of m. eg., 2 out of 3 above thold
+					// bModID must be >= bNcID. If not the PAM will make bModID=bNcID
+	// Nc for OD
+	BYTE bNcOD;		// how many flaw values required at or above threshold
+	BYTE bTholdOD;	// Threshold value 0-127
+	BYTE bModOD;	// active depth of FIFO. This is the 'm' in Nc out of m. eg., 2 out of 3 above thold
+	BYTE bSpare[2];
+	// Wall Nx portion
+	WORD wNx;		// Number of wall readings to average. Typically not more than 8
+	WORD wWallMax;	// maximum allowed hardware wall reading. 2.000" -> 1377 typically
+	WORD wWallMin;	// minimum allowed hardware wall reading. 0.040" -> 27
+	WORD wDropOut;	// number of bad readings before drop out occurs
+	} ST_NC_NX;		// sizeof(ST_NC_NX) = 16
 
+// Since the Receiver/PAM used for this initial systems knows nothing about the type signals it processes,
+// this command sets the Nc and Nx variables for all virtual channels.
+// In this original system there are up to 32 channels per instrument but only a few channel types
+// with the types being repeated. It is the same channel type but at a different physical location, 
+// much like the fixed channel types in Truscope where every channel type (for example Long) is replicated
+// in each of the 4 shoes.
+//
+#if 0
+See cfg100.h
+
+// Assume no more than 8 chnl types per instrument
+// With 32 vChnls, this means every chnl type repeats at least 4 times.
+// If more than 8 chnl types change the dimesion on stNcNx[]
+typedef struct
+	{
+	WORD wMsgID;		// 1
+	WORD wMsgSeqCnt;
+	BYTE bPamNumber;	// Which PAM
+	BYTE bInstNumber;	// Which Instrument connected to the above APAM
+	BYTE bChnlTypes;	// how many different chnl types for each instrument
+	BYTE bChnlRepeats;	// how many times a given chnl type repeats in each instrument
+	BYTE bMaxVChnlPerInst;	// We assume 32 total vChnl per instrument max
+	BYTE bSpare[3];
+	ST_NC_NX stNcNx[32];	// Max unique sets of Nc Nx data per instrument. Size = 16*32 =512
+	} PAM_INST_CHNL_INFO; // SIZEOF() = 524 replaces CHANNEL_CMD_1
+	
+typedef struct
+	{
+	WORD wMsgID;		// 1		
+	WORD wMsgSeqCnt;
+	BYTE bPAM_Number;	// PAM=Receiver number. 0 is the first PAM, 1 the second PAM, 0-255 but usually just 0
+	BYTE bInstNumber;	// for the PAM above, which connected instrument gets the command 0-255
+	BYTE bChannelTypes;	// the number of different channel types such as Long, Tran, Obliq, Wall
+	BYTE bChannelTypeRepetition;	// number of sets of ChannelTypes in this message
+	ST_NC_NX stNcNx[32];
+	} CHANNEL_CMD_1;	// sizeof(CHANNEL_CMD_1) = 520
+
+
+#endif
 
 /*****************	STRUCTURES	END *********************/
+
+#if 0
+
 
 #define TEST_UT                          20
 #define SET_INSPECT_MODE                 21
@@ -144,6 +214,7 @@ typedef struct
 #define RAW_DATA_ID                      10
 #define DATA_ID                          11
 #define ASCAN_ID                         12
+#define CHANNEL_CMD_1_ID				 1
 
 #define READ_TIMER_CMD_ID                201 //read command>200
 #define READ_LM86_LT_CMD_ID              210
@@ -253,6 +324,7 @@ typedef struct
 #define AscanPacketLength 1040
 #define CmdPacketLength 1040
 
+#endif
 
 
 #endif	// PA2_STRUCTS_H

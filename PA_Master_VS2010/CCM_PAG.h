@@ -38,12 +38,13 @@ public:
 	// copied from InspMsgProcess class
 	int GetInstNumber(void)		{	return m_nWhichInstrument;	}
 	// Store info about Channel type assignments
-	CHANNEL_INFO m_ChannelInfo[MAX_CHANNEL_PER_INSTRUMENT];
+//	CHANNEL_INFO m_ChannelInfo[MAX_CHANNEL_PER_INSTRUMENT];
 	// get the CHANNEL_CONFIG2 info from InspState.. usually when an MMI command is received
 	// Then SetChannelInfo will set the channel types for this instrument
-	void SetChannelInfo(void);
+	// 2016-06-27 sets only NcNx type info. Don't know specific chnl type
+	void SetChannelInfo(PAM_INST_CHNL_INFO *pPamInstChnlInfo);
 	// return a pointer to the channel info associated with this instrument
-	CHANNEL_INFO *GetChannelInfoPtr(void)		{ return &m_ChannelInfo[0];	}
+//	CHANNEL_INFO *GetChannelInfoPtr(void)		{ return &m_ChannelInfo[0];	}
 	int FindWhichSlave(int nChannel);
 	int FindSlaveChannel(int nChannel);
 	int FindDisplayChannel(int nArray, int nArrayCh);

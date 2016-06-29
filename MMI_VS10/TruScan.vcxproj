@@ -1,0 +1,427 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Tscope2|Win32">
+      <Configuration>Tscope2</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <SccProjectName />
+    <SccLocalPath />
+    <Keyword>MFCProj</Keyword>
+    <ProjectName>PhasedArrayMMI</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>Static</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>Static</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Tscope2|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>Dynamic</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Tscope2|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Tscope2|Win32'">
+    <OutDir>.\TruScan___Win32_Tscope2\</OutDir>
+    <IntDir>.\TruScan___Win32_Tscope2\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>.\Debug\</OutDir>
+    <IntDir>.\Debug\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>.\Release\</OutDir>
+    <IntDir>.\Release\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tscope2|Win32'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <Optimization>Disabled</Optimization>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+      <MinimalRebuild>true</MinimalRebuild>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AssemblerListingLocation>.\TruScan___Win32_Tscope2\</AssemblerListingLocation>
+      <BrowseInformation>true</BrowseInformation>
+      <PrecompiledHeaderOutputFile>.\TruScan___Win32_Tscope2\TruScan.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <ObjectFileName>.\TruScan___Win32_Tscope2\</ObjectFileName>
+      <ProgramDataBaseFileName>.\TruScan___Win32_Tscope2\</ProgramDataBaseFileName>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <StructMemberAlignment>1Byte</StructMemberAlignment>
+    </ClCompile>
+    <Midl>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TypeLibraryName>.\TruScan___Win32_Tscope2\TruScan.tlb</TypeLibraryName>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <TargetEnvironment>Win32</TargetEnvironment>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\TruScan___Win32_Tscope2\TruScan.bsc</OutputFile>
+    </Bscmake>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <OutputFile>.\TruScan___Win32_Tscope2\TruScan.exe</OutputFile>
+      <AdditionalDependencies>WS2_32.LIB;DIBAPI32.LIB;VERSION.LIB;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <Optimization>Disabled</Optimization>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+      <MinimalRebuild>true</MinimalRebuild>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <PreprocessorDefinitions>WIN32;_I_AM_PAG;_SYSCP_OS_WIN7;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;_WIN32_WINNT=0x0601;SERVER_RCVLIST_THREADBASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
+      <AssemblerListingLocation>.\Debug\</AssemblerListingLocation>
+      <BrowseInformation>true</BrowseInformation>
+      <PrecompiledHeaderOutputFile>.\Debug\TruScan.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeader>Create</PrecompiledHeader>
+      <ObjectFileName>.\Debug\</ObjectFileName>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <StructMemberAlignment>1Byte</StructMemberAlignment>
+      <EnablePREfast>false</EnablePREfast>
+      <UndefinePreprocessorDefinitions>
+      </UndefinePreprocessorDefinitions>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+    </ClCompile>
+    <Midl>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TypeLibraryName>.\Debug\TruScan.tlb</TypeLibraryName>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <TargetEnvironment>Win32</TargetEnvironment>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>_DEBUG;_WIN32_WINNT_MAXVER;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\Debug\TruScan.bsc</OutputFile>
+    </Bscmake>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <OutputFile>.\Debug\PhasedArrayMMI.exe</OutputFile>
+      <AdditionalDependencies>WS2_32.LIB;DIBAPI32.LIB;VERSION.LIB;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <StringPooling>true</StringPooling>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <Optimization>MaxSpeed</Optimization>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>_I_AM_PAG;WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;_SYS_OS_WIN7;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AssemblerListingLocation>.\Release\</AssemblerListingLocation>
+      <BrowseInformation>true</BrowseInformation>
+      <PrecompiledHeaderOutputFile>.\Release\TruScan.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <ObjectFileName>.\Release\</ObjectFileName>
+      <ProgramDataBaseFileName>.\Release\</ProgramDataBaseFileName>
+      <StructMemberAlignment>1Byte</StructMemberAlignment>
+    </ClCompile>
+    <Midl>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TypeLibraryName>.\Release\TruScan.tlb</TypeLibraryName>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <TargetEnvironment>Win32</TargetEnvironment>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\Release\TruScan.bsc</OutputFile>
+    </Bscmake>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <SubSystem>Windows</SubSystem>
+      <OutputFile>.\Release\PhasedArrayMMI.exe</OutputFile>
+      <AdditionalDependencies>WS2_32.LIB;DIBAPI32.LIB;VERSION.LIB;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Acal.cpp" />
+    <ClCompile Include="AdiSetupDlg.cpp" />
+    <ClCompile Include="Alarms.cpp" />
+    <ClCompile Include="AscanDlg.cpp" />
+    <ClCompile Include="AscanReadSeq.cpp" />
+    <ClCompile Include="BldIndx.cpp" />
+    <ClCompile Include="caldata.cpp" />
+    <ClCompile Include="calicopy.cpp" />
+    <ClCompile Include="Catch.cpp" />
+    <ClCompile Include="CCM_GDP.cpp" />
+    <ClCompile Include="CCM_SysCp.cpp" />
+    <ClCompile Include="ChangePsWd.cpp" />
+    <ClCompile Include="ChnlOn.cpp" />
+    <ClCompile Include="ChnlRangeDlg.cpp" />
+    <ClCompile Include="ChnlTraceDlg.cpp" />
+    <ClCompile Include="ClientConnectionManagement.cpp" />
+    <ClCompile Include="ClientSocket.cpp" />
+    <ClCompile Include="CmdProcessThread.cpp" />
+    <ClCompile Include="CompV.cpp" />
+    <ClCompile Include="Cpyto.cpp" />
+    <ClCompile Include="Disk.cpp" />
+    <ClCompile Include="DmxAdj.cpp" />
+    <ClCompile Include="DrawTraces.cpp" />
+    <ClCompile Include="Echo.cpp" />
+    <ClCompile Include="EndAreaToolDlg.cpp" />
+    <ClCompile Include="Enet.cpp" />
+    <ClCompile Include="ErrMsg.cpp" />
+    <ClCompile Include="FolderDlg.cpp" />
+    <ClCompile Include="Ftext.cpp" />
+    <ClCompile Include="FText2.cpp" />
+    <ClCompile Include="GainDlg.cpp" />
+    <ClCompile Include="GateDlg.cpp" />
+    <ClCompile Include="HwTimer.cpp" />
+    <ClCompile Include="INSPECT.CPP" />
+    <ClCompile Include="IpxStat.cpp" />
+    <ClCompile Include="JointNum.cpp" />
+    <ClCompile Include="LoadProgress.cpp" />
+    <ClCompile Include="Nc.cpp" />
+    <ClCompile Include="NcNx.cpp" />
+    <ClCompile Include="OdDlg.cpp" />
+    <ClCompile Include="OnSite.cpp" />
+    <ClCompile Include="Oscpe.cpp" />
+    <ClCompile Include="PasswordDlg.cpp" />
+    <ClCompile Include="Pulser.cpp" />
+    <ClCompile Include="QStringParser.cpp" />
+    <ClCompile Include="Rcvr.cpp" />
+    <ClCompile Include="Replay.cpp" />
+    <ClCompile Include="ResizingDialog.cpp" />
+    <ClCompile Include="ScopeDlg.cpp" />
+    <ClCompile Include="ScopeTrace1CalDlg.cpp" />
+    <ClCompile Include="ScopeTrace2CalDlg.cpp" />
+    <ClCompile Include="ScpDmx2.cpp" />
+    <ClCompile Include="seekButton.cpp" />
+    <ClCompile Include="SequenceDlg.cpp" />
+    <ClCompile Include="ServerRcvListThreadBase.cpp" />
+    <ClCompile Include="ServerSocketOwnerThread.cpp" />
+    <ClCompile Include="ServerConnectionManagement.cpp" />
+    <ClCompile Include="ServerListenThread.cpp" />
+    <ClCompile Include="ServerRcvListThread.cpp" />
+    <ClCompile Include="ServerSocket.cpp" />
+    <ClCompile Include="SetUp.cpp" />
+    <ClCompile Include="Shear.cpp" />
+    <ClCompile Include="StdAfx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Tscope2|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Tscope2|Win32'">stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="StrpChnl.cpp" />
+    <ClCompile Include="SysGain.cpp" />
+    <ClCompile Include="TCG.cpp" />
+    <ClCompile Include="TcgSetupDlg.cpp" />
+    <ClCompile Include="ClientCommunicationThread.cpp" />
+    <ClCompile Include="TcpThreadRxList.cpp" />
+    <ClCompile Include="Tholds.cpp" />
+    <ClCompile Include="tof.cpp" />
+    <ClCompile Include="TRUSCAN.CPP" />
+    <ClCompile Include="TSCANDLG.CPP" />
+    <ClCompile Include="viewcfg.cpp" />
+    <ClCompile Include="WallDlg.cpp" />
+    <ClCompile Include="WCalDlg.cpp" />
+    <ClCompile Include="WcJob.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="TRUSCAN.RC" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Include\MC_SysCP_Constants.h" />
+    <ClInclude Include="..\include\MillConsoleIDP_Constants.h" />
+    <ClInclude Include="..\Include\PA2Struct.h" />
+    <ClInclude Include="..\Include\Truscan_version.h" />
+    <ClInclude Include="Acal.h" />
+    <ClInclude Include="AdiSetupDlg.h" />
+    <ClInclude Include="Alarms.h" />
+    <ClInclude Include="AscanDlg.h" />
+    <ClInclude Include="AscanReadSeq.h" />
+    <ClInclude Include="BldIndx.h" />
+    <ClInclude Include="caldata.h" />
+    <ClInclude Include="calicopy.h" />
+    <ClInclude Include="Catch.h" />
+    <ClInclude Include="CCM_GDP.h" />
+    <ClInclude Include="CCM_SysCp.h" />
+    <ClInclude Include="ChangePsWd.h" />
+    <ClInclude Include="ChnlOn.h" />
+    <ClInclude Include="ChnlRangeDlg.h" />
+    <ClInclude Include="ChnlTraceDlg.h" />
+    <ClInclude Include="ClientConnectionManagement.h" />
+    <ClInclude Include="ClientSocket.h" />
+    <ClInclude Include="CmdProcessThread.h" />
+    <ClInclude Include="CompV.h" />
+    <ClInclude Include="Cpyto.h" />
+    <ClInclude Include="DIBAPI.H" />
+    <ClInclude Include="DIBDLL.H" />
+    <ClInclude Include="DIBUTIL.H" />
+    <ClInclude Include="Disk.h" />
+    <ClInclude Include="DmxAdj.h" />
+    <ClInclude Include="DrawTraces.h" />
+    <ClInclude Include="Echo.h" />
+    <ClInclude Include="EndAreaToolDlg.h" />
+    <ClInclude Include="Enet.h" />
+    <ClInclude Include="ENGLISH.H" />
+    <ClInclude Include="ErrMsg.h" />
+    <ClInclude Include="EXTERN.H" />
+    <ClInclude Include="FolderDlg.h" />
+    <ClInclude Include="Ftext.h" />
+    <ClInclude Include="Ftext2.h" />
+    <ClInclude Include="GainDlg.h" />
+    <ClInclude Include="GateDlg.h" />
+    <ClInclude Include="HwTimer.h" />
+    <ClInclude Include="Inspect.h" />
+    <ClInclude Include="IpxStat.h" />
+    <ClInclude Include="JointNum.h" />
+    <ClInclude Include="LimitSingleInstance.h" />
+    <ClInclude Include="Nc.h" />
+    <ClInclude Include="NcNx.h" />
+    <ClInclude Include="OdDlg.h" />
+    <ClInclude Include="OnSite.h" />
+    <ClInclude Include="Oscpe.h" />
+    <ClInclude Include="PasswordDlg.h" />
+    <ClInclude Include="Pulser.h" />
+    <ClInclude Include="QStringParser.h" />
+    <ClInclude Include="Rcvr.h" />
+    <ClInclude Include="Replay.h" />
+    <ClInclude Include="ResizingDialog.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="ScopeDlg.h" />
+    <ClInclude Include="scopetrace1caldlg.h" />
+    <ClInclude Include="scopetrace2caldlg.h" />
+    <ClInclude Include="ScpDmx2.h" />
+    <ClInclude Include="SeekButton.h" />
+    <ClInclude Include="SequenceDlg.h" />
+    <ClInclude Include="ServerRcvListThreadBase.h" />
+    <ClInclude Include="ServerSocketOwnerThread.h" />
+    <ClInclude Include="ServerConnectionManagement.h" />
+    <ClInclude Include="ServerListenThread.h" />
+    <ClInclude Include="ServerRcvListThread.h" />
+    <ClInclude Include="ServerSocket.h" />
+    <ClInclude Include="SetUp.h" />
+    <ClInclude Include="Shear.h" />
+    <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="StrpChnl.h" />
+    <ClInclude Include="SysGain.h" />
+    <ClInclude Include="TCG.h" />
+    <ClInclude Include="TcgSetupDlg.h" />
+    <ClInclude Include="ClientCommunicationThread.h" />
+    <ClInclude Include="TcpThreadRxList.h" />
+    <ClInclude Include="Tholds.h" />
+    <ClInclude Include="tof.h" />
+    <ClInclude Include="TRUSCAN.H" />
+    <ClInclude Include="TSCANDLG.H" />
+    <ClInclude Include="..\Include\Udp_msg.h" />
+    <ClInclude Include="viewcfg.h" />
+    <ClInclude Include="WallDlg.h" />
+    <ClInclude Include="WCalDlg.h" />
+    <ClInclude Include="WcJob.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="res\bitmap1.bmp" />
+    <CustomBuild Include="res\bmpScope1NormalOff.bmp" />
+    <CustomBuild Include="res\bmpScope1NormalOn.bmp" />
+    <CustomBuild Include="res\bmpScope2ActivGateOff.bmp" />
+    <CustomBuild Include="res\bmpScope2ActivGateOn.bmp" />
+    <CustomBuild Include="res\bmpScope2AllGateOff.bmp" />
+    <CustomBuild Include="res\bmpScope2AllGateOn.bmp" />
+    <CustomBuild Include="res\CURSOR1.CUR" />
+    <CustomBuild Include="res\iconScope1RFoff.ico" />
+    <CustomBuild Include="res\iconScope1RFon.ico" />
+    <CustomBuild Include="res\iconScope2Gate1Off.ico" />
+    <CustomBuild Include="res\iconScope2Gate1On.ico" />
+    <CustomBuild Include="res\iconScope2Gate2Off.ico" />
+    <CustomBuild Include="res\iconScope2Gate2On.ico" />
+    <CustomBuild Include="res\iconScope2Gate3Off.ico" />
+    <CustomBuild Include="res\iconScope2Gate3On.ico" />
+    <CustomBuild Include="res\iconScope2Gate4Off.ico" />
+    <CustomBuild Include="res\iconScope2Gate4On.ico" />
+    <CustomBuild Include="res\sh12.ico" />
+    <CustomBuild Include="res\sh1x.ico" />
+    <CustomBuild Include="res\shx2.ico" />
+    <CustomBuild Include="res\shxx.ico" />
+    <CustomBuild Include="res\TRUSCAN.ICO" />
+    <CustomBuild Include="res\TRUSCAN.RC2">
+      <FileType>RC</FileType>
+    </CustomBuild>
+    <CustomBuild Include="res\varcologo256.bmp" />
+    <CustomBuild Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram1.cd" />
+    <None Include="ClassDiagram2.cd" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties RESOURCE_FILE="TRUSCAN.RC" />
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

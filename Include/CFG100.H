@@ -811,7 +811,7 @@ typedef struct
 	BYTE bMaxVChnlPerInst;	// We assume 32 total vChnl per instrument max
 	BYTE bSpare[3];
 	ST_NC_NX stNcNx[32];	// Max unique sets of Nc Nx data per instrument. Size = 16*32 =512
-	} PAM_INST_CHNL_INFO; // SIZEOF() = 136
+	} PAM_INST_CHNL_INFO; // SIZEOF() = 524
 	
 // a record for setting the phased array 2 Nc Nx dialog parameters
 // If there are 4 chnls types in an instrument and each type repeats 8 times, then there are 32 virtual channels
@@ -822,7 +822,7 @@ typedef struct
 	{
 	BYTE bPamQty;		// how many Pam's. Assume a max of 4 PAM's
 	BYTE bInst;			// Max instruments per PAM. Assume up to 16 instruments
-	PAM_INST_CHNL_INFO PamInstChnlInfo[4][16]; // [PAMS][INST]    size =64*128 + 2 = 8194
+	PAM_INST_CHNL_INFO PaInstChnlInfo[4][16]; // [PAMS][INST]    size =64*128 + 2 = 8194
 	}	NcNxPA2REC;
 
 

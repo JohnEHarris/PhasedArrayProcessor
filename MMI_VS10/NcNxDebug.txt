@@ -1,0 +1,18 @@
+
+***************************************************DEBUG RELEASE*****************************************************************
+Wed Jun 29 13:54:50 2016
+	0		 0			 1		1		  1			1		1			  1		1		1		0050		0025			000
+CTscanDlg::SendMsgToPAM Client = 0 is not connected
+
+rc = stSCM[ePAM_Server].pSCM->SendPacketToPAM
+
+	0		 0			 1		1		  1			1		1			  1		1		1		0050		0025			000
+CTscanDlg::SendMsgToPAM Client = 0 is not connected
+
+rc = stSCM[ePAM_Server].pSCM->SendPacketToPAM
+
+	0		 0			 1		1		  1			1		1			  1		1		1		0050		0025			000
+CTscanDlg::SendMsgToPAM Client = 0 is not connected
+
+rc = stSCM[ePAM_Server].pSCM->SendPacketToPAM
+

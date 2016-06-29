@@ -5,6 +5,7 @@ Purpose:	Group all variable which are global to a processor into
 Date:	02/22/02
 Author:	jeh
 Revised:
+
 */
 
 

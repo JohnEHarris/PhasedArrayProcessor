@@ -78,6 +78,7 @@ void CCmdProcessThread::ProcessReceivedMessage(WPARAM, LPARAM)
 		break;
 #endif
 	default:
+		// this is processed by CClientConnectionManagement::ProcessReceivedMessage(void)
 		m_pMyCCM->ProcessReceivedMessage();
 		}	// switch (m_pMyCCM->m_nMyConnection)
 	}

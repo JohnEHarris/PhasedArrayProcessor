@@ -54,7 +54,6 @@ class CServiceApp;
 // edit this value if more client connections to servers are needed
 #define	MAX_SERVERS							1
 #define MAX_CLIENTS_PER_SERVER				8
-
 // An instrument client can have up to this many virtual channels
 #define MAX_CHNLS_PER_INSTRUMENT			32
 
@@ -87,7 +86,7 @@ extern THE_APP_CLASS theApp;
 
 #define INSTRUMENT_PACKET_SIZE				1040
 #define MASTER_PACKET_SIZE					1260
-
+#define PAG_CMD_PACKET_SIZE					1040
 
 #endif
 
@@ -107,7 +106,7 @@ SRV_SOCKET_INFO gServerArray[MAX_SERVERS] =
 
 #ifdef _I_AM_PAG
 	{
-		{ "192.168.10.10", 7501, MASTER_PACKET_SIZE,"192.168.10.10"}		// PAG server IP and listening port for 1st phased array master
+		{ "192.168.10.10", 7501, PAG_CMD_PACKET_SIZE,"192.168.10.10"}		// PAG server IP and listening port for 1st phased array master
 //		{ "192.168.10.10", 7501, INSTRUMENT_PACKET_SIZE,"192.168.10.201"}		// PAG server IP and listening port for 1st phased array master
 //		{ "192.168.10.30", 7501, INSTRUMENT_PACKET_SIZE,"192.168.10.40"}		// PAG server IP and listening port for 1st phased array master
 //		,{"192.168.10.10", 9997, 1040, ""}		// dummy, 
@@ -167,6 +166,7 @@ typedef struct
 	BYTE bStopSendRcv;				// have socket throw away all input/output data
 
 	BYTE bConnected;				// eNotConnected, eNotConfigured, eConfigured .. detected in receive thread.
+	WORD wMsgSeqCnt;				// sequential number of sent message
 	UINT uPacketsReceived;
 	UINT uBytesReceived;
 	UINT uPacketsPerSecond;			// received packets

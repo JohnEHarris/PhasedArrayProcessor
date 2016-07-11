@@ -330,10 +330,12 @@ void CClientCommunicationThread::StartTCPCommunication()
 		}
 
 	   BOOL rtn;
-	   stmp = m_pstCCM->sServerName;
+	   // Try server IP4 address before server name
+	   stmp = m_pstCCM->sServerIP4;
+	   
 	   if (stmp.IsEmpty())
 			{
-			stmp = m_pstCCM->sServerIP4;
+			stmp = stmp = m_pstCCM->sServerName;
 			if (stmp.IsEmpty())
 				{
 				s = _T("Could not find Server name or IP Address... Aborting\n");
@@ -386,8 +388,10 @@ void CClientCommunicationThread::StartTCPCommunication()
 				}
 
 			s.Format(_T("Connect Error = %d\n"), nError);
-			DebugMsg(s);
-			DebugMsg( _T("SysCP: connect failed.\n") );
+			TRACE(s);   //DebugMsg(s)
+			s = m_pstCCM->szSocketName;
+			s += _T(": connect failed.\n");
+			TRACE(s);   //DebugMsg(s)
 			m_pSocket->ShutDown(2);
 			m_pSocket->Close();		
 			delete m_pSocket;
@@ -396,7 +400,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 		else
 			{
 			s.Format(_T("SysCP or %s: connected.\n"), stmp);
-			DebugMsg(s);	// Connect to server named xxx at ip = yyyy
+			TRACE(s);   //DebugMsg(s)	// Connect to server named xxx at ip = yyyy
 			m_pMyCCM->SetSocketPtr(m_pSocket);		// store socket into stCCM for use by send and receive threads
 			}
 
@@ -432,8 +436,12 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
 		TRACE(s);
 		m_nThreadIdOld = nId;
 		nRole = m_nMyRole;
+#ifdef	_I_AM_PAG
 		if (CNcNx::m_pDlg)
 			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
 
 		}
 
@@ -442,29 +450,45 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
 	if (!m_pMyCCM)
 		{
 		s += _T("!m_pMyCCM\n");
+#ifdef	_I_AM_PAG
 		if (CNcNx::m_pDlg)
 			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
 		return;	// (LRESULT) 0;
 		}
 	if (!m_pstCCM)
 		{
 		s += _T("!m_pstCCM\n");
+#ifdef	_I_AM_PAG
 		if (CNcNx::m_pDlg)
 			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
 		return;	// (LRESULT) 0;
 		}
 	if (m_pstCCM->pSendPktList->IsEmpty())
 		{
 		s += _T("m_pstCCM->pSendPktList->IsEmpty()\n");
+#ifdef	_I_AM_PAG
 		if (CNcNx::m_pDlg)
 			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif		
 		return;	// (LRESULT) 0;	// nothing to send
 		}
 	if (!m_pstCCM->pSocket)
 		{
 		s += _T("!m_pstCCM->pSocket\n");
+#ifdef	_I_AM_PAG
 		if (CNcNx::m_pDlg)
 			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif		
 		return;	// (LRESULT) 0;	// no socket to send with
 		}
 
@@ -474,9 +498,12 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
 
 	s += _T("Send queued messages if any\n");
 	TRACE(s);
-	if (CNcNx::m_pDlg)
-		CNcNx::m_pDlg->DebugOut(s);
-
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
 
 	// if we get to here, there is at least one packet to send
 	while (m_pstCCM->pSendPktList->GetCount() > 0)
@@ -546,6 +573,15 @@ afx_msg void CClientCommunicationThread::OnTimer(WPARAM w, LPARAM lParam)
 			m_nConnectRetryTick++;
 			}
 		break;
+
+#ifdef _I_AM_PAG
+	case eFake_GDP_Pipe_Data:
+		// call back to the main dialog to generate and send some fake pipe data to gdp
+		// fake data is taken from yiqing's void CAmalogSimDlg::OnStopSequence() 
+		if ((m_nTick & 3) == 0)
+			pCTscanDlg->MakeFakeGDP_Data();
+		break;
+#endif
 
 	default:
 		break;

@@ -25,7 +25,7 @@ Revised:
 #include <string.h>
 #include <stdio.h>
 #include "InstMsgProcess.h"
-#include "RunningAverage.h"
+//#include "RunningAverage.h"
 
 class CInstState;
 extern  CInspState InspState;
@@ -38,11 +38,10 @@ int FindDisplayChannel(int nArray, int nArrayCh);
 // Only constructor
 CInstMsgProcess::CInstMsgProcess(int nInstrument)
 	{
-	int i;
 	m_nWhichInstrument = nInstrument;
 	m_nInstrumentSocket = -1;
 	m_bConnected = 0;
-	for ( i = 0; i < MAX_WALL_CHANNELS; i++)	m_pRunningAvg[i] = NULL;
+//	for ( i = 0; i < MAX_WALL_CHANNELS; i++)	m_pRunningAvg[i] = NULL;
 	//memset( (void *)&m_ChannelInfo[0],0, sizeof(CHANNEL_INFO)*MAX_CHANNEL_PER_INSTRUMENT);
 #ifdef _DEBUG
 	printf("CInstMsgProcess instance for instrument [%d] created\n", nInstrument);
@@ -52,7 +51,6 @@ CInstMsgProcess::CInstMsgProcess(int nInstrument)
 // Destructor
 CInstMsgProcess::~CInstMsgProcess()
 	{
-	int i;
 	if (m_nInstrumentSocket >= 0)
 		{
 		closesocket(m_nInstrumentSocket);
@@ -61,6 +59,7 @@ CInstMsgProcess::~CInstMsgProcess()
 	m_bConnected = 0;
 	m_nWhichInstrument = -1;
 	m_nInstrumentSocket = -1;
+#if 0
 	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
 		{
 		if (m_pRunningAvg[i])
@@ -69,6 +68,7 @@ CInstMsgProcess::~CInstMsgProcess()
 			m_pRunningAvg[i] = NULL;
 			}
 		}
+#endif
 	}
 
 // usually called when an MMI command is received to set channel config info

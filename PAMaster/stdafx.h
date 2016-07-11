@@ -1,6 +1,10 @@
-#include <afxwin.h>
-#include "NTService.h"
-// copied from stdafx.h in PAG...JEH
+// stdafx.h : include file for standard system include files,
+//  or project specific include files that are used frequently, but
+//      are changed infrequently
+//
+
+#if !defined(AFX_STDAFX_H__E654F6C9_C864_11D3_9B48_00A0C91FC401__INCLUDED_)
+#define AFX_STDAFX_H__E654F6C9_C864_11D3_9B48_00A0C91FC401__INCLUDED_
 
 #if _MSC_VER > 1000
 #pragma once
@@ -17,5 +21,9 @@
 #endif // _AFX_NO_AFXCMN_SUPPORT
 
 #include <afxsock.h>		// MFC socket extensions
+#include <afxcontrolbars.h>
 
 //{{AFX_INSERT_LOCATION}}
+// Microsoft Visual C++ will insert additional declarations immediately before the previous line.
+
+#endif // !defined(AFX_STDAFX_H__E654F6C9_C864_11D3_9B48_00A0C91FC401__INCLUDED_)

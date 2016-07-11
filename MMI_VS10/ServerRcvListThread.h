@@ -44,12 +44,20 @@ public:
 #ifdef THIS_IS_SERVICE_APP
 	afx_msg void InitRunningAverage(WPARAM w, LPARAM lParam);
 	void ProcessInstrumentData(void *pData);
-	
+	void MakeFakeDataHead(SRawDataPacket *pData);
+	void MakeFakeData(SRawDataPacket *pData);
+	int GetSequenceModulo(SRawDataPacket *pData);
+	void BuildOutputPacket(SRawDataPacket *pRaw);
+	void SaveFakeData(CString& s);
 	// create a processing class instance for each wall channel
 	CRunningAverage *m_pRunAvg[MAX_WALL_CHANNELS];
 		
 	int m_nInspectMode;
 	int m_nMotionTime;
+	int m_nFakeDataSeqNumber;
+	int m_nFrameCount;	// every 16th frame send data to the PAG/Receiver
+	int m_nFakeDataCallCount;	// how many times fake data called.
+
 	CInspState *GetInspState(void)	{	return &InspState;	}
 
 	CHANNEL_INFO m_ChannelInfo[MAX_CHANNEL_PER_INSTRUMENT];

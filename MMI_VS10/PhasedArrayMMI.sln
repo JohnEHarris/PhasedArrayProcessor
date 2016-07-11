@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PhasedArrayMMI", "TruScan.vcxproj", "{851E35AD-584D-33CA-9543-5D68E3AE2B7D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PhasedArrayMMI", "TruScan.vcxproj", "{76C6CB71-068C-29F8-8261-0DB6EECC3211}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -10,12 +10,12 @@ Global
 		Tscope2|Win32 = Tscope2|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{851E35AD-584D-33CA-9543-5D68E3AE2B7D}.Debug|Win32.ActiveCfg = Debug|Win32
-		{851E35AD-584D-33CA-9543-5D68E3AE2B7D}.Debug|Win32.Build.0 = Debug|Win32
-		{851E35AD-584D-33CA-9543-5D68E3AE2B7D}.Release|Win32.ActiveCfg = Release|Win32
-		{851E35AD-584D-33CA-9543-5D68E3AE2B7D}.Release|Win32.Build.0 = Release|Win32
-		{851E35AD-584D-33CA-9543-5D68E3AE2B7D}.Tscope2|Win32.ActiveCfg = Tscope2|Win32
-		{851E35AD-584D-33CA-9543-5D68E3AE2B7D}.Tscope2|Win32.Build.0 = Tscope2|Win32
+		{76C6CB71-068C-29F8-8261-0DB6EECC3211}.Debug|Win32.ActiveCfg = Debug|Win32
+		{76C6CB71-068C-29F8-8261-0DB6EECC3211}.Debug|Win32.Build.0 = Debug|Win32
+		{76C6CB71-068C-29F8-8261-0DB6EECC3211}.Release|Win32.ActiveCfg = Release|Win32
+		{76C6CB71-068C-29F8-8261-0DB6EECC3211}.Release|Win32.Build.0 = Release|Win32
+		{76C6CB71-068C-29F8-8261-0DB6EECC3211}.Tscope2|Win32.ActiveCfg = Tscope2|Win32
+		{76C6CB71-068C-29F8-8261-0DB6EECC3211}.Tscope2|Win32.Build.0 = Tscope2|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

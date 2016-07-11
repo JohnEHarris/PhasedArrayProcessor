@@ -269,14 +269,17 @@ void CClientCommunicationThread::StartTCPCommunication()
 	m_pMyCCM->SetConnectionState(0);	// now assume we are not connected
 
 	EnterCriticalSection(m_pstCCM->pCSRcvPkt);
-	if (m_pstCCM->pSocket != NULL)
-	//if (m_pSocket)
+//	if (m_pSocket)
+	if (m_pstCCM->pSocket)
 		{
 		TRACE1("[%03d] Client socket already exists.... close and destroy before recreating\n", m_nConnectionRestartCounter++);
-		m_pSocket->Close();
+		//m_pSocket->Close();
+		m_pstCCM->pSocket->Close();
 		Sleep(10);
-		delete m_pSocket;
+		//delete m_pSocket;
+		delete m_pstCCM->pSocket;
 		m_pSocket = NULL;
+		m_pstCCM->pSocket = NULL;
 		}
 
 	m_pSocket = new CClientSocket(m_pMyCCM);	// subtype c0, 16 bytes long.
@@ -353,8 +356,27 @@ void CClientCommunicationThread::StartTCPCommunication()
 			}
 
 		uPort = m_pstCCM->uServerPort;
+
+
+#ifdef _I_AM_PAG
+		// select the servers port connection value based on the OS version
+		// and attempt to CONNECT to the server
+		switch( m_pstCCM->nWinVersion)
+			{
+		case 7:		// for Win 7  port = 0xfff0 ?? why this number
+					// stmp is null. Should it have the IP4 address we are trying to reach??
+			rtn = m_pSocket->Connect(stmp, MC_SYSCP_LISTENPORT_WIN7 );
+			break;
+		default:	// for Win XP  port = 0xc000 ?? why this number
+			rtn = m_pSocket->Connect(stmp, MC_SYSCP_LISTENPORT );
+			}
+
+#else
+	   // PAM if here
 		rtn = m_pSocket->Connect(stmp, uPort );
 
+#endif
+		
 	   if ( rtn == 0 )
 			{
 			int nError = GetLastError();	//10035 is WSAEWOULDBLOCK..normal 
@@ -369,7 +391,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 				stmp = GetTimeString();
 				stmp += _T("\n");
 				s += stmp;
-				TRACE(s);   //DebugMsg(s)
+				DebugMsg(s);
 				return;
 				}
 
@@ -414,25 +436,83 @@ afx_msg void CClientCommunicationThread::RestartTcpComDlg(WPARAM w, LPARAM lPara
 afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
 	{
 	int nRole;
+	CString s;
 	int nId = AfxGetThread()->m_nThreadID;
 	if (nId != m_nThreadIdOld)
 		{
-		TRACE2("Transmit Packet old thread id=%d New thread id=%d\n", m_nThreadIdOld, nId);
+		s.Format(_T("Transmit Packet old thread id=%d New thread id=%d\n"), m_nThreadIdOld, nId);
+		TRACE(s);
 		m_nThreadIdOld = nId;
 		nRole = m_nMyRole;
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
+
 		}
 
+	s = _T("CClientCommunicationThread::TransmitPackets ");
 	//if (m_nInXmitLoop)							return (LRESULT) 0;	// already in Transmit loop operation
-	if (!m_pMyCCM)									return;	// (LRESULT) 0;
-	if (!m_pstCCM)									return;	// (LRESULT) 0;
-	if (m_pstCCM->pSendPktList->IsEmpty())	return;	// (LRESULT) 0;	// nothing to send
-	if (!m_pstCCM->pSocket)							return;	// (LRESULT) 0;	// no socket to send with
+	if (!m_pMyCCM)
+		{
+		s += _T("!m_pMyCCM\n");
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
+		return;	// (LRESULT) 0;
+		}
+	if (!m_pstCCM)
+		{
+		s += _T("!m_pstCCM\n");
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
+		return;	// (LRESULT) 0;
+		}
+	if (m_pstCCM->pSendPktList->IsEmpty())
+		{
+		s += _T("m_pstCCM->pSendPktList->IsEmpty()\n");
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif		
+		return;	// (LRESULT) 0;	// nothing to send
+		}
+	if (!m_pstCCM->pSocket)
+		{
+		s += _T("!m_pstCCM->pSocket\n");
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif		
+		return;	// (LRESULT) 0;	// no socket to send with
+		}
 
 	m_nInXmitLoop = 1;				// now entered into TransmitPacket loop
 
 	stSEND_PACKET *pSendPkt;	// ptr to the packet info in the linked list of send packets
 
-	TRACE("Send queued messages if any\n");
+	s += _T("Send queued messages if any\n");
+	TRACE(s);
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
+
 	// if we get to here, there is at least one packet to send
 	while (m_pstCCM->pSendPktList->GetCount() > 0)
 		{

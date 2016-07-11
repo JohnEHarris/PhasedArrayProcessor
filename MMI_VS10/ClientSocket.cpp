@@ -237,10 +237,11 @@ void CClientSocket::MyMessageBox(CString s)
 void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from CAsyncSocket
   {
 	  CString s, s0, s1;
+	  char txt[64];
 	  UINT uSPort, uCPort;	// temp to hold port numbers discovered
 	  if (m_pCCM)
 		{
-		s.Format(_T("Client Connection %d "),m_pCCM->m_nMyConnection);
+		s.Format(_T("Client Connection %d = %s"),m_pCCM->m_nMyConnection, m_pCCM->szName);
 		}
 	  else
 		{
@@ -271,7 +272,7 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
               MyMessageBox(_T("The lpSockAddrLen argument is incorrect.\n"));
               break;
            case WSAEINVAL: 
-              MyMessageBox(_T("The socket is already bound to an address.\n"));
+              MyMessageBox(_T("The socket is already bound to an address.\n"));			// 10022L
               break;
            case WSAEISCONN: 
               MyMessageBox(_T("The socket is already connected.\n"));
@@ -327,13 +328,16 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 			m_pCCM->SetConnectionState(0xff);
 			m_pCCM->SetClientPort(uCPort);
 			}
-		s += _T("\nSucceeded!");
+		s += _T("\n");
+		s += m_pCCM->GetSocketName();
+		s += _T(" Succeeded!\n");
 		DebugOutMessage(s);
 
 #ifdef THIS_IS_SERVICE_APP
 		char buffer [80];
 		strcpy(buffer,GetTimeStringPtr());
-		printf("PAM client connected to PAG server on connection %s:%d at %s\n",s1,uCPort, buffer);
+		CstringToChar(s1, txt);
+		printf("PAM client connected to PAG server on connection %s:%d at %s\n",txt,uCPort, buffer);
 #endif
 		int nSize;
 		int nSizeOf = sizeof(int);

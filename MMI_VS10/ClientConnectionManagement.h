@@ -40,11 +40,13 @@ Revised:	12-Jun-12 Abandon 'C' worker threads in favor of using a class method f
 
 
 #ifdef THIS_IS_SERVICE_APP
-#define	MAX_CLIENTS				4		
+// 2016-05-17 the PAM/Receiver is connected only to the PT as a client
+// The PAG was connected to the database, the SysCp and the GDP
+#define	MAX_CLIENTS				1		
 // edit this value if more client connections to servers are needed
 #else
 #define THE_APP_CLASS	CTscanApp
-#define	MAX_CLIENTS				5		
+#define	MAX_CLIENTS				2		
 // edit this value if more client connections to servers are needed
 #endif
 
@@ -53,7 +55,7 @@ Revised:	12-Jun-12 Abandon 'C' worker threads in favor of using a class method f
 // are status info set by the worker thread to let the outside world know what state
 // the worker is in
 //
-enum eClientConnectionManagement {eNotExist, eRun, eAbort, eAborted};	// {out, out, in, out}
+enum eClientConnectionManagement {eNotExist, eRun, eAbort, eAborted};	// {out, out, out, in}
 
 enum eThreadRole { eUnknown, eReceiver, eSender };		// 0=unknown, 1=Receiver, 2=Sender
 
@@ -61,7 +63,7 @@ enum eThreadRole { eUnknown, eReceiver, eSender };		// 0=unknown, 1=Receiver, 2=
 // Use these enum's to tell CClientConnectionManagement::TimerTick() what action to take 
 // for each type of system implemented
 
-enum eClientRestart	{ eRestartPAGtoSysCp, eRestartPAMtoPAG };
+enum eClientRestart	{ eRestartPAGtoSysCp, eRestartPAMtoPAG, eFake_GDP_Pipe_Data };
 
 // Collect all or most of the necessary control variables into a structure
 
@@ -211,7 +213,7 @@ typedef struct
 
 #ifdef _I_AM_PAG
 	{ 
-	_T("localhost"), _T(""), _T("mc-scp"), _T("")	,0XFFF0,1260,7			// Syscp, conn #0
+	_T("localhost"), _T(""), _T("mc-scp"), _T("")	,(short)0XFFF0,1260,7			// Syscp, conn #0
 
 #endif
 
@@ -311,7 +313,7 @@ public:
 	void OnReceive(CClientSocket *pSocket);	// Called by CClientSocket::OnReceive()
 	void* GetWholePacket(int nPacketSize, int *pReceived);
 	void UnknownRcvdPacket(void *pV);
-	void ProcessReceivedMessage(void);		// Main dlg calls thru our ccm to process msg in linked list
+	virtual void ProcessReceivedMessage(void);		// Main dlg calls thru our ccm to process msg in linked list
 
 	void SetClientIp(CString s);	// { if (m_pstCCM)  m_pstCCM->sClientIP4 = s;}
 	void SetServerIp(CString s);	// { if (m_pstCCM)  m_pstCCM->sServerIP4 = s;}

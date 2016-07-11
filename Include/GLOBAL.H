@@ -61,7 +61,13 @@ Revised:
 /**************************************************************/
 /** Global parameters maintained in each element of Truscope **/
 /**************************************************************/
-//PubExt int gChannel, gCopyTo, gGate, gPrf, gSysInitFlag;
+#ifdef THIS_IS_SERVICE_APP
+extern int gChannel,  gGate;
+#else
+PubExt int gChannel,  gGate;
+#endif
+
+PubExt int gCopyTo, gPrf, gSysInitFlag;
 /*PubExt WORD wXdcrType[4][10];	/* by shoe and channel */
 
 /*PubExt UT_OFFSET UtOffset;		/* defined in instdata.h */

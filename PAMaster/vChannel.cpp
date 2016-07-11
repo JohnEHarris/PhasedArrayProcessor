@@ -73,17 +73,17 @@ void CvChannel::FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
 // bIdOd selects which FIFO id=0, od=1
 BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 	{
-	int i;
+	int i = 0;
 	Nc_FIFO *pFifo;
 	bIdOd &= 1;	// limit range to 0-1
 	pFifo = &NcFifo[bIdOd];
 	if (bAmp > 0xc0)
 		i = i+3;
 
-	i = pFifo->bInput;		// slot position in the fifo
+	i = pFifo->bInPt;		// slot position in the fifo
 	pFifo->bCell[i] = bAmp;	// replace oldest element
-	pFifo->bInput++;		// advance to next oldest position
-	if (pFifo->bInput >= pFifo->bMod)	pFifo->bInput = 0;	// fifo is only bMod deep
+	pFifo->bInPt++;		// advance to next oldest position
+	if (pFifo->bInPt >= pFifo->bMod)	pFifo->bInPt = 0;	// fifo is only bMod deep
 
 	pFifo->bAboveThld = 0;	// get ready to count fifo entries above or equal to thold
 	pFifo->bMaxTemp   = 0;
@@ -138,7 +138,7 @@ void CvChannel::WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut)
 	{
 	memset((void *) &NxFifo,0, sizeof(NxFifo));
 	if (bNx > 8) bNx = 8;
-	else if (bNx < 1) bNx = 1;
+	//else if (bNx < 1) bNx = 1; // 2016-06-15 bNx = 0 -> not a wall channel
 	NxFifo.bNx = bNx;
 	NxFifo.wWallMax = wMax;	// maximum allowed value for a wall reading
 	NxFifo.wWallMin = wMin;	// minimum allowed value for a wall reading
@@ -154,6 +154,8 @@ WORD CvChannel::InputWFifo(WORD wWall)
 	WORD wOldWall;
 	Nx_FIFO *pFifo = &NxFifo;
 
+	if (pFifo->bNx ==0) return 10;	// not considered a wall channel
+
 	if ( (wWall < pFifo->wWallMin) || (wWall > pFifo->wWallMax))
 		{
 		pFifo->wBadWall++;
@@ -162,9 +164,9 @@ WORD CvChannel::InputWFifo(WORD wWall)
 		}
 
 	pFifo->wGoodWall++;
-	i = pFifo->bInput++;			// slot position in the fifo and increment to next
-	if ( pFifo->bInput >= pFifo->bNx)	
-		 pFifo->bInput = 0;
+	i = pFifo->bInPt++;			// slot position in the fifo and increment to next
+	if ( pFifo->bInPt >= pFifo->bNx)	
+		 pFifo->bInPt = 0;
 	wOldWall = pFifo->wCell[i];		// get oldest wall reading
 	pFifo->wCell[i] = wWall;		// replace oldest element with this one
 	pFifo->uSum += (wWall - wOldWall);	// change in sum is new - old

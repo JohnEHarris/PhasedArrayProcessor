@@ -6,7 +6,7 @@
 #ifdef THIS_IS_SERVICE_APP
 #include "ServiceApp.h"
 #include "../include/cfg100.h"
-class CRunningAverage;
+//class CRunningAverage;
 class CInstState;
 extern  CInspState InspState;
 
@@ -42,7 +42,7 @@ public:
 	afx_msg void ProcessRcvList(WPARAM w, LPARAM lParam);
 
 #ifdef THIS_IS_SERVICE_APP
-	afx_msg void InitRunningAverage(WPARAM w, LPARAM lParam);
+//	afx_msg void InitRunningAverage(WPARAM w, LPARAM lParam);
 	void ProcessInstrumentData(void *pData);
 	void MakeFakeDataHead(SRawDataPacket *pData);
 	void MakeFakeData(SRawDataPacket *pData);
@@ -50,7 +50,7 @@ public:
 	void BuildOutputPacket(SRawDataPacket *pRaw);
 	void SaveFakeData(CString& s);
 	// create a processing class instance for each wall channel
-	CRunningAverage *m_pRunAvg[MAX_WALL_CHANNELS];
+//	CRunningAverage *m_pRunAvg[MAX_WALL_CHANNELS];
 		
 	int m_nInspectMode;
 	int m_nMotionTime;

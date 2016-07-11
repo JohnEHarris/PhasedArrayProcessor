@@ -33,7 +33,7 @@ managed classes.
 #include <string.h>
 #include <stdio.h>
 #include "InstMsgProcess.h"
-#include "RunningAverage.h"
+//#include "RunningAverage.h"
 #include "HwTimer.h"
 #include "InspState.h"
 #include "ClientConnectionManagement.h"	// 21-Jan-13 jeh

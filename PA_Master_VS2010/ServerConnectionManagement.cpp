@@ -481,12 +481,13 @@ extern CTscanDlg *pCTscanDlg;
 int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag)
 	{
 	int nReturn = 0;
-	int nChannelInPam = pCTscanDlg->ComputeChannelNumberInPAMClient();
-	MMI_CMD *pCmd =( MMI_CMD *) pB;
+	CString s;
+//	int nChannelInPam = pCTscanDlg->ComputeChannelNumberInPAMClient();
+	PAM_GENERIC_MSG *pCmd =( PAM_GENERIC_MSG *) pB;
 
 
-	pCmd->PAM_Number = nClientIndex;
-	pCmd->ChnlNum = nChannelInPam;
+//	pCmd->bPamNumber = nClientIndex;
+//	pCmd->ChnlNum = nChannelInPam;
 
 #if 0
 	if ( this->m_nMyServer != nClientIndex)
@@ -500,14 +501,28 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 	CServerSocket * pSocket;	// id this client's socket
 	CServerSocketOwnerThread *pThread;	// id this client's socket's controlling thread
 	if (m_pstSCM == NULL)
-		{	
-		TRACE(_T("SCM::SendPacket - no m_pstSCM for this client\n"));		
+		{
+		s = _T("SCM::SendPacket - no m_pstSCM for this client\n");
+		TRACE(s);
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
 		if (nDeleteFlag)		delete pB;
 		return -2;		// we don't know which server instance we are
 		}
 	if (m_pstSCM->pClientConnection[nClientIndex] == NULL)
 		{
-		TRACE(_T("SCM::SendPacket - no pClientConnection for this client\n"));		
+		s = _T("SCM::SendPacket - no pClientConnection for this client\n");
+		TRACE(s);		
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
 		if (nDeleteFlag)		delete pB;
 		return -3;	// we don't know which client instance we are trying to com with
 		}
@@ -515,7 +530,10 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 	pThread = m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread;
 	if (pThread == NULL)
 		{
-		TRACE(_T("SCM::SendPacket - no pServerSocketOwnerThread for this client\n"));		
+		s = _T("SCM::SendPacket - no pServerSocketOwnerThread for this client\n");
+		TRACE(s);		
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
 		if (nDeleteFlag)		delete pB;
 		return -4;		// we know the client number, but not the sockets controlling thread
 		}
@@ -523,32 +541,40 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 
 	if (pSocket == NULL)
 		{
-		TRACE(_T("SCM::SendPacket - no socket for this client\n"));		
+		s = _T("SCM::SendPacket - no socket for this client\n");
+		TRACE(s);		
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
 		if (nDeleteFlag)		delete pB;
 		return -5;		// the clients socket doesn't exist
 		}
 
 	if (m_pstSCM->nSeverShutDownFlag)
 		{
-		TRACE(_T("Server ShutDown in progress\n"));	// don't queue any new packets	
+		s = _T("Server ShutDown in progress\n");
+		TRACE(s);	// don't queue any new packets	
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+
 		if (nDeleteFlag)		delete pB;
 		return -6;		
 		}
 
 	// ok to add to linked list and then send if here
 	// build a packet with packet length as the first int of the packet
-	stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[nBytes+sizeof(int)];	// resize the buffer that will actually be used
-	memcpy( (void *) &pBuf->Msg, (void *) pB, nBytes);	// move all data to the new buffer
-	pBuf->nLength = nBytes;
+//	stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[nBytes+sizeof(int)];	// resize the buffer that will actually be used
+//	memcpy( (void *) &pBuf->Msg, (void *) pB, nBytes);	// move all data to the new buffer
+//	pBuf->nLength = nBytes;
 
 	pSocket->LockSendPktList();
-	pSocket->AddTailSendPkt((void *) pBuf);
+	pSocket->AddTailSendPkt((void *) pB);
 	pSocket->UnLockSendPktList();
-	if (nDeleteFlag)		delete pB;
+//	if (nDeleteFlag)		delete pB;
 	// post a thread message to a ServerSocketOwnerThread to empty the linked list and send all packets
 	// Message activates CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, (WORD) nClientIndex, 0L);
-	return nBytes+sizeof(int);
+//	return nBytes+sizeof(int);
+	return sizeof(PAM_INST_CHNL_INFO); // only one message now
 	}
 #endif
 

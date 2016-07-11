@@ -190,13 +190,29 @@ void CServerSocket::OnAccept(int nErrorCode)
 	CString Ip4,s;
 	UINT uPort;
 	int nClientPortIndex;			// which client are we connecting to? Derive from IP address
-	UINT uClientBaseAddress;		// what is the 32 bit index of the 1st PA Master?
+	UINT uClientBaseAddress, uClientBaseAddress2;		// what is the 32 bit index of the 1st PA Master?
+	WORD wClientBaseAddress[8];
 	char *pIpBase = gServerArray[nMyServer].ClientBaseIp;
 
 #ifdef CLIENT_AND_SERVER_ON_SAME_MACHINE
 	uClientBaseAddress = inet_addr (pIpBase);	// Instrument base "192.168.10.201", PAG is "192.168.10.10"
 #else
 	uClientBaseAddress = ntohl(inet_addr (pIpBase));	// Instrument base "192.168.10.201", PAG is "192.168.10.10"
+	// update to newer function 
+	s = pIpBase;
+	if (1 != InetPton(AF_INET, s, &wClientBaseAddress) )
+		{
+		TRACE(_T("InetPton error\n"));
+		return;
+		}
+	else
+		{
+		TRACE(_T("InetPton success in OnAccept\n"));
+		uClientBaseAddress2 = ntohl(*(u_long*)&wClientBaseAddress);	// same value as uClientBaseAddress
+		;
+		}
+
+
 #endif
 
 
@@ -282,6 +298,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 #else
 		s.Format(_T("PAGSrv[%d]:MasterInst[%d]"), nMyServer, nClientPortIndex);
 #endif
+		TRACE(s);
 		pscc->szSocketName = s;
 		pscc->uClientPort = uPort;
 		m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
@@ -349,9 +366,10 @@ void CServerSocket::OnAccept(int nErrorCode)
 	s.Format(_T("Client accepted to server on socket %s : %d\n"), Ip4, uPort);
 	TRACE(s);
 		
-	char buffer [80];
+	char buffer [80], txt[64];
 	strcpy(buffer,GetTimeStringPtr());
-	printf("Instrument Client[%d] accepted to server on socket %s : %d at %s\n", nClientPortIndex, Ip4, uPort, buffer);
+	CstringToChar(Ip4, txt);
+	printf("Instrument Client[%d] accepted to server on socket %s : %d at %s\n", nClientPortIndex, txt, uPort, buffer);
 	Sleep(10);
 			
 	// Asocket.Close();	not necessary. Since Asocket on stack, when this routine ends, Asocket deletes
@@ -435,11 +453,9 @@ void CServerSocket::OnReceive(int nErrorCode)
 	//BYTE Buf[MAX_PAM_BYTES+8];			// put it on the stack instead of the heap. Probably quicker
 	BYTE *pB;	// debug
 	void *pPacket = 0;
-#ifdef _I_AM_PAG
-	int nPacketSize = sizeof(I_MSG_RUN);	//1260  the biggest message
-#else
-	int nPacketSize = gServerArray[m_nMyServer].nPacketSize;
-#endif
+	int nPacketSize;
+
+	nPacketSize = gServerArray[m_nMyServer].nPacketSize;
 	//TCPDUMMY * Data = new TCPDUMMY;
 	int n, m;
 	int nWholePacketQty = 0;
@@ -473,7 +489,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)	return;
 	if (m_pSCC == NULL)							return;
 #if 1
-	if (m_pSCC->uPacketsReceived < 8)
+	//if (m_pSCC->uPacketsReceived < 8)
 		{
 		s.Format(_T("[%4d]Server[%d]Socket[%d] got %d bytes\n"), 
 		m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, n);
@@ -483,10 +499,10 @@ void CServerSocket::OnReceive(int nErrorCode)
 
 
 	if (m_pSCC->bStopSendRcv)
-		{
-		n = -1;	// forced exit
-		m_pSCC->bConnected = (BYTE) eNotConnected;
-		}
+			{
+			n = -1;	// forced exit
+			m_pSCC->bConnected = (BYTE) eNotConnected;
+			}
 
 
 	if ( n > 0)
@@ -625,12 +641,12 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 	{
 	int nSockOpt = TRUE;
 	int  sockerr=0;
-	short nPort;
+	UINT uPort;
 
 	if ( NULL == pSCM)	return -1;
 	pSCM->SetServerType(eListener);
-	nPort = pSCM->GetServerPort();
-	if (nPort <= 0) return -1;
+	uPort = pSCM->GetServerPort();
+	if (uPort == 0) return -1;
 
 	// We want to be called by the OS when data a packet is received, when a client connects to the server, 
 	// when a socket closes, and when the client on the other end has accepted the connection
@@ -639,7 +655,7 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 
 	// the final null can be replaced with an ip4 address if a specific NIC is desired to be used,
 	// otherwise this socket will listen on all NIC's -- lpszSockAddress = null
-	if (sockerr = this->Create(nPort, SOCK_STREAM, FD_READ | FD_CONNECT | FD_CLOSE | FD_ACCEPT,  NULL )	!= 0 )
+	if (sockerr = this->Create(uPort, SOCK_STREAM, FD_READ | FD_CONNECT | FD_CLOSE | FD_ACCEPT,  NULL )	!= 0 )
 		{	// Socket created
 
 		nSockOpt = 1;
@@ -685,6 +701,7 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
 	{
 	CString s;
+	int i;
 
 	s.Format(_T("Send%d"), nClientPortIndex);
 	pscc->szSocketName	= _T("");
@@ -714,4 +731,9 @@ void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTI
 	pscc->uBytesSent				= 0;
 	pscc->uUnsentPackets			= 0;
 	pscc->uLastTick					= 0;
+
+	for ( i = 0; i < MAX_CHNLS_PER_INSTRUMENT; i++)
+		{
+		pscc->pvChannel[i] = new CvChannel(nClientPortIndex,i);
+		}
 	}

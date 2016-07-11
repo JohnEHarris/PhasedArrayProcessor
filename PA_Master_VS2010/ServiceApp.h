@@ -10,7 +10,7 @@
 #endif // _MSC_VER >= 1000
 
 // THIS_IS_SERVICE_APP is defined in the PAM project under C++ | Preprocessor Definitions 
-
+#include "NTService.h"
 #include "../Include/PA2Struct.h"
 #include "../include/cfg100.h"
 #include "../include/udp_msg.h"

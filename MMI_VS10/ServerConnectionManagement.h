@@ -36,6 +36,9 @@ typedef struct
 #define eInstrument_Server	0	// the one and only server for all instrument connected to a PAM
 
 
+// An instrument client can have up to this many virtual channels
+#define MAX_CHNLS_PER_INSTRUMENT			32
+
 // THIS_IS_SERVICE_APP is defined in the PAM project under C++ | Preprocessor Definitions 
 
 #ifdef THIS_IS_SERVICE_APP
@@ -54,6 +57,7 @@ class CServiceApp;
 // edit this value if more client connections to servers are needed
 #define	MAX_SERVERS							1
 #define MAX_CLIENTS_PER_SERVER				8
+
 
 
 #define INSTRUMENT_PACKET_SIZE				1040
@@ -124,11 +128,11 @@ extern SRV_SOCKET_INFO gServerArray[];
 class CServerConnectionManagement;	// we're going to make a ptr to ourselves in the class so we have to define the class here
 class CServerListenThread;			// Thread to listen for connection on a given server port (a given service type)
 class CServerSocket;				// our specific implementation of an ASync socket
-class CServerSocketOwnerThread;	// a thread to control the resource of the management class and the dialog
+class CServerSocketOwnerThread;		// a thread to control the resource of the management class and the dialog
 class CAsyncSocket;
-class CServerRcvListThreadBase;			// a thread to read the linked list filled from the data received from the client
+class CServerRcvListThreadBase;		// a thread to read the linked list filled from the data received from the client
 class CServerRcvListThread;			// a thread to read the linked list filled from the data received from the client
-
+class CvChannel;					// array of ptrs of this type to logically connect channels to instruments
 /** =============================================================================**/
 // A structure to define the operation of the server with one particular client.
 //
@@ -151,7 +155,7 @@ typedef struct
 	CRITICAL_SECTION *pCSSendPkt;	// control access to output (send) list
 	CPtrList* pSendPktList;			// list containing packets to send
 	CRITICAL_SECTION *pCSRcvPkt;	// control access to input (receive) list
-	CPtrList* pRcvPktList;			// list containing packets received
+	CPtrList* pRcvPktList;			// list containing packets received from client
 	CServerSocket * pSocket;		// ASync socket fills RcvPktList with OnReceive method.
 									// same socket is used to send packets to CLIENT
 									// This socket is owned by ServerSocketOwnerThread
@@ -160,7 +164,7 @@ typedef struct
 	int nSSOwnerThreadPriority;
 	int nSSRcvListThreadPriority;	// THREAD_PRIORITY_NORMAL
 
-	DWORD ServerRcvListThreadID;		// the ID of the rcv thread... allows posting messages w/o thread ptr
+	DWORD ServerRcvListThreadID;	// the ID of the rcv thread... allows posting messages w/o thread ptr
 	int m_nMyThreadIndex;			// which instance of this we are?
 	BYTE bStopSendRcv;				// have socket throw away all input/output data
 
@@ -177,7 +181,13 @@ typedef struct
 	UINT uPacketsSent;
 	UINT uUnsentPackets;			// Sending was aborted w/o sending the packet
 
-	UINT uLastTick;			// Use with main app uAppTimerTick value to provide keep alive messages
+	UINT uLastTick;					// Use with main app uAppTimerTick value to provide keep alive messages
+	// 2016-06-06 jeh
+	// initialized in CServerSocket::OnAcceptInitializeConnectionStats
+	CvChannel* pvChannel[MAX_CHNLS_PER_INSTRUMENT];	// array of ptrs to virtual channels associated with each client connection
+	
+	RAW_INSTRUMENT_STATUS InstrumentStatus;	// Status info which comes with each TCPIP packet from an instrument
+
 
 	} ST_SERVERS_CLIENT_CONNECTION;	// Name means for a given server what are the properties of each connected client
 
@@ -284,6 +294,9 @@ public:
 
 	void SetServerType(int t)		{ if (m_pstSCM)	m_pstSCM->nServerType = t;	}
 	int GetServerType(void)			{ return ( m_pstSCM ? m_pstSCM->nServerType : -1 );	}
+
+	void SetClientBaseIp(CString s) { if (m_pstSCM)	m_pstSCM->sClientBaseIP = s; }
+	CString GetClientBaseIp(void)	{return ( m_pstSCM ? m_pstSCM->sClientBaseIP : _T("") );}
 
 	void LockDebugIn(void)			{ EnterCriticalSection(m_pstSCM->pCSDebugIn );	}
 	//void AddTailDebugIn(CString s)	{ m_pstCCM->pInDebugMessageList->AddTail(&s);	}

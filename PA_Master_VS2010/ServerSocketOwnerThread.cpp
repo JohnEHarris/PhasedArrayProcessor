@@ -312,9 +312,11 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	int nClientIndex = (int) w;
 	CString s;
 	int nSent;
+	int nMsgSize;
 	int i = -1;
 	int nError;
-	stSEND_PACKET *pBuf; 
+	PAM_INST_CHNL_INFO *pCmd;
+	//stSEND_PACKET *pBuf; 
 	CServerSocket *pSocket = &m_ConnectionSocket;
 
 
@@ -327,14 +329,14 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	while (pSocket->m_pSCC->pSendPktList->GetCount() > 0 )
 		{
 		pSocket->LockSendPktList();
-		pBuf = (stSEND_PACKET *) pSocket->m_pSCC->pSendPktList->RemoveHead();
+		pCmd = (PAM_INST_CHNL_INFO *) pSocket->m_pSCC->pSendPktList->RemoveHead();
 		pSocket->UnLockSendPktList();
 			
-		MMI_CMD *pCmd = (MMI_CMD *) &pBuf->Msg;
-#ifdef _DEBUG
-		int nElapse;
-		switch (pCmd->MsgId)
+		//MMI_CMD *pCmd = (MMI_CMD *) &pBuf->Msg;
+		int nElapse = 0;
+		switch (pCmd->wMsgID)
 			{
+#if 0
 		case SYSINIT:
 			m_pHwTimer->Start();
 			m_nConfigMsgQty = 0;
@@ -350,16 +352,21 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			TRACE(s);
 
 			break;
+#endif
+		case NC_NX_CMD_ID:
+			s.Format(_T("NC_NX_CMD_ID Msg seq cnt =%d\n"), pCmd->wMsgSeqCnt);
+			pCmd->wMsgSeqCnt = pSocket->m_pSCC->wMsgSeqCnt++;
+			nMsgSize = sizeof(PAM_INST_CHNL_INFO);
+
 		default:
 			break;
 			}
 
-#endif
 		// up to 50 attempts to send
 		for ( i = 0; i < 50; i++)
 			{
-			nSent = pSocket->Send( (void *) pBuf->Msg, pBuf->nLength,0);
-			if (nSent == pBuf->nLength)
+			nSent = pSocket->Send( (void *) pCmd, nMsgSize,0);
+			if (nSent == nMsgSize)
 				{
 				pSocket->m_pSCC->uBytesSent += nSent;
 				pSocket->m_pSCC->uPacketsSent++;
@@ -389,12 +396,12 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				{
 				pSocket->m_pSCC->uUnsentPackets++;
 				s.Format(_T("ServerSocketOwnerThread Sent=%d, expected=%d, list cnt=%d, Pkts sent=%d, Pkts lost=%d, msgSeq=%d, Error=%d\n"),
-					nSent, pBuf->nLength, pSocket->m_pSCC->pSendPktList->GetCount(), pSocket->m_pSCC->uPacketsSent,
-					pSocket->m_pSCC->uUnsentPackets, pCmd->MsgNum, nError);
+					nSent, nSent, pSocket->m_pSCC->pSendPktList->GetCount(), pSocket->m_pSCC->uPacketsSent,
+					pSocket->m_pSCC->uUnsentPackets, pCmd->wMsgSeqCnt, nError);
 				TRACE(s);
 				}
 			// 10054L is forcibly closed by remote host
 			}	// for ( i = 0; i < 5; i++)
-		delete pBuf;		
+		delete pCmd;		
 		}
 	}

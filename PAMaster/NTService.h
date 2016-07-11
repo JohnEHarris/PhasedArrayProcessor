@@ -27,6 +27,7 @@
 
 // last revised: $Date: 11.05.98 21:09 $, $Revision: 3 $
 
+#include <winsvc.h>
 
 #ifndef NTService_h
 #define NTService_h

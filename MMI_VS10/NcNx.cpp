@@ -42,6 +42,7 @@ void CstringToIntArray(CString s, int *pArray, int nArraySize)
 	}
 
 
+
 // CNcNx dialog
 
 IMPLEMENT_DYNAMIC(CNcNx, CDialogEx)

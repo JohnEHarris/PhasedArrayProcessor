@@ -45,7 +45,7 @@ public:
 
 	int InitListeningSocket(CServerConnectionManagement * pSCM);
 	void SetSCM(CServerConnectionManagement *pSCM)		{	m_pSCM = pSCM;	}
-	(CServerConnectionManagement *) GetSCM(void)		{	return m_pSCM;	}
+	CServerConnectionManagement * GetSCM(void)		{	return m_pSCM;	}
 
 	void OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex);
 	void KillpClientConnectionStruct(void);
@@ -71,7 +71,7 @@ public:
 	BYTE GetConnectionStatus(void)		{ return (m_pSCC ?	m_pSCC->bConnected : eInstrumentNotPresent);	}
 	void SetConnectionStatus(BYTE s)	{ if	 (m_pSCC)	m_pSCC->bConnected = s;							}
 
-	// vairables
+	// variables
 	CServerConnectionManagement *m_pSCM;		// ptr to the controlling class
 	ST_SERVERS_CLIENT_CONNECTION *m_pSCC;		// ptr to my connection info/statistics/objects
 	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// pointer to my global structure instance 

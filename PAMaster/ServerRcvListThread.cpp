@@ -26,7 +26,7 @@ static char THIS_FILE[] = __FILE__;
 // THIS_IS_SERVICE_APP is defined in the PAM project under C++ | Preprocessor Definitions 
 
 #ifdef THIS_IS_SERVICE_APP
-#include "RunningAverage.h"
+//#include "RunningAverage.h"
 #include "../include/cfg100.h"
 
 // for rnadom number generator
@@ -174,7 +174,7 @@ int CServerRcvListThread::ExitInstance()
 	// TODO:  perform any per-thread cleanup here
 	// return CServerRcvListThreadBase::ExitInstance();
 	CString s;
-	int i;
+	//int i;
 #ifdef THIS_IS_SERVICE_APP
 #if 0
 	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
@@ -196,7 +196,7 @@ BEGIN_MESSAGE_MAP(CServerRcvListThread, CServerRcvListThreadBase)
 
 #ifdef THIS_IS_SERVICE_APP
 	ON_THREAD_MESSAGE(WM_USER_SERVERSOCKET_PKT_RECEIVED, ProcessRcvList)// manually added by jeh 11-06-12
-	ON_THREAD_MESSAGE(WM_USER_INIT_RUNNING_AVERAGE, InitRunningAverage)	// manually added by jeh 11-09-12
+//	ON_THREAD_MESSAGE(WM_USER_INIT_RUNNING_AVERAGE, InitRunningAverage)	// manually added by jeh 11-09-12
 #endif
 
 #ifdef _I_AM_PAG
@@ -382,6 +382,8 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 // Instantiate and initialize the Running average class instances
 // Before processing any instrument data.
 //
+#if 0
+
 #ifdef THIS_IS_SERVICE_APP
 afx_msg void CServerRcvListThread::InitRunningAverage(WPARAM w, LPARAM lParam)
 	{
@@ -396,6 +398,7 @@ afx_msg void CServerRcvListThread::InitRunningAverage(WPARAM w, LPARAM lParam)
 		// pRunAvg[i]->SetChannelNumber(??);
 		// changes when config file changes chnl type
 		}
+#endif
 	}
 #endif
 

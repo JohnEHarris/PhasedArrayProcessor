@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectName>PA_Master</ProjectName>
+    <ProjectName>PA_Master2015</ProjectName>
     <ProjectGuid>{D91686D0-B387-4DA2-A484-7FAE55E01383}</ProjectGuid>
     <RootNamespace>MFCService</RootNamespace>
     <Keyword>MFCProj</Keyword>
@@ -22,13 +22,13 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>Dynamic</UseOfMfc>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>Dynamic</UseOfMfc>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -56,7 +56,7 @@
     <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">PhasedArrayMasterVS2013</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">PhasedArrayMasterVS2015</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">PhasedArrayMasterVS2015</TargetName>
     <RunCodeAnalysis Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</RunCodeAnalysis>
   </PropertyGroup>
@@ -97,7 +97,6 @@
       <ProgramDatabaseFile>.\Release/PhasedArray_Master.pdb</ProgramDatabaseFile>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
-      <Version>1.0.01</Version>
     </Link>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -168,7 +167,6 @@
     <ClInclude Include="MainModuleGlobal.h" />
     <ClInclude Include="NTService.h" />
     <ClInclude Include="NTServiceEventLogMsg.h" />
-    <ClInclude Include="RunningAverage.h" />
     <ClInclude Include="ServerRcvListThread.h" />
     <ClInclude Include="ServerRcvListThreadBase.h" />
     <ClInclude Include="ServerSocketOwnerThread.h" />
@@ -196,17 +194,10 @@
     <ClCompile Include="HwTimer.cpp" />
     <ClCompile Include="InspState.cpp" />
     <ClCompile Include="InstMsgProcess.cpp" />
-    <ClCompile Include="MFCNTService.cpp">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="NTService.cpp">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="RunningAverage.cpp" />
     <ClCompile Include="ServerRcvListThread.cpp" />
     <ClCompile Include="ServerRcvListThreadBase.cpp" />
     <ClCompile Include="ServerSocketOwnerThread.cpp" />
@@ -232,6 +223,7 @@
     <None Include="MFCService.dsp" />
     <None Include="NTServiceEventLogMsg.mc">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

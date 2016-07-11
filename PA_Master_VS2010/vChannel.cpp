@@ -73,12 +73,12 @@ void CvChannel::FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
 // bIdOd selects which FIFO id=0, od=1
 BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 	{
-	int i;
+	int i = 0;
 	Nc_FIFO *pFifo;
 	bIdOd &= 1;	// limit range to 0-1
 	pFifo = &NcFifo[bIdOd];
-
-	if (pFifo->bNc == 0) return 0;	// not considered a flaw channel
+	if (bAmp > 0xc0)
+		i = i+3;
 
 	i = pFifo->bInPt;		// slot position in the fifo
 	pFifo->bCell[i] = bAmp;	// replace oldest element

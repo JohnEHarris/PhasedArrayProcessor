@@ -15,7 +15,7 @@ Revised:
 
 
 #endif		// INSTMSGPROCESS_H
-class CRunningAverage;
+//class CRunningAverage;
 
 class CInstMsgProcess
 {
@@ -35,7 +35,7 @@ public:
 	BYTE m_bConnected;			// are we connected to an instrument.
 	// Each wall channel in an instrument has a class to process the wall data
 	// There can be 4 channels of wall
-	CRunningAverage *m_pRunningAvg[MAX_WALL_CHANNELS];
+//	CRunningAverage *m_pRunningAvg[MAX_WALL_CHANNELS];
 	// Store info about Channel type assignments
 	CHANNEL_INFO m_ChannelInfo[MAX_CHANNEL_PER_INSTRUMENT];
 	// get the CHANNEL_CONFIG2 info from InspState.. usually when an MMI command is received

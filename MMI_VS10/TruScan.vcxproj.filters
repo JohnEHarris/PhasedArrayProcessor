@@ -246,6 +246,9 @@
     <ClCompile Include="NcNx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="vChannel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="TRUSCAN.RC">
@@ -515,6 +518,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Include\PA2Struct.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vChannel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

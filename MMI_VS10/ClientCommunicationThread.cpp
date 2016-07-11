@@ -49,6 +49,7 @@ Revised:	02-Mar-2005 This code works the same, but the CClientSocket is now usin
 
 //#include "ClientCommunicationThread.h"
 
+extern CTscanDlg* pCTscanDlg;
 extern CString GetTimeString(void);
 
 #ifdef _DEBUG
@@ -578,8 +579,8 @@ afx_msg void CClientCommunicationThread::OnTimer(WPARAM w, LPARAM lParam)
 	case eFake_GDP_Pipe_Data:
 		// call back to the main dialog to generate and send some fake pipe data to gdp
 		// fake data is taken from yiqing's void CAmalogSimDlg::OnStopSequence() 
-		if ((m_nTick & 3) == 0)
-			pCTscanDlg->MakeFakeGDP_Data();
+//		if ((m_nTick & 3) == 0)
+//			pCTscanDlg->MakeFakeGDP_Data();
 		break;
 #endif
 

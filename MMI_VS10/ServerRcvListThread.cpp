@@ -386,10 +386,10 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 // Instantiate and initialize the Running average class instances
 // Before processing any instrument data.
 //
+#if 0
 #ifdef THIS_IS_SERVICE_APP
 afx_msg void CServerRcvListThread::InitRunningAverage(WPARAM w, LPARAM lParam)
 	{
-#if 0
 	int i;
 	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
 		{

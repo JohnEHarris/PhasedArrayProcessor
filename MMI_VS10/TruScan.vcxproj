@@ -284,6 +284,7 @@
     <ClCompile Include="tof.cpp" />
     <ClCompile Include="TRUSCAN.CPP" />
     <ClCompile Include="TSCANDLG.CPP" />
+    <ClCompile Include="vChannel.cpp" />
     <ClCompile Include="viewcfg.cpp" />
     <ClCompile Include="WallDlg.cpp" />
     <ClCompile Include="WCalDlg.cpp" />
@@ -377,6 +378,7 @@
     <ClInclude Include="TRUSCAN.H" />
     <ClInclude Include="TSCANDLG.H" />
     <ClInclude Include="..\Include\Udp_msg.h" />
+    <ClInclude Include="vChannel.h" />
     <ClInclude Include="viewcfg.h" />
     <ClInclude Include="WallDlg.h" />
     <ClInclude Include="WCalDlg.h" />

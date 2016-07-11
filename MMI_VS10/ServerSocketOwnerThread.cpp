@@ -312,7 +312,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	int nClientIndex = (int) w;
 	CString s;
 	int nSent;
-	int nMsgSize;
+	int nMsgSize = 0;
 	int i = -1;
 	int nError;
 	PAM_INST_CHNL_INFO *pCmd;

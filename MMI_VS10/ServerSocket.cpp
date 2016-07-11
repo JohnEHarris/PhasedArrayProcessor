@@ -732,8 +732,10 @@ void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTI
 	pscc->uUnsentPackets			= 0;
 	pscc->uLastTick					= 0;
 
+#ifdef THIS_IS_SERVICE_APP
 	for ( i = 0; i < MAX_CHNLS_PER_INSTRUMENT; i++)
 		{
 		pscc->pvChannel[i] = new CvChannel(nClientPortIndex,i);
 		}
+#endif
 	}

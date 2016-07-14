@@ -121,7 +121,7 @@ void CTestThread::TestNx(void)
 	CvChannel *pCh = new CvChannel(0,0);	// inst 0, chnl 0
 	// Nx = 2, Max=1377, Min=110 , Drop=4
 	WORD Wall[] = {300,333,315,288,255,2200,0,324,326,366,400,0,0,298,320,322,360,100,100,100,100,0,0};
-	pCh->WFifoInit(2,1377,110,4);
+	pCh->WFifoInit(1,1377,110,4);
 	TRACE("Nx = 2, Max=1377, Min=110 , Drop=4\n");
 	for ( i = 0; i < sizeof(Wall)/2; i++)
 		{

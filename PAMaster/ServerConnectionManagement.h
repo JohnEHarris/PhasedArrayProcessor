@@ -145,7 +145,7 @@ enum { eNotConnected, eNotConfigured, eConfigured };
 
 typedef struct
 	{
-	CString szSocketName;			// name of this socket
+	CString szSocketName;			// name of this server socket
 	CString sClientName;			// symbolic name of the client network address,  eg., MC_ACP_HOSTNAME = "mc-acp"
 	CString sClientIP4;				// IP4 dotted address of client, normally this computers NIC address, eg., 192.168.10.10 
 	UINT uClientPort;				// set when connection to server made
@@ -157,7 +157,7 @@ typedef struct
 									// same socket is used to send packets to CLIENT
 									// This socket is owned by ServerSocketOwnerThread
 	CServerSocketOwnerThread *pServerSocketOwnerThread;	// thread to control sending to a connected client
-	CServerRcvListThreadBase *pServerRcvListThread;	// a thread to process data from the connected client
+	CServerRcvListThreadBase *pServerRcvListThread;		// a thread to process data from the connected client
 	int nSSOwnerThreadPriority;
 	int nSSRcvListThreadPriority;	// THREAD_PRIORITY_NORMAL
 
@@ -247,12 +247,19 @@ ST_SERVER_CONNECTION_MANAGEMENT stSCM[MAX_SERVERS];		// a global, static array o
 int gnMaxServers;
 int gnMaxClientsPerServer;
 short gnDefaultListenPort;
+// C global function
+ST_SERVER_CONNECTION_MANAGEMENT * GetPAM_SCM(void)	{	return &stSCM[0];	}
+
 #else
 extern ST_SERVER_CONNECTION_MANAGEMENT stSCM[MAX_SERVERS];		// a global, static array of SCM structs
 extern int gnMaxServers;
 extern int gnMaxClientsPerServer;
 extern short gnDefaultListenPort;
+// C global function
+extern ST_SERVER_CONNECTION_MANAGEMENT * GetPAM_SCM(void);	//	{	return &stSCM[0];	}
+
 #endif
+
 
 // Rather than having to set pointer to important information in every instance of the various classes, the information
 // can be shared in a global static array when a piece (class or thread or socket) knows which items to the static array belong to it.

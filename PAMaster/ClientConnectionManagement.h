@@ -68,12 +68,17 @@ enum eClientRestart	{ eRestartPAGtoSysCp, eRestartPAMtoPAG, eFake_GDP_Pipe_Data 
 // Collect all or most of the necessary control variables into a structure
 
 class CClientConnectionManagement;	// we're going to make a ptr to ourselves in the class so we have to define the class here
-class CClientCommunicationThread;		// adapted from ags3 project
+class CClientCommunicationThread;	// adapted from ags3 project
 									// Communication dlgs are controlled by windows messages
 class CCmdProcessThread;
 class CAsyncSocket;
 
-
+// Clients are connected to servers. Each client in this table is connected to some type of server.
+// If this is the Phased Array Master (PAM) then its only client-server connection is to the Phased Array GUI PAG
+// The PAG sends commands to the PAM via this connection. Those commands are usually directed toward the instruments
+// connected to the PAM thru its ServerConnectionManagement structure. Command information has to move from the
+//  ClientConnetionManagement CCM side to the SCM side by some mechanism in order to reach the instruments.
+//
 typedef struct
 	{
 	HWND hWnd;						// window handle of the primary dialog which sends/receives on this connection
@@ -207,7 +212,7 @@ typedef struct
 
 #ifdef THIS_IS_SERVICE_APP
 	{
-	"", "192.168.10.10", "", "192.168.10.10", 7501,sizeof(MMI_CMD),0		// PAM attempt to connect to PAG on port 7501
+	"PAM", "192.168.10.40", "PAG", "192.168.10.20", 7501,sizeof(PAM_GENERIC_MSG),0		// PAM attempt to connect to PAG on port 7501
 
 #endif
 

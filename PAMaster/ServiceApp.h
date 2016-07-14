@@ -73,6 +73,7 @@
 
 #define ePAM_Client_Of_PAG_Server			0
 
+
 class CServiceApp : public CWinApp, public CNTService
 	{
 	HANDLE	m_hStop;

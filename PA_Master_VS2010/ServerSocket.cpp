@@ -219,7 +219,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	char cIp4[20];
 
 	Asocket.GetSockName(Ip4,uPort);	// my socket info??
-	s.Format(_T("Server side socket %s : %d\n"), Ip4, uPort);
+	s.Format(_T("Server side socket %s : %d\n"), Ip4, uPort);	// crash here 7-14-16 on reconnect by instrument
 	TRACE(s);
 	Asocket.GetPeerName(Ip4,uPort);	// connecting clients info??
 	s.Format(_T("Client side socket %s : %d\n"), Ip4, uPort);

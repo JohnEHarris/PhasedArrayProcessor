@@ -61,6 +61,8 @@ managed classes.
 CServiceApp theApp;		// the persistent instance of the application
 UINT uAppTimerTick;		// approximately 50 ms
 
+UINT uVchannelConstructor[4][40];	// count when constructor called. 4 inst, 40 chnl
+
 UINT CheckKey( void *dummy );
 int readn( int fd, char *bp, int len);
 
@@ -308,6 +310,7 @@ void CstringToChar(CString &s, char *p, int nSizeOfArray)
 /*************** END FUNCTION PROTOTYPES ******************/					
 //CServiceApp *pTheApp;
 
+
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -366,30 +369,7 @@ CServiceApp::CServiceApp()
 	// 
 #endif
 
-#if 0
-	CHwTimer *pTimer;
-	pTimer = new CHwTimer();
-	int nDeltaT[20];
-	WORD wResult[20], wMin[20];
-	WORD dbgWall = 100;
-	CRunningAverage *pRunAvg = new CRunningAverage(8);
-	pRunAvg->SetDropOutThreshold(30);	// allow us to see the wall filtered value roll off
-	pRunAvg->SetLowWallLimit(0);		// ignore the lower limit for this test
-	pRunAvg->SetMinWallSearchRange(8);
-	pTimer->HwStartTime();
-	for ( i = 0; i < 20; i++)
-		{
-		wResult[i] = pRunAvg->Input(dbgWall);
-		wMin[i] = pRunAvg->GetMinWallOfLastN(dbgWall--);
-		if (i > 10) dbgWall = 1;
-		}
-	pTimer->HwStopTime();
 
-	pTimer->GetDeltaTimeArray(nDeltaT);
-	pRunAvg->DefaultLowWallLimit();
-	delete pTimer;
-#endif
-	
 	for (i=0; i<MAX_SHOES; i++)	// max shoes may be a problem 19-apr-12 jeh
 		{
 		g_WallCoef.fWallSlope[i] = 1.0f;
@@ -646,6 +626,7 @@ BOOL CServiceApp :: InitInstance()
 	// The ini file will be store in the folder which has the executable code
 
 	int i;
+	memset (&uVchannelConstructor,0, sizeof(uVchannelConstructor));
 	CString s,Fake;	// fake is a debug file with fake data and fake data msg to PAG
 
 	// ths didn't work with 2010 compiler. Might have with vs2005

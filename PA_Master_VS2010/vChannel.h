@@ -45,6 +45,13 @@ public:
 	void FifoClear(BYTE bIdOd);	// zero fifo entries, keep other parameters
 	BYTE bGetIdGateMax(void)	{ return m_GateID;	}
 	BYTE bGetOdGateMax(void)	{ return m_GateOD;	}
+
+	BYTE bGetNcId(void)			{ return NcFifo[0].bNc;	}
+	BYTE bGetNcOd(void)			{ return NcFifo[1].bNc;	}
+	BYTE bGetMId(void)			{ return NcFifo[0].bMod;	}
+	BYTE bGetMOd(void)			{ return NcFifo[1].bMod;	}
+	BYTE bGetThldId(void)		{ return NcFifo[0].bThold;	}
+	BYTE bGetThldOd(void)		{ return NcFifo[1].bThold;	}
 		
 	/*********************** Flaw processing routines ***********************/
 	/*======================================================================*/
@@ -70,6 +77,8 @@ public:
 	BYTE bGetNx(void)					{ return NxFifo.bNx;		  }
 	void SetDropCount(WORD wDropOut)	{ NxFifo.wDropOut = wDropOut; }
 	WORD GetDropCount(void)				{ return NxFifo.wDropOut;	  }
+	WORD wGetMaxWallLimit(void)			{ return NxFifo.wWallMax;	}
+	WORD wGetMinWallLimit(void)			{ return NxFifo.wWallMin;	}
 
 	/*********************** Wall processing routines ***********************/
 

@@ -153,6 +153,8 @@ BOOL CServerRcvListThread::InitInstance()
 			m_ConnectionSocket.m_pSCC->sClientIP4, m_ConnectionSocket.m_pSCC->uClientPort); 
 		TRACE(s);
 		TRACE(m_ConnectionSocket.m_pSCC->szSocketName);
+		m_pElapseTimer = new CHwTimer();
+
 		//InitRunningAverage(0,0);
 		return TRUE;
 
@@ -334,6 +336,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 	int i, k;
 	CString s,t;
 	CvChannel *pChannel;
+	int nNcId, nNcOd, nModId, nModOd, nThdlId, nThldOd, nNx, nMaxLimit, nMinLimit, nDrop; 
 
 	s = _T("\r\nPAM Output Data Packet\r\n");
 	SaveFakeData(s);
@@ -350,6 +353,27 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 
 	s.Format(_T("Loc=%3d Angle=%3d Inst=%2d Stat=%04x Sync=0x5CEBDAAD\r\n"),
 		pOutputPacket->wLoc, pOutputPacket->wAngle, pOutputPacket->instNumber, pOutputPacket->wStatus);
+	SaveFakeData(s);
+	// Get Nc Nx info for 1st channel  -- for debug from output file
+	pChannel = m_pSCC->pvChannel[0];
+	nNcId		= pChannel->bGetNcId();
+	nNcOd		= pChannel->bGetNcOd();
+	nModId		= pChannel->bGetMId();
+	nModOd		= pChannel->bGetMOd();
+	nThdlId		= pChannel->bGetThldId();
+	nThldOd		= pChannel->bGetThldOd();
+	nNx			= pChannel->bGetNx();
+	nMaxLimit	= pChannel->wGetMaxWallLimit();
+	nMinLimit	= pChannel->wGetMinWallLimit();
+	nDrop		= pChannel->GetDropCount();
+
+
+	s = _T("\r\n ID: Nc   M  Thld  Nx  MaxWall  MinWall Drop\r\n");
+	SaveFakeData(s);
+	s.Format(_T("   %2d  %2d  %3d   %d  %4d  %4d  %2d\r\n OD:"), nNcId, nModId, nThdlId, nNx, nMaxLimit, nMinLimit, nDrop );
+	SaveFakeData(s);
+	//od parameters
+	s.Format(_T("   %2d  %2d  %3d"), nNcOd, nModOd, nThldOd );
 	SaveFakeData(s);
 
 	s.Format(_T("\r\n      ID   OD   MinW    MaxW"));
@@ -379,28 +403,6 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 
 
 
-// Instantiate and initialize the Running average class instances
-// Before processing any instrument data.
-//
-#if 0
-
-#ifdef THIS_IS_SERVICE_APP
-afx_msg void CServerRcvListThread::InitRunningAverage(WPARAM w, LPARAM lParam)
-	{
-	int i;
-	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
-		{
-		// constructor sets default values for running average.
-		m_pRunAvg[i] = new CRunningAverage(NX_TOTAL);	// default max len
-//		m_pRunAvg[i]->SetMyInstMsgProcess(pInstMsgProcess);	// who's your daddy
-		m_pRunAvg[i]->SetSlaveNumber(m_nThreadIndex);
-		// figure out which channel I belong to
-		// pRunAvg[i]->SetChannelNumber(??);
-		// changes when config file changes chnl type
-		}
-#endif
-	}
-#endif
 
 // Take the code from ServiceApp, tInstMsgProcess() and incorporate into this class
 // Note that original code read input data from a socket and blocked until data was available.
@@ -427,6 +429,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 	BYTE bGateTmp;
 	WORD wTOFSum;
 	CvChannel *pChannel;
+	CString s;
 
 #ifdef MAKE_FAKE_DATA
 	// Basically Yqing's simulator gave us some bytes. Generate test data in place of those bytes.
@@ -452,6 +455,8 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 			m_pSCC->InstrumentStatus.wPeriod	= pRaw->DataHead.wPeriod;
 			}
 
+		if (m_pElapseTimer)
+			m_pElapseTimer->Start();
 		for ( j = 0; j < nFrameQtyPerPacket; j++)	// Assumes the data packet contains whole frames
 			{
 			for ( i = 0; i < nSeqQty; i++)
@@ -502,6 +507,9 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 				}
 
 			}	// j loop. do nFrameQty
+		m_nElapseTime = m_pElapseTimer->Stop();		// elapse time in uSec for 128 AScans
+		s.Format(_T("Nc Nx processing for 128 Ascans in %d uSec\n"), m_nElapseTime);
+		TRACE(s);
 
 
 

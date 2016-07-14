@@ -105,7 +105,7 @@ typedef struct
 	UINT uSum;		// sum of all wall values in FIFO
 	WORD wBadWall;	// how many out of range range wall readings
 	WORD wGoodWall;	// consecutive good wall readings
-	WORD wWallMax;	// minimum allowed hardware wall reading
+	WORD wWallMax;	// maximum allowed hardware wall reading
 	WORD wWallMin;	// minimum allowed hardware wall reading
 	WORD wDropOut;	// number of bad readings before drop out occurs
 	} Nx_FIFO;

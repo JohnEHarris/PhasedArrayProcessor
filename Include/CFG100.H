@@ -836,8 +836,8 @@ typedef struct
 	BYTE bChnlRepeats;	// how many times a given chnl type repeats in each instrument
 	BYTE bMaxVChnlPerInst;	// We assume 32 total vChnl per instrument max
 	BYTE bSpare[3];
-	WORD wSpare[512];	// Max unique sets of Nc Nx data per instrument. Size = 16*32 =512
-	} PAM_GENERIC_MSG; // SIZEOF() = 136
+	BYTE bMsg[1024];	// Max unique sets of Nc Nx data per instrument. Size = 16*32 =512 words
+	} PAM_GENERIC_MSG; // SIZEOF() = 1036
 
 
 

@@ -25,16 +25,23 @@ Revised:	modeled somewhat like RunningAverage. The two may be merged in the futu
 //#include <stdio.h>
 //#include "vChannel.h"
 #include "InstMsgProcess.h"
+extern UINT uVchannelConstructor[4][40];
 
+// Every time an instrument connects, the constructor runs
+// Must reload from GUI or store last good Nc Nx info in a static table
 CvChannel::CvChannel(int nInst, int nChnl)
 	{
 	// id/od, Nc, Thold, bMod
-	FifoInit(0,3,37,5);	// id
-	FifoInit(1,3,37,5);	// od
+	FifoInit(0,1,20,1);	// id
+	FifoInit(1,1,20,1);	// od
 	
 	// Wall processing routines
 	// Nx, Max allowed, Min, DropOut cnt
-	WFifoInit(3,1377,27,8);
+	WFifoInit(1,1377,27,4);
+	if ( nInst > 3) return;
+	if (nChnl > 39) return;
+	// counter of how many time constructor runs for each chnl/instrument
+	uVchannelConstructor[nInst][nChnl]++;
 	};
 
 CvChannel::~CvChannel()
@@ -165,6 +172,8 @@ WORD CvChannel::InputWFifo(WORD wWall)
 
 	pFifo->wGoodWall++;
 	i = pFifo->bInPt++;			// slot position in the fifo and increment to next
+	if ( i >= pFifo->bNx)
+		 i = 0;
 	if ( pFifo->bInPt >= pFifo->bNx)	
 		 pFifo->bInPt = 0;
 	wOldWall = pFifo->wCell[i];		// get oldest wall reading

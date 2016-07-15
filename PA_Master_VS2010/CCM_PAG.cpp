@@ -347,68 +347,7 @@ void CCCM_PAG::SetChannelInfo(PAM_INST_CHNL_INFO *pPamInstChnlInfo)
 		}
 
 
-#if 0
-	CHANNEL_CONFIG2 ChannelCfg;
-	int i, nDispCh;
-	int nSlave = GetInstNumber();
-	InspState.GetChannelConfig(&ChannelCfg);
 
-	for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
-		{
-		nDispCh = FindDisplayChannel(nSlave, i);
-
-		if (i < g_ArrayScanNum[nSlave])
-			m_ChannelInfo[i].channel_type = ChannelCfg.Ch[nDispCh/MAX_CHANNEL_PER_INSTRUMENT][nDispCh%MAX_CHANNEL_PER_INSTRUMENT].Type;
-		else
-			m_ChannelInfo[i].channel_type = IS_NOTHING;
-
-		switch (m_ChannelInfo[i].channel_type)
-			{
-		case IS_LONG:
-			m_ChannelInfo[i].id_thold = g_AllTholds.TholdLong[0];
-			m_ChannelInfo[i].od_thold = g_AllTholds.TholdLong[1];
-			m_ChannelInfo[i].nc_for_id = g_NcNx.Long[0];
-			m_ChannelInfo[i].nc_for_od = g_NcNx.Long[1];
-			break;
-		case IS_TRAN:
-			m_ChannelInfo[i].id_thold = g_AllTholds.TholdTran[0];
-			m_ChannelInfo[i].od_thold = g_AllTholds.TholdTran[1];
-			m_ChannelInfo[i].nc_for_id = g_NcNx.Tran[0];
-			m_ChannelInfo[i].nc_for_od = g_NcNx.Tran[1];
-			break;
-		case IS_OBQ1:
-			m_ChannelInfo[i].id_thold = g_AllTholds.TholdOblq1[0];
-			m_ChannelInfo[i].od_thold = g_AllTholds.TholdOblq1[1];
-			m_ChannelInfo[i].nc_for_id = g_NcNx.Oblq1[0];
-			m_ChannelInfo[i].nc_for_od = g_NcNx.Oblq1[1];
-			break;
-		case IS_OBQ2:
-			m_ChannelInfo[i].id_thold = g_AllTholds.TholdOblq2[0];
-			m_ChannelInfo[i].od_thold = g_AllTholds.TholdOblq2[1];
-			m_ChannelInfo[i].nc_for_id = g_NcNx.Oblq2[0];
-			m_ChannelInfo[i].nc_for_od = g_NcNx.Oblq2[1];
-			break;
-		case IS_OBQ3:
-			m_ChannelInfo[i].id_thold = g_AllTholds.TholdOblq3[0];
-			m_ChannelInfo[i].od_thold = g_AllTholds.TholdOblq3[1];
-			m_ChannelInfo[i].nc_for_id = g_NcNx.Oblq3[0];
-			m_ChannelInfo[i].nc_for_od = g_NcNx.Oblq3[1];
-			break;
-		case IS_WALL:
-			m_ChannelInfo[i].id_thold = g_AllTholds.TholdLamin[0];
-			m_ChannelInfo[i].od_thold = g_AllTholds.TholdLamin[1];
-			m_ChannelInfo[i].TholdWallThds[0] = g_AllTholds.TholdWallThds[0];
-			m_ChannelInfo[i].TholdWallThds[1] = g_AllTholds.TholdWallThds[1];
-			m_ChannelInfo[i].nc_for_id = g_NcNx.Lamin[0];
-			m_ChannelInfo[i].nc_for_od = g_NcNx.Lamin[1];
-			m_ChannelInfo[i].nx_for_wall = g_NcNx.Wall[0];
-			break;
-		default:
-			break;
-			}
-
-		}
-#endif
 	}
 
 // Send the same message to all Instruments
@@ -510,64 +449,18 @@ BOOL CCCM_PAG::SendSlaveMsg(int nWhichInstrument, MMI_CMD *pCmd)
 	return TRUE;
 	}
 
-void CCCM_PAG::InitImageBufArray(void)
-{
-	int i, nSlave, ct,ci;
-	int MaxXOffset;
-	CHANNEL_CONFIG2 ChannelCfg;
-	WORD *pWord;
-
-	MaxXOffset = GetMaxXOffset();
-	//MaxXOffset = 0;
-
-	memset( (void *) &ImageBuf, 0, sizeof(ImageBuf));
-
-	nBufout = nPreviousX = nMaxX = 0;
-	nBufin = IMAGE_BUF_OUTPUT_DELAY;
-	nBufcnt = IMAGE_BUF_OUTPUT_DELAY + MaxXOffset + 1;
-
-	//for (nSlave=0; nSlave<4; nSlave++)
-		InspState.GetChannelConfig(&ChannelCfg);
-		//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
-
-	for ( i = 0; i < IMAGE_BUF_DIM; i++)
-	{
-		ImageBuf[i].InspHdr.nStation = 0;
-		ImageBuf[i].UtInsp.MinWall = 0x3fff;
-		memset ( (void *) &ImageBuf[i].UtInsp.SegWallMin[0], 0x3f, 2*N_SEG);
-		ImageBuf[i].InspHdr.status[1] |= WALL_INCLUDED;
-
-		for (nSlave=0; nSlave<4; nSlave++)
-		{
-			for (ci=0; ci<10; ci++)
-			{
-				ct = ChannelCfg.Ch[nSlave][ci].Type;
-
-				switch ( ct)
-				{	/* chnl type */
-				case IS_NOTHING:
-				default:
-					break;
-
-				case IS_WALL:
-					pWord = (WORD *) &ImageBuf[i].UtInsp.GateMaxAmp[nSlave*20+ci*2];
-					*pWord = 0x3fff;
-					break;
-				}
-			}
-		}
-	}
-}
-
 
 /**********************************************************************************
 * Compute the distance between the leftmost transducer and the rightmost transducer
 */
 int CCCM_PAG::GetMaxXSpan(void)
 	{
+#if 0
 	int nMaxXSpan;
 	nMaxXSpan = GetMaxXOffset() - GetMinXOffset();
 	return nMaxXSpan;
+#endif
+	return 0;
 	}
 
 
@@ -583,7 +476,6 @@ int CCCM_PAG::GetMaxXOffset(void)
 	for (nSlave=0; nSlave<MAX_SHOES; nSlave++)
 	{
 //		InspState.GetChannelConfig(&ChannelCfg);
-		//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
 
 		for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
 		{
@@ -613,6 +505,7 @@ int CCCM_PAG::GetMaxXOffset(void)
 
 int CCCM_PAG::GetMinXOffset(void)
 {
+#if 0
 	CHANNEL_CONFIG2 ChannelCfg;
 	int nSlave;
 	int i;
@@ -621,8 +514,6 @@ int CCCM_PAG::GetMinXOffset(void)
 	InspState.GetChannelConfig(&ChannelCfg);
 	for (nSlave=0; nSlave<MAX_SHOES; nSlave++)
 		{
-//		InspState.GetChannelConfig(&ChannelCfg);
-		//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
 
 		for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
 			{
@@ -646,5 +537,7 @@ int CCCM_PAG::GetMinXOffset(void)
 	}
 
 	return MinXOffset;
+#endif
+	return 0;
 }
 

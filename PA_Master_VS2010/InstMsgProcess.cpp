@@ -59,16 +59,7 @@ CInstMsgProcess::~CInstMsgProcess()
 	m_bConnected = 0;
 	m_nWhichInstrument = -1;
 	m_nInstrumentSocket = -1;
-#if 0
-	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
-		{
-		if (m_pRunningAvg[i])
-			{
-			delete m_pRunningAvg[i];
-			m_pRunningAvg[i] = NULL;
-			}
-		}
-#endif
+
 	}
 
 // usually called when an MMI command is received to set channel config info
@@ -76,6 +67,7 @@ CInstMsgProcess::~CInstMsgProcess()
 // move this code into ServerRcvListThread
 void CInstMsgProcess::SetChannelInfo(void)
 	{
+#if 0
 	CHANNEL_CONFIG2 ChannelCfg;
 	int i, nDispCh;
 	int nSlave = GetInstNumber();
@@ -136,4 +128,5 @@ void CInstMsgProcess::SetChannelInfo(void)
 			}
 
 		}
+#endif
 	}

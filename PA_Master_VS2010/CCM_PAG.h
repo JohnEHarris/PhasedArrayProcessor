@@ -52,7 +52,6 @@ public:
 	BOOL SendSlaveMsg(int nWhichSlave, MMI_CMD *pCmd);
 	BOOL SendSlaveMsgToAll(MMI_CMD *pCmd);
 
-	void InitImageBufArray(void);
 	int GetMaxXSpan(void);
 	int GetMaxXOffset(void);
 	int GetMinXOffset(void);

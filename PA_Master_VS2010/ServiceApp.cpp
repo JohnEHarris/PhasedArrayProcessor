@@ -41,17 +41,21 @@ managed classes.
 #include "ClientSocket.h"
 
 
-#define CURRENT_VERSION		"Version 1.0"
+#define CURRENT_VERSION		"Version 1.1"
 #define BUILD_VERSION			1
 
 #define VERSION_MAJOR           1
-#define VERSION_MINOR           0
+#define VERSION_MINOR           1
 #define VERSION_BUILD           BUILD_VERSION
 
 
 #if 0
+1.1.002			15-Jul-16	Eliminate Yanming code not being used
+1.1.001			May 2016	New Phased Array 2
 1.0.001			12-Mar-2013	Add Timer Tick to PAM to restart PAG connection attempt if not connected. PAM and PAG code the same almost
 							Steers commands with MMI_CMD variables PAM_Number and Inst_Number_In_PAM
+
+
 #endif
 
 
@@ -66,13 +70,6 @@ UINT uVchannelConstructor[4][40];	// count when constructor called. 4 inst, 40 c
 UINT CheckKey( void *dummy );
 int readn( int fd, char *bp, int len);
 
-// Thread code
-// CLIENTS
-UINT ClientSocketInit(void *dummy);				// a thread to connect to the MMI
-UINT tRcvrProcessMmiMsg(void *dummy);			// a thread to receive and queue msg from the MMI
-												// queues msg's are dequeued by ProcessMmiMsg thread
-UINT ProcessMmiMsg(void *dummy);				// a thread to process messages from the MMI
-UINT tSendRawFlawToMMI(void *dummy);
 
 // SERVER BASED OR RELATED
 //UINT tcpServerWorkTask(void *pSlave);			// a thread to receive and process data from an
@@ -81,14 +78,7 @@ UINT tSendRawFlawToMMI(void *dummy);
 UINT tInstMsgProcess (void *pCInstMsgProcess);	// swap this for tcpServerWorkTask above
 UINT tcpServerWorkTask_WD(void *pSlave);
 
-#ifdef  YANMING_CODE
-BOOL ServerSocketInit();
-UINT ServerSocketThread(void *dummy);			// a thread that allows client inspection machines (slaves)
-												// to connect to this application
-#endif
-BOOL ServerSocketInit_WallDisplay();
-UINT ServerSocketThread_WallDisplay(void *dummy);
-UINT tSendWallDisplayMsg(void *dummy);
+
 
 // NEITHER SERVER NOR CLIENT BASED THREADS
 UINT tWriteWallDataToFile (void *dummy);
@@ -100,9 +90,7 @@ void ShutDownSystem();
 
 BOOL repeat = TRUE;     /* Global repeat flag and video variable */
 // global flags to regulate how often or 'if' a thread is created/run
-#ifdef  YANMING_CODE
-int  g_nServerSocket=-1;
-#endif
+
 
 
 int  g_nServerSocketWD=-1;
@@ -120,12 +108,9 @@ CInstMsgProcess* g_pInstMsgProcess[NUM_OF_SLAVES];	// typically supports 32 'sla
 CInspState InspState;		// one instance of a state keeping class.. not a pointer!
 
 
-CWinThread* g_pThreadClientSocketInit;
-CWinThread* g_pThreadRcvrProcessMmiMsg;
+//CWinThread* g_pThreadRcvrProcessMmiMsg;
 CWinThread* g_pThreadProcessMmiMsg;
-#ifdef  YANMING_CODE
-CWinThread* g_pThreadServerSocket;
-#endif
+
 CWinThread* g_pThreadServerSocket_WD;
 CWinThread* g_pThreadSlave[NUM_OF_SLAVES];	// a server task for every client instrument employing tcpServerWorkTask
 CWinThread* g_pThreadSendRawFlawToMMI;
@@ -259,7 +244,6 @@ I_MSG_RUN* GetNextImageBuf(void);
 BOOL GetNextRealTimeImageBuf(I_MSG_RUN** pIBuf);
 void ComputeEcc(I_MSG_RUN *pRun, C_MSG_ALL_THOLD *pThold);
 void SendPipeLocation(int nStation, SITE_SPECIFIC_DEFAULTS *pSiteDefault);
-void SendRawFlawToMMI();
 int FindWhichSlave(int nChannel);
 int FindSlaveChannel(int nChannel);
 int FindDisplayChannel(int nArray, int nArrayCh);
@@ -991,9 +975,7 @@ Size of SRawDataPacket is 1040
 	if (m_pTestThread)
 		m_pTestThread->PostThreadMessage(WM_USER_THREAD_HELLO_WORLD,1,5L);
 
-	//original legacy code will run if YANMING_CODE is defined
 
-#ifndef	YANMING_CODE
 	GetAllIP4AddrForThisMachine();
 	InitializeServerConnectionManagement();	// crashes if ServerConnect called after ClientConnect
 	Sleep(200);
@@ -1002,26 +984,6 @@ Size of SRawDataPacket is 1040
 	if (gDlg.pTuboIni)
 		gDlg.pTuboIni->SaveIniFile();
 
-#endif
-
-
-// pipes could be replaced by linked lists. Receiving data could be done with ASync OnReceive and added to linked list
-// Then windows or thread messages could be posted to have another thread process the linked list.
-#ifdef  YANMING_CODE
-	if ( _pipe( g_hPipeMmiMsg, sizeof(MMI_CMD) * 1000, O_BINARY ) == -1 )
-	{
-		printf("Failed creating g_hPipeMmiMsg.\n");
-		goto service_exit;
-	}
-
-	if ( _pipe( g_hPipeWallDisplay, 1000 * 1000, O_BINARY ) == -1 )
-		{
-		printf("Failed creating g_hPipeWallDisplay.\n");
-		goto service_exit;
-		}
-#endif
-
-
 	CHwTimer *pInitTimer = new CHwTimer();
 	pInitTimer->Start();
 	InitRawWallBuf();
@@ -1029,72 +991,8 @@ Size of SRawDataPacket is 1040
 	printf("InitRawWallBuf elpase time in uSec = %d\n", nInitTime);
 	delete pInitTimer;
 
-#ifndef YANMING_CODE
 	goto WHILE_TARGET;	// for hybrid model with my SCM but YG's client connection, comment out the goto
-#endif
 
-//	WSADATA wsaData;
-//	int rv, 
-
-
-    /* Launch CheckKey thread to check for terminating keystroke. */
-    //_beginthread( CheckKey, 0, NULL );
-	// This program is a server to the inspection machine clients
-#ifdef YANMING_CODE
-repeat_serverinit:
-
-	if ( ServerSocketInit() )
-		g_pThreadServerSocket = AfxBeginThread(ServerSocketThread, NULL, THREAD_PRIORITY_NORMAL);
-	// if we can create a server socket, we will start a server thread to accept connections from 
-	// the instrument pulser-receiver clients
-	else
-	{
-		//printf("Failed ServerSocketInit.\n");
-		//goto service_exit;
-		TRACE(_T("ServerSocketInit() failed\n"));
-		_tprintf(TEXT("ServerSocketInit() failed\n"));
-
-		::Sleep(500);
-		goto repeat_serverinit;
-	}
-
-#endif
-// This program is a server to the program to display wall readings as a bar chart (WallDisplay.exe)
-#if 0
-repeat_serverinit_WD:
-
-	if ( ServerSocketInit_WallDisplay() )
-		g_pThreadServerSocket_WD = AfxBeginThread(ServerSocketThread_WallDisplay, NULL, THREAD_PRIORITY_NORMAL);
-	else
-	{
-		//printf("Failed ServerSocketInit.\n");
-		//goto service_exit;
-		::Sleep(500);
-		goto repeat_serverinit_WD;
-	}
-
-#endif
-
-	// bypass all this code if line 960 got0 WHILE_TARGET executes 
-	g_nRunClientSocketInitThread = 1;
-	g_pThreadClientSocketInit = AfxBeginThread(ClientSocketInit, NULL, THREAD_PRIORITY_NORMAL);
-
-	// receive cmds from mmi and move to a buffer. Then send the buffer thru a pipe
-	// ProcessMmiMsg is a thread reading the other end of the pipe
-	g_nRunRcvrProcessMmiMsgThread = 1;
-	g_pThreadRcvrProcessMmiMsg = AfxBeginThread(tRcvrProcessMmiMsg, NULL, THREAD_PRIORITY_NORMAL);
-
-	g_nRunProcessMmiMsgThread = 1;
-	g_pThreadProcessMmiMsg = AfxBeginThread(ProcessMmiMsg, NULL, THREAD_PRIORITY_NORMAL);
-
-	g_nRunSendRawFlawToMMIThread = 1;
-	g_pThreadSendRawFlawToMMI = AfxBeginThread(tSendRawFlawToMMI, NULL, THREAD_PRIORITY_NORMAL);
-
-	g_nRunWriteWallDataToFileThread = 1;
-	g_pThreadWriteWallDataToFile = AfxBeginThread(tWriteWallDataToFile, NULL, THREAD_PRIORITY_NORMAL);
-
-	g_nRunSendWallDisplayMsgThread = 1;
-	g_pThreadSendWallDisplayMsg = AfxBeginThread(tSendWallDisplayMsg, NULL, THREAD_PRIORITY_NORMAL);
 
 WHILE_TARGET:
 	// jeh code for Run()
@@ -1106,16 +1004,6 @@ WHILE_TARGET:
 	pNetBuf->bConnected[0] = 1;
 
 	// testing only
-#if 0
-	Sleep(500);
-	if (m_pTestThread)
-		{
-		m_pTestThread->PostThreadMessageA(WM_QUIT,0,0L);
-		TRACE(_T("Posted	WM_QUIT to TestThread\n"));
-		printf("Posted	WM_QUIT to TestThread\n");
-		}
-#endif
-
 	int j;
 	void *pv;
 
@@ -1134,19 +1022,7 @@ WHILE_TARGET:
 		uAppTimerTick++;
 		if (nDebugShutdown)	break;
 		// attempt to make a connection attempted when the server was busy/non responsive
-#if 0
-		if (pCCM_PAG)
-			{
-			if (pCCM_PAG->GetConnectionState() == 0)
-				{
-				pCCM_PAG->m_pstCCM->nNotConnectedTick++;
-				if (pCCM_PAG->m_pstCCM->nNotConnectedTick > 50)
-					{	// cancel the client socket and attempt to connect again
-					}
-				}
-			}
-#endif
-		// for testing only, throw away all collected data
+
 #if 1
 		for ( i = 0; i < MAX_SERVERS; i++)
 			{
@@ -1234,77 +1110,23 @@ WHILE_TARGET:
 
 
 #endif
-	// enter main-loop
-	// If the Stop() method sets the event, then we will break out of
-	// this loop.
-	// wait for event m_hStop for 10 milliseconds. If it times out, we do the loop
 
-	/*********************************************************************************/
-	/*********************************************************************************/
-YG_RUN:
-	while( ::WaitForSingleObject(m_hStop, 10) != WAIT_OBJECT_0 ) 
-	{
-		// popup a small message box every 10 seconds
-		//::MessageBox(0, TEXT("Hi, here is your very first MFC based NT-service"), TEXT("MFC SampleService"), MB_OK);
-		if (g_nMmiSocket >= 0)
-		{
-			for (i=1; i<NUM_OF_SLAVES+1; i++)
-			{
-				pNetBuf->bConnected[i] = g_bConnected[i];
-			}
-
-			pNetBuf->InspHdr.NextJointNum = g_nJointNum;
-
-			rc = send( g_nMmiSocket, (char *) &sendBuf, sizeof(I_MSG_RUN), 0 );
-			// this can potentially collide with SendMmiMsg() which also sends using g_nMmiSocket
-			if ( rc <= 0 )
-			{
-				//AfxMessageBox(_T("send call failed.\nMessage ID = "+str));
-				//return FALSE;
-			}
-
-			for (i=0; i<NUM_OF_SLAVES; i++)
-			{
-				g_bConnected[i+1] = 0;
-			}
-		}	// if (g_nMmiSocket >= 0).. if  we are connected to the MMI
-
-		::Sleep( 3000 );	// sleep for dwMilliseconds... 3 seconds
-		//AfxMessageBox(sip);
-	}	// while waiting for stop
-
-	/**********  SHUT DOWN SEQUENCE ************/
 
 YG_END:
 
 	if( m_hStop )
 		::CloseHandle(m_hStop);
 
-	if (g_nRunClientSocketInitThread > 0)
-	{
-		g_nRunClientSocketInitThread = 0;
-		::WaitForSingleObject(g_pThreadClientSocketInit->m_hThread, INFINITE);
-		//AfxMessageBox("Exit ClientSocketInit Thread successfully.");
-	}
+
 
 	if (g_nRunRcvrProcessMmiMsgThread > 0)
 	{
 		g_nRunRcvrProcessMmiMsgThread = 0;
 		closesocket(g_nMmiSocket);
 		g_nMmiSocket = -1;
-		::WaitForSingleObject(g_pThreadRcvrProcessMmiMsg->m_hThread, 10000);
-		//AfxMessageBox("Exit tRcvrProcessMmiMsg Thread successfully.");
 	}
 
-	if (g_nRunProcessMmiMsgThread > 0)
-	{
-		g_nRunProcessMmiMsgThread = 0;
-		_write ( g_hPipeMmiMsg[WRITE], (void *) &sendBuf, sizeof(MMI_CMD));
-		::Sleep(4);
-		//close( g_hPipeMmiMsg[READ] );
-		::WaitForSingleObject(g_pThreadProcessMmiMsg->m_hThread, 10000);
-		//AfxMessageBox("Exit tRcvrProcessMmiMsg Thread successfully.");
-	}
+
 
 	BYTE dummy[1000];
 	if (g_nRunSendWallDisplayMsgThread > 0)
@@ -1815,57 +1637,7 @@ UINT CheckKey( void *dummy )
 	return 0;
 }
 
-// Try to connect to the TruWall MMI control program
-// Rest of PA Master will not run until we connect to the MMI
-UINT ClientSocketInit(void *dummy)
-{
-	struct sockaddr_in serverAddr;
-	int sockAddrSize;
-	int socketFD;
-	unsigned short nPortNumber = 7501;	// PAG is listening at 7501
-	char *pIP;
 
-	/* Set up the server address */
-	sockAddrSize = sizeof (struct sockaddr_in);
-	memset ((char *) &serverAddr, 0, sockAddrSize);
-	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons( nPortNumber );  /* the port number must be the same as that in the concentrator code */
-	serverAddr.sin_addr.s_addr = inet_addr("192.168.10.10");
-
-	/* create client's socket */
-	if ((socketFD = socket( AF_INET, SOCK_STREAM, 0 )) == ERROR )
-	{
-		//AfxMessageBox("ClientSocketInit - socket call failed.");
-		return 0;
-	}
-
-	/* connect to MMI server */
-	while (connect (socketFD, (struct sockaddr *) &serverAddr, sockAddrSize) != 0)
-	{
-		//AfxMessageBox("Master - Connect call failed.  Try again.");
-		closesocket (socketFD);
-		g_nMmiSocket = -1;
-
-		if (g_nRunClientSocketInitThread == 0)	// if we are shutting down, then quit without making a new socket
-			return 0;
-		// create a new socket
-		if ((socketFD = socket( AF_INET, SOCK_STREAM, 0 )) == ERROR )
-		{
-			puts("Phased Array Master - socket( AF_INET, SOCK_STREAM, 0 ) call failed.");
-			return 0;
-		}
-		::Sleep(5000);	// wait 5 seconds and then try to connect to the server
-		/* return FALSE; */
-	}
-	// if we are here, the connect was successful
-	pIP = inet_ntoa((IN_ADDR) serverAddr.sin_addr);
-	printf("PA Master connected to PA MMI at address %s \n", pIP);
-	
-	g_nMmiSocket = socketFD;
-	g_nRunClientSocketInitThread = 0;  //signify the thread has exited.
-
-   	return 1;
-}
 
 // create a server socket so that instruments can connect to this command line program (PhasedArray_Master.exe)
 // via tcp/ip. Address is usually 192.168.10.10 port 7502
@@ -2077,6 +1849,7 @@ UINT ServerSocketThread(void *dummy)
 
 // Waits for a connection attempt by the Wall Bar Display client (WallDisplay.exe)
 //
+#if 0
 BOOL ServerSocketInit_WallDisplay()
 {
 	struct sockaddr_in local;
@@ -2132,7 +1905,6 @@ BOOL ServerSocketInit_WallDisplay()
 	return TRUE;
 }
 
-
 UINT ServerSocketThread_WallDisplay(void *dummy)
 {
 	int nClientSocket;
@@ -2180,6 +1952,8 @@ UINT ServerSocketThread_WallDisplay(void *dummy)
 	return 0;
 }
 
+#endif
+
 
 
 /***************************************************
@@ -2212,56 +1986,6 @@ int readn( int fd, char *bp, int len)
 }
 
 
-#if 1
-/* Thread receiving MMI messages */
-UINT tRcvrProcessMmiMsg(void *dummy)
-{
-	MMI_CMD rcvrBuf;
-	int rc;
-
-	while(1)
-	{
-		if (g_nRunRcvrProcessMmiMsgThread == 0)
-		{
-			closesocket (g_nMmiSocket);
-			g_nMmiSocket = -1;
-			return 0;
-		}
-
-	    if (g_nMmiSocket >= 0)
-	    {
-		rc = readn (g_nMmiSocket, (char *) &rcvrBuf, sizeof(MMI_CMD));
-			if ( rc <= 0)	//1272 bytes
-			{
-				closesocket (g_nMmiSocket);
-				g_nMmiSocket = -1;
-				if (g_nRunRcvrProcessMmiMsgThread == 0)
-					return 0;
-				g_nRunClientSocketInitThread = 1;
-				g_pThreadClientSocketInit = AfxBeginThread(ClientSocketInit, NULL, NULL);
-			}
-			else
-			{
-				// Send the buffer thru a pipe to a waiting thread on the other end which is
-				// ProcessMmiMsg(&rcvrBuf);
-				rc = _write ( g_hPipeMmiMsg[WRITE], (void *) &rcvrBuf, sizeof(MMI_CMD));
-				//if (rc <0)
-					//printf("write pipe failed.");
-			}
-	    }
-	    else
-	    {
-			::Sleep(2000);
-	    }
-	}
-
- 	closesocket (g_nMmiSocket);
-	g_nMmiSocket = -1;
-  	
-	return 1;
-}
-#endif
-
 
 /***************************************************
    readn - read exactly n bytes from pipe
@@ -2285,889 +2009,6 @@ int readnpipe( int fd, char *bp, int len)
 		cnt -= rc;
 	}
 	return len;
-}
-
-
-
-#if 1
-/****************************************************************************
-* Helper:  process MMI message
-*
-*/
-UINT ProcessMmiMsg(void *dummy)
-{
-	int i = 5;
-	i = g_nMmiSocket + 1;	// BREAK POINT
-#if 0
-	MMI_CMD readBuf;
-	MMI_CMD *pMmiCmd = (MMI_CMD *) &readBuf;
-
-	WORD *pWArg;
-	DWORD *pDWArg;
-	float *pFArg;
-	WORD MsgId;
-	int i, rc;  /* generic looper */
-	static int nChannel = 0;
-	static int nGate = 0;
-	static int old_gChannel = 0;
-	int  nWhichSlave;
-	SHOE_CONFIG  *pShCfg;
-	C_MSG_ALL_THOLD *pThold;
-	WALL_COEF *pWallCoef;
-	SITE_SPECIFIC_DEFAULTS *pSiteDef;
-	CHANNEL_CONFIG2 ChannelCfg;
-//	static int  nInspectMode = NOP_MODE;
-	int nMotionTime;
-	MMI_CMD  tempCmd;
-	WORD nEnableAscan = 0;
-	JOB_REC *pJobRec;
-	C_MSG_NC_NX *pNcNx = (C_MSG_NC_NX *) pMmiCmd->CmdBuf;
-
-	pJobRec = (JOB_REC *) pMmiCmd->CmdBuf;
-
-	pWArg = (WORD *) pMmiCmd->CmdBuf;
-	pDWArg = (DWORD *) pMmiCmd->CmdBuf;
-	pFArg = (float *) pMmiCmd->CmdBuf;
-	pShCfg = (SHOE_CONFIG *) pMmiCmd->CmdBuf;
-	pThold = (C_MSG_ALL_THOLD *) pMmiCmd->CmdBuf;
-
-	while (1)
-	{
-		if (g_nRunProcessMmiMsgThread == 0)
-		{
-			return 0;
-		}
-
-		// block on a pipe read until the tRcvrProcessMmiMsg sends the message thru the pipe
-		rc = readnpipe(g_hPipeMmiMsg[READ], (char *) &readBuf, sizeof(MMI_CMD));
-
-		if (rc  == sizeof(MMI_CMD))
-		{
-		
-			MsgId = pMmiCmd->MsgId;
-
-			//nWhichSlave = nChannel / g_NumberOfScans;
-			nWhichSlave = FindWhichSlave(nChannel);
-
-#if 1
-			switch(MsgId)
-			{
-			case CHANNEL_SELECT:
-				nChannel = pWArg[0];
-				gChannel = nChannel;// % MAX_CHANNEL_PER_INSTRUMENT;
-				//nWhichSlave = nChannel / g_NumberOfScans;
-				nWhichSlave = FindWhichSlave(nChannel);
-				//pWArg[0] = nChannel % g_NumberOfScans;
-				pWArg[0] = FindSlaveChannel(nChannel);
-//				SetGetInspectMode_M (1 /* GET */, &nInspectMode, &nMotionTime);
-				if (InspState.GetInspectMode() != PKT_MODE)
-					SendSlaveMsg (nWhichSlave, pMmiCmd);
-				else
-				{
-					/* if active channel is changed from one slave to another */
-					if ( (nChannel/g_NumberOfScans) != (old_gChannel/g_NumberOfScans) )
-					{
-						nWhichSlave = old_gChannel / g_NumberOfScans;
-						tempCmd.MsgId = NOP_MODE;
-						SendSlaveMsg (nWhichSlave, &tempCmd);
-						nWhichSlave = nChannel / g_NumberOfScans;
-						tempCmd.MsgId = PKT_MODE;
-						SendSlaveMsg (nWhichSlave, &tempCmd);
-					}
-					else
-						SendSlaveMsg (nWhichSlave, pMmiCmd);
-				}
-				old_gChannel = nChannel;
-				break;
-
-			case SET_ASCAN_READ_SEQ:
-				nWhichSlave = FindWhichSlave(pWArg[0]);
-				SendSlaveMsg (nWhichSlave, pMmiCmd);
-				//printf("set ascan read seq.\n");
-				break;
-
-			case SET_ASCAN_READ_BEAM:
-				SendSlaveMsg (pWArg[0], pMmiCmd);
-				break;
-
-			case GATE_SELECT:
-				nGate = pWArg[0] % MAX_GATES;
-				gGate = nGate;
-				SendSlaveMsg (nWhichSlave, pMmiCmd);
-				break;
-
-			case PULSER_ONOFF:
-				nWhichSlave = pWArg[0];
-				SendSlaveMsg (nWhichSlave, pMmiCmd);
-				break;
-
-			case PULSER_PRF:
-				g_nPulserPRF = pWArg[1];
-				if (g_nPulserPRF < 1) g_nPulserPRF = 1000;
-				for (i=0; i<NUM_OF_SLAVES; i++)
-				{
-					SendSlaveMsg (i, pMmiCmd);
-				}
-				break;
-
-			case SCOPE_TRACE1_MDAC:
-				SendSlaveMsg (pWArg[0], pMmiCmd);
-				break;
-
-			case RUN_MODE:  /* inspection run mode */
-				nMotionTime = (int) pWArg[0];
-				g_nXloc = 0;
-				g_nXloc_S2 = 0;
-				g_nTick = 0;
-				g_nOldMotionBus = 0;
-				InspState.SetInspectMode(RUN_MODE);
-				InspState.SetMotionMode(nMotionTime);
-				//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
-				g_nAuxClkIntCnt = -10;
-				for (i=0; i<NUM_OF_SLAVES; i++)
-				{
-					SendSlaveMsg (i, pMmiCmd);
-				}
-				break;
-
-			case CAL_MODE:  /* calibration mode */
-				InspState.SetInspectMode(CAL_MODE);
-				//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
-				for (i=0; i<NUM_OF_SLAVES; i++)
-				{
-					SendSlaveMsg (i, pMmiCmd);
-				}
-				break;
-
-			case PKT_MODE:  /* calibration mode */
-				InspState.SetInspectMode(PKT_MODE);
-				//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
-				SendSlaveMsg (nWhichSlave, pMmiCmd);
-				break;
-
-			case PLC_MODE:  /*  */
-				InspState.SetInspectMode(PLC_MODE);
-				//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
-
-				g_nPlcOfWho = (BYTE) pWArg[0];
-
- 	   			if (pWArg[0] > 0)
- 	   			{
- 	   				nWhichSlave = pWArg[0] - 1;
- 	   				SendSlaveMsg (nWhichSlave, pMmiCmd);
- 	   			}
-				break;
-
-			case ADC_MODE:
-  	  			nWhichSlave = pWArg[0];
-  	  			SendSlaveMsg (nWhichSlave, pMmiCmd);
-  	  			break;
-
-			case NOP_MODE:  /* inspection stop mode */
-		#if 1
-				InitImageBufArray ();
-		#endif
-  	  			//nInspectMode = NOP_MODE;
-				InspState.SetInspectMode(NOP_MODE);
-   	 			//SetGetInspectMode_M (0 /* SET */, &nInspectMode, &nMotionTime);
-    			g_nXloc = 0;
-    			g_nXloc_S2 = 0;
-    			g_nTick = 0;
-				g_nNextWindow = 0;
- 	   			for (i=0; i<NUM_OF_SLAVES; i++)
-  	  			{
-   	 				SendSlaveMsg (i, pMmiCmd);
-    			}
-    			break;
-
-			case ASCAN_MODE:
-				//printf("MasterTCPIP -- ASCAN_MODE.\n");
- 	   			nEnableAscan = pWArg[0];
-  	  			for (i=0; i<NUM_OF_SLAVES; i++)
-   	 			{
-    					if ( (i == nWhichSlave) && (nEnableAscan == 1) )
-    						pWArg[0] = 1;
-    					else
-    						pWArg[0] = 0;
-	    				SendSlaveMsg (i, pMmiCmd);
- 	   			}
-  	  			break;
-
-			case CHANNEL_CONFIG_MSG:
-    			nWhichSlave = pShCfg->nSlave;
-    			for ( i = 0; i < MAX_CHANNEL_PER_INSTRUMENT; i++)
-    			{
-	    			ChannelCfg.Ch[nWhichSlave][i].Type = pShCfg->Ch[i].Type;
- 	   				ChannelCfg.Ch[nWhichSlave][i].cXOffset = pShCfg->Ch[i].cXOffset;
-  	  				ChannelCfg.Ch[nWhichSlave][i].cWOffset = pShCfg->Ch[i].cWOffset;
-   	 			}
-    			//ChannelCfg.cClockOffset = pChnlCfg->cClockOffset;
-    			//SetGetChannelCfg (0 /* SET */, &ChannelCfg, nWhichSlave);
-				InspState.SetChannelConfig(&ChannelCfg, nWhichSlave);
-				if (g_pInstMsgProcess[nWhichSlave]) g_pInstMsgProcess[nWhichSlave]->SetChannelInfo();
-    			g_nMaxXSpan = GetMaxXSpan();
-				InitImageBufArray ();
-  	  			SendSlaveMsg (nWhichSlave, pMmiCmd);		
-   	 			break;
-
-			case SET_ALL_THOLDS:
-    			for (i=0; i<NUM_OF_SLAVES; i++)
-    			{
-    				SendSlaveMsg (i, pMmiCmd);
-				}
- 	   			memcpy ( (void *) &g_AllTholds, (void *) pThold, sizeof(C_MSG_ALL_THOLD) );
-				InspState.SetChannelConfig(&ChannelCfg, nWhichSlave);
-				if (g_pInstMsgProcess[nWhichSlave]) g_pInstMsgProcess[nWhichSlave]->SetChannelInfo();
-  	  			break;
-
-			case SITE_SPECIFIC_MSG:
-				pSiteDef = (SITE_SPECIFIC_DEFAULTS *) pMmiCmd->CmdBuf;
- 	   			//SetGetSiteDefaults(0 /*SET*/, pSiteDef);
-				InspState.SetSiteDefaults(pSiteDef);	// load the site defaults from file in MMI
-  	  			g_nRecordWallData = pSiteDef->nRecordWallData;
-
-   	 			if (pSiteDef->nDefaultLineSpeed > 0)
-    					g_fTimePerInch = 1.0f / ( ((float) pSiteDef->nDefaultLineSpeed)*12.0f/6000.0f );
-    			if (pSiteDef->nDefaultRotateSpeed > 0)
-    				g_fTimePerTurn = 1.0f / ( ((float)pSiteDef->nDefaultRotateSpeed)/6000.0f );
-
-    			if (pSiteDef->n20ChnlPerHead == 0)
-    				g_b20ChnlPerHead = FALSE;
-    			else
-    				g_b20ChnlPerHead = TRUE;
-
-				if ( pSiteDef->fMotionPulseLen > 0.0f)
-					g_fMotionPulseLen = pSiteDef->fMotionPulseLen;
-
-
-    			for (i=0; i<NUM_OF_SLAVES; i++)
-    			{
-    				SendSlaveMsg (i, pMmiCmd);
-				}
-
- 	   			g_nMaxWallWindowSize = pSiteDef->nMaxWallWindowSize;
-  	  			if ( (g_nMaxWallWindowSize > WALL_BUF_SIZE) || (g_nMaxWallWindowSize < 1) )
-   	 				g_nMaxWallWindowSize = 10;
-
-    			pMmiCmd->MsgId = WALL_DROP_TIME;
-    			pWArg[0] = pSiteDef->nWallDropTime;
-				for (i=0; i<NUM_OF_SLAVES; i++)
-				{
-		   			SendSlaveMsg (i, pMmiCmd);
-	  			}
-   	 			g_WallDropTime = pWArg[0] / 1000.f;
-
-				g_NumberOfScans = 0;
-				for (i=0; i<NUM_OF_SLAVES; i++)
-				{
-					switch(pSiteDef->nPhasedArrayScanType[i])
-					{
-					case LINEAR_SCAN_0_DEGREE:
-					case LINEAR_SCAN_37_DEGREE:
-						g_NumberOfScans += 1;
-						g_ArrayScanNum[i] = 1;
-						g_SequenceLength[i] = 49;
-						break;
-
-					default:
-					case THREE_SCAN_LRW_8_BEAM:
-					case THREE_SCAN_LRW_8_BEAM_FOCUS:
-					case THREE_SCAN_LO1LO1R_8_BEAM_12345678:
-					case THREE_SCAN_LO1LO1R_8_BEAM_56781234:
-						g_NumberOfScans += 3;
-						g_ArrayScanNum[i] = 3;
-						g_SequenceLength[i] = 24;
-						break;
-
-					case THREE_SCAN_LRW_16_BEAM:
-						g_NumberOfScans += 3;
-						g_ArrayScanNum[i] = 3;
-						g_SequenceLength[i] = 48;
-						break;
-
-					case TWO_SCAN_LR_8_BEAM:
-						g_NumberOfScans += 2;
-						g_ArrayScanNum[i] = 2;
-						g_SequenceLength[i] = 16;
-						break;
-
-					case TWO_SCAN_LR_16_BEAM:
-						g_NumberOfScans += 2;
-						g_ArrayScanNum[i] = 2;
-						g_SequenceLength[i] = 32;
-						break;
-
-					case LONG_8_BEAM_12345678:
-					case LONG_8_BEAM_56781234:
-						g_NumberOfScans += 1;
-						g_ArrayScanNum[i] = 1;
-						g_SequenceLength[i] = 8;
-						break;
-
-					case LONG_24_BEAM_800:
-					case LONG_24_BEAM_080:
-					case LONG_24_BEAM_12345678:
-					case LONG_24_BEAM_56781234:
-						g_NumberOfScans += 1;
-						g_ArrayScanNum[i] = 1;
-						g_SequenceLength[i] = 24;
-						break;
-
-					case WALL_25_BEAM_90_DEGREE_PROBE:
-						g_NumberOfScans += 1;
-						g_ArrayScanNum[i] = 1;
-						g_SequenceLength[i] = 25;
-						break;
-					}
-
-					g_nPhasedArrayScanType[i] = pSiteDef->nPhasedArrayScanType[i];
-					InspState.SetChannelConfig(&ChannelCfg, nWhichSlave);
-					if (g_pInstMsgProcess[nWhichSlave]) g_pInstMsgProcess[nWhichSlave]->SetChannelInfo();
-				}
-					
-				
-    			break;
-
-			case SET_NC_NX:
-    			memcpy ( (void *) &g_NcNx, (void *) pNcNx, sizeof (C_MSG_NC_NX) );
-    			for (i=0; i<NUM_OF_SLAVES; i++)
-    			{
-    				SendSlaveMsg (i, pMmiCmd);
-				}
-				InspState.SetChannelConfig(&ChannelCfg, nWhichSlave);
-				if (g_pInstMsgProcess[nWhichSlave]) g_pInstMsgProcess[nWhichSlave]->SetChannelInfo();
- 	   			break;
-
-			case SET_WALL_COEFS:
-    			pWallCoef = (WALL_COEF *) pMmiCmd->CmdBuf;
-    			memcpy( (void *) &g_WallCoef, (void *) pWallCoef, sizeof (WALL_COEF) );
-    			for (i=0; i<MAX_SHOES; i++)
-    			{
-	    			pWallCoef->fWallSlope[0] = pWallCoef->fWallSlope[i];
- 	   				pWallCoef->WallOffset[0] = pWallCoef->WallOffset[i];
-
-  	  				SendSlaveMsg (i, pMmiCmd);
-   	 			}
-				InspState.SetChannelConfig(&ChannelCfg, nWhichSlave);
-				if (g_pInstMsgProcess[nWhichSlave]) g_pInstMsgProcess[nWhichSlave]->SetChannelInfo();
-    			break;
-
-			case 0x69:   /* sequence length */
-			case FIRING_SEQ:
-    			nWhichSlave = pWArg[0]/10;
-				pWArg[0] %= 10;
- 				SendSlaveMsg (nWhichSlave, pMmiCmd);
-  				break;
-
-			case JOINT_NUMBER_MSG:
-   				g_nJointNum = pDWArg[0];
-    			for (i=0; i<NUM_OF_SLAVES; i++)
-    			{
-	    			SendSlaveMsg (i, pMmiCmd);
-				}
-				break;
-
-			case RECEIVER_GAIN:
-			case TCG_FN:
-				nWhichSlave = FindWhichSlave(pMmiCmd->ChnlNum);
-				SendSlaveMsg (nWhichSlave, pMmiCmd);
-   	 			break;
-
-			case RECEIVER_FCNT:   /* receiver offset */
-    			nWhichSlave = FindWhichSlave(pWArg[1]);
-    			SendSlaveMsg (nWhichSlave, pMmiCmd);
-    			break;
-
-			case ENET_STATS_MODE:
-    			g_nNoMmiReplyCnt = 0;
-    			for (i=0; i<NUM_OF_SLAVES; i++)
-				{
- 	   			SendSlaveMsg (i, pMmiCmd);
-  	  			}
-   	 			break;
-
-			case 0x63:   /* TCG_TRIGGER, TCG_STEP */
-    			nWhichSlave = FindWhichSlave(pWArg[1]);
- 	   			SendSlaveMsg (nWhichSlave, pMmiCmd);
-  	  			break;
-
-			case RUN_CAL_JOINT:
-				if (pWArg[0])
- 	   				g_bRunCalJoint = TRUE;
-  	  			else
-   	 				g_bRunCalJoint = FALSE;
-    			if (g_bRunCalJoint)
-    			{
-    				g_nNextRealJointNum = g_nJointNum;
-    				g_nJointNum = g_nNextCalJointNum;
-				}
- 	   			else
-  	  			{
-   	 				g_nNextCalJointNum = g_nJointNum;
-    				g_nJointNum = g_nNextRealJointNum;
-    			}
-    			break;
-
-			case LAST_JOINT_NUMBER:
-				g_nNextRealJointNum = pDWArg[0]+1;
- 	   			g_nNextCalJointNum = pDWArg[1]+1;
-  	  			if (g_bRunCalJoint)
-   	 			{
-    				g_nJointNum = g_nNextCalJointNum;
-    			}
-    			else
-				{
-		   			g_nJointNum = g_nNextRealJointNum;
-  	  			}
-   	 			break;
-
-			case STORE_JOBREC_MSG:
-				g_bShowWallDiff = pJobRec->ShowWallDiff;
-				memcpy( (void *) &g_JobRec, (void *) pJobRec, sizeof (JOB_REC) );
-
-			case WALL_DROP_TIME:
-				for (i=0; i<NUM_OF_SLAVES; i++)
- 	   			{
-  	  				SendSlaveMsg (i, pMmiCmd);
-   	 			}
-    			break;
-
-			case LOAD_CONFIG_FILE:
- 	   			for (i=0; i<NUM_OF_SLAVES; i++)
-  	  			{
-   	 				SendSlaveMsg (i, pMmiCmd);
-    			}
-    			if (g_AdiStatus != 3)
-    				g_AdiStatus = 1;
-				break;
-
-			case ASCAN_REFRESH_RATE:
- 				for (i=0; i<NUM_OF_SLAVES; i++)
-  				{
-   	 				SendSlaveMsg (i, pMmiCmd);
-    			}
-    			break;
-
-			case ASCAN_BROADCAST:
-				g_bBcastAscan = (BYTE) pWArg[0];
- 	   			break;
-
-			case SET_X_SCALE:
-				g_nXscale = pWArg[0];
- 	   			if (g_nXscale < 600) g_nXscale = 900;
-  	  			if (g_nXscale > 900) g_nXscale = 900;
-   	 			break;
-
-			case SET_PIPE_PRESENT:
- 				for (i=0; i<NUM_OF_SLAVES; i++)
-  				{
-   	 				SendSlaveMsg (i, pMmiCmd);
-    			}
-    			break;
-
-			case TURN_OFF_MASTER:
-				//ShutDownSystem();
-				g_nShowWallBars = pWArg[0];
-				break;
-
-			default:
-    			SendSlaveMsg (nWhichSlave, pMmiCmd);
-    			break;
-			}	// end switch()
-#endif
-
-		}
-		else if (rc >= 0)
-		{
-			;
-			//printf("Read End of Pipe.");
-		}
-		else
-		{
-			//printf("Read Pipe Error.");
-			return 0;
-		}
-
-		//::Sleep(2);
-	}
-#endif
-	return i;
-}
-
-
-/****************************************************************************
-* Helper:  send messages to Nios slave over TCP socket
-*
-*/
-BOOL SendSlaveMsg(int nWhichSlave, MMI_CMD *pSendBuf)
-	{
-#if 0
-	WORD *pWArg;
-	int rc, data, i;
-//	BYTE buf[CmdPacketLength], value;
-	SCmdPacket *pCmd = (SCmdPacket *) buf;
-	static BYTE GateTrigger[MAX_CHANNEL][4];
-	static BYTE GateDetectMode[MAX_CHANNEL][4];
-	static BYTE GatePolarity[MAX_CHANNEL][4];
-	static BYTE GateTofTrigger[MAX_CHANNEL][4];
-	static BYTE GateTofStop[MAX_CHANNEL][4];
-	static BYTE TcgTrigger[NUM_OF_SLAVES][4];
-	static BYTE TcgStep[NUM_OF_SLAVES];
-	static TCG_REC_MSG TcgRec[NUM_OF_SLAVES][4];
-	SITE_SPECIFIC_DEFAULTS *pSiteDef;
-	int    nSlaveCh=0;
-	static int nOldSlave;
-	WORD td[16];  //focusing time delays
-#endif
-	return FALSE;
-	}
-
-/**************************************************************************** 
-* 
-* tInstMsgProcess - receive and process slave data .. formerly called tcpServerWorkTask
-* passes a pointer to CInstMsgProcess class instance, ie which class instance is servicing instrument n
-* 
-* RETURNS: 0 or 1. 
-* This is a C function which is passed a ptr to a void. How do we get class functionality out
-* of this thread function? We pass a pointer to the instantiating class instance and store 
-* a copy of the pointer in the thread's stack. Since the thread never terminates until the 
-* program terminates and since each thread instances is unique, we can convert 'c' functions
-* called by the original c code into class methods using the saved class instance pointer.
-*/ 
-
-UINT tInstMsgProcess (void *pCInstMsgProcess)
-{
-#if 0
-	CInstMsgProcess *pInstMsgProcess = (CInstMsgProcess *) pCInstMsgProcess;	// copy in ptr to the particular instance
-	// pInstMsgProcess stays in the stack for each thread and is thus "static" as long
-	// as the thread does not return.
-//	int tmpdbg = pInstMsgProcess->GetInstNumber();
-//	int *pSlave = &tmpdbg;
-	int nSocket = pInstMsgProcess->GetSocket();
-/**************************************************************************** 
-* 
-* tcpServerWorkTask - receive and process slave data 
-* 
-* RETURNS: 0 or 1. 
-*/ 
-// change task name from tcpServerWorkTask to tInstMsgProcess
-#if 0
-//UINT tcpServerWorkTask (void *pSlave)
-{
-#endif
-	I_MSG_RUN *pSendBuf;
-	PEAK_DATA  ReadBuf;
-	BYTE recvBuf[RAW_DATA_PACKET_LENGTH];
-	UDP_SLAVE_DATA SlvData;
-	int i, ic;
-	int nInspectMode;
-	int nMotionTime;
-	int xloc = 0;   /* temporary */
-	DWORD  NextPacketNum = 0;
-	int nReturn;
-	BOOL  bGetSlaveRev = TRUE;
-	SITE_SPECIFIC_DEFAULTS SiteDefault;
-	int nSendCnt = 0;
-	int nOldXloc=-1;
-	SRawDataPacket *pNiosRawData = (SRawDataPacket *) recvBuf;
-	static int nRecvCnt = 0;
-	static short wClock_old = 100;
-
-	int nSlave = pInstMsgProcess->GetInstNumber();		//*( (int *) pSlave);
-	ReadBuf.RDP_number = nSlave;
-
-	I_MSG_RUN SendBuf;
-	I_MSG_RUN SendCalBuf;
-	I_MSG_ASCAN *pAscanMsg = (I_MSG_ASCAN *) &SendBuf;
-	pAscanMsg->MstrHdr.MsgId = ASCAN_MODE;
-
-	// create a processing class instance for each wall channel
-	CRunningAverage *pRunAvg[MAX_WALL_CHANNELS]; // localize to avoid using pInstMsgProcess
-	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
-		{
-		// constructor sets default values for running average.
-		pRunAvg[i] = pInstMsgProcess->m_pRunningAvg[i] = new CRunningAverage(NX_TOTAL);	// default max len
-		pRunAvg[i]->SetMyInstMsgProcess(pInstMsgProcess);	// who's your daddy
-		pRunAvg[i]->SetSlaveNumber(nSlave);
-		// figure out which channel I belong to
-		// pRunAvg[i]->SetChannelNumber(??);
-		// changes when config file changes chnl type
-		}
-
-
-	while (1)
-	{	// begin thread loop
-		if (nSocket >= 0)		// g_SocketSlave[nSlave] >= 0)
-		{
-			//if (readn(g_SocketSlave[nSlave], (char *) recvBuf, RAW_DATA_PACKET_LENGTH) <= 0)..RAW_DATA_PACKET_LENGTH = 1040
-			// wait for expected data lenght data packet. If packet not ready, this thread sleeps
-			if (readn(nSocket, (char *) recvBuf, RAW_DATA_PACKET_LENGTH) <= 0)
-			{
-#if 0
-				closesocket (g_SocketSlave[nSlave]);
-				g_SocketSlave[nSlave] = -1;
-#endif
-				delete pInstMsgProcess;	// closes open sockets
-				g_pInstMsgProcess[nSlave] = NULL;
-
-				return 0;
-			}
-
-			//SetGetInspectMode_M (1 /* GET */, &nInspectMode, &nMotionTime);
-			nInspectMode = InspState.GetInspectMode();
-			nMotionTime  = InspState.GetMotionMode();
-
-			if (nInspectMode == NOP_MODE)
-			{		nRecvCnt = 0;
-				//g_nOldMotionBus = 0x4010;
-			}
-
-
-			if (recvBuf[0] == RAW_DATA_ID)
-			{
-				//NiosRawData_to_PeakData(pNiosRawData, &ReadBuf, nInspectMode);
-				SlvData.PeakData = ReadBuf;	// how can this copy from ReadBuf to .PeakData
-#if 0
-00419FCC  mov         ecx,18h 
-00419FD1  lea         esi,[ebp-84h] 
-00419FD7  lea         edi,[ebp-4F4h] 
-00419FDD  rep movs    dword ptr es:[edi],dword ptr [esi] 
-#endif
-
-
-				if (nSlave == 0)
-				{	// (nSlave == 0)
-					nRecvCnt++;
-					if ( (nInspectMode == RUN_MODE) && (nMotionTime == 1) )  //inspect in time mode
-					{
-						g_nXloc = (int) ( (float) nRecvCnt * 128.0f / ((float) g_nPulserPRF * g_fTimePerInch) );
-						if (g_nXloc >= g_nXscale)
-							nRecvCnt = -2 * g_nPulserPRF / 128;    //halt for 2 seconds
-
-						if (g_nXloc < 0)
-						{
-							g_nPipeStatus = PIPE_NOT_PRESENT;
-							g_nMotionBus = 0x4010;
-						}
-						else
-						{
-							g_nPipeStatus = PIPE_PRESENT;
-							g_nMotionBus = 0x4011;
-						}
-
-						if ( (nRecvCnt % 10) == 0 )
-							g_bStartOfRevS1 = TRUE;
-						else
-							g_bStartOfRevS1 = FALSE;
-					}
-					else    //inspection in motion mode
-					{
-						g_nOldXloc = g_nXloc;
-						g_nXloc = (int) ( pNiosRawData->DataHead.wLocation * g_fMotionPulseLen + 0.5f);  //0.495 for the encoder on the three array hand scanner
-
-						if (pNiosRawData->DataHead.bDin & 0x04)
-						{
-							g_nPipeStatus = PIPE_PRESENT;
-							//g_nMotionBus = 0x4001 | ((pNiosRawData->DataHead.bDin & 0x01) << 4);  //get the direction bit
-
-							if (g_nOldXloc > g_nXloc)
-								g_nMotionBus = 0x4001 | ((pNiosRawData->DataHead.bDin & 0x01) << 14);  //going backward //get the home/away bit;  
-							else
-								g_nMotionBus = 0x4011 | ((pNiosRawData->DataHead.bDin & 0x01) << 14);  //going forward //get the home/away bit;
-						}
-						else
-						{
-							g_nPipeStatus = PIPE_NOT_PRESENT;
-							//g_nMotionBus = 0x4000 | ((pNiosRawData->DataHead.bDin & 0x01) << 4);  //get the direction bit
-
-							if (g_nOldXloc > g_nXloc)
-								g_nMotionBus = 0x4000 | ((pNiosRawData->DataHead.bDin & 0x01) << 14);  //going backward //get the home/away bit;
-							else
-								g_nMotionBus = 0x4010 | ((pNiosRawData->DataHead.bDin & 0x01) << 14);  //going forward //get the home/away bit;
-						}
-
-						if ( ((pNiosRawData->DataHead.wClock / 10) == 0) && ((wClock_old / 10) != 0) )
-							g_bStartOfRevS1 = TRUE;
-						else
-							g_bStartOfRevS1 = FALSE;
-						
-						wClock_old = pNiosRawData->DataHead.wClock;
-						g_nPeriod = pNiosRawData->DataHead.wPeriod;
-					}
-
-					Inspection_Process_Control();
-				}	// (nSlave == 0)
-			}
-			else if (recvBuf[0] == ASCAN_ID)
-			{
-				for (i=0; i<1024; i++)
-					pAscanMsg->Ascan[i] = recvBuf[i+DataHeadLength];
-
-				memcpy( (void *) &(pAscanMsg->MstrHdr.MmiStat), (void *) recvBuf, DataHeadLength);
-
-				/* send the packet data to MMI */
-				SendMmiMsg (g_nMmiSocket, &SendBuf);
-
-				ReadBuf.wLineStatus = 0;   //force to forgo the following inspection data process step
-				ReadBuf.RdpStatus = 1;
-			}
-			else  //keep alive message
-			{
-				ReadBuf.wLineStatus = 0;   //force to forgo the following inspection data process step
-				ReadBuf.RdpStatus = 1;
-			}
-
-			//g_bConnected[nSlave+1] = 1;  /* This slave is alive since we received a message from it.*/
-			pInstMsgProcess->m_bConnected = 1;
-
-			if (ReadBuf.wLineStatus != 0)
-			{
-				ReadBuf.RDP_number = nSlave;
-
-				SlvData.PeakData = ReadBuf;			
-			}
-
-			if (nMotionTime == 1)   //inspection in time mode
-			{
-				SlvData.PeakData.xloc = g_nXloc;
-			}
-
-			if (nSlave > 0)   //if endcoder is only connected to the first array
-			{
-				SlvData.PeakData.xloc = g_nXloc;
-			}
-
-			//SetGetSiteDefaults (1 /*GET*/, &SiteDefault);
-			InspState.GetSiteDefaults(&SiteDefault);	// site defaults copied into SiteDefault
-
-#if 1
-			switch (nInspectMode)
-			{
-			case RUN_MODE:
-				if ( g_nPipeStatus != PIPE_PRESENT )  /* If no pipe in the system, do nothing. */
-					break;
-				if ( ReadBuf.wLineStatus == 0 )     /* If not inspection data, do nothing. */
-					break;
-
-				nReturn = BuildImageMap(&SlvData, nSlave, &g_bStartOfRevS1);
-
-				if ( nReturn )
-				{
-					nSendCnt = 0;
-					if (nReturn != IMAGE_BUF_DIM/*was == 1*/)
-					{
-						for (i=0; i<nReturn; i++)
-						{
-							pSendBuf = GetNextImageBuf();
-
-							if ( pSendBuf != NULL )
-							{
-								pSendBuf->MstrHdr.MsgId = RUN_MODE;
-								pSendBuf->InspHdr.Period = g_nPeriod;
-								pSendBuf->InspHdr.VelocityDt = g_nVelocityDt;
-								pSendBuf->InspHdr.wLineStatus = PIPE_PRESENT | INSPECT_ENABLE_TRUSCOPE;
-								if (g_bRunCalJoint)
-									pSendBuf->InspHdr.status[1] |= CALIBRATION_JOINT;
-								pSendBuf->InspHdr.status[2] = g_nMotionBus;
-								pSendBuf->InspHdr.NextJointNum = g_nJointNum;
-								pSendBuf->InspHdr.JointLength = ( g_nXloc + SiteDefault.nDefaultXOffset ) % g_nXscale;
-								pSendBuf->InspHdr.JointNumber = g_nStation1JointNum;
-								pSendBuf->MstrHdr.nWhichWindow = g_nStation1Window;
-								ComputeEcc(pSendBuf, &g_AllTholds);
-
-								if ( (pSendBuf->InspHdr.xloc >= 0)  && g_bAnyShoeDown )
-								{
-									/* send the IData to MMI */
-									if ( SendMmiMsg (g_nMmiSocket, pSendBuf) == FALSE )
-										break;//return ERROR;
-								}
-								else
-									SendPipeLocation(0, &SiteDefault);
-
-								nSendCnt++;
-							}
-						}
-					}
-
-					/* send real time messages */
-					//nSendCnt = 0;
-					//printf ("***** Real time message *****\n");
-					while ( GetNextRealTimeImageBuf(&pSendBuf) )
-					{
-						//printf ("real time message 1\n\n");
-						if (pSendBuf != NULL)
-						{
-							//printf ("real time message 2\n\n");
-							pSendBuf->MstrHdr.MsgId = RUN_MODE;
-							pSendBuf->InspHdr.wLineStatus = PIPE_PRESENT | INSPECT_ENABLE_TRUSCOPE | REAL_TIME_DATA;
-							pSendBuf->InspHdr.Period = g_nPeriod;
-							pSendBuf->InspHdr.VelocityDt = g_nVelocityDt;
-							pSendBuf->InspHdr.JointNumber = g_nStation1JointNum;
-							pSendBuf->MstrHdr.nWhichWindow = g_nStation1Window;
-							if (g_bRunCalJoint)
-								pSendBuf->InspHdr.status[1] |= CALIBRATION_JOINT;
-							pSendBuf->InspHdr.status[2] = g_nMotionBus;
-							pSendBuf->InspHdr.NextJointNum = g_nJointNum;
-							pSendBuf->InspHdr.JointLength = ( g_nXloc + SiteDefault.nDefaultXOffset ) % g_nXscale;
-							if (pSendBuf->InspHdr.xloc >= 0)
-							{
-								//logMsg("wLinStatus = 0x%08X\n",pSendBuf->InspHdr.wLineStatus,0,0,0,0,0);
-								//printf("xloc = %d, EchoBit = 0x%08X\n",pSendBuf->InspHdr.xloc,pSendBuf->InspHdr.EchoBit[0]);
-								//printf("SegWallMin[25] = %d, SegMinChnl[25] = %d\n\n", pSendBuf->UtInsp.SegWallMin[25],pSendBuf->UtInsp.SegMinChnl[25]);
-								/* send the IData to MMI */
-
-								//if ( SendMmiMsg (g_nMmiSocket, pSendBuf) == FALSE )
-									//break;//return ERROR;
-
-								for (i=0; i<MAX_SHOES; i++)
-									pSendBuf->InspHdr.EchoBit[i] = 0x0000;
-
-								//nSendCnt++;
-							}
-						}
-					}
-					if (nSendCnt == 0)
-						SendPipeLocation(0, &SiteDefault);
-					//printf ("******************************\n\n");
-				}
-				break;
-
-			case CAL_MODE:
-				if (ReadBuf.wLineStatus == 0)
-					break;
-				BuildCalMsg (&SlvData, nSlave);
-				if (nSlave == 0)
-				{
-					if (nRecvCnt >= g_nPulserPRF/1000)
-					{
-						nRecvCnt = 0;
-
-						memcpy ((void *) &SendCalBuf, (void *) &CalBuf, sizeof(I_MSG_CAL));
-
-						/* send the calibration data to MMI */
-						SendMmiMsg (g_nMmiSocket, &SendCalBuf);
-
-						/* clear CalBuf */
-						memset( (void *) &CalBuf, 0, sizeof(I_MSG_CAL));
-						for (i=0; i<MAX_SHOES; i++)
-							for (ic=0; ic<10; ic++)
-								CalBuf.Shoe[i].MinWall[ic] = 0x3FFF;
-					}
-				}
-				break;
-
-			default:
-				break;
-			}
-				
-#endif
-			
-		}
-
-	}	// exit thread loop
-#endif
-#endif
-	return 0;
 }
 
 
@@ -3200,94 +2041,6 @@ UINT tcpServerWorkTask_WD (void *pSlave)
 
 	}
 	
-	return 0;
-}
-
-
-// a thread to send wall data to the Wall Bar Display GUI
-// gets wall bar data thru a pipe from NiosRawData_to_PeakData
-// which was called by tcpServerWorkTask (thread)
-
-UINT tSendWallDisplayMsg(void *dummy)
-{
-	int rc;
-//	I_MSG_RUN SendBuf;
-	I_MSG_WD BufSend;
-//	I_MSG_RUN *pSendBuf = (I_MSG_RUN *) &SendBuf;
-	DWORD nMsgNum = 1;
-	BYTE  *pByte = (BYTE *) &BufSend.status[0];
-	WORD  readBuf[500];
-
-	while (1)
-	{
-		if (g_nRunSendWallDisplayMsgThread == 0)
-			return 0;
-
-		rc = readnpipe(g_hPipeWallDisplay[READ], (char *) &readBuf, 1000);	// move 1000 bytes from pipe to readBuf
-
-		if (rc == 1000)
-		{	// pipe read 1000 bytes
-			memcpy ( (void *) BufSend.Wall, (void *) readBuf, 1000);	// copy readbuf to BufSend
-
-			BufSend.nNorWall = (WORD) (g_AllTholds.fWall * 1000.0f + 0.5f);  //nominal wall
-			pByte[0] = (BYTE) (10 * g_AllTholds.TholdWall[0]);  //min wall threshold
-			pByte[1] = (BYTE) (10 * g_AllTholds.TholdWall[1]);  //min wall threshold
-		
-
-			//add IDs
-			//BufSend.Mach = TRUSCAN_MACH_ID;
-			//BufSend.TruscanMsgId = TRUSCAN_MSG_ID;
-			BufSend.MsgNum = nMsgNum;
-
-			//BufSend.MsgId = pSendBuf->MstrHdr.MsgId;
-			//BufSend.wLineStatus = pSendBuf->InspHdr.wLineStatus;
-			//BufSend.xloc = pSendBuf->InspHdr.xloc;
-			//BufSend.Period = pSendBuf->InspHdr.Period;
-			//BufSend.JointNumber = pSendBuf->InspHdr.JointNumber;
-			//BufSend.MinWall = pSendBuf->UtInsp.MinWall;
-			//BufSend.MaxWall = pSendBuf->UtInsp.MaxWall;
-			//BufSend.MinWallClk = pSendBuf->UtInsp.MinWallClk;
-			//BufSend.MaxWallClk = pSendBuf->UtInsp.MaxWallClk;
-
-			BufSend.Num_of_Beams = 25;
-			BufSend.Num_of_Scans = 20;
-			BufSend.status[2] = g_nShowWallBars;
-
-			if (g_socketWallDisplay >= 0)
-			{
-				//rc = send( g_socketAGS, (char *) pSendBuf, sizeof(I_MSG_RUN), 0 );
-				rc = send( g_socketWallDisplay, (char *) &BufSend, sizeof(I_MSG_WD), 0 );
-
-				if ( rc <= 0 )
-				{
-					nMsgNum = 1;
-					_close(g_socketWallDisplay);
-					g_socketWallDisplay = -1;
-					::Sleep(1000);
-				}
-				else if ( rc < sizeof(I_MSG_WD) )
-					return 0;
-				else
-				{	// 1 whole msg sent
-					nMsgNum++;
-				}
-			}	// g_socketWallDisplay >= 0
-			else
-			{	// no socket to WallDisplay program yet
-				nMsgNum = 1;
-				::Sleep(2000);
-			}
-		}	//	// pipe read 1000 bytes
-		else if (rc >= 0)
-		{
-			;	// something in pipe but not the full message
-		}
-		else
-		{
-			return 0;
-		}
-	}	// while 1
-
 	return 0;
 }
 
@@ -3704,7 +2457,6 @@ void NiosRawData_to_PeakData(SRawDataPacket *pInspData, PEAK_DATA *pPeakData, CS
 				
 				g_RawFlaw[g_nRawFlawBuffer].nXloc = pInspData->DataHead.wLocation;
 				g_RawFlaw[g_nRawFlawBuffer].nMotionBus = (WORD) pInspData->DataHead.bDin;
-				//SendRawFlawToMMI();
 				g_bSendRawFlawToMMI = TRUE;
 			}
 
@@ -5198,44 +3950,6 @@ void SendPipeLocation(int nStation, SITE_SPECIFIC_DEFAULTS *pSiteDefault)
 }
 
 
-void SendRawFlawToMMI()
-{
-	I_MSG_RUN SendBuf;
-	I_MSG_RAW_FLAW *pRawFlaw = (I_MSG_RAW_FLAW *) &SendBuf;
-	int i;
-	int nBuffer = (g_nRawFlawBuffer + 1) % 2;  //send buffer
-	BYTE *pByte = (BYTE *) g_RawFlaw[nBuffer].Amp;
-
-	pRawFlaw->MstrHdr.MsgId = RAW_FLAW_MODE;
-	pRawFlaw->MstrHdr.IdataStat.wLast = g_RawFlaw[nBuffer].nXloc;
-	pRawFlaw->MstrHdr.IdataStat.nDup = g_RawFlaw[nBuffer].nMotionBus;
-	pRawFlaw->MstrHdr.IdataStat.nRcv = (int) g_nJointNum;
-
-	for (i=0; i<10; i++)
-	{
-		pRawFlaw->MstrHdr.nSlave = i;
-		memcpy( (void *) pRawFlaw->Buf, (void *) &pByte[1152*i], 1152);
-
-		SendMmiMsg (g_nMmiSocket, &SendBuf);
-	}
-}
-
-
-UINT tSendRawFlawToMMI(void *dummy)
-{
-	while (g_nRunSendRawFlawToMMIThread == 1)
-	{
-		if (g_bSendRawFlawToMMI)
-		{
-			SendRawFlawToMMI();
-			g_bSendRawFlawToMMI = FALSE;
-		}
-
-		::Sleep(100);
-	}
-
-	return 1;
-}
 
 
 void InitRawWallBuf(void)

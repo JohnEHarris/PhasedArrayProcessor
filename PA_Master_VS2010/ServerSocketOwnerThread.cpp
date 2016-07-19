@@ -12,7 +12,6 @@ Revised:
 
 #ifdef THIS_IS_SERVICE_APP
 #include "ServiceApp.h"
-extern int	g_SocketSlave[NUM_OF_SLAVES];
 extern CServiceApp theApp;
 #else
 #include "Truscan.h"
@@ -106,7 +105,6 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	// m_hConnectionSocket = Asocket.Detach(); set when thread created suspended
 	// attached via the handle to the temporary socket generated in the OnAccept() operation in CServerSocket
 	m_ConnectionSocket.Attach(m_hConnectionSocket, FD_READ | FD_CLOSE );
-	//g_SocketSlave[m_nThreadIndex] = m_hConnectionSocket;	// legacy code support
 	m_ConnectionSocket.GetPeerName(Ip4,uPort);	// connecting clients info??
 	m_ConnectionSocket.SetClientIp4(Ip4);
 	m_ConnectionSocket.m_pSCC->sClientIP4 = Ip4;

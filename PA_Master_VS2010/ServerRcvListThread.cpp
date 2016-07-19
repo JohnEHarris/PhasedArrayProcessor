@@ -34,32 +34,11 @@ static char THIS_FILE[] = __FILE__;
 
 class CInstState;
 extern  CInspState InspState;
-extern  int g_ArrayScanNum[NUM_OF_SLAVES];
 extern 	C_MSG_ALL_THOLD  g_AllTholds;
 extern 	C_MSG_NC_NX g_NcNx;
-extern int  g_nPipeStatus;	// = PIPE_NOT_PRESENT;     /* temporary */
-extern DWORD g_nJointNum;	// = 1;
-extern int  g_nXloc;
-extern int  g_nOldXloc;	// = 0;
-extern WORD   g_nMotionBus;	// = 0;
-extern float  g_fMotionPulseLen;	// = 0.506329f;
-extern int    g_nShowWallBars;	// = 1;
-extern WORD   g_nPulserPRF;	// = 1000;
-extern float  g_fTimePerInch;
-extern int    g_nXscale;	// = 900;
-extern BOOL   g_bStartOfRevS1;
-extern WORD   g_nPeriod;
 extern I_MSG_RUN SendBuf;
-extern short  g_nVelocityDt;               /* delta t to travel 4 inches in 1 ms clocks */
-extern BOOL   g_bRunCalJoint;
-extern WORD   g_nStation1Window;// = 0;       /* the inspect window to which the station 1 Idata is sent */
-extern WORD   g_nStation2Window;// = 0;       /* the inspect window to which the station 2 Idata is sent */
-extern DWORD  g_nStation1JointNum;// = 0;
 extern DWORD  g_nStation2JointNum;// = 0;
-extern BOOL   g_bAnyShoeDown;
 extern I_MSG_RUN SendCalBuf;
-extern I_MSG_CAL  CalBuf;
-extern I_MSG_RUN ImageBuf[IMAGE_BUF_DIM];
 
 extern UINT uAppTimerTick;
 extern CServiceApp theApp;
@@ -168,6 +147,7 @@ int CServerRcvListThread::ExitInstance()
 	CString s;
 	//int i;
 #ifdef THIS_IS_SERVICE_APP
+	delete m_pElapseTimer;
 #if 0
 	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
 		{
@@ -330,7 +310,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 
 	s = _T("\r\nPAM Output Data Packet\r\n");
 	SaveFakeData(s);
-	DATA_PACKET_1 *pOutputPacket = new (DATA_PACKET_1);
+	IDATA_PACKET *pOutputPacket = new (IDATA_PACKET);
 	pOutputPacket->bvChannelQty	= 1;
 	pOutputPacket->wLoc		= m_pSCC->InstrumentStatus.wLoc;
 	pOutputPacket->wAngle	= m_pSCC->InstrumentStatus.wAngle;
@@ -360,10 +340,10 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 
 	s = _T("\r\n ID: Nc   M  Thld  Nx  MaxWall  MinWall Drop\r\n");
 	SaveFakeData(s);
-	s.Format(_T("   %2d  %2d  %3d   %d  %4d  %4d  %2d\r\n OD:"), nNcId, nModId, nThdlId, nNx, nMaxLimit, nMinLimit, nDrop );
+	s.Format(_T("     %2d  %2d  %3d   %d  %4d    %4d     %2d\r\n OD:"), nNcId, nModId, nThdlId, nNx, nMaxLimit, nMinLimit, nDrop );
 	SaveFakeData(s);
 	//od parameters
-	s.Format(_T("   %2d  %2d  %3d"), nNcOd, nModOd, nThldOd );
+	s.Format(_T(" %2d  %2d  %3d"), nNcOd, nModOd, nThldOd );
 	SaveFakeData(s);
 
 	s.Format(_T("\r\n      ID   OD   MinW    MaxW"));
@@ -386,7 +366,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 	// Put the newly created packet into the linked list for output
 	// For now send this message directly. In future, put into linked list
 	// and signal the sender thread to empty list.
-	theApp.PamSendToPag(pOutputPacket, sizeof(DATA_PACKET_1));
+	theApp.PamSendToPag(pOutputPacket, sizeof(IDATA_PACKET));
 	delete pOutputPacket;
 
 	}

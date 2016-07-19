@@ -112,7 +112,8 @@ int CServerRcvListThreadBase::ExitInstance()
 	TRACE(s);
 	if (m_pSCC->pServerRcvListThread)
 		{
-		//delete m_pSCC->pServerRcvListThread;
+		delete m_pSCC->pServerRcvListThread;	// never gets here when closing debug window 2016-07-18 jeh
+		//  but did get here when runnint and inst 1 reconnected.
 		m_pSCC->pServerRcvListThread= NULL;
 		}
 	return CWinThread::ExitInstance();

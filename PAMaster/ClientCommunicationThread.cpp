@@ -77,7 +77,7 @@ static char THIS_FILE[] = __FILE__;
 /////////////////////////////////////////////////////////////////////////////
 // CClientCommunicationThread
 
-IMPLEMENT_DYNCREATE(CClientCommunicationThread, CWinThread)
+IMPLEMENT_DYNCREATE(CClientCommunicationThread, CWinThread) // subtype c0, 128 bytes long. memory leak
 
 CClientCommunicationThread::CClientCommunicationThread()
 	{

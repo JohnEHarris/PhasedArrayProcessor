@@ -42,11 +42,17 @@ int CTestThread::ExitInstance()
 BEGIN_MESSAGE_MAP(CTestThread, CWinThread)
 
 	ON_THREAD_MESSAGE(WM_USER_THREAD_HELLO_WORLD,ThreadHelloWorld)
+	ON_THREAD_MESSAGE(WM_USER_TEST_THREAD_BAIL,Bail)
 
 END_MESSAGE_MAP()
 
 
 // CTestThread message handlers
+afx_msg void CTestThread::Bail(WPARAM w, LPARAM lParam)
+	{
+	ExitInstance();	// NEVER GETS HERE
+	}
+
 
 afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually added jeh 10-24-2012
 	{
@@ -122,7 +128,7 @@ void CTestThread::TestNx(void)
 	// Nx = 2, Max=1377, Min=110 , Drop=4
 	WORD Wall[] = {300,333,315,288,255,2200,0,324,326,366,400,0,0,298,320,322,360,100,100,100,100,0,0};
 	pCh->WFifoInit(1,1377,110,4);
-	TRACE("Nx = 2, Max=1377, Min=110 , Drop=4\n");
+	TRACE("Nx = 1, Max=1377, Min=110 , Drop=4\n");
 	for ( i = 0; i < sizeof(Wall)/2; i++)
 		{
 		pCh->InputWFifo(Wall[i]);

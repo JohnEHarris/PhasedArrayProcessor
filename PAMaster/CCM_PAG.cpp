@@ -26,75 +26,16 @@ Revised:	20-Jan-13
 #include "time.h"
 
 //extern THE_APP_CLASS theApp;
-extern  int g_NumberOfScans;
-extern 	int g_nXloc;
-extern 	int g_nXloc_S2;
-extern 	int g_nTick;
-extern 	DWORD g_nOldMotionBus;
-extern 	int g_nAuxClkIntCnt;
-extern 	BYTE g_nPlcOfWho;
-extern 	WORD g_nNextWindow;
-extern 	int g_nMaxXSpan;       /* distance between the leftmost transducer and the rightmost transducer */
-extern 	float g_fTimePerTurn;
-extern 	int g_nNoMmiReplyCnt;
-extern 	DWORD g_nNextRealJointNum;
-extern 	DWORD  g_nNextCalJointNum;	// = 5001;
-extern 	int g_NumberOfScans;
-extern 	int g_NumberOfScans;
 
-extern  int g_ArrayScanNum[NUM_OF_SLAVES];
 extern 	C_MSG_ALL_THOLD  g_AllTholds;
 extern 	C_MSG_NC_NX g_NcNx;
-extern 	WALL_COEF  g_WallCoef;
-extern int  g_nPipeStatus;	// = PIPE_NOT_PRESENT;     /* temporary */
-extern DWORD g_nJointNum;	// = 1;
-extern int  g_nXloc;
-extern int  g_nOldXloc;	// = 0;
-extern WORD   g_nMotionBus;	// = 0;
-extern float  g_fMotionPulseLen;	// = 0.506329f;
-extern int    g_nShowWallBars;	// = 1;
-extern WORD   g_nPulserPRF;	// = 1000;
-extern float  g_fTimePerInch;
-extern int    g_nXscale;	// = 900;
-extern BOOL   g_bStartOfRevS1;
-extern WORD   g_nPeriod;
 extern I_MSG_RUN SendBuf;
-extern short  g_nVelocityDt;               /* delta t to travel 4 inches in 1 ms clocks */
-extern BOOL   g_bRunCalJoint;
-extern WORD   g_nStation1Window;// = 0;       /* the inspect window to which the station 1 Idata is sent */
-extern WORD   g_nStation2Window;// = 0;       /* the inspect window to which the station 2 Idata is sent */
-extern DWORD  g_nStation1JointNum;// = 0;
 extern DWORD  g_nStation2JointNum;// = 0;
-extern BOOL   g_bAnyShoeDown;
-extern BYTE   g_bBcastAscan;
 extern I_MSG_RUN SendCalBuf;
-extern I_MSG_CAL  CalBuf;
-extern I_MSG_RUN ImageBuf[IMAGE_BUF_DIM];
 
-extern BOOL   g_bAnyShoeDown;	// = FALSE;
 
-extern BOOL   g_b20ChnlPerHead;	// = FALSE;
-extern WORD   g_nRecordWallData;
-extern BOOL   g_bShowWallDiff;	// = FALSE;
 
-extern BOOL   g_bSendRawFlawToMMI;	// = FALSE;
 
-extern WORD   g_nPulserPRF;	// = 1000;
-extern WORD   g_nMaxWallWindowSize;	// = 10;
-extern float  g_WallDropTime;	// = 0.1f;       /* initialized to 0.1 seconds */
-extern int    g_NumberOfScans;	// = 3;
-extern int	   g_ArrayScanNum[NUM_OF_SLAVES];
-extern int    g_SequenceLength[NUM_OF_SLAVES];
-extern int    g_nPhasedArrayScanType[NUM_OF_SLAVES];
-extern int    g_nInspectMode;	// = CAL_MODE;
-extern JOB_REC  g_JobRec;
-extern BYTE   g_AdiStatus;
-extern int nBufin, nBufout;			/* index from 0-IMAGE_BUF_DIM - 1 */
-extern int nBufcnt;				/* image buffer management */
-extern int nPreviousX;	// =0;
-extern int nFlush;
-extern int nMaxX;
-extern int gChannel, gGate;
 
 #define I_AM_CCM_PAG
 //#include "CCM_PAG.h"
@@ -257,7 +198,6 @@ int CCCM_PAG::FindWhichSlave(int nChannel)
 
 	for (i=0; i<10; i++)
 		{
-		sum += g_ArrayScanNum[i];
 
 		if ( (nChannel / sum) == 0)
 			{
@@ -271,28 +211,14 @@ int CCCM_PAG::FindWhichSlave(int nChannel)
 
 int CCCM_PAG::FindSlaveChannel(int nChannel)
 {
-	int sum=0, nSlaveCh=0, i;
-	for (i=0; i<10; i++)
-		{
-		sum += g_ArrayScanNum[i];
-		if ( (nChannel / sum) == 0)
-			{
-			nSlaveCh = nChannel - (sum - g_ArrayScanNum[i]);
-			break;
-			}
-		}
-	return nSlaveCh;
+
+	return 0;
 }
 
 int CCCM_PAG::FindDisplayChannel(int nArray, int nArrayCh)
 	{
-	int nDispCh = nArrayCh, i;
-	for (i=0; i<nArray; i++)
-		{
-		nDispCh += g_ArrayScanNum[i];
-		}
 
-	return nDispCh;
+	return 0;
 	}
 //
 // These function copied from InspMsgProcess class
@@ -510,70 +436,25 @@ BOOL CCCM_PAG::SendSlaveMsg(int nWhichInstrument, MMI_CMD *pCmd)
 	return TRUE;
 	}
 
-void CCCM_PAG::InitImageBufArray(void)
-{
-	int i, nSlave, ct,ci;
-	int MaxXOffset;
-	CHANNEL_CONFIG2 ChannelCfg;
-	WORD *pWord;
-
-	MaxXOffset = GetMaxXOffset();
-	//MaxXOffset = 0;
-
-	memset( (void *) &ImageBuf, 0, sizeof(ImageBuf));
-
-	nBufout = nPreviousX = nMaxX = 0;
-	nBufin = IMAGE_BUF_OUTPUT_DELAY;
-	nBufcnt = IMAGE_BUF_OUTPUT_DELAY + MaxXOffset + 1;
-
-	//for (nSlave=0; nSlave<4; nSlave++)
-		InspState.GetChannelConfig(&ChannelCfg);
-		//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
-
-	for ( i = 0; i < IMAGE_BUF_DIM; i++)
-	{
-		ImageBuf[i].InspHdr.nStation = 0;
-		ImageBuf[i].UtInsp.MinWall = 0x3fff;
-		memset ( (void *) &ImageBuf[i].UtInsp.SegWallMin[0], 0x3f, 2*N_SEG);
-		ImageBuf[i].InspHdr.status[1] |= WALL_INCLUDED;
-
-		for (nSlave=0; nSlave<4; nSlave++)
-		{
-			for (ci=0; ci<10; ci++)
-			{
-				ct = ChannelCfg.Ch[nSlave][ci].Type;
-
-				switch ( ct)
-				{	/* chnl type */
-				case IS_NOTHING:
-				default:
-					break;
-
-				case IS_WALL:
-					pWord = (WORD *) &ImageBuf[i].UtInsp.GateMaxAmp[nSlave*20+ci*2];
-					*pWord = 0x3fff;
-					break;
-				}
-			}
-		}
-	}
-}
-
 
 /**********************************************************************************
 * Compute the distance between the leftmost transducer and the rightmost transducer
 */
 int CCCM_PAG::GetMaxXSpan(void)
 	{
+#if 0
 	int nMaxXSpan;
 	nMaxXSpan = GetMaxXOffset() - GetMinXOffset();
 	return nMaxXSpan;
+#endif
+	return 0;
 	}
 
 
 
 int CCCM_PAG::GetMaxXOffset(void)
 {
+#if 0
 	CHANNEL_CONFIG2 ChannelCfg;
 	int nSlave;
 	int i;
@@ -583,7 +464,6 @@ int CCCM_PAG::GetMaxXOffset(void)
 	for (nSlave=0; nSlave<MAX_SHOES; nSlave++)
 	{
 //		InspState.GetChannelConfig(&ChannelCfg);
-		//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
 
 		for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
 		{
@@ -607,12 +487,15 @@ int CCCM_PAG::GetMaxXOffset(void)
 	}
 
 	return MaxXOffset;
+#endif
+	return 0;
 }
 
 
 
 int CCCM_PAG::GetMinXOffset(void)
 {
+#if 0
 	CHANNEL_CONFIG2 ChannelCfg;
 	int nSlave;
 	int i;
@@ -621,8 +504,6 @@ int CCCM_PAG::GetMinXOffset(void)
 	InspState.GetChannelConfig(&ChannelCfg);
 	for (nSlave=0; nSlave<MAX_SHOES; nSlave++)
 		{
-//		InspState.GetChannelConfig(&ChannelCfg);
-		//SetGetChannelCfg (1 /* GET */, &ChannelCfg, nSlave);
 
 		for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
 			{
@@ -646,5 +527,7 @@ int CCCM_PAG::GetMinXOffset(void)
 	}
 
 	return MinXOffset;
+#endif
+	return 0;
 }
 

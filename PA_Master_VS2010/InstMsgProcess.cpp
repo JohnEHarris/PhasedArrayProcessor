@@ -29,7 +29,6 @@ Revised:
 
 class CInstState;
 extern  CInspState InspState;
-extern  int g_ArrayScanNum[NUM_OF_SLAVES];
 extern 	C_MSG_ALL_THOLD  g_AllTholds;
 extern 	C_MSG_NC_NX g_NcNx;
 

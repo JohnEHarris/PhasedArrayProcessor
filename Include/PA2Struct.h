@@ -128,7 +128,7 @@ typedef struct
 	UINT uMsgSeqCount;	// counter to uniquely identify each packet
 	UINT uSync;			// 0x5CEBDAAD ... 18 bytes to here
 	RESULTS Results[32];	// Some "channels" at the end may be channel type NONE
-	} DATA_PACKET_1;	// sizeof = 210
+	} IDATA_PACKET;	// sizeof = 210
 
 typedef struct
 	{

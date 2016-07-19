@@ -28,6 +28,7 @@ public:
 	virtual BOOL InitInstance();
 	virtual int ExitInstance();
 	afx_msg void ThreadHelloWorld(WPARAM w, LPARAM lParam);	// manually added jeh 10-24-2012
+	afx_msg void Bail(WPARAM w, LPARAM lParam);		// another way to call ExitInstance??
 
 	// Testing Nc function
 	void TestNc(void);

@@ -75,124 +75,16 @@ void ShutDownSystem();
 BOOL repeat = TRUE;     /* Global repeat flag and video variable */
 // global flags to regulate how often or 'if' a thread is created/run
 
-
-
-int  g_nRunClientSocketInitThread = 1;
-int  g_nRunRcvrProcessMmiMsgThread = 1;
-int  g_nRunProcessMmiMsgThread = 1;
-int  g_nRunSendRawFlawToMMIThread = 1;
-int  g_nRunWriteWallDataToFileThread= 1;
-int  g_nRunSendWallDisplayMsgThread = 1;
-
-// Encapsulate the processing of data from inspection instruments in this class
-//CInstMsgProcess* g_pInstMsgProcess[NUM_OF_SLAVES];	// typically supports 32 'slave' instruments
-
 CInspState InspState;		// one instance of a state keeping class.. not a pointer!
-
-
-//CWinThread* g_pThreadRcvrProcessMmiMsg;
-CWinThread* g_pThreadProcessMmiMsg;
-
-CWinThread* g_pThreadServerSocket_WD;
-CWinThread* g_pThreadSendRawFlawToMMI;
-CWinThread* g_pThreadWriteWallDataToFile;
-CWinThread* g_pThreadWallDisplay;
-CWinThread* g_pThreadSendWallDisplayMsg;
-
-int  g_nSlave[NUM_OF_SLAVES];
-int  g_nWD=0;
-int  g_hPipeMmiMsg[2];		// pipes could be replace with linked lists!!
-int  g_hPipeWallDisplay[2];
-enum PIPES { READ, WRITE }; /* Constants 0 and 1 for READ and WRITE */
-
-
-int    g_SocketSlave[NUM_OF_SLAVES];    /* TCP sockets for communicating with slaves */
-int    g_socketWallDisplay = -1;		/* TCP socket for communicating with wall display program */
-int    g_nRcvrIdataCnt;
-int    g_nAuxClkIntCnt = 0;
-int    g_nAuxClkIntCnt2 = 0;
-float  g_fTimePerTurn = 0.5f;       /* unit: second */
-float  g_fTimePerInch = 0.25f;      /* unit: second */
-int    g_nLostIdataCnt = 0;
-BYTE   g_bConnected[NUM_OF_SLAVES+1];   /* network connection status.  0: not connected, 1: connected.  Master in 0, Slave1 in 1, etc. */
-BYTE   g_nBoardRevision[NUM_OF_SLAVES+1][MAX_BOARD_PER_INSTRUMENT];
-char   g_SlaveCodeRev[40];
-BYTE   g_AdiStatus;
-int    g_nNoMmiReplyCnt = 0;
-int    g_nXloc_S2 = 0;              /* X location of Station 2 */
-int    g_nTick = 0;                 /* Angular location in ticks (180 ticks for one full rotation */
-WORD   g_nPeriod;		    /* period of rotation in 0.1 ms */
-short  g_nVelocityDt;               /* delta t to travel 4 inches in 1 ms clocks */
-WORD   g_nNextWindow = 0;           /* next available inspect window for display */
-WORD   g_nStation1Window = 0;       /* the inspect window to which the station 1 Idata is sent */
-WORD   g_nStation2Window = 0;       /* the inspect window to which the station 2 Idata is sent */
-DWORD  g_nStation1JointNum = 0;
-DWORD  g_nStation2JointNum = 0;
-DWORD  g_nOldMotionBus = 0;
-BOOL   g_bStartOfRevS1 = FALSE;
-BOOL   g_bStartOfRevS2 = FALSE;
 C_MSG_ALL_THOLD  g_AllTholds;
 C_MSG_NC_NX g_NcNx;
-WALL_COEF  g_WallCoef;
-BOOL   g_bRunCalJoint = FALSE;
-DWORD  g_nNextRealJointNum = 1;
-DWORD  g_nNextCalJointNum = 5001;
-int    g_nMaxXSpan;                 /* distance between the leftmost transducer and the rightmost transducer */
-BYTE   g_nPlcOfWho = 0;             /* 0=Master, 1=Instrument 1, etc. */
-DWORD  g_dwPlc[4];
-int    g_nXscale = 900;
-int    gChannel = 0;
-int    gGate = 0;
-BYTE   g_bBcastAscan = 0;
-BOOL   g_bAnyShoeDown = FALSE;
-
-BOOL   g_b20ChnlPerHead = FALSE;
-WORD   g_nRecordWallData=0;
-BOOL   g_bShowWallDiff = FALSE;
-
-BOOL   g_bSendRawFlawToMMI = FALSE;
-
-WORD   g_nPulserPRF = 1000;
-WORD   g_nMaxWallWindowSize = 10;
-float  g_WallDropTime = 0.1f;       /* initialized to 0.1 seconds */
-int    g_NumberOfScans = 3;
-int	   g_ArrayScanNum[NUM_OF_SLAVES];
-int    g_SequenceLength[NUM_OF_SLAVES];
-int    g_nPhasedArrayScanType[NUM_OF_SLAVES];
-int    g_nInspectMode = CAL_MODE;
-
-int  g_nPipeStatus = PIPE_NOT_PRESENT;     /* temporary */
-DWORD g_nJointNum = 1;
-int  g_nXloc = 0;             /* temporary */
-int  g_nOldXloc = 0;
-WORD   g_nMotionBus = 0;
 float  g_fMotionPulseLen = 0.506329f;
-int    g_nShowWallBars = 1;
 
-CSCAN_REVOLUTION g_RawFlaw[2];
-int    g_nRawFlawBuffer = 0;  /* the buffer to write the raw flaw to */
-
-RAW_WALL_HEAD       g_RawWallHeadCopy;
-WALL_REVOLUTION     g_RawWallCopy[NUM_MAX_REVOL];
-int  g_nXlocRevStart;         /* starting X location of the revolution */
-int  g_nWallAscanCnt[NUM_WALL_CHANNEL*2];
-JOB_REC  g_JobRec;
-BOOL g_bWriteWallDataFile=FALSE;
-
-I_MSG_CAL  CalBuf;
-I_MSG_RUN ImageBuf[IMAGE_BUF_DIM];
-
-int nBufin, nBufout;			/* index from 0-IMAGE_BUF_DIM - 1 */
-int nBufcnt;				/* image buffer management */
-int nPreviousX =0;
-int nFlush;
-int nMaxX;
 /*  End Globals */
 
 
 /*************** BEGIN FUNCTION PROTOTYPES ******************/
 					
-BOOL SendSlaveMsg(int nWhichSlave, MMI_CMD *pSendBuf);
 //void SetGetInspectMode_M (int nSetGet/* 0=SET, 1=GET */, int *nMode, int *nMotionTime);
 void Inspection_Process_Control();
 
@@ -202,8 +94,6 @@ int GetMinXOffset(void);
 int GetMaxXSpan(void);
 
 
-BOOL PipeIsPresent() {return g_nPipeStatus;};
-BOOL BoxIsEnabled(int nBox) { return TRUE;};
 
 int FindWhichSlave(int nChannel);
 int FindSlaveChannel(int nChannel);
@@ -265,7 +155,7 @@ CServiceApp::CServiceApp()
 	{
 //	WSADATA wsaData;
 //	int rv, 
-	int i;
+//	int i;
 	//pTheApp = this;
 
 	AfxSocketInit();
@@ -278,16 +168,8 @@ CServiceApp::CServiceApp()
 		}
 #endif
 
-	for (i=0; i<NUM_OF_SLAVES; i++)
-		{
-		g_SocketSlave[i] = -1;   /* initialized to an invalid socket. */
-		g_nSlave[i] = i;
-		g_nWD = 0;
-		g_bConnected[i+1] = 0;
-		}
 
-//	for ( i = 0; i < NUM_OF_SLAVES; i++)	g_pInstMsgProcess[i] = NULL;
-//	g_pInstMsgProcess[0] = new CInstMsgProcess(0);	// DEBUGGING
+
 	g_NcNx.Long[0] = 1;
 	g_NcNx.Long[1] = 1;
 	g_NcNx.Tran[0] = 1;
@@ -315,18 +197,7 @@ CServiceApp::CServiceApp()
 #endif
 
 
-	for (i=0; i<MAX_SHOES; i++)	// max shoes may be a problem 19-apr-12 jeh
-		{
-		g_WallCoef.fWallSlope[i] = 1.0f;
-		g_WallCoef.WallOffset[i] = 0;
-		}
 
-	for (i=0; i<NUM_OF_SLAVES; i++)
-		{
-		g_ArrayScanNum[i] = 3;
-		g_SequenceLength[i] = 24;
-		g_nPhasedArrayScanType[i] = 2;	// default is THREE_SCAN_LRW_8_BEAM
-		}
 
 
 	}
@@ -348,14 +219,6 @@ CServiceApp::~CServiceApp()
 	Sleep(6000);	// long enough to break out of Run infinite loop.. leave in for Yanming code
 
 	ReportStatus(SERVICE_STOP_PENDING, 11000);
-
-#if 0
-for ( i = 0; i < 32; i++)
-	{
-	if ( g_pInstMsgProcess[i])	delete g_pInstMsgProcess[i];
-	g_pInstMsgProcess[i] = NULL;
-	}
-#endif
 
 }
 
@@ -705,10 +568,10 @@ void CServiceApp::ShutDown(void)
 	{
 	int i, j,k;
 
-	ReportStatus(SERVICE_STOP_PENDING, 11000);
-	if( m_hStop )
-		::SetEvent(m_hStop);
-	m_hStop = 0;
+//	ReportStatus(SERVICE_STOP_PENDING, 11000);
+//	if( m_hStop )
+//		::SetEvent(m_hStop);
+//	m_hStop = 0;
 
 
 #if 1
@@ -731,17 +594,21 @@ void CServiceApp::ShutDown(void)
 
 	if (m_pTestThread)
 		{
-		::SetEvent(m_pTestThread->m_hTimerTick);
-		Sleep(5);
-		m_pTestThread->PostThreadMessage(WM_QUIT,0,0L);
-		Sleep(20);
+		//::SetEvent(m_pTestThread->m_hTimerTick);
+		//Sleep(5);
+		i = m_pTestThread->PostThreadMessage(WM_USER_TEST_THREAD_BAIL,0,0L); // fails, returns 0
+		if (i)
+			j = i;
+		else 
+		j = i*2;
+		//Sleep(20);
 		}
 	m_pTestThread = 0;
 
 
 
 
-	Sleep(300);
+	//Sleep(300);
 	// This code taken from void CTscanDlg::OnCancel() - the PAG
 	CString s;
 
@@ -749,7 +616,7 @@ void CServiceApp::ShutDown(void)
 		{
 		if (pCCM[i])	delete pCCM[i];
 		pCCM[i] = NULL;
-		Sleep(10);
+		//Sleep(10);
 		}
 	i = 14;
 	s = _T("Here we are");
@@ -762,12 +629,18 @@ void CServiceApp::ShutDown(void)
 		if (pSCM[i])
 			{
 			pSCM[i]->ServerShutDown(i);
-			Sleep(200);
+			//Sleep(200);
 			delete pSCM[i];
 			}
 		pSCM[i] = NULL;
-		Sleep(10);
+		//Sleep(10);
 		}
+		
+	ReportStatus(SERVICE_STOP_PENDING, 11000);
+	if( m_hStop )
+		::SetEvent(m_hStop);
+	m_hStop = 0;
+
 	}
 
 
@@ -937,7 +810,7 @@ Size of SRawDataPacket is 1040
 	Sleep(50);
 	// Test posting a message to newly created thread
 	if (m_pTestThread)
-		m_pTestThread->PostThreadMessage(WM_USER_THREAD_HELLO_WORLD,1,5L);
+		i = m_pTestThread->PostThreadMessage(WM_USER_THREAD_HELLO_WORLD,1,5L);
 
 
 	GetAllIP4AddrForThisMachine();
@@ -976,6 +849,7 @@ WHILE_TARGET:
 		Sleep(50);
 		uAppTimerTick++;
 		if (nDebugShutdown)	break;
+		void *pv;
 		// attempt to make a connection attempted when the server was busy/non responsive
 
 #if 1
@@ -993,18 +867,18 @@ WHILE_TARGET:
 							{
 							// received data
 							stSCM[i].pClientConnection[j]->pSocket->LockRcvPktList();
-							//while (stSCM[i].pClientConnection[j]->pRcvPktList->GetCount())
+							while (stSCM[i].pClientConnection[j]->pRcvPktList->GetCount())
 								{
-								//pv = stSCM[i].pClientConnection[j]->pRcvPktList->RemoveHead();
-								//delete pv;
+								pv = stSCM[i].pClientConnection[j]->pRcvPktList->RemoveHead();
+								delete pv;
 								}
 							stSCM[i].pClientConnection[j]->pSocket->UnLockRcvPktList();
 							// data to be sent
 							stSCM[i].pClientConnection[j]->pSocket->LockSendPktList();
-							//while (stSCM[i].pClientConnection[j]->pSendPktList->GetCount())
+							while (stSCM[i].pClientConnection[j]->pSendPktList->GetCount())
 								{
-								//pv = stSCM[i].pClientConnection[j]->pSendPktList->RemoveHead();
-								//delete pv;
+								pv = stSCM[i].pClientConnection[j]->pSendPktList->RemoveHead();
+								delete pv;
 								}
 							stSCM[i].pClientConnection[j]->pSocket->UnLockSendPktList();
 							}
@@ -1074,76 +948,13 @@ YG_END:
 
 
 
-	if (g_nRunRcvrProcessMmiMsgThread > 0)
-	{
-		g_nRunRcvrProcessMmiMsgThread = 0;
-	}
-
-
-
-	BYTE dummy[1000];
-	if (g_nRunSendWallDisplayMsgThread > 0)
-	{
-		g_nRunSendWallDisplayMsgThread = 0;
-		_write ( g_hPipeWallDisplay[WRITE], (void *) dummy, 1000);
-		::Sleep(4);
-		::WaitForSingleObject(g_pThreadSendWallDisplayMsg->m_hThread, 10000);
-	}
-
-#ifdef  YANMING_CODE
-	closesocket(g_nServerSocket);
-	g_nServerSocket = -1;
-	::WaitForSingleObject(g_pThreadServerSocket->m_hThread, INFINITE);
-#endif
-
-	::WaitForSingleObject(g_pThreadServerSocket_WD->m_hThread, INFINITE);
-
-	for (i=0; i<NUM_OF_SLAVES; i++)
-	{
-		if (g_SocketSlave[i] >= 0)
-		{
-			closesocket(g_SocketSlave[i]);
-			g_SocketSlave[i] = -1;
-		}
-	}
-
-	closesocket(g_socketWallDisplay);
-	g_socketWallDisplay = -1;
-	::WaitForSingleObject(g_pThreadWallDisplay->m_hThread, INFINITE);
-
-	if (g_nRunSendRawFlawToMMIThread > 0)
-	{
-		g_nRunSendRawFlawToMMIThread = 0;
-		::WaitForSingleObject(g_pThreadSendRawFlawToMMI->m_hThread, INFINITE);
-	}
-
-	if (g_nRunWriteWallDataToFileThread > 0)
-	{
-		g_nRunWriteWallDataToFileThread = 0;
-		::WaitForSingleObject(g_pThreadWriteWallDataToFile->m_hThread, INFINITE);
-	}
-
-
 
 //service_exit:
 
-	//_getch();
-#if 0
-	for ( i = 0; i < 32; i++)
-		{
-		if ( g_pInstMsgProcess[i])	delete g_pInstMsgProcess[i];
-		g_pInstMsgProcess[i] = NULL;
-		}
-#endif
-//	delete pInitTimer;
 
 	WSACleanup();  //  Free resources allocated by WSAStartup()	
 
-    _close( g_hPipeMmiMsg[READ] );
-    _close( g_hPipeMmiMsg[WRITE] );
 
-    _close( g_hPipeWallDisplay[READ] );
-    _close( g_hPipeWallDisplay[WRITE] );
 
 	ReportStatus(SERVICE_STOPPED);
 	}	// void CServiceApp :: Run( DWORD, LPTSTR *)
@@ -1599,7 +1410,6 @@ UINT CheckKey( void *dummy )
 void Inspection_Process_Control()
 {
 #if 0
-	switch (g_nOldMotionBus & 0x00000001)    /* look at the old pipe present status */
 	{
 	case 0:		/* pipe is not present */
 		switch (g_nMotionBus & 0x00000001)     /* look at the new pipe present status */
@@ -1609,8 +1419,6 @@ void Inspection_Process_Control()
 
 		case 1:		/* pipe is present. */
 			PipeInProcess();
-			g_nStation1Window = g_nNextWindow;
-			g_nStation1JointNum = g_nJointNum;
 			break;
 		}
 		break;
@@ -1629,7 +1437,6 @@ void Inspection_Process_Control()
 
 	}
 
-	g_nOldMotionBus = g_nMotionBus;
 #endif
 }
 
@@ -1647,6 +1454,7 @@ void Inspection_Process_Control()
 
 int FindWhichSlave(int nChannel)
 {
+#if 0
 	int sum=0, nSlave=0, i;
 
 	for (i=0; i<10; i++)
@@ -1659,13 +1467,15 @@ int FindWhichSlave(int nChannel)
 			break;
 		}
 	}
+#endif
 
-	return nSlave;
+	return 0;	//nSlave;
 }
 
 
 int FindSlaveChannel(int nChannel)
 {
+#if 0
 	int sum=0, nSlaveCh=0, i;
 
 	for (i=0; i<10; i++)
@@ -1678,24 +1488,27 @@ int FindSlaveChannel(int nChannel)
 			break;
 		}
 	}
+#endif
 
-	return nSlaveCh;
+	return 0;	//nSlaveCh;
 }
 
 
 int FindDisplayChannel(int nArray, int nArrayCh)
 {
+#if 0
 	int nDispCh = nArrayCh, i;
 
 	for (i=0; i<nArray; i++)
 	{
 		nDispCh += g_ArrayScanNum[i];
 	}
+#endif
 
-	return nDispCh;
+	return 0;	//nDispCh;
 }
 
-#if 1
+#if 0
 void ComputeTranFocusDelay(float thickness, float zf_value, float water_path, float incident_angle, WORD *td)
 {
      const double PI=3.1415926535897932;

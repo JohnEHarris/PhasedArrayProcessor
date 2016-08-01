@@ -27,18 +27,26 @@ enum IdOdTypes {eId, eOd};
 #define NC_NX_CMD_ID		1
 
 /*****************	STRUCTURES	*********************/
+// A channel is a UT echo or reflection assigned a physical position in the transducer.
+// Since this is a multiplexed system, the same channel repeats eventually.
+// The number of A-Scans that occur before the repeat is the SeqModulo.
+// This number of A-Scans is a data frame.
+// Raw data begins with the first channel of the frame. This channel can be of type NONE
+// For this particular implementation it is assumed that there are up to 32 A-Scans in a data frame.
+// bSeqModulo would be 32 in this case.
 typedef struct 
 	{
-    BYTE bMsgID;	// = eIdataTypes
-    BYTE bSpare1; 
-    BYTE bSeq; //sequence number (zero-based) of the first data point
-    BYTE bDin; //digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+    BYTE bMsgID;		// = eIdataTypes
+	BYTE bChannelTypes;	// eg. Long, Wall, Tran, Oblq. All long type have same focal law. All tran types have same focal law, etc
+    BYTE bChannelRepeats;	//how many times a channel type repeats during a frame before coming to the 1st virtual channel again
+	BYTE bFramesInDataPacket;	// bFramesInDataPacket*bChannelRepeats*bChannelTypes <= 128
+    BYTE bDin;			//digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+    BYTE bSpare[3];
     WORD wMsgSeqCnt;
-    WORD wLocation; //x location in motion pulses
-    WORD wClock; //unit in .2048ms
-    WORD wPeriod; //unit in .2048ms
-    BYTE bSpare2[4];
-	} SDataHead; //16 bytes
+    WORD wLocation;		//x location in motion pulses
+    WORD wClock;		//unit in .2048ms
+    WORD wPeriod;		//unit in .2048ms
+	} SDataHead;		//16 bytes
 
 
 typedef struct 
@@ -52,9 +60,9 @@ typedef struct
 
 typedef struct 
 	{
-    SDataHead DataHead; // 16 bytes
-    SRawData RawData[128];  // raw data of 128 consecutive pulses 128*8=1024
-	} SRawDataPacket; //1040 bytes
+    SDataHead DataHead;		// 16 bytes
+    SRawData RawData[128];	// raw data of 128 consecutive pulses 128*8=1024
+	} SRawDataPacket;		//1040 bytes
 
 typedef struct 
 	{

@@ -587,7 +587,7 @@ void CServerSocket::OnClose(int nErrorCode)
 	// KillpClientConnectionStruct();
 
 	CAsyncSocket::OnClose(nErrorCode);
-#if 0
+#if 1
 	// kill the socket's thread  .. a partial shutdown
 	if (m_pSCC)
 		{

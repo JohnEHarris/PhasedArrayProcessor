@@ -216,7 +216,7 @@ int CServerSocketOwnerThread::ExitInstance()
 
 #endif
 				m_pSCC->pSocket->KillpClientConnectionStruct();
-				//delete m_pSCC->pSocket; corrupts heap
+				//delete m_pSCC->pSocket; corrupts heap STOPPED here on 2016-08-01 jeh .. need to delete?
 				m_pSCC->pSocket = NULL;
 				//delete m_pSCC->pSocket; corrupts heap
 				}

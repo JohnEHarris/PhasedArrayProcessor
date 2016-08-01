@@ -54,7 +54,7 @@ public:
 		
 	int m_nInspectMode;
 	int m_nMotionTime;
-	int m_nFakeDataSeqNumber;
+	//int m_nFakeDataSeqNumber;
 	int m_nFrameCount;	// every 16th frame send data to the PAG/Receiver
 	int m_nFakeDataCallCount;	// how many times fake data called.
 

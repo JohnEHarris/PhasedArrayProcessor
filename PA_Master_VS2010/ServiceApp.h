@@ -32,9 +32,9 @@
 #include "CCM_PAG.h"					//12-May-16 jeh
 #include "vChannel.h"					//02-Jun-16 jeh
 
-#define SERVICE_APP_VERSION		1.0.01
 
 /*
+see ServiceApp.cpp
 1.0.01			2016-06-14 Nc Nx working with fake data input, good output to PAG
 */
 

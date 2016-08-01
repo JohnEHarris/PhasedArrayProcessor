@@ -41,7 +41,7 @@ managed classes.
 
 
 #define CURRENT_VERSION		"Version 1.1"
-#define BUILD_VERSION			1
+#define BUILD_VERSION			2
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           1
@@ -51,6 +51,7 @@ managed classes.
 #if 0
 1.1.002			15-Jul-16	Eliminate Yanming code not being used
 1.1.001			May 2016	New Phased Array 2
+1.0.01			2016-06-14 Nc Nx working with fake data input, good output to PAG - from header file.
 1.0.001			12-Mar-2013	Add Timer Tick to PAM to restart PAG connection attempt if not connected. PAM and PAG code the same almost
 							Steers commands with MMI_CMD variables PAM_Number and Inst_Number_In_PAM
 

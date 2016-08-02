@@ -654,7 +654,7 @@ void CServiceApp::ShutDown(void)
 void CServiceApp :: Run( DWORD, LPTSTR *) 
 	{	// args not used in this small example
 		// report to the SCM that we're about to start
-	int i;
+	int i,j,k;
 	CString s;
 	int nDebugShutdown = 0;		// manual way to shut down when running the debugger
 	// To shutdown in debugger, set nDebugShutdown = 1 inside the Run() infinite loop
@@ -834,7 +834,7 @@ WHILE_TARGET:
 	pNetBuf->bConnected[0] = 1;
 
 	// testing only
-	int j;
+	//int j;
 
 	// for hybrid code of my server and Yangming's client connections, jump to the old while() loop
 	// goto YG_RUN;
@@ -862,8 +862,10 @@ WHILE_TARGET:
 				// Server 0 by convention is the server receiving data packets from the instruments
 				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 					{
-					if(stSCM[i].pClientConnection[j])
+					k = (int) stSCM[i].pClientConnection[j];
+					if(k > 0)	// break for debug
 						{	// empty the linked lists
+						k = (int) stSCM[i].pClientConnection[j]->pSocket;	//debug
 						if ( (stSCM[i].pClientConnection[j]->pSocket)	) // && (stSCM[i].nComThreadExited[J] == 0))
 							{
 							// received data

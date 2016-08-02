@@ -101,10 +101,10 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	m_ConnectionSocket.m_pstSCM		= this->m_pMySCM->m_pstSCM;
 	m_ConnectionSocket.m_pSCC		= this->m_pSCC;		//m_pMySCM->m_pstSCM->pClientConnection[0]; // Server's client connection
 	m_ConnectionSocket.m_pSCC->pServerSocketOwnerThread = this;
-	m_ConnectionSocket.m_pSCC->pSocket = &m_ConnectionSocket;
 	// m_hConnectionSocket = Asocket.Detach(); set when thread created suspended
 	// attached via the handle to the temporary socket generated in the OnAccept() operation in CServerSocket
 	m_ConnectionSocket.Attach(m_hConnectionSocket, FD_READ | FD_CLOSE );
+	m_ConnectionSocket.m_pSCC->pSocket = &m_ConnectionSocket;
 	m_ConnectionSocket.GetPeerName(Ip4,uPort);	// connecting clients info??
 	m_ConnectionSocket.SetClientIp4(Ip4);
 	m_ConnectionSocket.m_pSCC->sClientIP4 = Ip4;
@@ -198,28 +198,37 @@ int CServerSocketOwnerThread::ExitInstance()
 	int i;
 	if ((m_nMyServer >= 0) && (m_nMyServer < MAX_SERVERS) )
 		{
-		if ( m_pSCC)
+		if (m_ConnectionSocket)
 			{
-
-			if ( m_pSCC->pSocket)
+			if (m_ConnectionSocket.ShutDown(2))
 				{
-				m_pSCC->pSocket->ShutDown(2);
-				m_pSCC->pSocket->Close();
+				s = _T("Shutdown of client socket was successful\n");
+				TRACE(s);
+				m_ConnectionSocket.Close();
+				}
+			else
+				{
+				s = _T("Shutdown of client socket failed\n");
+				TRACE(s);
+				}
+			}
+		if ( m_pSCC)	// this points to pClientConnection
+			{
 #ifdef _DEBUG
-				s.Format(_T("ServerSocket[%d][%d] closed\n"),m_nMyServer, m_nThreadIndex);
-				TRACE(s);
-				int n = m_pSCC->uPacketsSent;
-				int m = m_pSCC->uPacketsReceived;
-				int k = m_pSCC->uUnsentPackets;
-				s.Format(_T("Packets Sent = %5d, Packets Received = %5d, Packets Unsent = %5d\n"), n, m, k);
-				TRACE(s);
+			s.Format(_T("ServerSocket[%d][%d] closed\n"),m_nMyServer, m_nThreadIndex);
+			TRACE(s);
+			int n = m_pSCC->uPacketsSent;
+			int m = m_pSCC->uPacketsReceived;
+			int k = m_pSCC->uUnsentPackets;
+			s.Format(_T("Packets Sent = %5d, Packets Received = %5d, Packets Unsent = %5d\n"), n, m, k);
+			TRACE(s);
 
 #endif
-				m_pSCC->pSocket->KillpClientConnectionStruct();
-				//delete m_pSCC->pSocket; corrupts heap STOPPED here on 2016-08-01 jeh .. need to delete?
-				m_pSCC->pSocket = NULL;
-				//delete m_pSCC->pSocket; corrupts heap
-				}
+			m_pSCC->pSocket->KillpClientConnectionStruct();
+			//delete m_pSCC->pSocket; corrupts heap STOPPED here on 2016-08-01 jeh .. need to delete?
+			m_pSCC->pSocket = NULL;
+			//delete m_pSCC->pSocket; corrupts heap
+			}
 			Sleep(20);
 			m_pSCC->bConnected = (BYTE) eNotConnected;
 			//delete m_pSCC;	// wait til destructor
@@ -243,11 +252,11 @@ int CServerSocketOwnerThread::ExitInstance()
 				}
 #endif
 
-			}
 #ifdef _DEBUG
 		s.Format(_T("CServerSocketOwnerThread::ExitInstance[%d][%d]\n"),m_nMyServer, m_nThreadIndex);
 		TRACE(s);
 #endif
+
 		if (m_pstSCM)
 			{
 			if (m_pstSCM->pClientConnection[m_nThreadIndex])
@@ -258,9 +267,10 @@ int CServerSocketOwnerThread::ExitInstance()
 				m_pstSCM->nComThreadExited[m_nThreadIndex] = 1;
 				}
 			}
+		return CWinThread::ExitInstance();
 		}
-	return CWinThread::ExitInstance();
 	}
+
 
 BEGIN_MESSAGE_MAP(CServerSocketOwnerThread, CWinThread)
 

@@ -291,7 +291,9 @@ void CServerSocket::OnAccept(int nErrorCode)
 	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] == NULL)	// first time thru
 		{
 		pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
+
 		OnAcceptInitializeConnectionStats(pscc,nMyServer, nClientPortIndex);
+
 		pscc->sClientIP4 = Ip4;
 #ifdef THIS_IS_SERVICE_APP
 		s.Format(_T("PAMSrv[%d]:Instrument[%d]"), nMyServer, nClientPortIndex);
@@ -303,7 +305,9 @@ void CServerSocket::OnAccept(int nErrorCode)
 		pscc->uClientPort = uPort;
 		m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
 		}
+
 	else 	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread)
+
 		{
 		TRACE("CServerSocketOwnerThread ALREADY exists... kill it\n");
 		CWinThread * pThread1 = (CWinThread *)m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread;

@@ -35,7 +35,7 @@ CServerSocketOwnerThread::CServerSocketOwnerThread()
 //	m_ConnectionSocketPAM.m_pThread = NULL;
 	nDebug = 0;
 	m_nConfigMsgQty = 0;
-	m_pHwTimer = new CHwTimer();
+	//m_pHwTimer = new CHwTimer();
 	}
 
 CServerSocketOwnerThread::~CServerSocketOwnerThread()
@@ -226,7 +226,7 @@ int CServerSocketOwnerThread::ExitInstance()
 #endif
 			m_pSCC->pSocket->KillpClientConnectionStruct();
 			//delete m_pSCC->pSocket; corrupts heap STOPPED here on 2016-08-01 jeh .. need to delete?
-			m_pSCC->pSocket = NULL;
+			//m_pSCC->pSocket = NULL;
 			//delete m_pSCC->pSocket; corrupts heap
 			}
 			Sleep(20);
@@ -248,6 +248,11 @@ int CServerSocketOwnerThread::ExitInstance()
 				{
 				s.Format(_T("CServerSocketOwnerThread::ExitInstance[%d][%d] failed to kill pServerRcvListThread\n"),
 					m_nMyServer, m_nThreadIndex);
+				TRACE(s);
+				}
+			else
+				{
+				s.Format(_T("CServerSocketOwnerThread::ExitInstance killed ServerRcvListThread in less than %d ms\n"), i);
 				TRACE(s);
 				}
 #endif
@@ -276,6 +281,7 @@ BEGIN_MESSAGE_MAP(CServerSocketOwnerThread, CWinThread)
 
 	//ON_THREAD_MESSAGE(WM_USER_INIT_COMMUNICATION_THREAD,InitCommunicationThread)
 	ON_THREAD_MESSAGE(WM_USER_SERVER_SEND_PACKET, TransmitPackets)
+	ON_THREAD_MESSAGE(WM_USER_KILL_OWNER_SOCKET, Exit2)
 
 END_MESSAGE_MAP()
 
@@ -310,6 +316,25 @@ afx_msg void CServerSocketOwnerThread::InitCommunicationThread(WPARAM w, LPARAM 
 	}
 #endif
 
+afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
+	{
+	int nReturn;
+	CString t, s = _T("CServerSocketOwnerThread::ExitInstance() called by ");
+	switch (w)
+		{
+	case 0:
+	default:
+		s += _T("unknown return = ");	break;
+	case 1:
+		s += _T(" CServerSocket::OnClose() return = ");	break;
+	case 2:
+		s += _T(" CServerSocket::OnAccept() return = ");	break;
+		}
+	nReturn = ExitInstance();	//thread message does not allow return of anything but void
+	t.Format(_T("%d\n"), nReturn);
+	s += t;
+	TRACE(s);
+	}
 
 // A message or messages have been placed into the linked list controlled by this thread
 // This function will empty the linked list by sending its contents out using the associated

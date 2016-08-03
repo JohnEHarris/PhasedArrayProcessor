@@ -309,13 +309,16 @@ void CServerSocket::OnAccept(int nErrorCode)
 	else 	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread)
 
 		{
+		CAsyncSocket::OnClose(nErrorCode);
 		TRACE("CServerSocketOwnerThread ALREADY exists... kill it\n");
 		CWinThread * pThread1 = (CWinThread *)m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread;
-		PostThreadMessage(pThread1->m_nThreadID,WM_QUIT, 0L, 0L);	// this will cause com thread to execute ExitInstance()
+		// wParam = 2 from OnAccept, 1= from OnClose
+		PostThreadMessage(pThread1->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, 2L, 0L);	// this will cause com thread to execute ExitInstance()
 		// ExitInstance() will close the socket and delete the pClientConnection structure
 		for ( i = 0; i <50; i++)
 			{
-			if (m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex])	break;
+			if (m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex])	
+				break;
 			Sleep(10);	// pretty bad to sleep inside an OS call back function!!!!
 			}
 		if ( i == 50) ASSERT(0);
@@ -597,7 +600,8 @@ void CServerSocket::OnClose(int nErrorCode)
 		{
 		if (m_pSCC->pServerSocketOwnerThread)
 			{
-			PostThreadMessage(m_pSCC->pServerSocketOwnerThread->m_nThreadID,WM_QUIT, 0L, 0L);
+			// wParam = 0 from OnAccept, 1= from OnClose
+			PostThreadMessage(m_pSCC->pServerSocketOwnerThread->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, 1L, 0L);
 			}
 		Sleep(200);
 		}

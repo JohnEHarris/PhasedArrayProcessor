@@ -213,6 +213,7 @@ CServiceApp::~CServiceApp()
 	
 	ShutDown(); // first place when closing dos window
 
+	Sleep(1000);
 
 	if( m_hStop )
 		::SetEvent(m_hStop);
@@ -575,6 +576,8 @@ void CServiceApp::ShutDown(void)
 //	m_hStop = 0;
 
 
+	// need to kill the server listen thread and socket
+
 #if 1
 	for ( j = 0; j < MAX_SERVERS; j++)
 		{
@@ -588,7 +591,9 @@ void CServiceApp::ShutDown(void)
 					delete stSCM[j].pClientConnection[i]->pvChannel[k];
 				}
 			if (stSCM[j].pClientConnection[i])
+				{
 				delete stSCM[j].pClientConnection[i];
+				}
 			}
 		}
 #endif
@@ -862,7 +867,9 @@ WHILE_TARGET:
 				// Server 0 by convention is the server receiving data packets from the instruments
 				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 					{
+#if 0
 					k = (int) stSCM[i].pClientConnection[j];
+					if (stSCM[i].nComThreadExited[J] != 0) k = 0;
 					if(k > 0)	// break for debug
 						{	// empty the linked lists
 						k = (int) stSCM[i].pClientConnection[j]->pSocket;	//debug
@@ -886,7 +893,10 @@ WHILE_TARGET:
 							stSCM[i].pClientConnection[j]->pSocket->UnLockSendPktList();
 							}
 						}	// pClientConnection[j]
+#endif
+
 					Sleep(10);
+
 					}	// j loop
 				}
 			}

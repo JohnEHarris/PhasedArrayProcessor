@@ -272,8 +272,8 @@ int CServerSocketOwnerThread::ExitInstance()
 				m_pstSCM->nComThreadExited[m_nThreadIndex] = 1;
 				}
 			}
-		return CWinThread::ExitInstance();
 		}
+	return CWinThread::ExitInstance();
 	}
 
 

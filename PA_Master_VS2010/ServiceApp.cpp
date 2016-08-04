@@ -205,7 +205,7 @@ CServiceApp::CServiceApp()
 
 CServiceApp::~CServiceApp()
 	{
-	//int i;
+	int i = 1;	// FOR DEBUG, lock in loop before stop event
 	//Stop();
 
 	if (m_nFakeDataExists)
@@ -213,7 +213,10 @@ CServiceApp::~CServiceApp()
 	
 	ShutDown(); // first place when closing dos window
 
-	Sleep(1000);
+	while (i)
+		{
+		Sleep(1000);
+		}
 
 	if( m_hStop )
 		::SetEvent(m_hStop);
@@ -569,19 +572,41 @@ int CServiceApp::ExitInstance()
 void CServiceApp::ShutDown(void)
 	{
 	int i, j,k;
+	CString s;
+	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM;
 
-//	ReportStatus(SERVICE_STOP_PENDING, 11000);
-//	if( m_hStop )
-//		::SetEvent(m_hStop);
-//	m_hStop = 0;
-
-
-	// need to kill the server listen thread and socket
+	// need to kill the server listen thread and socket.. done below in server shut down routine
 
 #if 1
 	for ( j = 0; j < MAX_SERVERS; j++)
 		{
-		if (NULL == &stSCM[j]) continue;
+		pstSCM = &stSCM[j];
+#if 1
+		if (NULL == pstSCM) goto CLIENT_LOOP;
+		// Kill listener threads and sockets
+		if ( pstSCM->pServerListenSocket)
+			{
+			if (pstSCM->pServerListenSocket->ShutDown(2) )
+				{
+				s.Format(_T("Shutdown of listener socket[%d] was successful\n"), j);
+				TRACE(s);
+				pstSCM->pServerListenSocket->Close();
+				}
+			else
+				{
+				s.Format(_T("Shutdown of listener socket[%d] failed\n"), j);
+				TRACE(s);
+				}
+			}
+		if (pstSCM->pServerListenThread)
+			{
+			pstSCM->pServerListenThread->PostThreadMessage(WM_QUIT, 0L, 0L);
+			}
+
+CLIENT_LOOP:
+#endif
+
+
 		for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 			{
 			if ( NULL == stSCM[j].pClientConnection[i]) continue;
@@ -616,7 +641,6 @@ void CServiceApp::ShutDown(void)
 
 	//Sleep(300);
 	// This code taken from void CTscanDlg::OnCancel() - the PAG
-	CString s;
 
 	for ( i = 0; i < MAX_CLIENTS; i++)
 		{
@@ -628,7 +652,9 @@ void CServiceApp::ShutDown(void)
 	s = _T("Here we are");
 	//if (pCCM_SysCp)
 	if (pCCM_PAG)
-		{		delete pCCM_PAG;	pCCM_PAG = NULL;		}
+		{
+		// delete send thread and critical sections, delete receive thread and critical sections
+		delete pCCM_PAG;	pCCM_PAG = NULL;		}
 
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{
@@ -641,11 +667,13 @@ void CServiceApp::ShutDown(void)
 		pSCM[i] = NULL;
 		//Sleep(10);
 		}
-		
+
+#if 0
 	ReportStatus(SERVICE_STOP_PENDING, 11000);
 	if( m_hStop )
 		::SetEvent(m_hStop);
 	m_hStop = 0;
+#endif
 
 	}
 
@@ -867,9 +895,10 @@ WHILE_TARGET:
 				// Server 0 by convention is the server receiving data packets from the instruments
 				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 					{
-#if 0
+#if 1
 					k = (int) stSCM[i].pClientConnection[j];
-					if (stSCM[i].nComThreadExited[J] != 0) k = 0;
+					if (stSCM[i].pSCM->m_pstSCM[i].nComThreadExited[j] == 1)
+						continue;
 					if(k > 0)	// break for debug
 						{	// empty the linked lists
 						k = (int) stSCM[i].pClientConnection[j]->pSocket;	//debug
@@ -880,6 +909,7 @@ WHILE_TARGET:
 							while (stSCM[i].pClientConnection[j]->pRcvPktList->GetCount())
 								{
 								pv = stSCM[i].pClientConnection[j]->pRcvPktList->RemoveHead();
+								// normally would send data to PAG here???
 								delete pv;
 								}
 							stSCM[i].pClientConnection[j]->pSocket->UnLockRcvPktList();
@@ -888,6 +918,7 @@ WHILE_TARGET:
 							while (stSCM[i].pClientConnection[j]->pSendPktList->GetCount())
 								{
 								pv = stSCM[i].pClientConnection[j]->pSendPktList->RemoveHead();
+								// Normally would send commands to Instrument here
 								delete pv;
 								}
 							stSCM[i].pClientConnection[j]->pSocket->UnLockSendPktList();
@@ -1113,6 +1144,38 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 		}
 		s.Format(_T("\nSERVER CONNECTION MANAGEMENT has completed for MAX_SERVERS = %d \n"), MAX_SERVERS);
 		TRACE(s);
+	}
+
+// undo the initialization
+int KillServerConnectionManagement(int nServer)
+	{
+	int nError, nResult;
+	int i;
+	CString s;
+
+	nResult = 0;
+	if (gnMaxServers > MAX_SERVERS)
+		{
+		TRACE1("gnMaxServers = %d greater than MAX_SERVERS\n", gnMaxServers);
+		gnMaxServers = MAX_SERVERS;
+		}
+	for ( i = 0; i < gnMaxServers; i++)
+		{
+
+		if (pSCM[i])
+			{	// kill this server
+			nError = pSCM[i]->StopListenerThread(i);
+			if (nError)
+				{
+				s.Format(_T("Failed to stop listener Thread[%d], ERROR = %d\n"), i, nError);
+				TRACE(s);
+				delete pSCM[i];	// delete anyway
+				pSCM[i] = NULL;
+				nResult |= nError;
+				}
+			}
+		}
+	return nResult;
 	}
 
 

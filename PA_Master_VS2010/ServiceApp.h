@@ -110,6 +110,7 @@ public:
 		// the same subnet as the servers.
 
 	void InitializeServerConnectionManagement(void);	// jeh taken from PAG/TScanDlg.cpp and modified
+	int KillServerConnectionManagement(int nServer);	// undo what Initialize created
 	void InitializeClientConnectionManagement(void);
 	void ShutDown(void);
 

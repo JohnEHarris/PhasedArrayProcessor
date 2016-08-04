@@ -140,7 +140,7 @@ enum {eMasterNotPresent, eMasterNotConnected, eMasterConnected };
 //
 enum {eInstrumentNotPresent, eInstrumentNotConnected, eInstrumentConnected, eInstrumentConfigured };
 // Configured means the instrument has received a configuration file.
-enum { eNotConnected, eNotConfigured, eConfigured };
+enum { eNotConnected = 0, eNotConfigured, eConfigured };
 
 
 typedef struct

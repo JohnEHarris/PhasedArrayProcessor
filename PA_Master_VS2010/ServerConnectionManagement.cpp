@@ -213,7 +213,7 @@ int CServerConnectionManagement::StopListenerThread(int nMyServer)
 // 20-Sep-12 Let the threads close/destroy all object they control in their ExitInstance() routine.
 int CServerConnectionManagement::ServerShutDown(int nMyServer)
 	{
-	int i, j;
+	int i, j, nReturn;
 	CString s;
 	CWinThread *pThread;
 //	StopListenerThread(nMyServer);
@@ -221,7 +221,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 	if (nMyServer >= MAX_SERVERS)				return 3;
 	if (NULL == m_pstSCM)						return 3;
 	m_pstSCM->nSeverShutDownFlag = 1;
-	if (NULL == m_pstSCM->pServerListenThread)	return 3;
+	if (NULL == m_pstSCM->pServerListenThread)	nReturn = 3;
 
 #if 0
 	// global shutdown flag now handles this
@@ -237,7 +237,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 
 	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
 		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);	
-	// post a message to init the listener thread. Feed in a pointer to this instance of SCM
+	// post a message to stop the listener thread. Feed in a pointer to this instance of SCM
 	//m_pstSCM->pServerListenThread->PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
 	//Sleep(20);
 

@@ -57,20 +57,44 @@ BOOL CServerListenThread::InitInstance()
 int CServerListenThread::ExitInstance()
 	{
 	// TODO:  perform any per-thread cleanup here
+	int Error;
+	CString s;
+
+	if (m_pstSCM == NULL)	goto EXIT;
+	if (m_pstSCM->pServerListenThread == NULL)	goto EXIT;
+
 	if ( m_pListenSocket)
 		{
-		m_pListenSocket->ShutDown(2);
-		m_pListenSocket->Close();
+		if (m_pstSCM->pServerListenSocket->ShutDown(2) )
+			{
+			s = _T("Shutdown of listener socket was successful\n");
+			TRACE(s);
+			m_pstSCM->pServerListenSocket->Close();
+			}
+		else
+			{
+			Error = GetLastError();	// WSAENOTCONN                      10057L
+			s .Format(_T("Shutdown of listener socket[%d] failed\n"), Error);
+			TRACE(s);
+			}
 		delete m_pListenSocket;
 		m_pListenSocket = NULL;
+		TRACE("Listening socket deleted\n");
 		}
+		
+	if (m_pstSCM->pServerListenThread)
+		{
+		m_pstSCM->pServerListenThread = NULL;
+		}
+
+EXIT:
 	return CWinThread::ExitInstance();
 	}
 
 BEGIN_MESSAGE_MAP(CServerListenThread, CWinThread)
 
 	ON_THREAD_MESSAGE(WM_USER_INIT_LISTNER_THREAD,InitListnerThread)
-	ON_THREAD_MESSAGE(WM_USER_STOP_LISTNER_THREAD,StopListnerThread)
+	//ON_THREAD_MESSAGE(WM_USER_STOP_LISTNER_THREAD,StopListnerThread)
 	ON_THREAD_MESSAGE(WM_USER_DO_NOTHING,DoNothing)
 	
 
@@ -172,6 +196,7 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 
 	}
 
+#if 0
 afx_msg void CServerListenThread::StopListnerThread(WPARAM w, LPARAM lParam)
 	{
 	if (m_pstSCM == NULL)	return;
@@ -185,6 +210,7 @@ afx_msg void CServerListenThread::StopListnerThread(WPARAM w, LPARAM lParam)
 	CWinThread *pThread = this;
 	PostThreadMessage(WM_QUIT, 0L, 0L);
 	}
+#endif
 
 // debugging aid
 afx_msg void CServerListenThread::DoNothing(WPARAM w, LPARAM lParam)

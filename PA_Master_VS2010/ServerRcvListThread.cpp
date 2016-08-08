@@ -118,10 +118,12 @@ BOOL CServerRcvListThread::InitInstance()
 #ifdef THIS_IS_SERVICE_APP
 
 	CServerRcvListThreadBase::InitInstance();
+#if 0
 		s.Format(_T("Instrument Client[%d] accepted to server on socket %s : %d\n"), m_nThreadIndex, 
 			m_ConnectionSocket.m_pSCC->sClientIP4, m_ConnectionSocket.m_pSCC->uClientPort); 
 		TRACE(s);
 		TRACE(m_ConnectionSocket.m_pSCC->szSocketName);
+#endif
 		m_pElapseTimer = new CHwTimer();
 
 		//InitRunningAverage(0,0);
@@ -146,19 +148,15 @@ int CServerRcvListThread::ExitInstance()
 	// return CServerRcvListThreadBase::ExitInstance();
 	CString s = _T("");
 	int i = 0;
+	void *pV;
+
 #ifdef THIS_IS_SERVICE_APP
 	if (m_pElapseTimer)
 		{
 		delete m_pElapseTimer;
 		m_pElapseTimer = NULL;
 		}
-#if 0
-	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
-		{
-		if (m_pRunAvg[i])	delete m_pRunAvg[i];
-		m_pRunAvg[i] = NULL;
-		}
-#endif
+
 	// close and or delete everything the list thread created jeh 2016-08-01
 	// delete the client connection associated with this  thread see 
 	// pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
@@ -172,7 +170,10 @@ int CServerRcvListThread::ExitInstance()
 				delete m_pSCC->pvChannel[i];
 				m_pSCC->pvChannel[i] = NULL;
 				}
-			}
+			}	// for loop
+		// release storage and critical sections
+		// socket object belongs to ServerSockerOwnerThread so must have it to kill the linked lists
+		
 		}
 
 

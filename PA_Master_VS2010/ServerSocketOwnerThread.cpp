@@ -29,9 +29,9 @@ IMPLEMENT_DYNCREATE(CServerSocketOwnerThread, CWinThread)
 
 CServerSocketOwnerThread::CServerSocketOwnerThread()
 	{
-	m_pMySCM = NULL;
-	m_pstSCM = NULL;
-	m_ConnectionSocket.m_pThread = NULL;
+	m_pMySCM = NULL;	// managing class ptr
+	m_pstSCM = NULL;	// managing structure ptr
+	m_ConnectionSocket.m_pThread = NULL;	// ServerSocket on stack
 //	m_ConnectionSocketPAM.m_pThread = NULL;
 	nDebug = 0;
 	m_nConfigMsgQty = 0;
@@ -55,6 +55,8 @@ CServerSocketOwnerThread::~CServerSocketOwnerThread()
 	TRACE(s);
 	if (m_pHwTimer)		delete m_pHwTimer;
 	m_pHwTimer = NULL;
+	//m_ConnectionSocket is on stack but has elements that were created with new operator
+	m_ConnectionSocket.m_pSCC->pSocket->KillpClientConnectionStruct();
 	}
 
 
@@ -75,7 +77,7 @@ CServerSocketOwnerThread::~CServerSocketOwnerThread()
 		Sleep(10);
 		// Make the correct socket type selection in the thread resume
 		// chooses between CServerSocket and CServerSocketPA_Master
-		pThread->ResumeThread(); -- this causes InitInstance to run
+		pThread->ResumeThread(); //-- this causes InitInstance to run
 		}
 #endif
 
@@ -93,7 +95,9 @@ BOOL CServerSocketOwnerThread::InitInstance()
 #endif
 	uPort = 5;
 
+	// HEADER FILE definition CServerSocket m_ConnectionSocket;			// server's connection to the client .. on stack
 	//m_ConnectionSocket.Init();	// since created on stack a member variable, Init() ran in constructor
+
 	m_ConnectionSocket.m_nMyThreadIndex = m_nThreadIndex;
 	m_ConnectionSocket.m_pThread	= this;
 	m_ConnectionSocket.m_pSCM		= this->m_pMySCM;	// ST_SERVER_CONNECTION_MANAGEMENT
@@ -102,8 +106,8 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	m_ConnectionSocket.m_pSCC		= this->m_pSCC;		//m_pMySCM->m_pstSCM->pClientConnection[0]; // Server's client connection
 	m_ConnectionSocket.m_pSCC->pServerSocketOwnerThread = this;
 	// m_hConnectionSocket = Asocket.Detach(); set when thread created suspended
-	// attached via the handle to the temporary socket generated in the OnAccept() operation in CServerSocket
-	m_ConnectionSocket.Attach(m_hConnectionSocket, FD_READ | FD_CLOSE );
+	//m_ConnectionSocket.Attach(m_hConnectionSocket, FD_READ | FD_CLOSE ); take default setting on next line
+	m_ConnectionSocket.Attach(m_hConnectionSocket);
 	m_ConnectionSocket.m_pSCC->pSocket = &m_ConnectionSocket;
 	m_ConnectionSocket.GetPeerName(Ip4,uPort);	// connecting clients info??
 	m_ConnectionSocket.SetClientIp4(Ip4);
@@ -140,6 +144,8 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	// PAM if here
 	CServerRcvListThreadBase *pThread =
 
+		// one rcv list thread for each client connection
+		// create suspended in theApp and set pointers to structures here
 		m_pSCC->pServerRcvListThread = theApp.CreateServerReceiverThread(m_nMyServer, m_pSCC->nSSRcvListThreadPriority);
 		m_pSCC->ServerRcvListThreadID = pThread->m_nThreadID;
 		// PAM if here
@@ -164,9 +170,9 @@ BOOL CServerSocketOwnerThread::InitInstance()
 		pThread->m_pstSCM		= this->m_pMySCM->m_pstSCM;
 		pThread->m_nMyServer	= this->m_pMySCM->m_pstSCM->pSCM->m_nMyServer;
 		pThread->m_pSCC			= this->m_pMySCM->m_pstSCM->pClientConnection[m_nThreadIndex];
-		pThread->m_pSCC->pSocket = &m_ConnectionSocket;
+//		pThread->m_pSCC->pSocket = &m_ConnectionSocket;	// point the socket to the ServerSocket on our stack in this thread
 		pThread->m_nThreadIndex	= m_nThreadIndex;
-		pThread->m_hConnectionSocket = m_hConnectionSocket;	// hand off the socket we just accepted to the thread
+//		pThread->m_hConnectionSocket = m_hConnectionSocket;	// hand off the socket we just accepted to the thread
 		//pThread->m_ConnectionSocket = this->m_ConnectionSocket;
 		Sleep(10);
 		// Make the correct socket type selection in the thread resume
@@ -233,6 +239,9 @@ int CServerSocketOwnerThread::ExitInstance()
 			m_pSCC->bConnected = (BYTE) eNotConnected;
 			//delete m_pSCC;	// wait til destructor
 			//m_pSCC = NULL;
+			//
+			m_pstSCM->nComThreadExited[m_nThreadIndex] = 1;
+
 #if 1
 			if (m_pSCC->pServerRcvListThread)
 				{

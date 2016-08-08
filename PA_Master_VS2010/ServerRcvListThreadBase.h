@@ -40,8 +40,8 @@ public:
 	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// managing structure ptr
 	ST_SERVERS_CLIENT_CONNECTION *m_pSCC;		// ptr to my connection info/statistics/objects
 
-	SOCKET m_hConnectionSocket;
-	CServerSocket m_ConnectionSocket;				// server's connection to the client .. on stack
+	//SOCKET m_hConnectionSocket;
+	//CServerSocket m_ConnectionSocket;				// server's connection to the client .. on stack
 	//CString m_Ip4;
 	//UINT m_uPort;
 

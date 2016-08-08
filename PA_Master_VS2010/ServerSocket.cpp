@@ -1,6 +1,7 @@
 // ServerSocket.cpp : implementation file
 //
-
+// The server socket is the connection to the instrument. Idata comes thru this socket. It is owned by the
+// ServerSocketOwner in order to run at that thread's priority.
 #include "stdafx.h"
 // THIS_IS_SERVICE_APP is defined in the PAM project under C++ | Preprocessor Definitions 
 
@@ -11,13 +12,15 @@
 #include "time.h"
 
 // these externs are from Yanming's original project
+#if 0
 extern CCriticalSection g_CriticalSection;
 extern CCriticalSection g_CriticalSection2;
 extern CCriticalSection g_CriticalSectionAscan;
 extern CPtrList g_pTcpListUtData;
 extern CPtrList g_pTcpListUtData2;
 extern CPtrList g_pTcpListAscan;
-extern ASCAN_HEAD_NIOS g_AscanHead;	
+extern ASCAN_HEAD_NIOS g_AscanHead;
+#endif
 
 #else
 
@@ -118,7 +121,6 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// and then see if it is in the static list to know which stSCM[MAX_SERVERS] we belong to
 	m_nOwningThreadType = eListener;
 
-	// another way to id which server I am
 
 #if 0
 	DWORD hMyThreadID = GetCurrentThreadId();
@@ -133,6 +135,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 			}
 		}
 #endif
+	// a better way to id which server I am
+
 
 	for (nMyServer = 0; nMyServer < MAX_SERVERS; nMyServer++)
 		{
@@ -158,7 +162,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		}
 
 
-	CServerSocket Asocket(m_pSCM);	// a temporary Async socket of our fashioning on the stack
+	CServerSocket Asocket(m_pSCM);	// a temporary Async socket of our fashioning ON THE STACK
 	Asocket.m_nOwningThreadType = eListener;
 
 	// ACCEPT the connection from our client into the temporary socket Asocket
@@ -189,7 +193,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 	CString Ip4,s;
 	UINT uPort;
-	int nClientPortIndex;			// which client are we connecting to? Derive from IP address
+	int nClientPortIndex;					// which client are we connecting to? Derive from IP address
 	UINT uClientBaseAddress, uClientBaseAddress2;		// what is the 32 bit index of the 1st PA Master?
 	WORD wClientBaseAddress[8];
 	char *pIpBase = gServerArray[nMyServer].ClientBaseIp;
@@ -227,11 +231,11 @@ void CServerSocket::OnAccept(int nErrorCode)
 	//
 	CstringToChar(Ip4,cIp4);
 	int ntmp = ntohl(inet_addr(cIp4));
-	nClientPortIndex = (ntmp - uClientBaseAddress);
+	nClientPortIndex = (ntmp - uClientBaseAddress);	// 0-n
 
 #ifdef THIS_IS_SERVICE_APP
 	// Assume we know a range of addresses of clients which connected to this server
-	// for example 192.168.10.201 - the first instrument to 192.168.10.208 - the eighth instrument 
+	// for example 192.168.10.201 - the first instrument and 192.168.10.208 - the eighth instrument 
 	// in consecutive IP address order
 	// and assume they all connect to the same nic on the PAM side and thus need their own pClientConnection
 	// From the PeerName IP address we can compute the index for the pClientConnection
@@ -296,9 +300,9 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 		pscc->sClientIP4 = Ip4;
 #ifdef THIS_IS_SERVICE_APP
-		s.Format(_T("PAMSrv[%d]:Instrument[%d]"), nMyServer, nClientPortIndex);
+		s.Format(_T("PAMSrv[%d]:Instrument[%d]  OnAccept() creating critical sections/lists/vChannels"), nMyServer, nClientPortIndex);
 #else
-		s.Format(_T("PAGSrv[%d]:MasterInst[%d]"), nMyServer, nClientPortIndex);
+		s.Format(_T("PAGSrv[%d]:MasterInst[%d] OnAccept"), nMyServer, nClientPortIndex);
 #endif
 		TRACE(s);
 		pscc->szSocketName = s;
@@ -309,18 +313,21 @@ void CServerSocket::OnAccept(int nErrorCode)
 	else 	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread)
 
 		{
-		CAsyncSocket::OnClose(nErrorCode);
+		CAsyncSocket::OnClose(nErrorCode); // OnClose kills ServerSocketOwnerTherad
 		TRACE("CServerSocketOwnerThread ALREADY exists... kill it\n");
 		CWinThread * pThread1 = (CWinThread *)m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread;
 		// wParam = 2 from OnAccept, 1= from OnClose
-		PostThreadMessage(pThread1->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, 2L, 0L);	// this will cause com thread to execute ExitInstance()
-		// ExitInstance() will close the socket and delete the pClientConnection structure
+		PostThreadMessage(pThread1->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, 2L, 0L);	
+		// this will cause ServerSocketOwner to execute ExitInstance()
+		// ExitInstance() will close the socket and delete the pClientConnection structures
 		for ( i = 0; i <50; i++)
 			{
 			if (m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex])	
 				break;
 			Sleep(10);	// pretty bad to sleep inside an OS call back function!!!!
 			}
+		s.Format("Wait loop in OnAccept for ComThreadExited is %d\n", i);
+		TRACE(s);
 		if ( i == 50) ASSERT(0);
 		// redo what was above as if pClientConnection had never existed
 		pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
@@ -335,7 +342,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	else	ASSERT(0);
 
 
-	// create a new thread
+	// create a new thread IN SUSPENDED STATE
 	CServerSocketOwnerThread * pThread =
 	m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread = (CServerSocketOwnerThread *) AfxBeginThread(RUNTIME_CLASS (CServerSocketOwnerThread),
 	   	   					  				                                THREAD_PRIORITY_ABOVE_NORMAL,
@@ -597,7 +604,7 @@ void CServerSocket::OnClose(int nErrorCode)
 #if 1
 
 	// kill the socket's thread  .. a partial shutdown
-	m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] = 1;
+	// m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] = 1;
 	if (m_pSCC)
 		{
 		if (m_pSCC->pServerSocketOwnerThread)
@@ -617,7 +624,7 @@ void CServerSocket::KillpClientConnectionStruct(void)
 	CString s;
 
 	// Kill it at the socket level
-	if (m_pSCC)
+	if ((m_pSCC != NULL) && (*(int*) &m_pSCC !=  0xfeeefeee))
 		{
 		m_pSCC->bConnected = (BYTE) eNotConnected;
 		Sleep(5);
@@ -707,6 +714,8 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 	}
 
 // Initialize the elements of the structure ST_SERVERS_CLIENT_CONNECTION
+// Create critical sections, linked lists and virtual channels
+//
 // Get info from global static structure stSCM[nMyServer]
 void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
 	{

@@ -572,17 +572,21 @@ int CServiceApp::ExitInstance()
 void CServiceApp::ShutDown(void)
 	{
 	int i, j,k;
+	//DWORD Error;
+	void *pV;
 	CString s;
 	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM;
+	k = 1;
 
 	// need to kill the server listen thread and socket.. done below in server shut down routine
 
 #if 1
 	for ( j = 0; j < MAX_SERVERS; j++)
-		{
+		{	// loop MAX_SERVERS
 		pstSCM = &stSCM[j];
-#if 1
+		// let the listener thread kill the listener socket if it still exists
 		if (NULL == pstSCM) goto CLIENT_LOOP;
+#if 0
 		// Kill listener threads and sockets
 		if ( pstSCM->pServerListenSocket)
 			{
@@ -594,17 +598,52 @@ void CServiceApp::ShutDown(void)
 				}
 			else
 				{
+				Error = GetLastError();	// WSAENOTCONN                      10057L
 				s.Format(_T("Shutdown of listener socket[%d] failed\n"), j);
 				TRACE(s);
+				pstSCM->pServerListenSocket->Close();
+				Error = GetLastError();
 				}
 			}
+
+#endif
+		if (pstSCM->pCSDebugIn)
+			{
+			EnterCriticalSection(pstSCM->pCSDebugIn );
+			while (	pstSCM->pInDebugMessageList->GetCount() > 0)
+				{
+				pV = (void *) pstSCM->pInDebugMessageList->RemoveHead();
+				delete pV;
+				}
+			LeaveCriticalSection(pstSCM->pCSDebugIn );
+			delete pstSCM->pInDebugMessageList;
+			}
+
+			
+
+		if (pstSCM->pCSDebugOut)
+			{
+			EnterCriticalSection(pstSCM->pCSDebugOut );
+			while (	pstSCM->pOutDebugMessageList->GetCount() > 0)
+				{
+				pV = (void *) pstSCM->pOutDebugMessageList->RemoveHead();
+				delete pV;
+				}
+			LeaveCriticalSection(pstSCM->pCSDebugOut );
+			delete pstSCM->pOutDebugMessageList;
+			}
+
 		if (pstSCM->pServerListenThread)
 			{
 			pstSCM->pServerListenThread->PostThreadMessage(WM_QUIT, 0L, 0L);
+
+			}
+		while (k)
+			{
+			Sleep(20);	// let debugger follow to ServerListenThread			
 			}
 
 CLIENT_LOOP:
-#endif
 
 
 		for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
@@ -620,7 +659,7 @@ CLIENT_LOOP:
 				delete stSCM[j].pClientConnection[i];
 				}
 			}
-		}
+		}		// loop MAX_SERVERS
 #endif
 
 	if (m_pTestThread)
@@ -649,12 +688,15 @@ CLIENT_LOOP:
 		//Sleep(10);
 		}
 	i = 14;
-	s = _T("Here we are");
+	s = _T("Here we are trying to close CCM stuff");
+	TRACE(s);
 	//if (pCCM_SysCp)
 	if (pCCM_PAG)
 		{
 		// delete send thread and critical sections, delete receive thread and critical sections
-		delete pCCM_PAG;	pCCM_PAG = NULL;		}
+		delete pCCM_PAG;	
+		pCCM_PAG = NULL;		
+		}
 
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{
@@ -1009,9 +1051,10 @@ void CServiceApp :: Stop() {
 	// Note that the service might Sleep(), so we have to tell
 	// the SCM
 	//	"The next operation may take me up to 11 seconds. Please be patient."
-	ReportStatus(SERVICE_STOP_PENDING, 11000);
-	if( m_hStop )
-		::SetEvent(m_hStop);
+	//ReportStatus(SERVICE_STOP_PENDING, 11000);
+	//if( m_hStop )
+	//	::SetEvent(m_hStop);
+	Shutdown();
 	
 }
 /**************************************** Nov 20120 ************************************/
@@ -1718,7 +1761,7 @@ void ComputeTranFocusDelay(float thickness, float zf_value, float water_path, fl
 
 #endif
 
-
+#if 0
 void ShutDownSystem(  )
 {
 
@@ -1799,3 +1842,4 @@ void ShutDownSystem(  )
 
 	RevertToSelf();
 }
+#endif

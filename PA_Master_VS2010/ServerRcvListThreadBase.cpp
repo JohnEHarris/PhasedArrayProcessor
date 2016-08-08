@@ -65,6 +65,7 @@ BOOL CServerRcvListThreadBase::InitInstance()
 	AfxSocketInit();
 #endif
 		{
+#if 0
 		m_ConnectionSocket.Init();
 		m_ConnectionSocket.m_pThread	= this;
 		m_ConnectionSocket.m_pSCM		= this->m_pMySCM;	// ST_SERVER_CONNECTION_MANAGEMENT
@@ -98,6 +99,7 @@ BOOL CServerRcvListThreadBase::InitInstance()
 		TRACE(s);
 		TRACE(m_ConnectionSocket.m_pSCC->szSocketName);
 #endif
+#endif
 		}
 
 	return TRUE;
@@ -114,6 +116,7 @@ int CServerRcvListThreadBase::ExitInstance()
 		{
 		//delete m_pSCC->pServerRcvListThread;	// never gets here when closing debug window 2016-07-18 jeh
 		//  but did get here when runnint and inst 1 reconnected.
+		// check to make sure critical sections, linked lists are emptied and deleted
 		m_pSCC->pServerRcvListThread= NULL;
 		}
 	return CWinThread::ExitInstance();

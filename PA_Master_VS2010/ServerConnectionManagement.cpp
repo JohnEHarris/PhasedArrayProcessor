@@ -234,7 +234,11 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		}
 #endif
 
-
+	if (NULL == m_pstSCM->pServerListenThread)
+		{
+		TRACE("m_pstSCM->pServerListenThread IS NULL\n");
+		goto NO_SERVERLISTENTHREAD;
+		}
 	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
 		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);	
 	// post a message to stop the listener thread. Feed in a pointer to this instance of SCM
@@ -254,6 +258,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		TRACE(_T("Listener Exit routine didn't run or didn't NULL pServerListenThread\n"));
 		}
 
+NO_SERVERLISTENTHREAD:
 #if 0
 	// done in CServerSocketOwnerThread::ExitInstance()
 	// Kill the RcvListThread
@@ -337,7 +342,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 				crashes!!
 				if (m_pstSCM->pClientConnection[i]->pSocket)
 					{
-					m_pstSCM->pClientConnection[i]->pSocket->m_nOwningThreadType = eServerConnection;
+					m_pstSCM->pClientConnection[i]->pSocket->m_nOwningThreadType == eServerConnection;
 					delete m_pstSCM->pClientConnection[i]->pSocket;
 					}
 #endif

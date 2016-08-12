@@ -180,7 +180,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	with the same wMsg value used for messages.
 #endif
 
-	CString Ip4,s;
+	CString Ip4,s,t;
 	UINT uPort;
 	int nClientPortIndex;					// which client are we connecting to? Derive from IP address
 	UINT uClientBaseAddress, uClientBaseAddress2;		// what is the 32 bit index of the 1st PA Master?
@@ -284,16 +284,19 @@ void CServerSocket::OnAccept(int nErrorCode)
 	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] == NULL)	// first time thru
 		{
 		pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
+		pscc->pSocket = 0;		// hold off idle loop in ServiceApp. When not zero clear to run
 
 		OnAcceptInitializeConnectionStats(pscc,nMyServer, nClientPortIndex);
 
 		pscc->sClientIP4 = Ip4;
 #ifdef THIS_IS_SERVICE_APP
-		s.Format(_T("PAMSrv[%d]:Instrument[%d]  OnAccept() creating critical sections/lists/vChannels"), nMyServer, nClientPortIndex);
+		s.Format(_T("PAMSrv[%d]:Instrument[%d]"), nMyServer, nClientPortIndex);
+		t = s + _T("  OnAccept() creating critical sections/lists/vChannels");
 #else
 		s.Format(_T("PAGSrv[%d]:MasterInst[%d] OnAccept"), nMyServer, nClientPortIndex);
+		t = s;
 #endif
-		TRACE(s);
+		TRACE(t);
 		pscc->szSocketName = s;
 		pscc->uClientPort = uPort;
 		m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
@@ -345,17 +348,20 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// Init some things in the thread before it runs
 	if (pThread)
 		{
+		pThread->m_pConnectionSocket = new CServerSocket();
 		pThread->m_pMySCM		= m_pSCM;
 		pThread->m_pstSCM		= m_pSCM->m_pstSCM;
 		pThread->m_nMyServer	= m_pSCM->m_pstSCM->pSCM->m_nMyServer;
 		pThread->m_pSCC			= m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];
-		pThread->m_pSCC->pSocket = NULL;
+
+		//pThread->m_pSCC->pSocket = NULL;
 		pThread->m_nThreadIndex	= nClientPortIndex;
 		pThread->m_hConnectionSocket = Asocket.Detach();	// hand off the socket we just accepted to the thread
 		Sleep(10);
 		// Make the correct socket type selection in the thread resume
 		// chooses between CServerSocket and CServerSocketPA_Master
 		// Resume will cause CServerSocketOwnerThread::InitInstance() to execute
+		// pThread->m_pSCC->pSocket = (CServerSocket *) FromHandle(Asocket.Detach()); doesn't work
 		pThread->ResumeThread();
 		}
 	else

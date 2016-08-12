@@ -938,8 +938,10 @@ WHILE_TARGET:
 		// attempt to make a connection attempted when the server was busy/non responsive
 
 #if 1
+		k = 0;	// debug  prevent accessing pClientConnection until configured
 		for ( i = 0; i < MAX_SERVERS; i++)
 			{
+			//if (k == 0)	continue;
 			if (stSCM[i].pSCM)
 				{
 				// for each server in the system, empyt the linked list created by the instruments
@@ -947,7 +949,7 @@ WHILE_TARGET:
 				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 					{
 #if 1
-					k = (int) stSCM[i].pClientConnection[j];
+					k = (int) stSCM[i].pClientConnection[j];	// race condition of completing connection in debug
 					if (stSCM[i].pSCM->m_pstSCM[i].nComThreadExited[j] == 1)
 						continue;
 					if(k > 0)	// break for debug

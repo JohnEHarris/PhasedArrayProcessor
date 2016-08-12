@@ -96,7 +96,6 @@ public:
 	void SaveServerConnectionManagementInfo(void);
 	void GetClientConnectionManagementInfo(void);
 	void SaveClientConnectionManagementInfo(void);
-	int KillServerConnectionManagement(int nServer);
 	char m_buffer[128];
 	CServiceApp *m_ptheApp;
 	CFile m_FakeData;

@@ -299,31 +299,6 @@ END_MESSAGE_MAP()
 // w param has socket handle to connect to
 // lparam has pointer to the controlling CServerConnectionManagement class instance
 //
-#if 0
-afx_msg void CServerSocketOwnerThread::InitCommunicationThread(WPARAM w, LPARAM lParam)
-	{
-	m_pMySCM = (CServerConnectionManagement *) lParam;
-	if (NULL == m_pMySCM)
-		{
-		TRACE(_T("ServerSocketOwnerThread m_pMySCM is null\n"));
-		return;
-		}
-	m_pstSCM = m_pMySCM->m_pstSCM;
-
-	if (NULL == m_pstSCM)
-		{
-		TRACE(_T("ServerSocketOwnerThread m_pstCCM is null\n"));
-		return;
-		}
-
-#ifndef _AFXDLL
-	AFX_MODULE_THREAD_STATE* pState = AfxGetModuleThreadState();	// debugging aid
-	AfxSocketInit();
-#endif
-
-
-	}
-#endif
 
 afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 	{

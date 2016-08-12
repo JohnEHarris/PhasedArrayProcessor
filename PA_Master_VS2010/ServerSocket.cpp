@@ -11,17 +11,6 @@
 #include "AfxSock.h"
 #include "time.h"
 
-// these externs are from Yanming's original project
-#if 0
-extern CCriticalSection g_CriticalSection;
-extern CCriticalSection g_CriticalSection2;
-extern CCriticalSection g_CriticalSectionAscan;
-extern CPtrList g_pTcpListUtData;
-extern CPtrList g_pTcpListUtData2;
-extern CPtrList g_pTcpListAscan;
-extern ASCAN_HEAD_NIOS g_AscanHead;
-#endif
-
 #else
 
 #include "Truscan.h"

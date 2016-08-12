@@ -84,7 +84,7 @@ int CServerListenThread::ExitInstance()
 		
 	if (m_pstSCM->pServerListenThread)
 		{
-		m_pstSCM->pServerListenThread = NULL;
+		//m_pstSCM->pServerListenThread = NULL;
 		}
 
 EXIT:
@@ -196,21 +196,6 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 
 	}
 
-#if 0
-afx_msg void CServerListenThread::StopListnerThread(WPARAM w, LPARAM lParam)
-	{
-	if (m_pstSCM == NULL)	return;
-	if (m_pstSCM->pServerListenThread == NULL)	return;
-	if (m_pListenSocket != NULL)
-		{
-		m_pListenSocket->Close();
-		delete m_pListenSocket;
-		m_pListenSocket = NULL;
-		}
-	CWinThread *pThread = this;
-	PostThreadMessage(WM_QUIT, 0L, 0L);
-	}
-#endif
 
 // debugging aid
 afx_msg void CServerListenThread::DoNothing(WPARAM w, LPARAM lParam)

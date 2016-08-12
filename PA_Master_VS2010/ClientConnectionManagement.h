@@ -38,6 +38,11 @@ Revised:	12-Jun-12 Abandon 'C' worker threads in favor of using a class method f
 #define WM_USER_TIMER_TICK							WM_USER+0x21B 	// also in TScanDlg.h
 #define WM_USER_SERVER_SEND_PACKET					WM_USER+0x20A		// post thread msg when Server needs to send packet
 
+// ClientConnectionManagement
+#define WM_USER_KILL_CMD_PROCESS_THREAD				WM_USER+0x21C
+#define WM_USER_KILL_RECV_THREAD					WM_USER+0x21D
+#define WM_USER_KILL_SEND_THREAD					WM_USER+0x21E
+
 
 #ifdef THIS_IS_SERVICE_APP
 // 2016-05-17 the PAM/Receiver is connected only to the PT as a client
@@ -259,13 +264,18 @@ public:
 	// Worker 'threads'.. runing at higher/lower priority to handle tcp/ip messaging
 	// In fact, the main reason for having these threads is to run some process at a different priority
 	// than the main application. In the past we have typically run the Ethernet receiving thread
-	// at higher priority and the application or sending thread.
+	// at higher priority than the application or sending thread.
 
 	void CreateReceiveThread(void);
-	void CreateSendThread(void);
-	void CreateCmdProcessThread(void);	// Useful for PAM
 	void InitReceiveThread(void);
+	void KillReceiveThread(void);
+
+	void CreateSendThread(void);
 	void InitSendThread(void);
+	void KillSendThread(void);
+	void CreateCmdProcessThread(void);	// Useful for PAM
+	void KillCmdProcessThread(void);
+
 	void TimerTick(WORD wTargetSystem);
 
 	void SetSocketNameString(CString s);

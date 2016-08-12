@@ -169,7 +169,7 @@ CServiceApp::CServiceApp()
 		}
 #endif
 
-
+	m_nShutDownCount = 0;
 
 	g_NcNx.Long[0] = 1;
 	g_NcNx.Long[1] = 1;
@@ -213,10 +213,6 @@ CServiceApp::~CServiceApp()
 	
 	ShutDown(); // first place when closing dos window
 
-	while (i)
-		{
-		Sleep(1000);
-		}
 
 	if( m_hStop )
 		::SetEvent(m_hStop);
@@ -572,11 +568,17 @@ int CServiceApp::ExitInstance()
 void CServiceApp::ShutDown(void)
 	{
 	int i, j,k;
-	//DWORD Error;
+	DWORD dError;
 	void *pV;
 	CString s;
 	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM;
 	k = 1;
+
+	if (m_nShutDownCount)
+		return;	// only one time thru shutdown
+
+	// global variable
+	m_nShutDownCount++;	// set to 0 in constructor
 
 	// need to kill the server listen thread and socket.. done below in server shut down routine
 
@@ -585,28 +587,8 @@ void CServiceApp::ShutDown(void)
 		{	// loop MAX_SERVERS
 		pstSCM = &stSCM[j];
 		// let the listener thread kill the listener socket if it still exists
-		if (NULL == pstSCM) goto CLIENT_LOOP;
-#if 0
-		// Kill listener threads and sockets
-		if ( pstSCM->pServerListenSocket)
-			{
-			if (pstSCM->pServerListenSocket->ShutDown(2) )
-				{
-				s.Format(_T("Shutdown of listener socket[%d] was successful\n"), j);
-				TRACE(s);
-				pstSCM->pServerListenSocket->Close();
-				}
-			else
-				{
-				Error = GetLastError();	// WSAENOTCONN                      10057L
-				s.Format(_T("Shutdown of listener socket[%d] failed\n"), j);
-				TRACE(s);
-				pstSCM->pServerListenSocket->Close();
-				Error = GetLastError();
-				}
-			}
+		if (NULL == pstSCM) goto SERVERS_CLIENT_LOOP;
 
-#endif
 		if (pstSCM->pCSDebugIn)
 			{
 			EnterCriticalSection(pstSCM->pCSDebugIn );
@@ -635,15 +617,15 @@ void CServiceApp::ShutDown(void)
 
 		if (pstSCM->pServerListenThread)
 			{
-			pstSCM->pServerListenThread->PostThreadMessage(WM_QUIT, 0L, 0L);
-
+			//pstSCM->pServerListenThread->PostThreadMessage(WM_QUIT, 0L, 0L);
+			KillServerConnectionManagement(j);
 			}
 		while (k)
 			{
 			Sleep(20);	// let debugger follow to ServerListenThread			
 			}
 
-CLIENT_LOOP:
+SERVERS_CLIENT_LOOP:
 
 
 		for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
@@ -664,40 +646,21 @@ CLIENT_LOOP:
 
 	if (m_pTestThread)
 		{
-		//::SetEvent(m_pTestThread->m_hTimerTick);
-		//Sleep(5);
-		i = m_pTestThread->PostThreadMessage(WM_USER_TEST_THREAD_BAIL,0,0L); // fails, returns 0
+		::SetEvent(m_pTestThread->m_hTimerTick);
+		Sleep(5);
+		i = m_pTestThread->PostThreadMessage(WM_QUIT,0,0L); // fails, returns 0
+		Sleep(200);
 		if (i)
 			j = i;
 		else 
 		j = i*2;
 		//Sleep(20);
 		}
+
+	Sleep(10);
 	m_pTestThread = 0;
 
-
-
-
-	//Sleep(300);
-	// This code taken from void CTscanDlg::OnCancel() - the PAG
-
-	for ( i = 0; i < MAX_CLIENTS; i++)
-		{
-		if (pCCM[i])	delete pCCM[i];
-		pCCM[i] = NULL;
-		//Sleep(10);
-		}
-	i = 14;
-	s = _T("Here we are trying to close CCM stuff");
-	TRACE(s);
-	//if (pCCM_SysCp)
-	if (pCCM_PAG)
-		{
-		// delete send thread and critical sections, delete receive thread and critical sections
-		delete pCCM_PAG;	
-		pCCM_PAG = NULL;		
-		}
-
+#if 0
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{
 		if (pSCM[i])
@@ -710,7 +673,69 @@ CLIENT_LOOP:
 		//Sleep(10);
 		}
 
-#if 0
+	//Sleep(300);
+	// This code taken from void CTscanDlg::OnCancel() - the PAG
+
+
+	//if (pCCM_SysCp)
+#endif
+
+	if (pCCM_PAG)
+		{
+		// delete the client socket, then the cmd process thread, then the send thread, then the receive thead
+		if (pCCM_PAG->m_pstCCM)
+			{
+			if (pCCM_PAG->m_pstCCM->pSocket)
+				{	// socket exists
+				if (pCCM_PAG->m_pstCCM->pSocket->ShutDown(2))
+					{
+					s = _T("Shutdown of client socket was successful\n");
+					TRACE(s);					
+					dError = GetLastError();
+					}
+				else
+					{
+					dError = GetLastError();	// WSAENOTCONN                      10057L
+					s .Format(_T("Shutdown of client socket[%d] failed\n"), dError);
+					TRACE(s);
+					}
+				}	// socket exists
+
+			pCCM_PAG->KillReceiveThread();
+			i = 0;
+			while (( i < 50 ) && ( pCCM_PAG->m_pstCCM->pReceiveThread != 0) )
+				{	Sleep (10);		i++;	}
+			if ( i >= 50) TRACE("CCM - Failed to kill Receive Thread");
+			
+			pCCM_PAG->KillSendThread();
+			i = 0;
+			while (( i < 50 ) && ( pCCM_PAG->m_pstCCM->pSendThread != 0) )
+				{	Sleep (10);		i++;	}
+			if ( i >= 50) TRACE("CCM - Failed to kill Send Thread");
+
+			pCCM_PAG->KillCmdProcessThread();
+			i = 0;
+			while (( i < 50 ) && ( pCCM_PAG->m_pstCCM->pCmdProcessThread != 0) )
+				{	Sleep (10);		i++;	}
+			if ( i >= 50) TRACE("CCM - Failed to kill CmdProcess Thread");
+
+			}
+		// delete send thread and critical sections, delete receive thread and critical sections
+		delete pCCM_PAG;	
+		pCCM_PAG = NULL;		
+		}
+
+	for ( i = 0; i < MAX_CLIENTS; i++)
+		{
+		if (pCCM[i])	delete pCCM[i];	// in 2016 there is only pCCM_PAG
+		pCCM[i] = NULL;
+		//Sleep(10);
+		}
+	i = 14;
+	s = _T("Here we are trying to close CCM stuff");
+	TRACE(s);
+
+#if 1
 	ReportStatus(SERVICE_STOP_PENDING, 11000);
 	if( m_hStop )
 		::SetEvent(m_hStop);
@@ -777,22 +802,6 @@ void CServiceApp :: Run( DWORD, LPTSTR *)
 		}
 #endif
 
-#if 0
-/*
-	FILE *ipfile;
-	CString sip;
-	ipfile = fopen("ip_address.txt","r");
-	if (ipfile ==  NULL)
-		goto service_exit;
-
-	//read the ip address and close the file
-	fscanf(ipfile, "%s", sip);
-	//if ( (sip != "192.168.8.10") && (sip != "192.168.8.200") )
-		//goto service_exit;
-
-	fclose (ipfile);
-*/
-#endif
 
 #if 0
 //ifdef _DEBUG
@@ -924,7 +933,7 @@ WHILE_TARGET:
 		{	// the jeh do nothing main loop
 		Sleep(50);
 		uAppTimerTick++;
-		if (nDebugShutdown)	break;
+		if (nDebugShutdown)	break;	// use quick watch to change value to 1 when stepping with debugger
 		void *pv;
 		// attempt to make a connection attempted when the server was busy/non responsive
 
@@ -979,6 +988,7 @@ WHILE_TARGET:
 	// ASSUMINMG WE GOT HERE WITH THE DEBUGGER BY FORCING A CALL TO Shutdown()
 	ShutDown();
 	ReportStatus(SERVICE_STOPPED);
+#if 0
 	return;
 
 	// Now clean up the application
@@ -1021,13 +1031,13 @@ WHILE_TARGET:
 
 
 	// WHILE vestiges of YG code may still be in project
-	goto YG_END;
+	//goto YG_END;
 
-
+#endif
 #endif
 
 
-YG_END:
+//YG_END:
 
 	if( m_hStop )
 		::CloseHandle(m_hStop);
@@ -1057,7 +1067,7 @@ void CServiceApp :: Stop() {
 	Shutdown();
 	
 }
-/**************************************** Nov 20120 ************************************/
+/**************************************** Nov 2012 ************************************/
 /****** Add components from the GUI for running the server portion of the master  ******/
 
 
@@ -1175,7 +1185,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 					{
 					s.Format(_T("Failed to start listener Thread[%d], ERROR = %d\n"), i, nError);
 					TRACE(s);
-					delete pSCM[i];
+					//delete pSCM[i];
 					pSCM[i] = NULL;
 					}
 				}
@@ -1190,7 +1200,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 	}
 
 // undo the initialization
-int KillServerConnectionManagement(int nServer)
+int CServiceApp :: KillServerConnectionManagement(int nServer)
 	{
 	int nError, nResult;
 	int i;
@@ -1206,13 +1216,13 @@ int KillServerConnectionManagement(int nServer)
 		{
 
 		if (pSCM[i])
-			{	// kill this server
+			{	// kill this server' listen thread
 			nError = pSCM[i]->StopListenerThread(i);
 			if (nError)
 				{
 				s.Format(_T("Failed to stop listener Thread[%d], ERROR = %d\n"), i, nError);
 				TRACE(s);
-				delete pSCM[i];	// delete anyway
+				//delete pSCM[i];	// delete anyway
 				pSCM[i] = NULL;
 				nResult |= nError;
 				}
@@ -1573,20 +1583,7 @@ void Inspection_Process_Control()
 
 int FindWhichSlave(int nChannel)
 {
-#if 0
-	int sum=0, nSlave=0, i;
 
-	for (i=0; i<10; i++)
-	{
-		sum += g_ArrayScanNum[i];
-
-		if ( (nChannel / sum) == 0)
-		{
-			nSlave = i;
-			break;
-		}
-	}
-#endif
 
 	return 0;	//nSlave;
 }
@@ -1594,20 +1591,7 @@ int FindWhichSlave(int nChannel)
 
 int FindSlaveChannel(int nChannel)
 {
-#if 0
-	int sum=0, nSlaveCh=0, i;
 
-	for (i=0; i<10; i++)
-	{
-		sum += g_ArrayScanNum[i];
-
-		if ( (nChannel / sum) == 0)
-		{
-			nSlaveCh = nChannel - (sum - g_ArrayScanNum[i]);
-			break;
-		}
-	}
-#endif
 
 	return 0;	//nSlaveCh;
 }
@@ -1615,231 +1599,8 @@ int FindSlaveChannel(int nChannel)
 
 int FindDisplayChannel(int nArray, int nArrayCh)
 {
-#if 0
-	int nDispCh = nArrayCh, i;
 
-	for (i=0; i<nArray; i++)
-	{
-		nDispCh += g_ArrayScanNum[i];
-	}
-#endif
 
 	return 0;	//nDispCh;
 }
 
-#if 0
-void ComputeTranFocusDelay(float thickness, float zf_value, float water_path, float incident_angle, WORD *td)
-{
-     const double PI=3.1415926535897932;
-     double v21,h,z[16],zf,u0,bet8,tilt;
-     double rr,r0,r1,u,lhs,tmax;
-     double r[16],alp[16],bet[16],time[16];
-	 double v1=1.483;
-	 int j;
-
-/*
-     switch (m_wave_value)
-     {
-     case 0:
-           v2=3.2;
-           wword="T-wave";
-           break;
-     case 1:
-           v2=5.9;
-           wword="L-wave";
-           break;
-     }
-*/
-     double v2=3.2; //Simply set velocity for shear wave
-
-     v21=v2/v1;
-
-     float p = 0.6f; // center to center distance between two neighboring elements
-
-     h = thickness * 25.4f; //pipe thickness converted to mm from inches
-     zf = zf_value * 25.4f - h; //z-coordinate of focus point <--input. ID: zf_value=0; OD: zf_value=h.
-     tilt=0; //probe tilt angle //Simply set tilt = 0
-     tilt=tilt*asin(1.)/90;
-
-	 float m_distance_value = water_path * 25.4f;  // <--input
-
-     bet8 = asin( sin(incident_angle * PI / 180.f) * v2 / v1) * 180.0 / PI;   //m_ref_angle; // refraction angle [35,45] <--input  
-     bet8=bet8*asin(1.)/90;
-
-//   u0: x-coordinate of element #0
-	 int m_probe_orientation = 3;
-     switch (m_probe_orientation)
-     {
-     case 0:
-           z[0]=m_distance_value; //water path for element #0
-           for(j=1;j<16;j++)
-                z[j]=z[0]+j*p*sin(tilt);
-           u0=((2*h+zf)*tan(bet8)+z[8]*tan(asin(sin(bet8)/v21)))+8*p*cos(tilt); //default value: set angle bet8 for element #8       
-           break;
-     case 1:
-           z[15]=m_distance_value;
-           for(j=14;j>=0;j--)
-                z[j]=z[15]+(15-j)*p*sin(tilt);
-           u0=-((2*h+zf)*tan(bet8)+z[8]*tan(asin(sin(bet8)/v21)))+8*p*cos(tilt);
-           break;
-     case 2:
-           z[15]=m_distance_value;
-           for(j=14;j>=0;j--)
-                z[j]=z[15]+(15-j)*p*sin(tilt);
-           u0=((2*h+zf)*tan(bet8)+z[8]*tan(asin(sin(bet8)/v21)))-7.5*p*cos(tilt);
-           break;
-     case 3:
-           z[0]=m_distance_value;
-           for(j=1;j<16;j++)
-                z[j]=z[0]+j*p*sin(tilt);
-           u0=-((2*h+zf)*tan(bet8)+z[8]*tan(asin(sin(bet8)/v21)))-7.5*p*cos(tilt);
-           break;
-     }    
-
-/*
-     m_focus_value=u0;
-
-     result.Format("%s: h=%5.2f, z_min=%5.2f (tilt=%4.1f), u0=%5.2f (bet8=%4.1f), zf=%5.2f\n",
-           wword,h,m_distance_value,m_probe_tilt,u0,m_ref_angle,zf);
-     m_result_control.AddString(result);
-*/
-
-     tmax=0;
-     for(j=0;j<16;j++)
-     {
-           if(m_probe_orientation==0 || m_probe_orientation==1)
-                u=u0-j*p*cos(tilt);
-           else
-                u=u0+j*p*cos(tilt);
-
-           if(u<0.) u=fabs(u);
-           else u=fabs(u-0.);
-
-           if(h==0.)
-                rr=u; //when h=0 emergence point coincides with focal point
-           //simulate a curved transducer focusing at (x_F,0)
-           else 
-           {
-           r0=0.;
-           r1=u;
-     loop:
-           rr=(r0+r1)/2;
-           lhs=(v21*v21-1)*rr*rr*rr*rr-2*u*(v21*v21-1)*rr*rr*rr+
-                ((v21*v21-1)*u*u+v21*v21*(2*h+zf)*(2*h+zf)-z[j]*z[j])*rr*rr+
-                2*u*z[j]*z[j]*rr-u*u*z[j]*z[j];
-           if(lhs<0) r0=rr;
-           else r1=rr;
-           if((r1-r0)>1.e-5) goto loop;}
-
-           r[j]=rr;
-           time[j]=sqrt(r[j]*r[j]+z[j]*z[j])/v1+sqrt((u-r[j])*(u-r[j])+(2*h+zf)*(2*h+zf))/v2;
-           alp[j]=atan(r[j]/z[j])/PI*180;
-           bet[j]=asin(v21*r[j]/sqrt(r[j]*r[j]+z[j]*z[j]))/PI*180;
-
-           if(time[j]>tmax) tmax=time[j];
-     }
-
-     for(j=0;j<16;j++)
-	 {
-           td[j]= (WORD)((tmax-time[j])*1000.0);
-		   //printf("td %d = %d\r\n", j, td[j]);
-	 }
-
-
-/*
-     for(j=0;j<16;j++)
-     {
-           result.Format("j=%2d, r=%6.3f, alp=%5.2f, bet=%5.2f, time=%6.3f, time_delay=%d ns\n",
-           j,r[j],alp[j],bet[j],time[j],(int)((tmax-time[j])*1000));
-
-//         result.Format("j=%2d, time_delay=%d ns\n",j,td[j]);
-           m_result_control.AddString(result);
-
-     }
-*/
-}
-
-#endif
-
-#if 0
-void ShutDownSystem(  )
-{
-
-	TCHAR pName[ 128 ] = _T("Celle");
-	TCHAR pPasswd[128] = _T("pxi");
-	TCHAR pDomain[128] = _T("PXI");
-
-	TCHAR pRemoteName[260] = _T("PhasedArray");
-	TCHAR pMessage[ 512 ] = { 0 };
-
-	HANDLE hLogonToken;
-	HANDLE hAdminToken;
-	HANDLE hThreadToken;
-	TOKEN_PRIVILEGES tkp;
-
-
-	if( FALSE == LogonUser( pName, pDomain, pPasswd,
-							LOGON32_LOGON_INTERACTIVE,
-							LOGON32_PROVIDER_DEFAULT,
-							&hLogonToken ) )
-	{	
-		return;
-	}
-
-	if( FALSE == DuplicateTokenEx( hLogonToken, TOKEN_ALL_ACCESS, NULL, SecurityIdentification, TokenPrimary, &hAdminToken ) )
-		return;
-
-	if( FALSE == ImpersonateLoggedOnUser( hAdminToken ) )
-		return;
-
- 	if( FALSE == OpenThreadToken( GetCurrentThread(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, TRUE, &hThreadToken ) )
-	{
-		RevertToSelf();
-		return;
-	}
-
-	// Get the LUID for shutdown privilege.
-	LookupPrivilegeValue( NULL, SE_SHUTDOWN_NAME, &tkp.Privileges[0].Luid );
-
-	tkp.PrivilegeCount = 1;
-	tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-
-	// Get shutdown privilege for this thread.
-	AdjustTokenPrivileges( hThreadToken, FALSE, &tkp, 0, (PTOKEN_PRIVILEGES)NULL, 0 ); 
-	if( GetLastError() != ERROR_SUCCESS )
-	{
-		RevertToSelf();
-		return;
-	}
-
-
-	if( 1 )
-	{
-		//if( FALSE == InitiateSystemShutdown( pRemoteName, pMessage, pDlg->m_timeOut, FALSE, FALSE ) )
-		if( FALSE == InitiateSystemShutdownEx( NULL, _T("Norman Exit"), 0, TRUE, FALSE,0 ) )
-		{
-			RevertToSelf();
-			return;
-		}
-	}
-	else
-	{
-		if( FALSE == AbortSystemShutdown( pRemoteName ) )
-		{
-			RevertToSelf();
-			return;
-		}
-	}
-
-	// Disable shutdown privilege.
-	tkp.Privileges[0].Attributes = 0;
-	AdjustTokenPrivileges( hThreadToken, FALSE, &tkp, 0, (PTOKEN_PRIVILEGES)NULL, 0 );
-	if( GetLastError() != ERROR_SUCCESS )
-	{
-		RevertToSelf();
-		return;
-	}
-
-	RevertToSelf();
-}
-#endif

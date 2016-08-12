@@ -234,7 +234,7 @@ typedef struct
 	CRITICAL_SECTION *pCSDebugIn;
 	CRITICAL_SECTION *pCSDebugOut;
 
-	CServerConnectionManagement *pSCM;	// point to ourself. This is important.
+	CServerConnectionManagement *pSCM;	// point to ourself. This is important. Pointer to a CLASS
 
 	}	ST_SERVER_CONNECTION_MANAGEMENT;
 

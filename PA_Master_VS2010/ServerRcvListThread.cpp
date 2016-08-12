@@ -118,13 +118,7 @@ BOOL CServerRcvListThread::InitInstance()
 #ifdef THIS_IS_SERVICE_APP
 
 	CServerRcvListThreadBase::InitInstance();
-#if 0
-		s.Format(_T("Instrument Client[%d] accepted to server on socket %s : %d\n"), m_nThreadIndex, 
-			m_ConnectionSocket.m_pSCC->sClientIP4, m_ConnectionSocket.m_pSCC->uClientPort); 
-		TRACE(s);
-		TRACE(m_ConnectionSocket.m_pSCC->szSocketName);
-#endif
-		m_pElapseTimer = new CHwTimer();
+	m_pElapseTimer = new CHwTimer();
 
 		//InitRunningAverage(0,0);
 		return TRUE;

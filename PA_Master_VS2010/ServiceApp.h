@@ -72,6 +72,11 @@ see ServiceApp.cpp
 #define WM_USER_SERVERSOCKET_PKT_RECEIVED			WM_USER+0x21A
 #define WM_USER_KILL_OWNER_SOCKET					WM_USER+0x21B
 
+// ClientConnectionManagement
+#define WM_USER_KILL_CMD_PROCESS_THREAD				WM_USER+0x21C
+#define WM_USER_KILL_RECV_THREAD					WM_USER+0x21D
+#define WM_USER_KILL_SEND_THREAD					WM_USER+0x21E
+
 
 #define ePAM_Client_Of_PAG_Server			0
 
@@ -85,11 +90,13 @@ public:
 	virtual ~CServiceApp();
 	CTestThread *m_pTestThread;
 	//CTuboIni *m_pTuboIni;
+	int m_nShutDownCount;
 
 	void GetServerConnectionManagementInfo(void);
 	void SaveServerConnectionManagementInfo(void);
 	void GetClientConnectionManagementInfo(void);
 	void SaveClientConnectionManagementInfo(void);
+	int KillServerConnectionManagement(int nServer);
 	char m_buffer[128];
 	CServiceApp *m_ptheApp;
 	CFile m_FakeData;

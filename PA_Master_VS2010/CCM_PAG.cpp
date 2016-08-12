@@ -56,6 +56,7 @@ CCCM_PAG::CCCM_PAG(int nMyConnection) : CClientConnectionManagement(nMyConnectio
 
 CCCM_PAG::~CCCM_PAG(void)
 	{
+	m_pstCCM->pCCM = 0;
 	TRACE("CCM_PAG Destructor called\n");
 	// base destructor called implicity after this destructor runs
 	}
@@ -104,7 +105,7 @@ typedef struct
 	PAM_INST_CHNL_INFO *pPamChnlInfo;
 	WORD MsgId;
 
-
+	if (m_pstCCM->pRcvPktPacketList == NULL) return;
 
 	while (m_pstCCM->pRcvPktPacketList->GetCount())
 		{

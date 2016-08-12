@@ -2,6 +2,11 @@
 //
 // The server socket is the connection to the instrument. Idata comes thru this socket. It is owned by the
 // ServerSocketOwner in order to run at that thread's priority.
+//
+// OnAccept creates and populates the ClientConnection (ST_SERVERS_CLIENT_CONNECTION *pClientConnection[])
+// OnClose destroys that structure
+// On Shutdown of the ServiceApp a the Listen socket is killed so that OnAccept will not run again.
+//
 #include "stdafx.h"
 // THIS_IS_SERVICE_APP is defined in the PAM project under C++ | Preprocessor Definitions 
 
@@ -48,6 +53,7 @@ CServerSocket::~CServerSocket()
 		break;
 	case eServerConnection:
 		s.Format(_T("Server[%d] Connection Socket[%d] Destructor called\n"), m_nMyServer, m_nMyThreadIndex);
+		m_pSCC->pSocket = 0;
 		break;
 	default:
 		s = _T("Unknown Socket Destructor called\n");
@@ -96,6 +102,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	{
 	// TODO: Add your specialized code here and/or call the base class
 	int * bufBOOLsize;
+	int nResult;
 	BOOL bufBOOL;
 	bufBOOLsize = &bufBOOL;
     *bufBOOLsize = TRUE;
@@ -276,19 +283,19 @@ void CServerSocket::OnAccept(int nErrorCode)
 		return;
 		}
 
-	// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
-	ST_SERVERS_CLIENT_CONNECTION *pscc;
+	//ST_SERVERS_CLIENT_CONNECTION *pscc;
 	m_nMyServer = nMyServer;
 
 
 	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] == NULL)	// first time thru
 		{
-		pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
-		pscc->pSocket = 0;		// hold off idle loop in ServiceApp. When not zero clear to run
+		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];
 
-		OnAcceptInitializeConnectionStats(pscc,nMyServer, nClientPortIndex);
+		// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
+		nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, nClientPortIndex);
 
-		pscc->sClientIP4 = Ip4;
+
+		m_pSCC->sClientIP4 = Ip4;
 #ifdef THIS_IS_SERVICE_APP
 		s.Format(_T("PAMSrv[%d]:Instrument[%d]"), nMyServer, nClientPortIndex);
 		t = s + _T("  OnAccept() creating critical sections/lists/vChannels");
@@ -297,8 +304,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 		t = s;
 #endif
 		TRACE(t);
-		pscc->szSocketName = s;
-		pscc->uClientPort = uPort;
+		m_pSCC->szSocketName = s;
+		m_pSCC->uClientPort = uPort;
 		m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
 		}
 
@@ -322,12 +329,13 @@ void CServerSocket::OnAccept(int nErrorCode)
 		TRACE(s);
 		if ( i == 50) ASSERT(0);
 		// redo what was above as if pClientConnection had never existed
-		pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
-		OnAcceptInitializeConnectionStats(pscc,nMyServer, nClientPortIndex);
-		pscc->sClientIP4 = Ip4;
+		m_pSCC = m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];	
+		nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, nClientPortIndex);
+
+		m_pSCC->sClientIP4 = Ip4;
 		s.Format(_T("PAGSrv[%d]:MasterInst[%d]"), nMyServer, nClientPortIndex);
-		pscc->szSocketName = s;
-		pscc->uClientPort = uPort;
+		m_pSCC->szSocketName = s;
+		m_pSCC->uClientPort = uPort;
 		m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
 		}
 
@@ -613,39 +621,7 @@ void CServerSocket::OnClose(int nErrorCode)
 
 	}
 
-void CServerSocket::KillpClientConnectionStruct(void)
-	{
-	void *pV;
-	CString s;
 
-	// Kill it at the socket level
-	if ((m_pSCC != NULL) && (*(int*) &m_pSCC !=  0xfeeefeee))
-		{
-		m_pSCC->bConnected = (BYTE) eNotConnected;
-		Sleep(5);
-		LockRcvPktList();
-		while ( m_pSCC->pRcvPktList->GetCount() > 0)
-			{
-			pV = (void *) m_pSCC->pRcvPktList->RemoveHead();
-			delete pV;
-			}
-		UnLockRcvPktList();
-		delete m_pSCC->pRcvPktList;		m_pSCC->pRcvPktList	= NULL;
-		delete m_pSCC->pCSRcvPkt;		m_pSCC->pCSRcvPkt	= NULL;
-
-		LockSendPktList();
-		while ( m_pSCC->pSendPktList->GetCount() > 0)
-			{
-			pV = (void *) m_pSCC->pSendPktList->RemoveHead();
-			delete pV;
-			}
-		UnLockSendPktList();
-		delete m_pSCC->pSendPktList;		m_pSCC->pSendPktList	= NULL;
-		delete m_pSCC->pCSSendPkt;			m_pSCC->pCSSendPkt		= NULL;
-
-		}
-	// zero ptrs from thread and SCM class and structure
-	}
 
 // If the socket is to be used for listening, initialize with 'default' values. Fail and return
 // error if anything goes wrong
@@ -708,28 +684,46 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 	return 0;
 	}
 
+#if 0
+// elements of ST_SERVERS_CLIENT_CONNECTION which are created and thus must be destroy eventually
+	CRITICAL_SECTION *pCSSendPkt;	// control access to output (send) list
+	CPtrList* pSendPktList;			// list containing packets to send
+	CRITICAL_SECTION *pCSRcvPkt;	// control access to input (receive) list
+	CPtrList* pRcvPktList;			// list containing packets received from client
+	CServerSocket * pSocket;		// ASync socket fills RcvPktList with OnReceive method.
+									// same socket is used to send packets to CLIENT
+									// This socket is owned by ServerSocketOwnerThread
+	CServerSocketOwnerThread *pServerSocketOwnerThread;	// thread to control sending to a connected client
+	CServerRcvListThreadBase *pServerRcvListThread;	
+	CvChannel* pvChannel[MAX_CHNLS_PER_INSTRUMENT];	// array of ptrs to virtual channels associated with each client connection
+
+#endif
+
 // Initialize the elements of the structure ST_SERVERS_CLIENT_CONNECTION
 // Create critical sections, linked lists and virtual channels
 //
 // Get info from global static structure stSCM[nMyServer]
-void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
+// Clients are discovered when they connect.
+int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
 	{
 	CString s;
 	int i;
 
+	pscc = new ST_SERVERS_CLIENT_CONNECTION();
+		
 	s.Format(_T("Send%d"), nClientPortIndex);
-	pscc->szSocketName	= _T("");
-	pscc->sClientName	= _T("");
-	pscc->sClientIP4	= _T("");			
+	pscc->szSocketName		= _T("");
+	pscc->sClientName		= _T("");
+	pscc->sClientIP4		= _T("");			
 	pscc->m_nMyThreadIndex	= nClientPortIndex;
-	pscc->pCSSendPkt	= new CRITICAL_SECTION();
-	pscc->pCSRcvPkt		= new CRITICAL_SECTION();
+	pscc->pCSSendPkt		= new CRITICAL_SECTION();
+	pscc->pCSRcvPkt			= new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pscc->pCSSendPkt,4);
 	InitializeCriticalSectionAndSpinCount(pscc->pCSRcvPkt,4);
-	pscc->pSendPktList	= new CPtrList(64);
+	pscc->pSendPktList		= new CPtrList(64);
 	pscc->pRcvPktList		= new CPtrList(64);
 
-	pscc->pSocket		= NULL;		
+	pscc->pSocket					= NULL;		
 	pscc->pServerSocketOwnerThread	= NULL;
 	pscc->pServerRcvListThread		= NULL;
 	pscc->bConnected				= (BYTE) eNotConnected;
@@ -750,4 +744,44 @@ void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTI
 		{
 		pscc->pvChannel[i] = new CvChannel(nClientPortIndex,i);
 		}
+	// create threads
+
+
+	return 1;
 	}
+
+int CServerSocket::KillClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
+	{
+	void *pV;
+	CString s;
+
+	// Kill it at the socket level
+	if ((m_pSCC != NULL) && (*(int*) &m_pSCC !=  0xfeeefeee))
+		{
+		m_pSCC->bConnected = (BYTE) eNotConnected;
+		Sleep(5);
+		LockRcvPktList();
+		while ( m_pSCC->pRcvPktList->GetCount() > 0)
+			{
+			pV = (void *) m_pSCC->pRcvPktList->RemoveHead();
+			delete pV;
+			}
+		UnLockRcvPktList();
+		delete m_pSCC->pRcvPktList;		m_pSCC->pRcvPktList	= NULL;
+		delete m_pSCC->pCSRcvPkt;		m_pSCC->pCSRcvPkt	= NULL;
+
+		LockSendPktList();
+		while ( m_pSCC->pSendPktList->GetCount() > 0)
+			{
+			pV = (void *) m_pSCC->pSendPktList->RemoveHead();
+			delete pV;
+			}
+		UnLockSendPktList();
+		delete m_pSCC->pSendPktList;		m_pSCC->pSendPktList	= NULL;
+		delete m_pSCC->pCSSendPkt;			m_pSCC->pCSSendPkt		= NULL;
+
+		}
+	// zero ptrs from thread and SCM class and structure
+	return 0;
+	}
+

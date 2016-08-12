@@ -59,6 +59,7 @@ CServerSocketOwnerThread::~CServerSocketOwnerThread()
 	//m_ConnectionSocket.m_pSCC->pSocket->KillpClientConnectionStruct();
 	//m_pConnectionSocket->m_pSCC->m_pConnectionSocket->KillpClientConnectionStruct();
 	m_pConnectionSocket->KillpClientConnectionStruct();
+	m_pSCC->pServerSocketOwnerThread = 0;
 	}
 
 
@@ -152,6 +153,18 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	m_pConnectionSocket->m_pElapseTimer = new CHwTimer();
 	m_pConnectionSocket->m_pSCC->szSocketName.Format(_T("ServerSocket Connection Skt[%d][%d]\n"),  m_nMyServer, m_nThreadIndex);
 
+	#ifdef THIS_IS_SERVICE_APP
+	m_pConnectionSocket->m_pSCC->sClientName.Format(_T("Instrument[%d] on PAM Server[%d]\n"), m_nThreadIndex, m_nMyServer);
+#else
+	m_pConnectionSocket->m_pSCC->sClientName.Format(_T("PAM Client[%d] on PAG Server[%d]\n"), m_nThreadIndex, m_nMyServer);
+#endif
+	m_pConnectionSocket->m_nOwningThreadType = eServerConnection;
+
+#ifdef _DEBUG
+		s.Format(_T("Client accepted to server on socket %s : %d\n"), Ip4, uPort);
+		TRACE(s);
+		TRACE(m_pConnectionSocket->m_pSCC->szSocketName);
+#endif
 
 #endif	//CONNECTION_SOCKET_ON_STACK
 
@@ -244,6 +257,7 @@ int CServerSocketOwnerThread::ExitInstance()
 				s = _T("Shutdown of client socket failed\n");
 				TRACE(s);
 				}
+			delete m_pConnectionSocket;
 			}
 		if ( m_pSCC)	// this points to pClientConnection
 			{
@@ -345,6 +359,7 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 	t.Format(_T("%d\n"), nReturn);
 	s += t;
 	TRACE(s);
+	delete m_pSCC->pServerSocketOwnerThread;
 	}
 
 // A message or messages have been placed into the linked list controlled by this thread

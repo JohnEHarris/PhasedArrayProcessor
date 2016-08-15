@@ -58,7 +58,7 @@ CServerSocketOwnerThread::~CServerSocketOwnerThread()
 	//m_ConnectionSocket is on stack but has elements that were created with new operator
 	//m_ConnectionSocket.m_pSCC->pSocket->KillpClientConnectionStruct();
 	//m_pConnectionSocket->m_pSCC->m_pConnectionSocket->KillpClientConnectionStruct();
-	m_pConnectionSocket->KillpClientConnectionStruct();
+	//m_pConnectionSocket->KillpClientConnectionStruct();
 	m_pSCC->pServerSocketOwnerThread = 0;
 	}
 
@@ -257,7 +257,7 @@ int CServerSocketOwnerThread::ExitInstance()
 				s = _T("Shutdown of client socket failed\n");
 				TRACE(s);
 				}
-			delete m_pConnectionSocket;
+			//delete m_pConnectionSocket;
 			}
 		if ( m_pSCC)	// this points to pClientConnection
 			{
@@ -271,7 +271,7 @@ int CServerSocketOwnerThread::ExitInstance()
 			TRACE(s);
 
 #endif
-			m_pConnectionSocket->KillpClientConnectionStruct();
+			//m_pConnectionSocket->KillpClientConnectionStruct();
 			//delete m_pSCC->pSocket; corrupts heap STOPPED here on 2016-08-01 jeh .. need to delete?
 			//m_pSCC->pSocket = NULL;
 			//delete m_pSCC->pSocket; corrupts heap
@@ -337,29 +337,79 @@ END_MESSAGE_MAP()
 
 
 // CServerSocketOwnerThread message handlers
-// w param has socket handle to connect to
-// lparam has pointer to the controlling CServerConnectionManagement class instance
+// w param has the ClientPortIndex
+// lparam points to ST_SERVERS_CLIENT_CONNECTION
 //
-
+// See ServerSocket::int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
+// The SocketOwner Thread will undo what the BuildClientConnection routine buit in the class ServerSocket
 afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 	{
 	int nReturn;
-	CString t, s = _T("CServerSocketOwnerThread::ExitInstance() called by ");
-	switch (w)
+	CString t, s = _T("CServerSocketOwnerThread::ExitInstance()");
+	ST_SERVERS_CLIENT_CONNECTION *pscc;
+	void *pV;
+	int i;
+	// Close the socket and delete
+	// Kill the ServerRcvList thread
+	// delete linked lists and critical sections
+	pscc = (ST_SERVERS_CLIENT_CONNECTION *)lParam;
+	//Undo what BuildClientConnectionStructure created
+	if (pscc != NULL) 
 		{
-	case 0:
-	default:
-		s += _T("unknown return = ");	break;
-	case 1:
-		s += _T(" CServerSocket::OnClose() return = ");	break;
-	case 2:
-		s += _T(" CServerSocket::OnAccept() return = ");	break;
+		if (pscc->pSocket)
+			{
+			if (pscc->pSocket->ShutDown(2))
+				{
+				s += _T(" servers client socket shut down\n");
+				TRACE(s);
+				pscc->pSocket->Close();
+				}
+			else
+				{
+				s += _T(" servers client socket failed to shut down\n");
+				TRACE(s);
+				}
+			}
+
+		pscc->bConnected = (BYTE) eNotConnected;
+		if (pscc->pCSRcvPkt) 
+			EnterCriticalSection(pscc->pCSRcvPkt);
+		while ( pscc->pRcvPktList->GetCount() > 0)
+			{
+			pV = (void *) pscc->pRcvPktList->RemoveHead();
+			delete pV;
+			}
+		LeaveCriticalSection(pscc->pCSRcvPkt);
+		delete pscc->pRcvPktList;		pscc->pRcvPktList	= NULL;
+		delete pscc->pCSRcvPkt;			pscc->pCSRcvPkt	= NULL;
+
+		EnterCriticalSection(pscc->pCSSendPkt);
+		while ( m_pSCC->pSendPktList->GetCount() > 0)
+			{
+			pV = (void *) m_pSCC->pSendPktList->RemoveHead();
+			delete pV;
+			}
+		LeaveCriticalSection(pscc->pCSSendPkt);
+		delete m_pSCC->pSendPktList;		m_pSCC->pSendPktList	= NULL;
+		delete m_pSCC->pCSSendPkt;			m_pSCC->pCSSendPkt		= NULL;
+		}
+	delete pscc->pSocket;
+	pscc->pSocket = NULL;
+
+	pscc->bStopSendRcv = 1;
+	for ( i = 0; i < MAX_CHNLS_PER_INSTRUMENT; i++)
+		{
+		if (pscc->pvChannel[i])
+			{
+			delete pscc->pvChannel[i];
+			pscc->pvChannel[i] = 0;
+			}
 		}
 	nReturn = ExitInstance();	//thread message does not allow return of anything but void
 	t.Format(_T("%d\n"), nReturn);
 	s += t;
 	TRACE(s);
-	delete m_pSCC->pServerSocketOwnerThread;
+	//delete m_pSCC->pServerSocketOwnerThread;
 	}
 
 // A message or messages have been placed into the linked list controlled by this thread

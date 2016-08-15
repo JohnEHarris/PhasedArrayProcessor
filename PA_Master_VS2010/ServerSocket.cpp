@@ -74,7 +74,7 @@ void CServerSocket::Init(void)
 	m_nOwningThreadType = -1;
 	m_BufOffset = m_nStart = 0;
 	memset((void *) m_RcvBuf,0,sizeof(m_RcvBuf));
-	m_pElapseTimer = NULL;		//new CHwTimer();
+	m_pElapseTimer = new CHwTimer();
 	m_nMaxBufOffset	= 0;
 	m_nMaxStart		= 0;
 	m_nMinRcvRqst	= 0x10000;
@@ -289,6 +289,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] == NULL)	// first time thru
 		{
+		m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
 		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];
 
 		// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
@@ -309,14 +310,17 @@ void CServerSocket::OnAccept(int nErrorCode)
 		m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
 		}
 
+	/************************** What if already connected ?? *******************/
+
 	else 	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread)
 
 		{
 		CAsyncSocket::OnClose(nErrorCode); // OnClose kills ServerSocketOwnerTherad
 		TRACE("CServerSocketOwnerThread ALREADY exists... kill it\n");
-		CWinThread * pThread1 = (CWinThread *)m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread;
-		// wParam = 2 from OnAccept, 1= from OnClose
-		PostThreadMessage(pThread1->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, 2L, 0L);	
+		CWinThread * pThread1 = 
+			(CWinThread *)m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread;
+		// wParam = ClientPortIndex, lParam = ST_SERVERS_CLIENT_CONNECTION *
+		PostThreadMessage(pThread1->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, (WORD)nClientPortIndex, (LPARAM)m_pSCC);	
 		// this will cause ServerSocketOwner to execute ExitInstance()
 		// ExitInstance() will close the socket and delete the pClientConnection structures
 		for ( i = 0; i <50; i++)
@@ -328,6 +332,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		s.Format("Wait loop in OnAccept for ComThreadExited is %d\n", i);
 		TRACE(s);
 		if ( i == 50) ASSERT(0);
+
 		// redo what was above as if pClientConnection had never existed
 		m_pSCC = m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];	
 		nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, nClientPortIndex);
@@ -612,8 +617,9 @@ void CServerSocket::OnClose(int nErrorCode)
 		{
 		if (m_pSCC->pServerSocketOwnerThread)
 			{
-			// wParam = 0 from OnAccept, 1= from OnClose
-			PostThreadMessage(m_pSCC->pServerSocketOwnerThread->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, 1L, 0L);
+			// wParam = nClientPortIndex , (LPARAM)m_pSCC
+			PostThreadMessage(m_pSCC->pServerSocketOwnerThread->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, 
+				(WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
 			}
 		Sleep(200);
 		}
@@ -709,7 +715,8 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	CString s;
 	int i;
 
-	pscc = new ST_SERVERS_CLIENT_CONNECTION();
+	// skip over CStrings and zero the rest of the structure. Assume CString ptr is 4 bytes. 3 strings at beginning
+	memset ( (void *) &pscc->uClientPort, 0, sizeof(ST_SERVERS_CLIENT_CONNECTION)-12);
 		
 	s.Format(_T("Send%d"), nClientPortIndex);
 	pscc->szSocketName		= _T("");
@@ -726,7 +733,7 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	pscc->pSocket					= NULL;		
 	pscc->pServerSocketOwnerThread	= NULL;
 	pscc->pServerRcvListThread		= NULL;
-	pscc->bConnected				= (BYTE) eNotConnected;
+	pscc->bConnected				= (BYTE) eNotConfigured;
 	pscc->bStopSendRcv				= 0;
 	pscc->uPacketsReceived			= 0;
 	pscc->uBytesReceived			= 0;
@@ -750,8 +757,10 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	return 1;
 	}
 
+// Kill the ServerSocket Owner Thread and ReceiveList thread
 int CServerSocket::KillClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
 	{
+#if 0
 	void *pV;
 	CString s;
 
@@ -782,6 +791,7 @@ int CServerSocket::KillClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *p
 
 		}
 	// zero ptrs from thread and SCM class and structure
+#endif
 	return 0;
 	}
 

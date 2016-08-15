@@ -938,7 +938,12 @@ WHILE_TARGET:
 		// attempt to make a connection attempted when the server was busy/non responsive
 
 #if 1
-		k = 0;	// debug  prevent accessing pClientConnection until configured
+		k = 1;	// debug  prevent accessing pClientConnection until configured
+		while (k)
+			{
+			Sleep(10);
+			}
+
 		for ( i = 0; i < MAX_SERVERS; i++)
 			{
 			//if (k == 0)	continue;
@@ -950,6 +955,8 @@ WHILE_TARGET:
 					{
 #if 1
 					k = (int) stSCM[i].pClientConnection[j];	// race condition of completing connection in debug
+					if ( k == 0) 
+						continue;
 					if (stSCM[i].pSCM->m_pstSCM[i].nComThreadExited[j] == 1)
 						continue;
 					if(k > 0)	// break for debug

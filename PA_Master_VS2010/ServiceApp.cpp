@@ -568,7 +568,7 @@ int CServiceApp::ExitInstance()
 void CServiceApp::ShutDown(void)
 	{
 	int i, j,k;
-	DWORD dError;
+	int nError;
 	void *pV;
 	CString s;
 	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM;
@@ -588,7 +588,18 @@ void CServiceApp::ShutDown(void)
 		pstSCM = &stSCM[j];
 		// let the listener thread kill the listener socket if it still exists
 		if (NULL == pstSCM) goto SERVERS_CLIENT_LOOP;
+		//
+		nError = pstSCM->pSCM->ServerShutDown(j);
+		if (nError !=0)
+			{
+			s.Format(_T("Failed to shutdown Server%d Error = %d\n"), j, nError);
+			}
 
+		while (k)
+			{
+			Sleep(20);	// let debugger follow to ServerListenThread			
+			}
+#if 0
 		if (pstSCM->pCSDebugIn)
 			{
 			EnterCriticalSection(pstSCM->pCSDebugIn );
@@ -615,32 +626,29 @@ void CServiceApp::ShutDown(void)
 			delete pstSCM->pOutDebugMessageList;
 			}
 
-		if (pstSCM->pServerListenThread)
-			{
-			//pstSCM->pServerListenThread->PostThreadMessage(WM_QUIT, 0L, 0L);
-			KillServerConnectionManagement(j);
-			}
-		while (k)
-			{
-			Sleep(20);	// let debugger follow to ServerListenThread			
-			}
+#endif
 
 SERVERS_CLIENT_LOOP:
+		;
 
-
+#if 0
 		for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 			{
 			if ( NULL == stSCM[j].pClientConnection[i]) continue;
 			for ( k = 0; k < MAX_CHNLS_PER_INSTRUMENT; k++)
 				{
-				if (stSCM[j].pClientConnection[i]->pvChannel[k] )			
+				if (stSCM[j].pClientConnection[i]->pvChannel[k] )
+					{
 					delete stSCM[j].pClientConnection[i]->pvChannel[k];
+					stSCM[j].pClientConnection[i]->pvChannel[k] = 0;
+					}
 				}
-			if (stSCM[j].pClientConnection[i])
-				{
-				delete stSCM[j].pClientConnection[i];
-				}
+
+			// delete linked lists and critical sections and Async socket
+			delete stSCM[j].pClientConnection[i];
+			
 			}
+#endif
 		}		// loop MAX_SERVERS
 #endif
 
@@ -660,7 +668,7 @@ SERVERS_CLIENT_LOOP:
 	Sleep(10);
 	m_pTestThread = 0;
 
-#if 0
+#if 1
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{
 		if (pSCM[i])
@@ -691,12 +699,12 @@ SERVERS_CLIENT_LOOP:
 					{
 					s = _T("Shutdown of client socket was successful\n");
 					TRACE(s);					
-					dError = GetLastError();
+					nError = GetLastError();
 					}
 				else
 					{
-					dError = GetLastError();	// WSAENOTCONN                      10057L
-					s .Format(_T("Shutdown of client socket[%d] failed\n"), dError);
+					nError = GetLastError();	// WSAENOTCONN                      10057L
+					s .Format(_T("Shutdown of client socket[%d] failed\n"), nError);
 					TRACE(s);
 					}
 				}	// socket exists
@@ -1484,7 +1492,8 @@ CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNum
 // Server Connection Management class. In particular, this data is associated with SCM instance 0.
 // PAM's connection to the PAG is via a Client Connection Management socket, specifically CCM[0] instance
 // CCM[0] instance has a child class of CCM, namely CCM_PAG
-// NOTE!!! PamSendToPag DOES NOT DELETE THE MEMORY pointed to by pBuf
+//
+//
 void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 	{
 	CString s;

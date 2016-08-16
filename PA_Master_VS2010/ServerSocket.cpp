@@ -62,8 +62,11 @@ CServerSocket::~CServerSocket()
 
 	t += s;
 	TRACE(t);
-	if (m_pElapseTimer)	delete m_pElapseTimer;
-	m_pElapseTimer = NULL;
+	if (m_pElapseTimer)
+		{
+		delete m_pElapseTimer;
+		m_pElapseTimer = NULL;
+		}
 	}
 
 void CServerSocket::Init(void)
@@ -144,6 +147,16 @@ void CServerSocket::OnAccept(int nErrorCode)
 			}
 		}
 
+	// If in shut down, refuse to accept a client
+	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)
+		{
+		TRACE("Server ShutDown Flag is true, aborting OnAccept\n");
+		CAsyncSocket dummy;
+		Accept(dummy);
+		dummy.Close();
+		CAsyncSocket::OnAccept(nErrorCode);
+		return;
+		}
 
 	if ( ( nMyServer >= MAX_SERVERS) || (NULL == m_pSCM) )
 		{
@@ -358,7 +371,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	s.Format(_T("CServerSocketOwnerThread[%d][%d]= 0x%08x, Id=0x%04x was created\n"),
 					nMyServer, nClientPortIndex, pThread, pThread->m_nThreadID);
 	TRACE(s);
-	// Init some things in the thread before it runs
+	// Init some things in the thread before it runs. We are now accessing things inside the new thread, not in this thread
 	if (pThread)
 		{
 		pThread->m_pConnectionSocket = new CServerSocket();

@@ -35,7 +35,6 @@ CServerSocketOwnerThread::CServerSocketOwnerThread()
 //	m_ConnectionSocketPAM.m_pThread = NULL;
 	nDebug = 0;
 	m_nConfigMsgQty = 0;
-	//m_pHwTimer = new CHwTimer();
 	}
 
 CServerSocketOwnerThread::~CServerSocketOwnerThread()
@@ -53,8 +52,7 @@ CServerSocketOwnerThread::~CServerSocketOwnerThread()
 		}
 	s.Format(_T("~CServerSocketOwnerThread[%d][%d] = 0x%08x, Id=0x%04x has run\n"), m_nMyServer, m_nThreadIndex, this, nId);
 	TRACE(s);
-	if (m_pHwTimer)		delete m_pHwTimer;
-	m_pHwTimer = NULL;
+
 	//m_ConnectionSocket is on stack but has elements that were created with new operator
 	//m_ConnectionSocket.m_pSCC->pSocket->KillpClientConnectionStruct();
 	//m_pConnectionSocket->m_pSCC->m_pConnectionSocket->KillpClientConnectionStruct();
@@ -102,39 +100,12 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	// HEADER FILE definition CServerSocket m_ConnectionSocket;			// server's connection to the client .. on stack
 	//m_ConnectionSocket.Init();	// since created on stack a member variable, Init() ran in constructor
 	// 2016-08-12 change connection socket to a pointer and create here
+	// where does the mysterious m_pConnectionSocket come from. I don't see a 'new' operator in this file?
+	// the answer is it comes from ServerSocket class when this thread is created suspended.
+	// 		pThread->m_pConnectionSocket = new CServerSocket(); about line 367 in void CServerSocket::OnAccept(int nErrorCode)
 
-#ifdef CONNECTION_SOCKET_ON_STACK
-	m_ConnectionSocket.m_nMyThreadIndex = m_nThreadIndex;
-	m_ConnectionSocket.m_pThread	= this;
-	m_ConnectionSocket.m_pSCM		= this->m_pMySCM;	// ST_SERVER_CONNECTION_MANAGEMENT
-	m_ConnectionSocket.m_nMyServer	= this->m_nMyServer;
-	m_ConnectionSocket.m_pstSCM		= this->m_pMySCM->m_pstSCM;
-	m_ConnectionSocket.m_pSCC		= this->m_pSCC;		//m_pMySCM->m_pstSCM->pClientConnection[0]; // Server's client connection
-	m_ConnectionSocket.m_pSCC->pServerSocketOwnerThread = this;
-	// m_hConnectionSocket = Asocket.Detach(); set when thread created suspended
-	//m_ConnectionSocket.Attach(m_hConnectionSocket, FD_READ | FD_CLOSE ); take default setting on next line
-	m_ConnectionSocket.Attach(m_hConnectionSocket);
-	m_ConnectionSocket.m_pSCC->pSocket = &m_ConnectionSocket;
-	m_ConnectionSocket.GetPeerName(Ip4,uPort);	// connecting clients info??
-	m_ConnectionSocket.SetClientIp4(Ip4);
-	m_ConnectionSocket.m_pSCC->sClientIP4 = Ip4;
-	m_ConnectionSocket.m_pSCC->uClientPort = uPort;
-	m_ConnectionSocket.m_pElapseTimer = new CHwTimer();
-	m_ConnectionSocket.m_pSCC->szSocketName.Format(_T("ServerSocket Connection Skt[%d][%d]\n"),  m_nMyServer, m_nThreadIndex);
-#ifdef THIS_IS_SERVICE_APP
-	m_ConnectionSocket.m_pSCC->sClientName.Format(_T("Instrument[%d] on PAM Server[%d]\n"), m_nThreadIndex, m_nMyServer);
-#else
-	m_ConnectionSocket.m_pSCC->sClientName.Format(_T("PAM Client[%d] on PAG Server[%d]\n"), m_nThreadIndex, m_nMyServer);
-#endif
-	m_ConnectionSocket.m_nOwningThreadType = eServerConnection;
 
-#ifdef _DEBUG
-		s.Format(_T("Client accepted to server on socket %s : %d\n"), Ip4, uPort);
-		TRACE(s);
-		TRACE(m_ConnectionSocket.m_pSCC->szSocketName);
-#endif
 
-#else
 	m_pConnectionSocket->m_nMyThreadIndex = m_nThreadIndex;
 	m_pConnectionSocket->m_pThread	= this;
 	m_pConnectionSocket->m_pSCM		= this->m_pMySCM;	// ST_SERVER_CONNECTION_MANAGEMENT
@@ -166,7 +137,6 @@ BOOL CServerSocketOwnerThread::InitInstance()
 		TRACE(m_pConnectionSocket->m_pSCC->szSocketName);
 #endif
 
-#endif	//CONNECTION_SOCKET_ON_STACK
 
 	// Now create a thread to service the clients input data held in RcvPktList.
 	// If more threads are needed to perform work for data or commands going between the server
@@ -244,21 +214,32 @@ int CServerSocketOwnerThread::ExitInstance()
 	int i;
 	if ((m_nMyServer >= 0) && (m_nMyServer < MAX_SERVERS) )
 		{
-		if (m_pConnectionSocket)
+		if (m_pSCC->pSocket)
 			{
-			if (m_pConnectionSocket->ShutDown(2))
+			//if (m_pSCC->m_pConnectionSocket->ShutDown(2))
+			if (m_pSCC->pSocket->ShutDown(2))
 				{
 				s = _T("Shutdown of client socket was successful\n");
 				TRACE(s);
-				m_pConnectionSocket->Close();
+				m_pSCC->pSocket->Close();
 				}
 			else
 				{
 				s = _T("Shutdown of client socket failed\n");
 				TRACE(s);
 				}
-			//delete m_pConnectionSocket;
+
+			if (m_pSCC->pSocket->m_pElapseTimer)
+				{
+				delete m_pSCC->pSocket->m_pElapseTimer;
+				m_pSCC->pSocket->m_pElapseTimer = 0;
+				}
+
+			// now destroy the socket which was created in ServerSocket::OnAccept
+			delete m_pSCC->pSocket;
 			}
+		m_pSCC->pSocket = 0;
+
 		if ( m_pSCC)	// this points to pClientConnection
 			{
 #ifdef _DEBUG
@@ -273,7 +254,7 @@ int CServerSocketOwnerThread::ExitInstance()
 #endif
 			//m_pConnectionSocket->KillpClientConnectionStruct();
 			//delete m_pSCC->pSocket; corrupts heap STOPPED here on 2016-08-01 jeh .. need to delete?
-			//m_pSCC->pSocket = NULL;
+			m_pSCC->pSocket = NULL;	 // was deleted above under the name of m_pConnectionSocket 
 			//delete m_pSCC->pSocket; corrupts heap
 			}
 			Sleep(20);

@@ -232,7 +232,7 @@ afx_msg void CClientCommunicationThread::InitTcpThread(WPARAM w, LPARAM lParam)
 		break;
 
 	case 2:		// sender
-		TRACE(_T("Sender thread cannot create socket\n"));
+		TRACE(_T("CCT Sender thread cannot create socket\n"));
 		break;
 	}
 

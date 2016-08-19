@@ -35,6 +35,7 @@ CServerSocketOwnerThread::CServerSocketOwnerThread()
 //	m_ConnectionSocketPAM.m_pThread = NULL;
 	nDebug = 0;
 	m_nConfigMsgQty = 0;
+	//m_pHwTimer = new CHwTimer();
 	}
 
 CServerSocketOwnerThread::~CServerSocketOwnerThread()
@@ -52,7 +53,8 @@ CServerSocketOwnerThread::~CServerSocketOwnerThread()
 		}
 	s.Format(_T("~CServerSocketOwnerThread[%d][%d] = 0x%08x, Id=0x%04x has run\n"), m_nMyServer, m_nThreadIndex, this, nId);
 	TRACE(s);
-
+	if (m_pHwTimer)		delete m_pHwTimer;
+	m_pHwTimer = NULL;
 	//m_ConnectionSocket is on stack but has elements that were created with new operator
 	//m_ConnectionSocket.m_pSCC->pSocket->KillpClientConnectionStruct();
 	//m_pConnectionSocket->m_pSCC->m_pConnectionSocket->KillpClientConnectionStruct();
@@ -95,7 +97,6 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	AFX_MODULE_THREAD_STATE* pState = AfxGetModuleThreadState();	// debug checking
 	AfxSocketInit();
 #endif
-	uPort = 5;
 
 	// HEADER FILE definition CServerSocket m_ConnectionSocket;			// server's connection to the client .. on stack
 	//m_ConnectionSocket.Init();	// since created on stack a member variable, Init() ran in constructor
@@ -103,7 +104,6 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	// where does the mysterious m_pConnectionSocket come from. I don't see a 'new' operator in this file?
 	// the answer is it comes from ServerSocket class when this thread is created suspended.
 	// 		pThread->m_pConnectionSocket = new CServerSocket(); about line 367 in void CServerSocket::OnAccept(int nErrorCode)
-
 
 
 	m_pConnectionSocket->m_nMyThreadIndex = m_nThreadIndex;

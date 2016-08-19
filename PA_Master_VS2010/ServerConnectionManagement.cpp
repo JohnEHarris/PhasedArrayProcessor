@@ -226,6 +226,7 @@ int CServerConnectionManagement::StopListenerThread(int nMyServer)
 	// post a message to init the listener thread. Feed in a pointer to this instance of SCM
 	//m_pstSCM->pServerListenThread->PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
 	PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID,WM_QUIT, 0L, 0L);
+	Sleep(20);
 	return 0;	// success
 	}
 
@@ -266,12 +267,12 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 	// Listening thread kills listening socket and itself
 	nResult = StopListenerThread(nMyServer);
 
-	for ( i = 0; i < 10; i++)	// wait a little while for listener to go away
+	for ( i = 0; i < 100; i++)	// wait a little while for listener to go away
 		{
 		if (m_pstSCM->pServerListenThread == NULL)		break;
 		Sleep(10);
 		}
-	if ( i == 10)
+	if ( i == 100)
 		{
 		TRACE(_T("Listener Exit routine didn't run or didn't NULL pServerListenThread\n"));
 		}
@@ -324,7 +325,7 @@ SERVERS_CLIENT_LOOP:
 			{
 			if (m_pstSCM->nComThreadExited[i])					
 				break;
-			Sleep(10);
+			Sleep(50);
 			}	// for ( j = 0; j < 60; j++)
 
 		if ( j == 60)

@@ -908,8 +908,9 @@ Size of SRawDataPacket is 1040
 
 	GetAllIP4AddrForThisMachine();
 	InitializeServerConnectionManagement();	// crashes if ServerConnect called after ClientConnect
-	Sleep(200);
+	Sleep(500);
 	InitializeClientConnectionManagement();
+	Sleep(200);
 	// For debugging, write ini file to see changes
 	if (gDlg.pTuboIni)
 		gDlg.pTuboIni->SaveIniFile();
@@ -949,7 +950,7 @@ WHILE_TARGET:
 		k = 1;	// debug  prevent accessing pClientConnection until configured
 		while (k)
 			{
-			Sleep(10);
+			Sleep(100);
 			}
 
 		for ( i = 0; i < MAX_SERVERS; i++)
@@ -1492,8 +1493,7 @@ CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNum
 // Server Connection Management class. In particular, this data is associated with SCM instance 0.
 // PAM's connection to the PAG is via a Client Connection Management socket, specifically CCM[0] instance
 // CCM[0] instance has a child class of CCM, namely CCM_PAG
-//
-//
+// NOTE!!! PamSendToPag DOES NOT DELETE THE MEMORY pointed to by pBuf
 void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 	{
 	CString s;

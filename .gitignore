@@ -23,6 +23,7 @@ bld/
 [Oo]bj/
 NotInProject/
 OtherFolders/
+Tmp/
 
 # Visual Studio 2015 cache/options directory
 .vs/

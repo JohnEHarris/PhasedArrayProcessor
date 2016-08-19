@@ -5,7 +5,7 @@
 //
 // OnAccept creates and populates the ClientConnection (ST_SERVERS_CLIENT_CONNECTION *pClientConnection[])
 // OnClose destroys that structure
-// On Shutdown of the ServiceApp a the Listen socket is killed so that OnAccept will not run again.
+// On Shutdown of the ServiceApp the Listen socket is killed so that OnAccept will not run again.
 //
 #include "stdafx.h"
 // THIS_IS_SERVICE_APP is defined in the PAM project under C++ | Preprocessor Definitions 
@@ -304,7 +304,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		{
 		m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
 		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];
-
+		m_pSCC->pSocket = 0;		// hold off idle loop in ServiceApp. When not zero clear to run
 		// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
 		nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, nClientPortIndex);
 
@@ -347,7 +347,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		if ( i == 50) ASSERT(0);
 
 		// redo what was above as if pClientConnection had never existed
-		m_pSCC = m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];	
+		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];	
 		nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, nClientPortIndex);
 
 		m_pSCC->sClientIP4 = Ip4;
@@ -729,7 +729,7 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	int i;
 
 	// skip over CStrings and zero the rest of the structure. Assume CString ptr is 4 bytes. 3 strings at beginning
-	memset ( (void *) &pscc->uClientPort, 0, sizeof(ST_SERVERS_CLIENT_CONNECTION)-12);
+	//memset ( (void *) &pscc->uClientPort, 0, sizeof(ST_SERVERS_CLIENT_CONNECTION)-12);
 		
 	s.Format(_T("Send%d"), nClientPortIndex);
 	pscc->szSocketName		= _T("");

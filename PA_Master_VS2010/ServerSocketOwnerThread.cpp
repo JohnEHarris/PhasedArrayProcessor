@@ -40,6 +40,12 @@ CServerSocketOwnerThread::CServerSocketOwnerThread()
 
 CServerSocketOwnerThread::~CServerSocketOwnerThread()
 	{
+	}
+
+// jeh cant get clean exit when destructor callled when object deleted.
+// called just before ExitInstance calls the default CWin destructor.
+void CServerSocketOwnerThread::MyDestructor()
+	{
 	CString s;
 	int nId = AfxGetThread()->m_nThreadID;
 	CServerConnectionManagement *p = m_pMySCM;
@@ -50,16 +56,17 @@ CServerSocketOwnerThread::~CServerSocketOwnerThread()
 		int m = pSCC->uPacketsReceived;
 		s.Format(_T("Packets Sent = %5d, Packets Received = %5d\n"), n, m);
 		TRACE(s);
+		pSCC->pServerSocketOwnerThread = 0;
 		}
 	s.Format(_T("~CServerSocketOwnerThread[%d][%d] = 0x%08x, Id=0x%04x has run\n"), m_nMyServer, m_nThreadIndex, this, nId);
 	TRACE(s);
-	if (m_pHwTimer)		delete m_pHwTimer;
+	if (m_pHwTimer)
+		delete m_pHwTimer;
 	m_pHwTimer = NULL;
 	//m_ConnectionSocket is on stack but has elements that were created with new operator
 	//m_ConnectionSocket.m_pSCC->pSocket->KillpClientConnectionStruct();
 	//m_pConnectionSocket->m_pSCC->m_pConnectionSocket->KillpClientConnectionStruct();
 	//m_pConnectionSocket->KillpClientConnectionStruct();
-	m_pSCC->pServerSocketOwnerThread = 0;
 	}
 
 
@@ -188,10 +195,14 @@ BOOL CServerSocketOwnerThread::InitInstance()
 		// Make the correct socket type selection in the thread resume
 		// chooses between CServerSocket and CServerSocketPA_Master
 		pThread->ResumeThread();
+		// Set Hardware elapse timer
+		m_pHwTimer = new CHwTimer();
 		}
+
 	else
 		{
 		// do some sort of cleanup
+		m_pHwTimer = 0;
 		ASSERT(0);
 		}
 //#endif
@@ -200,6 +211,7 @@ BOOL CServerSocketOwnerThread::InitInstance()
 
 /***********************************************************************/
 
+	// created with auto delete turned off
 int CServerSocketOwnerThread::ExitInstance()
 	{
 	// TODO:  perform any per-thread cleanup here
@@ -256,6 +268,7 @@ int CServerSocketOwnerThread::ExitInstance()
 			//delete m_pSCC->pSocket; corrupts heap STOPPED here on 2016-08-01 jeh .. need to delete?
 			m_pSCC->pSocket = NULL;	 // was deleted above under the name of m_pConnectionSocket 
 			//delete m_pSCC->pSocket; corrupts heap
+			m_pSCC->pServerSocketOwnerThread = NULL;
 			}
 			Sleep(20);
 			m_pSCC->bConnected = (BYTE) eNotConnected;
@@ -304,6 +317,9 @@ int CServerSocketOwnerThread::ExitInstance()
 				}
 			}
 		}
+	//delete this; -- MOVE CODE IN owner destructor to this location and make sure auto delete is on
+	MyDestructor();
+	
 	return CWinThread::ExitInstance();
 	}
 
@@ -339,7 +355,8 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 		{
 		if (pscc->pSocket)
 			{
-			if (pscc->pSocket->ShutDown(2))
+			i = sizeof(CServerSocket);	//65620
+			if (i = pscc->pSocket->ShutDown(2))
 				{
 				s += _T(" servers client socket shut down\n");
 				TRACE(s);

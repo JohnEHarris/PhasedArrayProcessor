@@ -360,13 +360,15 @@ void CServerSocket::OnAccept(int nErrorCode)
 	else	ASSERT(0);
 
 
-	// create a new thread IN SUSPENDED STATE
+	// create a new thread IN SUSPENDED STATE 
+	//  THIS DID NOT WORK. LEAVE AUTODELETE ON ....and turn off auto delete. Must explicitly delete thread to run destructor.
 	CServerSocketOwnerThread * pThread =
 	m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread = (CServerSocketOwnerThread *) AfxBeginThread(RUNTIME_CLASS (CServerSocketOwnerThread),
 	   	   					  				                                THREAD_PRIORITY_ABOVE_NORMAL,
 															                0,					// stacksize
 											                                CREATE_SUSPENDED,	// runstate
 																			NULL);				// security
+	//pThread->m_bAutoDelete = 0;
 
 	s.Format(_T("CServerSocketOwnerThread[%d][%d]= 0x%08x, Id=0x%04x was created\n"),
 					nMyServer, nClientPortIndex, pThread, pThread->m_nThreadID);
@@ -765,6 +767,11 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 		pscc->pvChannel[i] = new CvChannel(nClientPortIndex,i);
 		}
 	// create threads
+	i = sizeof(CvChannel);					// 112
+	i = sizeof(CServerSocketOwnerThread);	// 108
+	i = sizeof(CServerRcvListThread);		// 272
+	i = sizeof(CServerConnectionManagement);// 12
+	i = sizeof(CServerListenThread);		// 80
 
 
 	return 1;

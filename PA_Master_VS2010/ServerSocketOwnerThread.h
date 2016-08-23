@@ -40,6 +40,7 @@ public:
 	//afx_msg void KillCommunicationThread(WPARAM w, LPARAM lParam);
 	afx_msg void TransmitPackets(WPARAM w, LPARAM lParam);
 	afx_msg void Exit2(WPARAM w, LPARAM lParam);
+	afx_msg void MyDestructor();
 
 	CServerConnectionManagement *m_pMySCM;		// managing class ptr
 	int m_nMyServer;							// which instance of stSCM[] we are

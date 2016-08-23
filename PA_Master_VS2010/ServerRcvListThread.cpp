@@ -108,6 +108,7 @@ CServerRcvListThread::~CServerRcvListThread()
 BOOL CServerRcvListThread::InitInstance()
 	{
 	CString s;
+	int i;
 	
 	// TODO:  perform and per-thread initialization here
 #ifndef _AFXDLL
@@ -119,6 +120,7 @@ BOOL CServerRcvListThread::InitInstance()
 
 	CServerRcvListThreadBase::InitInstance();
 	m_pElapseTimer = new CHwTimer();
+	i = sizeof(CHwTimer);		// 364
 
 		//InitRunningAverage(0,0);
 		return TRUE;

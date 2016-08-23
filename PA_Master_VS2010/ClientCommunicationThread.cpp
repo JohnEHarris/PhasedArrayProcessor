@@ -321,6 +321,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 	int nSockOpt = TRUE;
 	int  sockerr=0;
 	short nPort;
+	int i;
 	UINT uPort;
 	CString s, stmp;
 
@@ -363,6 +364,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 		}
 
 	m_pSocket = new CClientSocket(m_pMyCCM);	// subtype c0, 16 bytes long.
+	i = sizeof(CClientSocket);	//24
 
 
 // Purely Randy's work

@@ -481,8 +481,9 @@ BOOL CServiceApp :: InitInstance()
 	SetRegistryKey(_T("Tuboscope"));	// gen HKEY_CUR_USR\Software\Tuboscope\  key
 	// Use a custom Tubo INI file reader/writer to configure the PAM
 	if ( gDlg.pTuboIni == NULL )
-		gDlg.pTuboIni = new CTuboIni(t);	
+		gDlg.pTuboIni = new CTuboIni(t);	// 12
 	//m_pTuboIni = new CTuboIni(t);
+	//i = sizeof (CTuboIni);
 
 
 	// Open a debugger file for fake data
@@ -1164,7 +1165,7 @@ on a given machine, there is only one server involved. Hence MAX_SERVERS = 1.
 //
 void CServiceApp::InitializeServerConnectionManagement(void)
 	{
-	int i;
+	int i, j;
 	CString s;
 	UINT uPort;
 	int nError;
@@ -1185,6 +1186,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 		case 0:		// There are multiple client instrument looking for the PAM server. This is the only server
 					// for instruments in this application.
 			pSCM[i] = new CServerConnectionManagement(i);
+			j = sizeof(CServerConnectionManagement);
 			if (pSCM[i])
 				{
 				s = gServerArray[i].Ip;			// a global static table of ip addresses define by an ini file
@@ -1335,7 +1337,7 @@ void CServiceApp::GetAllIP4AddrForThisMachine(void)
 //
 void CServiceApp::InitializeClientConnectionManagement(void)
 	{
-	int i;
+	int i, j;
 #if 1
 	// Instantiate all CCM instances for as many client connections as are going to be supported
 	// Convention is for case 0 to be Phased Array GUI - PAG
@@ -1367,6 +1369,7 @@ void CServiceApp::InitializeClientConnectionManagement(void)
 			uServerPort = GetServerPort(i) & 0xffff;	// port on the PAG server that we will try to connect to
 			// Make a specific child class of CCM to handle the Phased Array GUI - PAG
 			pCCM_PAG = (CCCM_PAG *) new CCCM_PAG(i);
+			j = sizeof(CCCM_PAG);
 			if (NULL == pCCM_PAG)
 				{
 				TRACE1("pCCM_PAG[%d] is NULL\n", i);

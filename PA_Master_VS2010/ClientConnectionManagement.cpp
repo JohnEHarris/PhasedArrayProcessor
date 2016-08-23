@@ -93,6 +93,7 @@ extern THE_APP_CLASS theApp;
 CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHORT wOriginator)
 	{
 	CString s;
+	int i;
 	m_pstCCM = NULL;
 	m_nMyConnection = -1;
 	m_BufOffset = m_nStart = 0;
@@ -134,6 +135,7 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 	m_pstCCM->pCSSendPkt	= new CRITICAL_SECTION();
 	m_pstCCM->pCSDebugIn	= new CRITICAL_SECTION();
 	m_pstCCM->pCSDebugOut	= new CRITICAL_SECTION();
+	i = sizeof(CRITICAL_SECTION);		// 24
 
 	InitializeCriticalSectionAndSpinCount(m_pstCCM->pCSRcvPkt,4);
 	InitializeCriticalSectionAndSpinCount(m_pstCCM->pCSSendPkt,4);
@@ -144,6 +146,12 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 	m_pstCCM->pSendPktList			= new CPtrList(64);	// commands from somebody go here
 	m_pstCCM->pInDebugMessageList	= new CPtrList(64);
 	m_pstCCM->pOutDebugMessageList	= new CPtrList(64);
+	i = sizeof(CPtrList);					// 28
+	i = sizeof(CClientConnectionManagement);//65584
+	i = sizeof(CClientCommunicationThread);//128
+	i = sizeof(CClientSocket);				//16
+	i = sizeof(CCmdProcessThread);			//76
+	i = sizeof(CCCM_PAG);					//65596
 
 	m_pstCCM->uLastTick		= 0;
 

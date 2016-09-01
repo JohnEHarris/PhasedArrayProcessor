@@ -8,6 +8,8 @@ Revised:	Adapted from ClientConnectionManagement for the same reason - to manage
 			a TCP/Ip connetion. This connection is made by a server. It is assumed that all clients 
 			on a given connection are requesting the same kind of service and supplying the same data
 			set to the server.
+			Since the socket belongs to this thread, it runs at the priority of the ServerOwner which is high.
+			If it were in the global structure, it would run at the priority of the application.
 
 #endif
 
@@ -140,7 +142,7 @@ enum {eMasterNotPresent, eMasterNotConnected, eMasterConnected };
 //
 enum {eInstrumentNotPresent, eInstrumentNotConnected, eInstrumentConnected, eInstrumentConfigured };
 // Configured means the instrument has received a configuration file.
-enum { eNotConnected, eNotConfigured, eConfigured };
+enum { eNotConnected = 0, eNotConfigured, eConfigured };
 
 
 typedef struct
@@ -232,7 +234,7 @@ typedef struct
 	CRITICAL_SECTION *pCSDebugIn;
 	CRITICAL_SECTION *pCSDebugOut;
 
-	CServerConnectionManagement *pSCM;	// point to ourself. This is important.
+	CServerConnectionManagement *pSCM;	// point to ourself. This is important. Pointer to a CLASS
 
 	}	ST_SERVER_CONNECTION_MANAGEMENT;
 

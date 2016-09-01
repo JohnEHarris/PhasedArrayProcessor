@@ -35,7 +35,7 @@ BOOL CTestThread::InitInstance()
 int CTestThread::ExitInstance()
 {
 	// TODO:  perform any per-thread cleanup here
-
+	//delete this;
 	return CWinThread::ExitInstance();
 }
 
@@ -60,6 +60,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 	int i;
 #ifdef _DEBUG
 	printf("Hello World from Test Thread\n");
+	std::cout << "Hello World from Test Thread using std\n" << std::endl;
 #endif
 	s.Format(_T("Hello World from Test Thread wparam = %x, lparam = %x\r\n"), w,lParam);
 	TRACE(s);
@@ -78,6 +79,8 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 	// Infinite loop waiting on handle which never gets set
 	// Wakes every 100 ms and post msg to client threads primarily
 	// in PAG this same functionality is called CTscanDlg::TimerTickToThreads(void)
+	//
+	// waiting for ServiceApp::ShutDown to issue ::SetEvent(m_pTestThread->m_hTimerTick);
 	//
 	while( ::WaitForSingleObject(m_hTimerTick, 100) != WAIT_OBJECT_0 )
 		{

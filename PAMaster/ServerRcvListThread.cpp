@@ -85,7 +85,7 @@ IMPLEMENT_DYNCREATE(CServerRcvListThread, CServerRcvListThreadBase)
 
 CServerRcvListThread::CServerRcvListThread()
 	{
-	m_nFakeDataSeqNumber = 0;
+	//m_nFakeDataSeqNumber = 0;
 	m_nFrameCount = 0;
 	m_nFakeDataCallCount = 0;
 	srand( (unsigned)time( NULL ) );	// seed random number generator
@@ -108,6 +108,7 @@ CServerRcvListThread::~CServerRcvListThread()
 BOOL CServerRcvListThread::InitInstance()
 	{
 	CString s;
+	int i;
 	
 	// TODO:  perform and per-thread initialization here
 #ifndef _AFXDLL
@@ -118,11 +119,8 @@ BOOL CServerRcvListThread::InitInstance()
 #ifdef THIS_IS_SERVICE_APP
 
 	CServerRcvListThreadBase::InitInstance();
-		s.Format(_T("Instrument Client[%d] accepted to server on socket %s : %d\n"), m_nThreadIndex, 
-			m_ConnectionSocket.m_pSCC->sClientIP4, m_ConnectionSocket.m_pSCC->uClientPort); 
-		TRACE(s);
-		TRACE(m_ConnectionSocket.m_pSCC->szSocketName);
-		m_pElapseTimer = new CHwTimer();
+	m_pElapseTimer = new CHwTimer();
+	i = sizeof(CHwTimer);		// 364
 
 		//InitRunningAverage(0,0);
 		return TRUE;
@@ -144,17 +142,37 @@ int CServerRcvListThread::ExitInstance()
 {
 	// TODO:  perform any per-thread cleanup here
 	// return CServerRcvListThreadBase::ExitInstance();
-	CString s;
-	//int i;
+	CString s = _T("");
+	int i = 0;
+	void *pV;
+
 #ifdef THIS_IS_SERVICE_APP
-	delete m_pElapseTimer;
-#if 0
-	for ( i = 0; i < MAX_WALL_CHANNELS; i++)
+	if (m_pElapseTimer)
 		{
-		if (m_pRunAvg[i])	delete m_pRunAvg[i];
-		m_pRunAvg[i] = NULL;
+		delete m_pElapseTimer;
+		m_pElapseTimer = NULL;
 		}
-#endif
+
+	// close and or delete everything the list thread created jeh 2016-08-01
+	// delete the client connection associated with this  thread see 
+	// pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
+	// may need to get rid of ServerSocketOwnerThread elements also
+	if ( m_pSCC)
+		{
+		for ( i = 0; i < MAX_CHNLS_PER_INSTRUMENT; i++)
+			{
+			if (m_pSCC->pvChannel[i])
+				{
+				delete m_pSCC->pvChannel[i];
+				m_pSCC->pvChannel[i] = NULL;
+				}
+			}	// for loop
+		// release storage and critical sections
+		// socket object belongs to ServerSockerOwnerThread so must have it to kill the linked lists
+		
+		}
+
+
 #endif
 	s.Format(_T("CServerRcvListThread, Srv[%d]Instrument[%d] has exited\n"),m_nMyServer, m_nThreadIndex);
 	TRACE(s);
@@ -207,10 +225,12 @@ afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 
 void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
 	{
-	pData->DataHead.bMsgID	= eRawInsp;	// raw data=10
-	pData->DataHead.bSeq	= m_nFakeDataSeqNumber;
-	m_nFakeDataSeqNumber	+= 128;	// the next packet will 128 Ascans/Main bangs later
-	m_nFakeDataSeqNumber	= m_nFakeDataSeqNumber % 128;
+	pData->DataHead.bMsgID		= eRawInsp;	// raw data=10
+	pData->DataHead.bChannelTypes	= 4;
+	pData->DataHead.bChannelRepeats	= 8;
+	pData->DataHead.bFramesInDataPacket = 4;
+	//m_nFakeDataSeqNumber	+= 128;	// the next packet will 128 Ascans/Main bangs later
+	//m_nFakeDataSeqNumber		= m_nFakeDataSeqNumber % 128;
 
 	pData->DataHead.bDin = FORWARD | PIPE_PRESENT;
 	pData->DataHead.wMsgSeqCnt++;
@@ -286,13 +306,8 @@ int CServerRcvListThread::GetSequenceModulo(SRawDataPacket *pData)
 #if 0
 	int i;
 	int nStartSeqCount, nSeqQty;
-	// Since length == 1040 we have 128 ascan samples. The header tells us the 1st vChnl in the packet
-	nStartSeqCount = pData->DataHead.bSeq;
-	//Scan the whole packet to see when the start seq count occurs again .. this is the number of vChnls in th packet
-	for ( i = 1; i < 128; i++)
-		{
-		if (pData->RawData
-		}
+	// Since length == 1040 we have 128 ascan samples. 
+
 #endif
 	return 32;
 
@@ -401,16 +416,18 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 	CvChannel *pChannel;
 	CString s;
 
-#ifdef MAKE_FAKE_DATA
-	// Basically Yqing's simulator gave us some bytes. Generate test data in place of those bytes.
-	// Run the fake data through the Nc Nx operations and keep the Max, Min values
+
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
 	if (pBuf->nLength == 1040)
 		{
 		pRaw = (SRawDataPacket *) &pBuf->Msg;
+#ifdef MAKE_FAKE_DATA
+	// Basically Yqing's simulator gave us some bytes. Generate test data in place of those bytes.
+	// Run the fake data through the Nc Nx operations and keep the Max, Min values
 		MakeFakeData(pRaw);
 		// Now that we have fake data, process it
 		// How many vChannels?
+#endif
 		nSeqQty = GetSequenceModulo(pRaw);
 		// we need 16 frames of data to average/peak hold
 		// a frame occurs when the vChannel repeats
@@ -482,7 +499,12 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 		TRACE(s);
 		}	// if (pBuf->nLength == 1040)
 
-#endif
+	else
+		{
+		s.Format(_T("ProcessInstrumentData got a data packet of the wrong size, %d\n"),pBuf->nLength);
+		delete pData;	// info in pRaw was put into a new structure and sent to the PAG
+		}
+
 	}	// CServerRcvListThread::ProcessInstrumentData(void *pData)
 #endif
 

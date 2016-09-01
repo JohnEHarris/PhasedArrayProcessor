@@ -40,6 +40,7 @@ Revised:	02-Mar-2005 This code works the same, but the CClientSocket is now usin
 //#include "MC_SysCPTestClient.h"
 //#include "MC_SysCPTestClientDlg.h"
 #include "resource.h"
+//#include "ServiceApp.h"
 #include "ClientSocket.h"
 #include "ClientConnectionManagement.h"
 #include "ClientCommunicationThread.h"
@@ -98,32 +99,43 @@ CClientCommunicationThread::~CClientCommunicationThread()
 	{
 	int i = -1;
 	CString s = _T("");
+	CString t = _T("");
 	if (m_pMyCCM)
 		{
 		i = m_pMyCCM->m_pstCCM->pCCM->m_nMyConnection;
 		}
 
-	switch (m_nMyRole)
+	switch (this->m_nMyRole)
 		{
 	default:	s = _T("?? Com thread Destructor ran\n");	break;
 	case 1:		
-		s.Format(_T("Rcvr Com thread[%d] Destructor ran\n"), i);
+		s.Format(_T("Rcvr Com thread[%d],handle %0x Destructor ran\n"), i, this->m_hThread);
+		TRACE(s);
 		if (m_pstCCM->pReceiveThread)
 			{
-			//delete m_pstCCM->pReceiveThread;
+			//delete m_pstCCM->pReceiveThread; already done by ExitInstance
 			m_pstCCM->pReceiveThread = NULL;
+			t = _T("~CClientCommunicationThread() receive thread not null\n");
 			}
+		if (m_pstCCM->pSocket)
+			{
+			m_pstCCM->pSocket = NULL;
+			t = _T("~CClientCommunicationThread() ASync socket not null\n");
+			}
+
 		break;
 	case 2:
-		s.Format(_T("Send Com thread[%d] Destructor ran\n"), i);	
+		s.Format(_T("Send Com thread[%d],handle %0x Destructor ran\n"), i, this->m_hThread);	
 		if (m_pstCCM->pSendThread)
 			{
 			//delete m_pstCCM->pSendThread;
 			m_pstCCM->pSendThread = NULL;
+			t = _T("~CClientCommunicationThread() send thread not null\n");
 			}
 		break;
 		}
 	TRACE(s);
+	if (t.GetLength()) TRACE(t);
 	}
 
 
@@ -151,23 +163,13 @@ int CClientCommunicationThread::ExitInstance()
 	default:	TRACE(_T("?? Com thread ExitInstance()\n"));	break;
 	case 1:		
 		TRACE(_T("Rcvr Com thread ExitInstance()\n"));
-		if (NULL == m_pMyCCM)				break;
-		if (NULL == m_pstCCM)				break;
-		if (NULL == m_pstCCM->pCSRcvPkt)	break;
-		m_pMyCCM->SetConnectionState(0);
-		EnterCriticalSection(m_pstCCM->pCSRcvPkt);
-		if (m_pSocket)
-			{
-			m_pSocket->Close();
-			Sleep(10);
-			delete m_pSocket;
-			m_pSocket = NULL;
-			}
-		LeaveCriticalSection(m_pstCCM->pCSRcvPkt);
+		//delete m_pstCCM->pReceiveThread;
 
 		break;
 
-	case 2:		TRACE(_T("Send Com thread ExitInstance()\n"));	
+	case 2:		
+		TRACE(_T("Send Com thread ExitInstance()\n"));
+		//delete m_pstCCM->pSendThread;
 		break;
 		}
 	return CWinThread::ExitInstance();
@@ -179,6 +181,8 @@ BEGIN_MESSAGE_MAP(CClientCommunicationThread, CWinThread)
 	//}}AFX_MSG_MAP
 
 	ON_THREAD_MESSAGE(WM_USER_INIT_TCP_THREAD,InitTcpThread)
+	ON_THREAD_MESSAGE(WM_USER_KILL_RECV_THREAD,KillReceiveThread)
+	ON_THREAD_MESSAGE(WM_USER_KILL_SEND_THREAD,KillSendThread)
 	//ON_THREAD_MESSAGE(WM_USER_RESTART_TCP_COM_DLG,RestartTcpComDlg)
 	ON_THREAD_MESSAGE(WM_USER_RESTART_ADP_CONNECTION,RestartTcpComDlg)
 	ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, TransmitPackets)	
@@ -228,19 +232,96 @@ afx_msg void CClientCommunicationThread::InitTcpThread(WPARAM w, LPARAM lParam)
 		break;
 
 	case 2:		// sender
-		TRACE(_T("Sender thread cannot create socket\n"));
+		TRACE(_T("CCT Sender thread cannot create socket\n"));
 		break;
 	}
 
 	return;	// 0;
 	}
 
-// Taken from CTCPCommunicationDlg to eliminate need for hidden widows dialog
+// For shutdown must kill threads and linked lists
+afx_msg void CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lParam)
+	{
+	int nError;
+	CString s;
+	//void *pV;
+
+	// Since Receive created the socket, it will kill the socket
+	if (!m_pstCCM)
+		{
+		TRACE("m_pstCCM is null... cannot access client socket\n");
+		return;	// major trouble here, this should never happen
+		}	
+	if (! m_pMyCCM)
+		{
+		TRACE("m_pMyCCM is null... will not access client socket\n");
+		return;	// major trouble here, this should never happen
+		}
+	if (m_pstCCM->pSocket)
+		{
+		if (m_pstCCM->pSocket->ShutDown(2))
+			{
+			TRACE("Client Socket to PAG shut down OK\n");
+			m_pstCCM->pSocket->Close();
+			}
+		else
+			{
+			nError = GetLastError();	// WSAENOTCONN                      10057L
+			s.Format(_T("Shutdown of PAG client socket failed, %d\n"), nError);
+			}
+		delete m_pstCCM->pSocket;
+		m_pstCCM->pSocket = 0;
+		}
+	//ExitInstance();
+	}
+
+afx_msg void CClientCommunicationThread::KillSendThread(WPARAM w, LPARAM lParam)
+	{
+		int nError;
+	CString s;
+	//void *pV;
+
+	// Since Receive created the socket, it will kill the socket
+	if (!m_pstCCM)
+		{
+		TRACE("m_pstCCM is null... cannot access client socket\n");
+		return;	// major trouble here, this should never happen
+		}	
+	if (! m_pMyCCM)
+		{
+		TRACE("m_pMyCCM is null... will not access client socket\n");
+		return;	// major trouble here, this should never happen
+		}
+	if (m_pstCCM->pSocket)
+		{
+		if (m_pstCCM->pSocket->ShutDown(2))
+			{
+			TRACE("Client Socket to PAG shut down OK\n");
+			m_pstCCM->pSocket->Close();
+			m_pstCCM->pSocket = 0;	// ok stop
+			}
+		else
+			{
+			nError = GetLastError();	// WSAENOTCONN   10057L    WSAENOTSOCK     10038L
+			s.Format(_T("Shutdown of client socket[%d] failed\n"), nError);
+			}
+
+		}
+	m_pstCCM->pSocket = 0;	// memory leak if not already 0
+
+	//ExitInstance();
+	//delete m_pstCCM->pSendThread;
+	}
+	
+
+
+// Taken from CTCPCommunicationDlg to eliminate need for hidden windows dialog
 void CClientCommunicationThread::StartTCPCommunication()
 	{
 	int nSockOpt = TRUE;
 	int  sockerr=0;
 	short nPort;
+	int i;
 	UINT uPort;
 	CString s, stmp;
 
@@ -283,6 +364,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 		}
 
 	m_pSocket = new CClientSocket(m_pMyCCM);	// subtype c0, 16 bytes long.
+	i = sizeof(CClientSocket);	//24
 
 
 // Purely Randy's work
@@ -531,7 +613,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
 
 
 // On a timed basis, check the received packet activity to determine connectivity
-// This is usually a 0.1 second tick. Thus restarts occur every 50 sceonds for a stalled socket.
+// This is usually a 0.1 second tick. Thus restarts occur every 50 seconds for a stalled socket.
 //
 afx_msg void CClientCommunicationThread::OnTimer(WPARAM w, LPARAM lParam)
 	{

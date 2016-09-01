@@ -29,24 +29,7 @@ static char THIS_FILE[] = __FILE__;
 
 IMPLEMENT_DYNAMIC(CClientSocket, CAsyncSocket);
 
-#if 0
-// Legacy constructor
-CClientSocket::CClientSocket( CPtrList *pListDataIn,CPtrList *pListDebugMsgIn,
-							  CPtrList *pListDataOut,CPtrList *pListDebugMsgOut,
-							  CSemaphore * psemDataIn, CSemaphore * psemDataOut
-							)
-{
-	m_pListDataIn = pListDataIn;
-	m_pListDebugMsgIn = pListDebugMsgIn;
-	m_pListDataOut = pListDataOut;
-	m_pListDebugMsgOut = pListDebugMsgOut;
-	m_psemDataIn = psemDataIn;
-	m_psemDataOut = psemDataOut;
-	//DebugInMessage( "New CClientSocket." );
-	m_nChooseYourOnReceive = 0;	// legacy constructor gives legacy OnReceive jeh
-	m_pCCM = NULL;
-}
-#endif
+
 
 // New constructor for ClientConnectionManagment
 // Pass a ptr to the CCM class instance managing this socket/connection
@@ -209,17 +192,6 @@ void CClientSocket::OnAccept(int nErrorCode)
 
 void CClientSocket::OnClose(int nErrorCode) 
 	{
-	if (m_pCCM)
-		{
-		// Let the client manager decide if a restart of the receive/send thread is needed
-		m_pCCM->SetConnectionState(0);
-		if ( m_pCCM->m_pstCCM)
-			{
-			m_pCCM->InitReceiveThread();
-			}
-		}
-
-
 	CAsyncSocket::OnClose(nErrorCode);
 	}
 

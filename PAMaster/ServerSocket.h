@@ -47,8 +47,8 @@ public:
 	void SetSCM(CServerConnectionManagement *pSCM)		{	m_pSCM = pSCM;	}
 	CServerConnectionManagement * GetSCM(void)		{	return m_pSCM;	}
 
-	void OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex);
-	void KillpClientConnectionStruct(void);
+	int BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex);
+	int KillClientConnectionStructure (ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex);
 
 	//int SendPacket(BYTE *pB, int nBytes, int nDeleteFlag);
 

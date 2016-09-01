@@ -149,6 +149,10 @@
     <ManifestResourceCompile>
       <ResourceOutputFileName>$(IntDir)$(TargetName)$(TargetExt).embed.manifest.res</ResourceOutputFileName>
     </ManifestResourceCompile>
+    <PostBuildEvent>
+      <Command>
+"C:\Program Files (x86)\Windows Kits\8.1\bin\x64\signtool.exe" sign  /n   "National Oilwell Varco, Inc."   /t   "http://timestamp.entrust.net/TSS/AuthenticodeTS" $(OutDir)$(TargetName).exe</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\Include\CFG100.H" />

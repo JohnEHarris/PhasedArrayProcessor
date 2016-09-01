@@ -60,6 +60,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 	int i;
 #ifdef _DEBUG
 	printf("Hello World from Test Thread\n");
+	std::cout << "Hello World from Test Thread using std\n" << std::endl;
 #endif
 	s.Format(_T("Hello World from Test Thread wparam = %x, lparam = %x\r\n"), w,lParam);
 	TRACE(s);

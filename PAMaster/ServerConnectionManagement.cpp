@@ -106,6 +106,8 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 	CString s;
 	i = 0;
 
+	if (m_pstSCM == 0) 
+		goto EXIT;
 	if (m_pstSCM->pServerListenThread)
 		{
 		PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID,WM_QUIT, 0L, 0L);
@@ -115,26 +117,45 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 	/******************/
 	LockDebugIn();
 	n = m_pstSCM->pInDebugMessageList->GetCount();
-	while (!m_pstSCM->pInDebugMessageList->IsEmpty())	// empty the list
-	{
-		pV = (void *) m_pstSCM->pInDebugMessageList->RemoveHead();
-		delete pV;
-	}
-	delete m_pstSCM->pInDebugMessageList;				// delete the list
+	if ( n >= 0)
+		{
+		while (!m_pstSCM->pInDebugMessageList->IsEmpty())	// empty the list
+			{
+			pV = (void *) m_pstSCM->pInDebugMessageList->RemoveHead();
+			delete pV;
+			}
+		delete m_pstSCM->pInDebugMessageList;				// delete the list 2016-08-10 break
+		
+		}
+	m_pstSCM->pInDebugMessageList = 0;
+
 	UnLockDebugIn();
-	if (m_pstSCM->pCSDebugIn)		delete m_pstSCM->pCSDebugIn;	// delete the critcial section
+	if (m_pstSCM->pCSDebugIn)
+		{
+		delete m_pstSCM->pCSDebugIn;	// delete the critcial section
+		m_pstSCM->pCSDebugIn = 0;
+		}
 
 	/******************/
 	LockDebugOut();
 	n = m_pstSCM->pOutDebugMessageList->GetCount();
-	while (!m_pstSCM->pOutDebugMessageList->IsEmpty())
-	{
-		pV = (void *) m_pstSCM->pOutDebugMessageList->RemoveHead();
-		delete pV;
-	}
-	delete m_pstSCM->pOutDebugMessageList;
+	if ( n >= 0)
+		{
+		while (!m_pstSCM->pOutDebugMessageList->IsEmpty())
+			{
+			pV = (void *) m_pstSCM->pOutDebugMessageList->RemoveHead();
+			delete pV;
+			}
+		delete m_pstSCM->pOutDebugMessageList;
+		}
+	m_pstSCM->pOutDebugMessageList = 0;
+
 	UnLockDebugOut();
-	if (m_pstSCM->pCSDebugOut)		delete m_pstSCM->pCSDebugOut;
+	if (m_pstSCM->pCSDebugOut)
+		{
+		delete m_pstSCM->pCSDebugOut;
+		m_pstSCM->pCSDebugOut = 0;
+		}
 
 	// Kill connections to clients
 #if DONE_IN_COM_THREAD_EXIT_INST
@@ -152,7 +173,7 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 		}
 #endif
 
-
+EXIT:
 	s.Format(_T("~CServerConnectionManagement Destructor[%d] has run\n"), m_nMyServer);
 	TRACE(s);
 	}
@@ -215,15 +236,18 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 	{
 	int i, j;
 	CString s;
+	int nResult;
 	CWinThread *pThread;
+	void *pV;
+
 //	StopListenerThread(nMyServer);
 	if (nMyServer < 0)							return 3;
 	if (nMyServer >= MAX_SERVERS)				return 3;
 	if (NULL == m_pstSCM)						return 3;
 	m_pstSCM->nSeverShutDownFlag = 1;
-	if (NULL == m_pstSCM->pServerListenThread)	return 3;
+	//if (NULL == m_pstSCM->pServerListenThread)	nReturn = 3;
 
-#if 0
+#if 1
 	// global shutdown flag now handles this
 	for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 		{
@@ -234,16 +258,15 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		}
 #endif
 
+	if (NULL == m_pstSCM->pServerListenThread)
+		{
+		TRACE("m_pstSCM->pServerListenThread IS NULL\n");
+		goto NO_SERVERLISTENTHREAD;
+		}
 
-	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
-		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);	
-	// post a message to init the listener thread. Feed in a pointer to this instance of SCM
-	//m_pstSCM->pServerListenThread->PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
-	//Sleep(20);
+	// Listening thread kills listening socket and itself
+	nResult = StopListenerThread(nMyServer);
 
-	pThread = (CWinThread *) m_pstSCM->pServerListenThread; 
-	PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
-	Sleep(10);
 	for ( i = 0; i < 100; i++)	// wait a little while for listener to go away
 		{
 		if (m_pstSCM->pServerListenThread == NULL)		break;
@@ -254,72 +277,54 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		TRACE(_T("Listener Exit routine didn't run or didn't NULL pServerListenThread\n"));
 		}
 
+NO_SERVERLISTENTHREAD:
+
+	// Kill the debug critical sections and lists
 #if 0
-	// done in CServerSocketOwnerThread::ExitInstance()
-	// Kill the RcvListThread
-	int nDeadThreadQty, nDeadThreadStart;	// start is initial number of dead thread before waiting for threads to die
-
-	nDeadThreadQty = 0;
-	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
+	// move to destructor
+	if (m_pstSCM->pCSDebugIn)
 		{
-		if (NULL == m_pstSCM->pClientConnection[i])
+		EnterCriticalSection(m_pstSCM->pCSDebugIn );
+		while (	m_pstSCM->pInDebugMessageList->GetCount() > 0)
 			{
-			nDeadThreadQty++;
-			continue;	// go to end of loop
+			pV = (void *) m_pstSCM->pInDebugMessageList->RemoveHead();
+			delete pV;
 			}
-		pThread = (CWinThread *) m_pstSCM->pClientConnection[i]->pServerRcvListThread;
-		if (NULL != pThread)
-			{
-			PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
-			Sleep(10);
-			}
-		else nDeadThreadQty++;
+		LeaveCriticalSection(m_pstSCM->pCSDebugIn );
+		//delete m_pstSCM->pInDebugMessageList;
 		}
 
-	if (nDeadThreadQty != MAX_CLIENTS_PER_SERVER)
+			
+
+	if (m_pstSCM->pCSDebugOut)
 		{
-		// Wait for RcvListThreads to die
-		for ( j = 0; j < 10; j++)
+		EnterCriticalSection(m_pstSCM->pCSDebugOut );
+		while (	m_pstSCM->pOutDebugMessageList->GetCount() > 0)
 			{
-			nDeadThreadStart = nDeadThreadQty;
-			nDeadThreadQty = 0;
-			if (nDeadThreadStart == MAX_CLIENTS_PER_SERVER)	break;	// we are done
-			for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
-				{
-				if (NULL == m_pstSCM->pClientConnection[i])
-					{
-					nDeadThreadQty++;
-					continue;	// go to end of loop
-					}
-				pThread = (CWinThread *) m_pstSCM->pClientConnection[i]->pServerRcvListThread;
-				if (NULL != pThread)
-					{
-					//PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
-					Sleep(10);
-					}
-				else nDeadThreadQty++;
-				}	// for MAX_CLIENTS_PER_SERVER	
+			pV = (void *) m_pstSCM->pOutDebugMessageList->RemoveHead();
+			delete pV;
 			}
-		}
-	if (nDeadThreadQty != MAX_CLIENTS_PER_SERVER)
-		{
-		s.Format(_T("Failed to kill %d ServerRcvListThreads\n"), MAX_CLIENTS_PER_SERVER - nDeadThreadQty);
-		TRACE(s);
+		LeaveCriticalSection(m_pstSCM->pCSDebugOut );
+		//delete m_pstSCM->pOutDebugMessageList;
 		}
 #endif
+SERVERS_CLIENT_LOOP:
 
-	// Now kill all the ServerConnection threads which themselves have to close and kill their sockets
+	// Now kill all the ServerSocketOwner threads which themselves have to close and kill their sockets
 	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 		{
 		if (NULL == m_pstSCM->pClientConnection[i])	continue;	// go to end of loop
 
 		pThread = (CWinThread *) m_pstSCM->pClientConnection[i]->pServerSocketOwnerThread;
 		if (NULL != pThread)
-			PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
+			//PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
+			PostThreadMessage(pThread->m_nThreadID,WM_USER_KILL_OWNER_SOCKET,
+								(WORD)i, (LPARAM)m_pstSCM->pClientConnection[i]);
 		Sleep(10);
 		for ( j = 0; j < 60; j++)
 			{
-			if (m_pstSCM->nComThreadExited[i])					break;
+			if (m_pstSCM->nComThreadExited[i])					
+				break;
 			Sleep(50);
 			}	// for ( j = 0; j < 60; j++)
 
@@ -327,26 +332,8 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 			{
 			s.Format(_T("ServerComThread Exit routine didn't run or didn't NULL pServerSocketOwnerThread[%d]\n"), i);
 			TRACE(s);
+			return 2;
 			}
-#if 0
-		else
-			{
-			if (m_pstSCM->pClientConnection[i])
-				{
-#if 0
-				crashes!!
-				if (m_pstSCM->pClientConnection[i]->pSocket)
-					{
-					m_pstSCM->pClientConnection[i]->pSocket->m_nOwningThreadType = eServerConnection;
-					delete m_pstSCM->pClientConnection[i]->pSocket;
-					}
-#endif
-				delete m_pstSCM->pClientConnection[i];
-				m_pstSCM->pClientConnection[i] = NULL;
-				}
-			}
-#endif
-				
 		}	// for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 
 	return 0;

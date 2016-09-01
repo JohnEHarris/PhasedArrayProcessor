@@ -61,6 +61,8 @@ public:
 
 	// pass ptr to the controlling class instance of CCM in lParam
 	afx_msg void InitTcpThread(WPARAM w, LPARAM lParam);
+	afx_msg void KillReceiveThread(WPARAM w, LPARAM lParam);
+	afx_msg void KillSendThread(WPARAM w, LPARAM lParam);
 	afx_msg void RestartTcpComDlg(WPARAM w, LPARAM lParam);
 	afx_msg void TransmitPackets(WPARAM, LPARAM);
 	afx_msg void OnTimer(WPARAM w, LPARAM lParam);

@@ -64,41 +64,6 @@ BOOL CServerRcvListThreadBase::InitInstance()
 	AFX_MODULE_THREAD_STATE* pState = AfxGetModuleThreadState();	// debug checking
 	AfxSocketInit();
 #endif
-		{
-		m_ConnectionSocket.Init();
-		m_ConnectionSocket.m_pThread	= this;
-		m_ConnectionSocket.m_pSCM		= this->m_pMySCM;	// ST_SERVER_CONNECTION_MANAGEMENT
-		m_ConnectionSocket.m_nMyThreadIndex = this->m_nThreadIndex;
-		m_ConnectionSocket.m_nMyServer	= this->m_nMyServer;
-		m_ConnectionSocket.m_pstSCM		= this->m_pMySCM->m_pstSCM;
-		m_ConnectionSocket.m_pSCC		= this->m_pSCC;		//m_pMySCM->m_pstSCM->pClientConnection[0]; // Server's client connection
-		//m_ConnectionSocket.m_pSCC->pServerRcvListThread = this;
-		m_ConnectionSocket.m_pSCC->pSocket = &m_ConnectionSocket;
-		// m_hConnectionSocket = Asocket.Detach(); set when thread created suspended
-		// attache via the handle to the temporary socket generated in the OnAccept() operation in CServerSocket
-		// m_ConnectionSocket.Attach(m_hConnectionSocket, FD_READ | FD_CLOSE );
-		//m_ConnectionSocket.GetPeerName(m_Ip4,m_uPort);	// connecting clients info??
-		//m_ConnectionSocket.GetPeerName(Ip4,uPort);	// connecting clients info??
-		//m_ConnectionSocket.SetClientIp4(m_Ip4);
-		//m_ConnectionSocket.m_pSCC->sClientIP4 = m_Ip4;
-		//m_ConnectionSocket.m_pSCC->uClientPort = m_uPort;
-		m_ConnectionSocket.m_pSCC->szSocketName.Format(_T("ServerSocket Connection Skt[%d][%d]\n"),  m_nMyServer, m_nThreadIndex);
-#ifdef _I_AM_PAG 
-		m_ConnectionSocket.m_pSCC->sClientName.Format(_T("PAM[%d] on PAG Server[%d]\n"), m_nThreadIndex, m_nMyServer);
-#else
-#ifdef THIS_IS_SERVICE_APP
-		m_ConnectionSocket.m_pSCC->sClientName.Format(_T("Instrument[%d] on Server[%d]\n"), m_nThreadIndex, m_nMyServer);
-#endif
-
-#endif
-		m_ConnectionSocket.m_nOwningThreadType = eServerConnection;
-
-#if 0
-		s.Format(_T("Instrument Client[%d] accepted to server on socket %s : %d\n"), m_nThreadIndex, Ip4, uPort);
-		TRACE(s);
-		TRACE(m_ConnectionSocket.m_pSCC->szSocketName);
-#endif
-		}
 
 	return TRUE;
 }
@@ -112,8 +77,9 @@ int CServerRcvListThreadBase::ExitInstance()
 	TRACE(s);
 	if (m_pSCC->pServerRcvListThread)
 		{
-		delete m_pSCC->pServerRcvListThread;	// never gets here when closing debug window 2016-07-18 jeh
+		//delete m_pSCC->pServerRcvListThread;	// never gets here when closing debug window 2016-07-18 jeh
 		//  but did get here when runnint and inst 1 reconnected.
+		// check to make sure critical sections, linked lists are emptied and deleted
 		m_pSCC->pServerRcvListThread= NULL;
 		}
 	return CWinThread::ExitInstance();

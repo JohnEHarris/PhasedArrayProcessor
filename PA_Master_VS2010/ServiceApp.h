@@ -10,6 +10,8 @@
 #endif // _MSC_VER >= 1000
 
 // THIS_IS_SERVICE_APP is defined in the PAM project under C++ | Preprocessor Definitions 
+#include <iostream>
+using namespace std;
 #include "NTService.h"
 #include "../Include/PA2Struct.h"
 #include "../include/cfg100.h"
@@ -145,7 +147,6 @@ void CstringToChar(CString s, char *pChar);
 void CstringToTChar(CString s, TCHAR *pChar);
 CString GetTimeString(void);
 char* GetTimeStringPtr(void);
-
 
 
 #endif // !defined(AFX_SERVICEAPP_H__C234F376_E8FC_11D1_A712_000000000000__INCLUDED_)

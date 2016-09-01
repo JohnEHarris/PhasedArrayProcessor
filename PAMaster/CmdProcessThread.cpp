@@ -87,4 +87,3 @@ void CCmdProcessThread::DebugMsg(CString s)
 	{
 	TRACE(s);
 	}
-

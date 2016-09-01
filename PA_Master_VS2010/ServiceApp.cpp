@@ -32,6 +32,8 @@ managed classes.
 #include <io.h>
 #include <string.h>
 #include <stdio.h>
+#include <share.h>
+
 #include "InstMsgProcess.h"
 #include "HwTimer.h"
 #include "InspState.h"
@@ -49,6 +51,7 @@ managed classes.
 
 
 #if 0
+
 1.1.002			15-Jul-16	Eliminate Yanming code not being used
 1.1.001			May 2016	New Phased Array 2
 1.0.01			2016-06-14 Nc Nx working with fake data input, good output to PAG - from header file.
@@ -142,6 +145,11 @@ void CstringToChar(CString &s, char *p, int nSizeOfArray)
 	}
 }
 
+// Output the legacy printf statements to a DebugLog.
+// Old: printf("PAM client connected to PAG server on connection %s:%d at %s\n",txt,uCPort, buffer);
+// New: fprintf(DebugFile,"PAM client connected to PAG server on connection %s:%d at %s\n",txt,uCPort, buffer);
+// the DebugFile name is Debug.log.
+
 
 /*************** END FUNCTION PROTOTYPES ******************/					
 //CServiceApp *pTheApp;
@@ -168,6 +176,7 @@ CServiceApp::CServiceApp()
 		//memset((void *) &stSCM[i], 0, sizeof(ST_SERVER_CONNECTION_MANAGEMENT));
 		}
 #endif
+
 
 	m_nShutDownCount = 0;
 
@@ -210,6 +219,7 @@ CServiceApp::~CServiceApp()
 
 	if (m_nFakeDataExists)
 		m_FakeData.Close();
+
 	
 	ShutDown(); // first place when closing dos window
 
@@ -493,7 +503,7 @@ BOOL CServiceApp :: InitInstance()
 	CFileException fileException;
   
 	if ( !m_FakeData.Open( Fake, CFile::modeCreate |   
-			CFile::modeReadWrite, &fileException ) )
+			CFile::modeReadWrite | CFile::shareDenyNone , &fileException ) )
 		{
 		TRACE( _T("Can't open file %s, error = %u\n"),
 		Fake, fileException.m_cause );
@@ -520,6 +530,7 @@ void CServiceApp::SaveFakeData(CString& s)
 	try
 		{
 		m_FakeData.Write(ch,strlen(ch));	// I want to see ASCII in the file
+		m_FakeData.Flush();
 		}
 	catch (CFileException* e)
 		{
@@ -1006,6 +1017,10 @@ WHILE_TARGET:
 
 	// ASSUMINMG WE GOT HERE WITH THE DEBUGGER BY FORCING A CALL TO Shutdown()
 	ShutDown();
+		
+	WSACleanup();  //  Free resources allocated by WSAStartup()	
+
+	Sleep(500);
 	ReportStatus(SERVICE_STOPPED);
 #if 0
 	return;
@@ -1057,7 +1072,7 @@ WHILE_TARGET:
 
 
 //YG_END:
-
+#if 0
 	if( m_hStop )
 		::CloseHandle(m_hStop);
 
@@ -1072,6 +1087,7 @@ WHILE_TARGET:
 
 
 	ReportStatus(SERVICE_STOPPED);
+#endif
 	}	// void CServiceApp :: Run( DWORD, LPTSTR *)
 
 

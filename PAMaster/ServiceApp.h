@@ -10,6 +10,8 @@
 #endif // _MSC_VER >= 1000
 
 // THIS_IS_SERVICE_APP is defined in the PAM project under C++ | Preprocessor Definitions 
+#include <iostream>
+using namespace std;
 #include "NTService.h"
 #include "../Include/PA2Struct.h"
 #include "../include/cfg100.h"
@@ -32,9 +34,9 @@
 #include "CCM_PAG.h"					//12-May-16 jeh
 #include "vChannel.h"					//02-Jun-16 jeh
 
-#define SERVICE_APP_VERSION		1.0.01
 
 /*
+see ServiceApp.cpp
 1.0.01			2016-06-14 Nc Nx working with fake data input, good output to PAG
 */
 
@@ -70,6 +72,12 @@
 #define WM_USER_KILL_COMMUNICATION_THREAD			WM_USER+0x218
 #define WM_USER_INIT_RUNNING_AVERAGE				WM_USER+0x219
 #define WM_USER_SERVERSOCKET_PKT_RECEIVED			WM_USER+0x21A
+#define WM_USER_KILL_OWNER_SOCKET					WM_USER+0x21B
+
+// ClientConnectionManagement
+#define WM_USER_KILL_CMD_PROCESS_THREAD				WM_USER+0x21C
+#define WM_USER_KILL_RECV_THREAD					WM_USER+0x21D
+#define WM_USER_KILL_SEND_THREAD					WM_USER+0x21E
 
 
 #define ePAM_Client_Of_PAG_Server			0
@@ -84,6 +92,7 @@ public:
 	virtual ~CServiceApp();
 	CTestThread *m_pTestThread;
 	//CTuboIni *m_pTuboIni;
+	int m_nShutDownCount;
 
 	void GetServerConnectionManagementInfo(void);
 	void SaveServerConnectionManagementInfo(void);
@@ -109,6 +118,7 @@ public:
 		// the same subnet as the servers.
 
 	void InitializeServerConnectionManagement(void);	// jeh taken from PAG/TScanDlg.cpp and modified
+	int KillServerConnectionManagement(int nServer);	// undo what Initialize created
 	void InitializeClientConnectionManagement(void);
 	void ShutDown(void);
 

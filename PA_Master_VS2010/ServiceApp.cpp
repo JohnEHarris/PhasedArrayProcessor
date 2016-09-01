@@ -174,6 +174,8 @@ CServiceApp::CServiceApp()
 
 
 	m_nShutDownCount = 0;
+	pCSSaveDebug =new CRITICAL_SECTION();
+	InitializeCriticalSectionAndSpinCount(pCSSaveDebug,4);
 
 	g_NcNx.Long[0] = 1;
 	g_NcNx.Long[1] = 1;
@@ -215,6 +217,11 @@ CServiceApp::~CServiceApp()
 	if (m_nFakeDataExists)
 		m_FakeData.Close();
 
+	if (m_nDebugLogExists)
+		m_DebugLog.Close();
+
+	if (pCSSaveDebug)	// critical section access to debug log file
+		delete pCSSaveDebug;
 	
 	ShutDown(); // first place when closing dos window
 
@@ -611,6 +618,7 @@ int CServiceApp::ExitInstance()
 	int i;
 	i = 1;
 	CloseFakeData();
+	CloseDebugLog();
 #if 0
 	if (m_pMySampleMem)
 		delete m_pMySampleMem;

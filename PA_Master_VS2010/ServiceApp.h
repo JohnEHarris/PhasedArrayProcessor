@@ -99,6 +99,7 @@ public:
 	void GetClientConnectionManagementInfo(void);
 	void SaveClientConnectionManagementInfo(void);
 	char m_buffer[128];
+	CRITICAL_SECTION *pCSSaveDebug;	// control access to debug output 
 	CServiceApp *m_ptheApp;
 	CFile m_FakeData;
 	CFile m_DebugLog;

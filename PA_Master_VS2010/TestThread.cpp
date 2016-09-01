@@ -64,7 +64,9 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 #endif
 	s.Format(_T("Hello World from Test Thread wparam = %x, lparam = %x\r\n"), w,lParam);
 	TRACE(s);
+	EnterCriticalSection(theApp.pCSSaveDebug);
 	theApp.SaveDebugLog(s);
+	LeaveCriticalSection(theApp.pCSSaveDebug);
 	theApp.SaveFakeData(s);
 	s = _T("Nc=3 Thold=37 M=5, Nx=3 Max Wall=1377 Min Wall=27 Drop=8\r\n");
 	theApp.SaveFakeData(s);

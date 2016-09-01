@@ -144,7 +144,7 @@ int CServerRcvListThread::ExitInstance()
 	// return CServerRcvListThreadBase::ExitInstance();
 	CString s = _T("");
 	int i = 0;
-	void *pV;
+	//void *pV;
 
 #ifdef THIS_IS_SERVICE_APP
 	if (m_pElapseTimer)
@@ -497,6 +497,9 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 		m_nElapseTime = m_pElapseTimer->Stop();		// elapse time in uSec for 128 AScans
 		s.Format(_T("Nc Nx processing for 128 Ascans in %d uSec\n"), m_nElapseTime);
 		TRACE(s);
+		EnterCriticalSection(theApp.pCSSaveDebug);
+		theApp.SaveDebugLog(s);
+		LeaveCriticalSection(theApp.pCSSaveDebug);
 		}	// if (pBuf->nLength == 1040)
 
 	else

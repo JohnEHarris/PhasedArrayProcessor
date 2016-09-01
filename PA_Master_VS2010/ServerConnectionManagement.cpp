@@ -238,7 +238,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 	CString s;
 	int nResult;
 	CWinThread *pThread;
-	void *pV;
+	//void *pV;
 
 //	StopListenerThread(nMyServer);
 	if (nMyServer < 0)							return 3;
@@ -308,7 +308,7 @@ NO_SERVERLISTENTHREAD:
 		//delete m_pstSCM->pOutDebugMessageList;
 		}
 #endif
-SERVERS_CLIENT_LOOP:
+//SERVERS_CLIENT_LOOP:
 
 	// Now kill all the ServerSocketOwner threads which themselves have to close and kill their sockets
 	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)

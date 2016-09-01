@@ -145,11 +145,6 @@ void CstringToChar(CString &s, char *p, int nSizeOfArray)
 	}
 }
 
-// Output the legacy printf statements to a DebugLog.
-// Old: printf("PAM client connected to PAG server on connection %s:%d at %s\n",txt,uCPort, buffer);
-// New: fprintf(DebugFile,"PAM client connected to PAG server on connection %s:%d at %s\n",txt,uCPort, buffer);
-// the DebugFile name is Debug.log.
-
 
 /*************** END FUNCTION PROTOTYPES ******************/					
 //CServiceApp *pTheApp;
@@ -450,6 +445,7 @@ BOOL CServiceApp :: InitInstance()
 	int i;
 	memset (&uVchannelConstructor,0, sizeof(uVchannelConstructor));
 	CString s,Fake;	// fake is a debug file with fake data and fake data msg to PAG
+	CString DeBug;	// another debug file to catch printf statements since vs2015 does not output to monitor screen
 
 	// ths didn't work with 2010 compiler. Might have with vs2005
 	CString t = AfxGetAppName();	// shows AGS3
@@ -469,6 +465,7 @@ BOOL CServiceApp :: InitInstance()
 	t.Delete(i,32);				// t has path to 'exe' w/o the exe file name
 	Fake = t;
 	Fake = t + _T("FakeData.txt");
+	DeBug = t + _T("Debug.log");
 	// shows "D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\"
 	// The name of the App becomes an implicit part of the key
 	// We only write Tuboscope, but clever windows makes a subregistry entry of AdpMMI
@@ -498,7 +495,7 @@ BOOL CServiceApp :: InitInstance()
 
 	// Open a debugger file for fake data
 	//TCHAR* pszFileName = Fake.GetString();	//_T("c:\\test\\myfile.dat");
-	m_nFakeDataExists = 0;
+	m_nFakeDataExists = m_nDebugLogExists = 0;
 	//CFile myFile;
 	CFileException fileException;
   
@@ -509,6 +506,15 @@ BOOL CServiceApp :: InitInstance()
 		Fake, fileException.m_cause );
 		}
 	else m_nFakeDataExists = 1;
+
+	//m_DebugLog
+	if ( !m_DebugLog.Open( DeBug, CFile::modeCreate |   
+			CFile::modeReadWrite | CFile::shareDenyNone , &fileException ) )
+		{
+		TRACE( _T("Can't open file %s, error = %u\n"),
+		DeBug, fileException.m_cause );
+		}
+	else m_nDebugLogExists = 1;
 
 	RegisterService(__argc, __argv);
 	//printf("Starting the Service/n"); // causes an exception 
@@ -559,6 +565,46 @@ void CServiceApp::CloseFakeData(void)
 	m_nFakeDataExists = 0;
 	}
 
+void CServiceApp::SaveDebugLog(CString& s)
+	{
+	char ch[4000];
+	CstringToChar(s,ch,4000);
+	if (0 == m_nDebugLogExists)
+		{
+		TRACE(_T("Debug log file not available\n"));
+		return;
+		}
+	try
+		{
+		m_DebugLog.Write(ch,strlen(ch));	// I want to see ASCII in the file
+		m_DebugLog.Flush();
+		}
+	catch (CFileException* e)
+		{
+		e->ReportError();
+		e->Delete();
+		}
+	}
+	
+void CServiceApp::CloseDebugLog(void)
+	{
+	if (0 == m_nDebugLogExists)
+		{
+		TRACE(_T("Debug log file not available\n"));
+		return;
+		}
+	try
+		{
+		m_DebugLog.Close();
+		}
+	catch (CFileException* e)
+		{
+		e->ReportError();
+		e->Delete();
+		}	
+	}
+
+
 
 int CServiceApp::ExitInstance()
 	{
@@ -581,10 +627,10 @@ void CServiceApp::ShutDown(void)
 	{
 	int i, j,k;
 	int nError;
-	void *pV;
+	//void *pV;
 	CString s;
 	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM;
-	k = 1;
+	k = 0;
 
 	if (m_nShutDownCount)
 		return;	// only one time thru shutdown
@@ -959,7 +1005,7 @@ WHILE_TARGET:
 		// attempt to make a connection attempted when the server was busy/non responsive
 
 #if 1
-		k = 1;	// debug  prevent accessing pClientConnection until configured
+		k = 0;	// debug  prevent accessing pClientConnection until configured
 		while (k)
 			{
 			Sleep(100);
@@ -1091,17 +1137,20 @@ WHILE_TARGET:
 	}	// void CServiceApp :: Run( DWORD, LPTSTR *)
 
 
-void CServiceApp :: Stop() {
+void CServiceApp :: Stop() 
+	{
 	// report to the SCM that we're about to stop
 	// Note that the service might Sleep(), so we have to tell
 	// the SCM
 	//	"The next operation may take me up to 11 seconds. Please be patient."
 	//ReportStatus(SERVICE_STOP_PENDING, 11000);
-	//if( m_hStop )
-	//	::SetEvent(m_hStop);
-	Shutdown();
+	if( m_hStop )
+		::SetEvent(m_hStop);
+	Sleep(10);
+	m_hStop = 0;
+	CServiceApp::Shutdown();
 	
-}
+	}
 /**************************************** Nov 2012 ************************************/
 /****** Add components from the GUI for running the server portion of the master  ******/
 

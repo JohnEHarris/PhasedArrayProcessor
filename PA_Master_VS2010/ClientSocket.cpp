@@ -102,6 +102,7 @@ void CClientSocket::DebugOutMessage(CString s)
 	CString s1 = _T("CClientSocket..");
 	s1 += s + _T("\n");
 	TRACE(s1);
+	theApp.SaveDebugLog(s1);
 }
 
 // This is the legacy OnReceive. Selected by using the legacy constructor

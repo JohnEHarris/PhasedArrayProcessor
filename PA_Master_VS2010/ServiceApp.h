@@ -81,7 +81,7 @@ see ServiceApp.cpp
 
 
 #define ePAM_Client_Of_PAG_Server			0
-
+extern CServiceApp theApp;
 
 class CServiceApp : public CWinApp, public CNTService
 	{
@@ -101,9 +101,14 @@ public:
 	char m_buffer[128];
 	CServiceApp *m_ptheApp;
 	CFile m_FakeData;
+	CFile m_DebugLog;
 	int m_nFakeDataExists;
+	int m_nDebugLogExists;
 	void SaveFakeData(CString& s);
 	void CloseFakeData(void);
+	// Debug file - replace monitor output. Read with BareTail app
+	void SaveDebugLog(CString& s);
+	void CloseDebugLog(void);
 
 public:
 	virtual BOOL InitInstance();

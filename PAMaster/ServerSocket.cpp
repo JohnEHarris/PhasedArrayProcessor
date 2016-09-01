@@ -153,7 +153,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		TRACE("Server ShutDown Flag is true, aborting OnAccept\n");
 		CAsyncSocket dummy;
 		Accept(dummy);
-		dummy.Close();
+		dummy.Close();	// should we close after CAsyncSocket::OnAccept ??? 2016-08-29 jeh
 		CAsyncSocket::OnAccept(nErrorCode);
 		return;
 		}
@@ -328,7 +328,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	else 	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread)
 
 		{
-		CAsyncSocket::OnClose(nErrorCode); // OnClose kills ServerSocketOwnerTherad
+		CAsyncSocket::OnClose(nErrorCode); // OnClose kills ServerSocketOwnerThread ... maybe should just be OnClose() 2016-08-29
 		TRACE("CServerSocketOwnerThread ALREADY exists... kill it\n");
 		CWinThread * pThread1 = 
 			(CWinThread *)m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread;
@@ -360,8 +360,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 	else	ASSERT(0);
 
 
-	// create a new thread IN SUSPENDED STATE 
-	//  THIS DID NOT WORK. LEAVE AUTODELETE ON ....and turn off auto delete. Must explicitly delete thread to run destructor.
+	// create a new thread IN SUSPENDED STATE ....and turn off auto delete. Must explicitly delete thread to run destructor.
+	//  THIS DID NOT WORK. LEAVE AUTODELETE ON !!!
 	CServerSocketOwnerThread * pThread =
 	m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread = (CServerSocketOwnerThread *) AfxBeginThread(RUNTIME_CLASS (CServerSocketOwnerThread),
 	   	   					  				                                THREAD_PRIORITY_ABOVE_NORMAL,

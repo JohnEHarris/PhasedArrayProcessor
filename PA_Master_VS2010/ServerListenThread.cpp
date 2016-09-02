@@ -58,17 +58,28 @@ int CServerListenThread::ExitInstance()
 	{
 	// TODO:  perform any per-thread cleanup here
 	int Error;
-	CString s;
+	CString s, Id;
 
-	if (m_pstSCM == NULL)	goto EXIT;
-	if (m_pstSCM->pServerListenThread == NULL)	goto EXIT;
+	if (m_pstSCM == NULL)
+		{
+		DebugLog(_T("CServerListenThread::ExitInstance m_pstSCM == NULL\n"));
+		goto EXIT;
+		}
+	if (m_pstSCM->pServerListenThread == NULL)
+		{
+		DebugLog(_T("CServerListenThread::ExitInstance m_pstSCM->pServerListenThread == NULL\n"));
+		goto EXIT;
+		}
 
+	Id.Format(_T("CServerListenThread::ExitInstance thread ID = %0xh\n"), m_pstSCM->pServerListenThread->m_nThreadID);
+	DebugLog(Id);
 	if ( m_pListenSocket)
 		{
 		if (m_pstSCM->pServerListenSocket->ShutDown(2) )
 			{
 			s = _T("Shutdown of listener socket was successful\n");
 			TRACE(s);
+			DebugLog(s);
 			m_pstSCM->pServerListenSocket->Close();
 			}
 		else
@@ -76,6 +87,7 @@ int CServerListenThread::ExitInstance()
 			Error = GetLastError();	// WSAENOTCONN                      10057L
 			s .Format(_T("Shutdown of listener socket[%d] failed\n"), Error);
 			TRACE(s);
+			DebugLog(s);
 			}
 		delete m_pListenSocket;
 		m_pListenSocket = NULL;
@@ -90,6 +102,12 @@ int CServerListenThread::ExitInstance()
 EXIT:
 	return CWinThread::ExitInstance();
 	}
+
+void CServerListenThread::DebugLog(CString s)
+	{
+	theApp.SaveDebugLog(s);
+	}
+
 
 BEGIN_MESSAGE_MAP(CServerListenThread, CWinThread)
 
@@ -111,14 +129,18 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 	m_pMySCM = (CServerConnectionManagement *) lParam;
 	if (NULL == m_pMySCM)
 		{
-		TRACE(_T("InitListnerThread m_pMySCM is null\n"));
+		s = _T("InitListnerThread m_pMySCM is null\n");
+		TRACE(s);
+		DebugLog(s);
 		return;
 		}
 	m_pstSCM = m_pMySCM->m_pstSCM;
 
 	if (NULL == m_pstSCM)
 		{
-		TRACE(_T("InitListnerThread m_pstCCM is null\n"));
+		s = _T("InitListnerThread m_pstCCM is null\n");
+		TRACE(s);
+		DebugLog(s);
 		return;
 		}
 
@@ -149,12 +171,15 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 #endif
 #endif
 
-
-	TRACE(_T("InitListnerThread OK\n"));
+	s.Format(_T("InitListnerThread OK threadID = Ox%0x\n"), this->m_nThreadID );
+	TRACE(s);
+	DebugLog(s);
 	// create the listening socket
 	if (m_pListenSocket)
 		{
-		TRACE("Listening socket already exists.... close and destroy before recreating\n");
+		s = _T("Listening socket already exists.... close and destroy before recreating\n");
+		TRACE(s);
+		DebugLog(s);
 		m_pListenSocket->Close();
 		Sleep(10);
 		delete m_pListenSocket;
@@ -172,7 +197,9 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 		ASSERT (pDlg != NULL);
 		pDlg->MessageBox(_T("Failed to Create Listening Socket"),_T("MMI to Master Connection Impossible"));
 #endif
-		TRACE(_T("Failed to Create Listening Socket--Master to Instrument Connection Impossible") );
+		s = _T("Failed to Create Listening Socket--Master to Instrument Connection Impossible\n");
+		TRACE(s);
+		DebugLog(s);
 		}
 	//SockErr = ERROR_SUCCESS = 0;
 
@@ -186,6 +213,7 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 	s.Format(_T("Srv[%d] <%s> is listening at %s : %d\n"),m_pMySCM->m_nMyServer, 
 		m_pstSCM->sServerDescription, m_pstSCM->sServerIP4, m_pstSCM->uServerPort);
 	TRACE(s);
+	DebugLog(s);
 
 	SockErr =  m_pListenSocket->Listen(5);
 	if (SockErr == 0)

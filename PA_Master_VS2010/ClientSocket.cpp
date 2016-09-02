@@ -102,9 +102,7 @@ void CClientSocket::DebugOutMessage(CString s)
 	CString s1 = _T("CClientSocket..");
 	s1 += s + _T("\n");
 	TRACE(s1);
-	EnterCriticalSection(theApp.pCSSaveDebug);
 	theApp.SaveDebugLog(s1);
-	LeaveCriticalSection(theApp.pCSSaveDebug);
 }
 
 // This is the legacy OnReceive. Selected by using the legacy constructor
@@ -288,11 +286,11 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		
 		//GetPeerName(m_pCCM->m_pstCCM->sServerIP4, m_pCCM->m_pstCCM->uServerPort);
 		GetPeerName(s0, uSPort);
-		s.Format(_T("CClientSocket::OnConnect connected to %s:%d"), s0, uSPort);
+		s.Format(_T("CClientSocket::OnConnect connected to the PAG server %s:%d "), s0, uSPort);
 		DebugOutMessage(s);
 		//GetSockName(m_pCCM->m_pstCCM->sClientIP4, m_pCCM->m_pstCCM->uClientPort);
 		GetSockName(s1, uCPort);
-		s.Format(_T("CClientSocket::OnConnect my IP = %s:%d"), s1, uCPort);
+		s.Format(_T("CClientSocket::OnConnect PAM client IP = %s:%d"), s1, uCPort);
 		DebugOutMessage(s);
 		// may need to replace this with some sort of call to MakeConnectionDetail
 		// changed when CLIENT_IDENTITY_DETAIL removed from structure ST_CLIENT_CONNECTION_MANAGEMENT
@@ -312,7 +310,9 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		char buffer [80];
 		strcpy(buffer,GetTimeStringPtr());
 		CstringToChar(s1, txt);
-		printf("PAM client connected to PAG server on connection %s:%d at %s\n",txt,uCPort, buffer);
+		printf("PAM client %s:%d connected to PAG server at %s\n",txt,uCPort, buffer);
+		s.Format("PAM client %s:%d connected to PAG server at %s\n", txt, uCPort, buffer);
+		DebugOutMessage(s);
 #endif
 		int nSize;
 		int nSizeOf = sizeof(int);

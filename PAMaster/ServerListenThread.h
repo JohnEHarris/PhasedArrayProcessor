@@ -29,6 +29,7 @@ public:
 	afx_msg void InitListnerThread(WPARAM w, LPARAM lParam);
 	afx_msg void StopListnerThread(WPARAM w, LPARAM lParam);
 	afx_msg void DoNothing(WPARAM w, LPARAM lParam);
+	void DebugLog(CString s);
 
 
 	CServerConnectionManagement *m_pMySCM;		// managing class ptr

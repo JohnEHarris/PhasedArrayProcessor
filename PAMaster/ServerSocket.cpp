@@ -312,7 +312,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		m_pSCC->sClientIP4 = Ip4;
 #ifdef THIS_IS_SERVICE_APP
 		s.Format(_T("PAMSrv[%d]:Instrument[%d]"), nMyServer, nClientPortIndex);
-		t = s + _T("  OnAccept() creating critical sections/lists/vChannels");
+		t = s + _T("  OnAccept() creating critical sections/lists/vChannels\n");
 #else
 		s.Format(_T("PAGSrv[%d]:MasterInst[%d] OnAccept"), nMyServer, nClientPortIndex);
 		t = s;
@@ -400,13 +400,13 @@ void CServerSocket::OnAccept(int nErrorCode)
 		
 	// Display the connect socket IP and port
 	Asocket.GetSockName(Ip4,uPort);	// my socket info??
-	s.Format(_T("Client accepted to server on socket %s : %d\n"), Ip4, uPort);
+	s.Format(_T("Client on socket %s : %d accepted to server\n"), Ip4, uPort);
 	TRACE(s);
 		
 	char buffer [80], txt[64];
 	strcpy(buffer,GetTimeStringPtr());
 	CstringToChar(Ip4, txt);
-	printf("Instrument Client[%d] accepted to server on socket %s : %d at %s\n", nClientPortIndex, txt, uPort, buffer);
+	printf("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n", nClientPortIndex, txt, uPort, buffer);
 	Sleep(10);
 			
 	// Asocket.Close();	not necessary. Since Asocket on stack, when this routine ends, Asocket deletes

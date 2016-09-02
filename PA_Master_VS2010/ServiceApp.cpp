@@ -533,6 +533,7 @@ BOOL CServiceApp :: InitInstance()
 // Output fake data to a file
 void CServiceApp::SaveFakeData(CString& s)
 	{
+#ifdef _DEBUG
 	char ch[4000];
 	CstringToChar(s,ch,4000);
 	if (0 == m_nFakeDataExists)
@@ -550,6 +551,7 @@ void CServiceApp::SaveFakeData(CString& s)
 		e->ReportError();
 		e->Delete();
 		}
+#endif
 
 	}
 
@@ -574,6 +576,7 @@ void CServiceApp::CloseFakeData(void)
 
 void CServiceApp::SaveDebugLog(CString& s)
 	{
+#ifdef _DEBUG
 	char ch[4000];
 	CstringToChar(s,ch,4000);
 	if (0 == m_nDebugLogExists)
@@ -581,6 +584,7 @@ void CServiceApp::SaveDebugLog(CString& s)
 		TRACE(_T("Debug log file not available\n"));
 		return;
 		}
+	EnterCriticalSection(pCSSaveDebug);
 	try
 		{
 		m_DebugLog.Write(ch,strlen(ch));	// I want to see ASCII in the file
@@ -591,6 +595,8 @@ void CServiceApp::SaveDebugLog(CString& s)
 		e->ReportError();
 		e->Delete();
 		}
+	LeaveCriticalSection(pCSSaveDebug);
+#endif
 	}
 	
 void CServiceApp::CloseDebugLog(void)

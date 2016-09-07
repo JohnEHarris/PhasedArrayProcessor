@@ -56,8 +56,13 @@ class CServiceApp;
 // edit this value if more client connections to servers are needed
 #define	MAX_SERVERS							1
 #define MAX_CLIENTS_PER_SERVER				8
-// An instrument client can have up to this many virtual channels
-#define MAX_CHNLS_PER_INSTRUMENT			32
+// An instrument client can have up to this many virtual channels for each UT firing or Main Bang
+#define MAX_CHNLS_PER_MAIN_BANG			32
+// Channels may be redefined on each main bang. The counter which counts main bangs is called
+#define MAX_SEQ_COUNT					1
+// The number of virtual channels is finite. Channels repeat after MAX_SEQ_COUNT number of main bangs.
+// On any given main bang (sequence count) there can only be a max number of channels define by 
+// MAX_CHNLS_PER_MAIN_BANG. The max the number of channels in a transducer array is [16][32] = 512
 
 
 #define INSTRUMENT_PACKET_SIZE				1040
@@ -183,7 +188,7 @@ typedef struct
 	UINT uLastTick;					// Use with main app uAppTimerTick value to provide keep alive messages
 	// 2016-06-06 jeh
 	// initialized in CServerSocket::OnAcceptInitializeConnectionStats
-	CvChannel* pvChannel[MAX_CHNLS_PER_INSTRUMENT];	// array of ptrs to virtual channels associated with each client connection
+	CvChannel* pvChannel[MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];	// array of ptrs to virtual channels associated with each client connection
 	
 	RAW_INSTRUMENT_STATUS InstrumentStatus;	// Status info which comes with each TCPIP packet from an instrument
 

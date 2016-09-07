@@ -716,7 +716,7 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 									// This socket is owned by ServerSocketOwnerThread
 	CServerSocketOwnerThread *pServerSocketOwnerThread;	// thread to control sending to a connected client
 	CServerRcvListThreadBase *pServerRcvListThread;	
-	CvChannel* pvChannel[MAX_CHNLS_PER_INSTRUMENT];	// array of ptrs to virtual channels associated with each client connection
+	CvChannel* pvChannel[MAX_CHNLS_PER_MAIN_BANG];	// array of ptrs to virtual channels associated with each client connection
 
 #endif
 
@@ -762,9 +762,20 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	pscc->uUnsentPackets			= 0;
 	pscc->uLastTick					= 0;
 
-	for ( i = 0; i < MAX_CHNLS_PER_INSTRUMENT; i++)
+	// Defer the creation of virtual channels until we get 
+	// Max channels per main bang, and max number of main bangs in the sequence.
+	// Max sequence length = j, max channels per sequence = i
+	// This code will run when the channel-sequence configuration command runs
+	/*
+	for ( j = 0; j < MaxSeqLength; j++)
 		{
-		pscc->pvChannel[i] = new CvChannel(nClientPortIndex,i);
+		for ( i = 0; i < MaxChnlPerSeq; i++)
+			pscc->pvChannel[j][i] = new CvChannel(nClientPortIndex, (i + j*MaxChnlPerSeq));
+		}
+	*/
+	for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
+		{
+		pscc->pvChannel[0][i] = new CvChannel(nClientPortIndex,i);
 		}
 	// create threads
 	i = sizeof(CvChannel);					// 112

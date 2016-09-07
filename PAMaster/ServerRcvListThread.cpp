@@ -159,12 +159,12 @@ int CServerRcvListThread::ExitInstance()
 	// may need to get rid of ServerSocketOwnerThread elements also
 	if ( m_pSCC)
 		{
-		for ( i = 0; i < MAX_CHNLS_PER_INSTRUMENT; i++)
+		for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
 			{
-			if (m_pSCC->pvChannel[i])
+			if (m_pSCC->pvChannel[0][i])
 				{
-				delete m_pSCC->pvChannel[i];
-				m_pSCC->pvChannel[i] = NULL;
+				delete m_pSCC->pvChannel[0][i];
+				m_pSCC->pvChannel[0][i] = NULL;
 				}
 			}	// for loop
 		// release storage and critical sections
@@ -272,7 +272,7 @@ void CServerRcvListThread::MakeFakeData(SRawDataPacket *pData)
 	for ( j = 0; j < 4; j++)	// 4 sets of 32 Ascans, each ascan is a 'different' channel
 		{
 		offset = j*32;
-		for ( i = 0; i < MAX_CHNLS_PER_INSTRUMENT; i++)
+		for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
 			{
 			s.Format(_T("\r\n[%3d] "), i+offset);
 			k = pData->RawData[i+offset].bAmp2 = 5 + (GetRand()/2);	// 5-55 amplitude
@@ -340,7 +340,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 		pOutputPacket->wLoc, pOutputPacket->wAngle, pOutputPacket->instNumber, pOutputPacket->wStatus);
 	SaveFakeData(s);
 	// Get Nc Nx info for 1st channel  -- for debug from output file
-	pChannel = m_pSCC->pvChannel[0];
+	pChannel = m_pSCC->pvChannel[0][0];
 	nNcId		= pChannel->bGetNcId();
 	nNcOd		= pChannel->bGetNcOd();
 	nModId		= pChannel->bGetMId();
@@ -366,7 +366,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 
 	for ( i = 0; i < 32; i++)
 		{
-		pChannel = m_pSCC->pvChannel[i];
+		pChannel = m_pSCC->pvChannel[0][i];
 		s.Format(_T("\r\n[%3d] "), i);
 		k = pR[i].bFlaw[0] = pChannel->bGetIdGateMax();
 		t.Format(_T("%3d  "),k); s += t;
@@ -449,7 +449,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 			for ( i = 0; i < nSeqQty; i++)
 				{
 				k = j*nSeqQty;	// k points to beginning of a frame of data
-				pChannel = m_pSCC->pvChannel[i];
+				pChannel = m_pSCC->pvChannel[0][i];
 				// Get flaw Nc qualified Max values for this channel
 				bGateTmp = pChannel->InputFifo(eId, pRaw->RawData[i+k].bAmp2);	// output of the Nc peak holder
 				if (pChannel->m_GateID < bGateTmp)		pChannel->m_GateID = bGateTmp;
@@ -489,7 +489,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 				m_nFrameCount = 0;
 				for ( i = 0; i < nSeqQty; i++)
 					{
-					m_pSCC->pvChannel[i]->ResetGatesAndWalls();
+					m_pSCC->pvChannel[0][i]->ResetGatesAndWalls();	// replace [0] with [j]
 					}
 				}
 

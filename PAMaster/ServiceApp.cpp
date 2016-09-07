@@ -43,7 +43,7 @@ managed classes.
 
 
 #define CURRENT_VERSION		"Version 1.1"
-#define BUILD_VERSION			2
+#define BUILD_VERSION			3
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           1
@@ -52,6 +52,7 @@ managed classes.
 
 #if 0
 
+1.0.003			06-Sep-16	CvChannel* pvChannel now two dimensional. [0][j] - fix 1st index later
 1.1.002			15-Jul-16	Eliminate Yanming code not being used
 1.1.001			May 2016	New Phased Array 2
 1.0.01			2016-06-14 Nc Nx working with fake data input, good output to PAG - from header file.
@@ -707,7 +708,7 @@ SERVERS_CLIENT_LOOP:
 		for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 			{
 			if ( NULL == stSCM[j].pClientConnection[i]) continue;
-			for ( k = 0; k < MAX_CHNLS_PER_INSTRUMENT; k++)
+			for ( k = 0; k < MAX_CHNLS_PER_MAIN_BANG; k++)
 				{
 				if (stSCM[j].pClientConnection[i]->pvChannel[k] )
 					{

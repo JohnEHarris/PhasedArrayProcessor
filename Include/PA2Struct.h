@@ -92,7 +92,7 @@ typedef struct
 
 // Each wall reading goes into a wall averaging FIFO. The memory size of the FIFO is selected to be longer 
 // than the expected averaging interval which should be 8 or less (typically 2 to 4 readings).
-// The FIFO output is actually the sum of the values in the FIFO and the bad wall reading count.
+// The FIFO output is actually the sum of the values in the FIFO.
 // Values in the FIFO are not summed on each call, but the current location content in the FIFO is subtraced from the
 // sum and then the new value is stored and added to the sum. Then the next location in the FIFO is selected for
 // the next call (input) to the FIFO. This is exactly how a hardware implementation would work
@@ -125,6 +125,37 @@ typedef struct
 	WORD wTOFsum[2];	// divide by Nx and multiply by scaling factor for this vChannel
 	}	RESULTS;		// sizeof = 6
 
+
+/*
+2016-09-08 New definition of Idata Packet
+*/
+typedef struct
+	{
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE instNumber;	// 0-255. 0 based ip address of instruments for each PAP
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bFiringSequenceLength;	// how many main bangs before repeating the virtual channels
+	BYTE bStartSeqNumber;	// this packet may start somewhere in the middle of the sequence
+							// range is [0 - bFiringSequenceLength-1]
+	BYTE bNumberOfSeqPoints;	// how many different sets of virtual channels in this packet
+								// that is, how many main bangs included in this packet
+								// range is [1 - bFiringSequenceLength]
+	BYTE bMaxVChnlsPerSeqPoint;	// maximum number of virtual channels generated on a firing.
+								// Some sequence points may have channel type NOTHING
+								//
+	WORD wStatus;		// tbd
+	WORD wLoc;			// x location in motion pulses relative to 1st packet from instrument
+	WORD wAngle;		// angle in degrees from TOP relative to 1st packet from instrument
+	WORD wPeriod;		// period of rotation in 0.2048 ms
+	UINT uMsgSeqCount;	// counter to uniquely identify each packet
+	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	RESULTS Results[239];	// Some "channels" at the end may be channel-type NONE
+	} IDATA_PACKET;	// sizeof = 1460 - the maximum TCPIP packet size
+
+#if 0
+
 typedef struct
 	{
 	BYTE bvChannelQty;	// How many channels in this packet.
@@ -137,6 +168,8 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD ... 18 bytes to here
 	RESULTS Results[32];	// Some "channels" at the end may be channel type NONE
 	} IDATA_PACKET;	// sizeof = 210
+
+#endif
 
 typedef struct
 	{

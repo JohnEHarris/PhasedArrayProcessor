@@ -318,6 +318,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		t = s;
 #endif
 		TRACE(t);
+		theApp.SaveDebugLog(t);
 		m_pSCC->szSocketName = s;
 		m_pSCC->uClientPort = uPort;
 		m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
@@ -328,7 +329,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 	else 	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread)
 
 		{
-		CAsyncSocket::OnClose(nErrorCode); // OnClose kills ServerSocketOwnerThread ... maybe should just be OnClose() 2016-08-29
+		OnClose(nErrorCode);
+		//CAsyncSocket::OnClose(nErrorCode); // OnClose kills ServerSocketOwnerThread ... maybe should just be OnClose() 2016-08-29
 		TRACE("CServerSocketOwnerThread ALREADY exists... kill it\n");
 		CWinThread * pThread1 = 
 			(CWinThread *)m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread;
@@ -357,7 +359,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
 		}
 
-	else	ASSERT(0);
+	else	ASSERT(0);	// got a break here from real instrument 2016-09-08
 
 
 	// create a new thread IN SUSPENDED STATE ....and turn off auto delete. Must explicitly delete thread to run destructor.
@@ -402,6 +404,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	Asocket.GetSockName(Ip4,uPort);	// my socket info??
 	s.Format(_T("Client on socket %s : %d accepted to server\n"), Ip4, uPort);
 	TRACE(s);
+	theApp.SaveDebugLog(s);
 		
 	char buffer [80], txt[64];
 	strcpy(buffer,GetTimeStringPtr());

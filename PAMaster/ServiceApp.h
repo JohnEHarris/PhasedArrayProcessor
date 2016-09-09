@@ -110,6 +110,9 @@ public:
 	// Debug file - replace monitor output. Read with BareTail app
 	void SaveDebugLog(CString& s);
 	void CloseDebugLog(void);
+	void SetMy_PAM_Number(CString &Ip4, UINT uPort);
+	int  GetMy_PAM_Number(void)	{ return m_nPamNumber;	}
+	UINT GetMy_PAM_Port(void)	{ return m_uPamPort;	}
 
 public:
 	virtual BOOL InitInstance();
@@ -122,7 +125,8 @@ public:
 	UINT uThisMachineIP4Addr[20];				// 32 bit ulong representation of ip4
 		// We can find  class C subnet by masking out the high byte. Assuming our clients are in
 		// the same subnet as the servers.
-
+	int m_nPamNumber;			// the PAM number of this machine, the one running the ServiceApp
+	UINT m_uPamPort;				// the port number for the PAM being serviced by this machine (PC)
 	void InitializeServerConnectionManagement(void);	// jeh taken from PAG/TScanDlg.cpp and modified
 	int KillServerConnectionManagement(int nServer);	// undo what Initialize created
 	void InitializeClientConnectionManagement(void);

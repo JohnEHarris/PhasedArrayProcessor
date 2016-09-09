@@ -345,7 +345,7 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 	CString t, s = _T("CServerSocketOwnerThread::ExitInstance()");
 	ST_SERVERS_CLIENT_CONNECTION *pscc;
 	void *pV;
-	int i;
+	int i,j;
 	// Close the socket and delete
 	// Kill the ServerRcvList thread
 	// delete linked lists and critical sections
@@ -395,12 +395,13 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 	pscc->pSocket = NULL;
 
 	pscc->bStopSendRcv = 1;
-	for ( i = 0; i < MAX_CHNLS_PER_INSTRUMENT; i++)
+	for ( j = 0; j < MAX_SEQ_COUNT; j++)
+	for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
 		{
-		if (pscc->pvChannel[i])
+		if (pscc->pvChannel[j][i])
 			{
-			delete pscc->pvChannel[i];
-			pscc->pvChannel[i] = 0;
+			delete pscc->pvChannel[j][i];
+			pscc->pvChannel[j][i] = 0;
 			}
 		}
 	nReturn = ExitInstance();	//thread message does not allow return of anything but void

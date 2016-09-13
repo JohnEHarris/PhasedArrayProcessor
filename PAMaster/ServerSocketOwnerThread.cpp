@@ -391,8 +391,11 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 		delete m_pSCC->pSendPktList;		m_pSCC->pSendPktList	= NULL;
 		delete m_pSCC->pCSSendPkt;			m_pSCC->pCSSendPkt		= NULL;
 		}
-	delete pscc->pSocket;
-	pscc->pSocket = NULL;
+	if ( ((int)pscc->pSocket->m_hSocket > 0) && ((int)pscc->pSocket->m_hSocket < 32000))
+		{
+		delete pscc->pSocket;
+		pscc->pSocket = NULL;
+		}
 
 	pscc->bStopSendRcv = 1;
 	for ( j = 0; j < MAX_SEQ_COUNT; j++)

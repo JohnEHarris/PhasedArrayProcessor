@@ -424,7 +424,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 
 
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
-	if (pBuf->nLength == 1040)
+	if (pBuf->nLength == sizeof(SRawDataPacket))		// legacy 1040, future is ???
 		{
 		pRaw = (SRawDataPacket *) &pBuf->Msg;
 #ifdef MAKE_FAKE_DATA

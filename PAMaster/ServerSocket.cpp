@@ -202,7 +202,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 	CString Ip4,s,t;
 	UINT uPort;
-	//int nClientPortIndex;					// which client are we connecting to? Derive from IP address
+	//int m_nClientPortIndex;					// which client are we connecting to? Derive from IP address
 	UINT uClientBaseAddress, uClientBaseAddress2;		// what is the 32 bit index of the 1st PA Master?
 	WORD wClientBaseAddress[8];
 	char *pIpBase = gServerArray[nMyServer].ClientBaseIp;
@@ -258,7 +258,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// and assume they all connect to the same nic on the MMI side and thus need their own pClientConnection
 	// From the PeerName IP address we can compute the index for the pClientConnection
 		
-	//nClientPortIndex = (inet_addr(cIp4) - uClientBaseAddress); WHEN PAM on another machine
+	//m_nClientPortIndex = (inet_addr(cIp4) - uClientBaseAddress); WHEN PAM on another machine
 #endif
 	
 	if ( (m_nClientPortIndex < 0) || (m_nClientPortIndex >= MAX_CLIENTS_PER_SERVER) )
@@ -317,7 +317,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		s.Format(_T("PAMSrv[%d]:Instrument[%d]"), nMyServer, m_nClientPortIndex);
 		t = s + _T("  OnAccept() creating critical sections/lists/vChannels\n");
 #else
-		s.Format(_T("PAGSrv[%d]:MasterInst[%d] OnAccept"), nMyServer, nClientPortIndex);
+		s.Format(_T("PAGSrv[%d]:MasterInst[%d] OnAccept"), nMyServer, m_nClientPortIndex);
 		t = s;
 #endif
 		TRACE(t);
@@ -329,12 +329,10 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 	/************************** What if already connected ?? *******************/
 
-	else 	if (	(m_pSCC == m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex]) && 
-					(m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex]->pServerSocketOwnerThread))
+	else 	if (m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex]->pServerSocketOwnerThread)
 
 		{
-		//OnClose(nErrorCode);
-		//CAsyncSocket::OnClose(nErrorCode); // OnClose kills ServerSocketOwnerThread ... maybe should just be OnClose() 2016-08-29
+		CAsyncSocket::OnClose(nErrorCode); // OnClose kills ServerSocketOwnerTherad
 		TRACE("CServerSocketOwnerThread ALREADY exists... kill it\n");
 		CWinThread * pThread1 = 
 			(CWinThread *)m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex]->pServerSocketOwnerThread;
@@ -353,30 +351,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		if ( i == 50) ASSERT(0);
 
 		// redo what was above as if pClientConnection had never existed
-		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex];
-		if (m_pSCC == NULL)
-			{	// recreate the client connection
-			m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
-			m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex];
-			m_pSCC->pSocket = 0;		// hold off idle loop in ServiceApp. When not zero clear to run
-			// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
-			nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, m_nClientPortIndex);
-
-
-			m_pSCC->sClientIP4 = Ip4;
-#ifdef THIS_IS_SERVICE_APP
-			s.Format(_T("PAMSrv[%d]:Instrument[%d]"), nMyServer, m_nClientPortIndex);
-			t = s + _T("  OnAccept() creating critical sections/lists/vChannels\n");
-#else
-			s.Format(_T("PAGSrv[%d]:MasterInst[%d] OnAccept"), nMyServer, nClientPortIndex);
-			t = s;
-#endif
-			TRACE(t);
-			theApp.SaveDebugLog(t);
-			m_pSCC->szSocketName = s;
-			m_pSCC->uClientPort = uPort;
-			m_pSCM->m_pstSCM->nComThreadExited[m_nClientPortIndex] = 0;
-			}
+		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex];	
 		nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, m_nClientPortIndex);
 
 		m_pSCC->sClientIP4 = Ip4;
@@ -405,11 +380,18 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// Init some things in the thread before it runs. We are now accessing things inside the new thread, not in this thread
 	if (pThread)
 		{
-		pThread->m_pConnectionSocket = new CServerSocket();
-		pThread->m_pMySCM		= m_pSCM;
-		pThread->m_pstSCM		= m_pSCM->m_pstSCM;
-		pThread->m_nMyServer	= m_pSCM->m_pstSCM->pSCM->m_nMyServer;
-		pThread->m_pSCC			= m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex];
+		pThread->m_pConnectionSocket					= new CServerSocket();
+		pThread->m_pConnectionSocket->m_pSCM			=	pThread->m_pMySCM		= m_pSCM;
+		pThread->m_pConnectionSocket->m_pSCM->m_pstSCM	=	pThread->m_pstSCM		= m_pSCM->m_pstSCM;
+		pThread->m_pConnectionSocket->m_nMyServer		=	pThread->m_nMyServer	= m_pSCM->m_pstSCM->pSCM->m_nMyServer;
+		pThread->m_pConnectionSocket->m_pSCC			=	pThread->m_pSCC			= m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex];
+		pThread->m_pConnectionSocket->m_pThread			=	pThread;
+		pThread->m_pConnectionSocket->m_pSCC->m_nMyThreadIndex = pThread->m_nThreadIndex	= m_nClientPortIndex;
+		pThread->m_pConnectionSocket->m_pSCC->pSocket	=	pThread->m_pConnectionSocket;
+		pThread->m_pConnectionSocket->GetPeerName(Ip4,uPort);
+		pThread->m_pConnectionSocket->SetClientIp4(Ip4);
+		pThread->m_pConnectionSocket->m_pSCC->sClientIP4 = Ip4;
+		pThread->m_pConnectionSocket->m_pSCC->uClientPort= uPort;
 
 		//pThread->m_pSCC->pSocket = NULL;
 		pThread->m_nThreadIndex	= m_nClientPortIndex;
@@ -652,53 +634,23 @@ void CServerSocket::OnClose(int nErrorCode)
 	// TODO: Add your specialized code here and/or call the base class
 	// kill off our pClientConnection before we leave
 	// KillpClientConnectionStruct();
-	int nMyServer;
-	CServerConnectionManagement *m_pSCM = NULL;
 
-	CAsyncSocket::OnClose(nErrorCode);	//0x2745 on a restart of instrument = 10053
-	// #define WSAECONNABORTED                  10053L
+	CAsyncSocket::OnClose(nErrorCode);
+#if 1
 
-	for (nMyServer = 0; nMyServer < MAX_SERVERS; nMyServer++)
-		{
-		if (this == stSCM[nMyServer].pServerListenSocket)
-			{	// found myself
-			m_pSCM = pSCM[nMyServer];
-			//m_pstSCM = m_pSCM->m_pstSCM;	// ptr to specific entry in global structure
-			break;
-			}
-		}
-
-	if (m_pSCM == NULL)
-		{
-		TRACE1("CServerSocket::OnClose(%d) hopelessly lost\n", nErrorCode);
-		return;
-		}
-
-	if (m_pSCM->m_pstSCM == NULL)
-		{
-		TRACE1("CServerSocket::OnClose(%d) Fatal error, pMySCM->m_pstSCM == NULL\n", nErrorCode);
-		return;
-		}
-
-	if (m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex] == NULL)
-		{
-		TRACE1("CServerSocket::OnClose(%d) m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex] == NULL\n", nErrorCode);
-		return;
-		}
-	if (m_pSCC != m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex])
-		{
-		TRACE1("CServerSocket::OnClose(%d) m_pSCC != m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex]\n", nErrorCode);
-		return;
-		}
 	// kill the socket's thread  .. a partial shutdown
 	// m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] = 1;
-	if (m_pSCC->pServerSocketOwnerThread)
+	if (m_pSCC)
 		{
-		// wParam = nClientPortIndex , (LPARAM)m_pSCC
-		PostThreadMessage(m_pSCC->pServerSocketOwnerThread->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, 
-			(WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
-		}
+		if (m_pSCC->pServerSocketOwnerThread)
+			{
+			// wParam = m_nClientPortIndex , (LPARAM)m_pSCC
+			PostThreadMessage(m_pSCC->pServerSocketOwnerThread->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, 
+				(WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
+			}
 		Sleep(200);
+		}
+#endif
 
 	}
 
@@ -785,7 +737,7 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 //
 // Get info from global static structure stSCM[nMyServer]
 // Clients are discovered when they connect.
-int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
+int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int m_nClientPortIndex)
 	{
 	CString s;
 	int i;
@@ -793,11 +745,11 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	// skip over CStrings and zero the rest of the structure. Assume CString ptr is 4 bytes. 3 strings at beginning
 	//memset ( (void *) &pscc->uClientPort, 0, sizeof(ST_SERVERS_CLIENT_CONNECTION)-12);
 		
-	s.Format(_T("Send%d"), nClientPortIndex);
+	s.Format(_T("Send%d"), m_nClientPortIndex);
 	pscc->szSocketName		= _T("");
 	pscc->sClientName		= _T("");
 	pscc->sClientIP4		= _T("");			
-	pscc->m_nMyThreadIndex	= nClientPortIndex;
+	pscc->m_nMyThreadIndex	= m_nClientPortIndex;
 	pscc->pCSSendPkt		= new CRITICAL_SECTION();
 	pscc->pCSRcvPkt			= new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pscc->pCSSendPkt,4);
@@ -830,12 +782,12 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	for ( j = 0; j < MaxSeqLength; j++)
 		{
 		for ( i = 0; i < MaxChnlPerSeq; i++)
-			pscc->pvChannel[j][i] = new CvChannel(nClientPortIndex, (i + j*MaxChnlPerSeq));
+			pscc->pvChannel[j][i] = new CvChannel(m_nClientPortIndex, (i + j*MaxChnlPerSeq));
 		}
 	*/
 	for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
 		{
-		pscc->pvChannel[0][i] = new CvChannel(nClientPortIndex,i);
+		pscc->pvChannel[0][i] = new CvChannel(m_nClientPortIndex,i);
 		}
 	// create threads
 	i = sizeof(CvChannel);					// 112
@@ -849,7 +801,7 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	}
 
 // Kill the ServerSocket Owner Thread and ReceiveList thread
-int CServerSocket::KillClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
+int CServerSocket::KillClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int m_nClientPortIndex)
 	{
 #if 0
 	void *pV;

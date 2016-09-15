@@ -248,3 +248,5 @@ ModelManifest.xml
 # FAKE - F# Make
 .fake/
 gittxt.txt
+/PAMaster/ServerSocket - Copy.cpp
+/PAMaster/ServerSocketOwnerThread - Copy.cpp

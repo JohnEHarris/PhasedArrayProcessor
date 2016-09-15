@@ -132,6 +132,8 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	m_pConnectionSocket->m_pSCC->sClientIP4 = Ip4;
 	m_pConnectionSocket->m_pSCC->uClientPort = uPort;
 #endif
+	Ip4 = m_pConnectionSocket->m_pSCC->sClientIP4;
+	uPort = m_pConnectionSocket->m_pSCC->uClientPort;
 	m_pConnectionSocket->m_pElapseTimer = new CHwTimer();
 	m_pConnectionSocket->m_pSCC->szSocketName.Format(_T("ServerSocket Connection Skt[%d][%d]\n"),  m_nMyServer, m_nThreadIndex);
 

@@ -115,19 +115,25 @@ BOOL CServerSocketOwnerThread::InitInstance()
 
 	m_pConnectionSocket->m_nMyThreadIndex = m_nThreadIndex;
 	m_pConnectionSocket->m_pThread	= this;
+#if 0
 	m_pConnectionSocket->m_pSCM		= this->m_pMySCM;	// ST_SERVER_CONNECTION_MANAGEMENT
 	m_pConnectionSocket->m_nMyServer	= this->m_nMyServer;
 	m_pConnectionSocket->m_pstSCM		= this->m_pMySCM->m_pstSCM;
 	m_pConnectionSocket->m_pSCC		= this->m_pSCC;		//m_pMySCM->m_pstSCM->pClientConnection[0]; // Server's client connection
+#endif
 	m_pConnectionSocket->m_pSCC->pServerSocketOwnerThread = this;
 	// m_hConnectionSocket = Asocket.Detach(); set when thread created suspended
 	//m_ConnectionSocket.Attach(m_hConnectionSocket, FD_READ | FD_CLOSE ); take default setting on next line
 	m_pConnectionSocket->Attach(m_hConnectionSocket);
+#if 0
 	m_pConnectionSocket->m_pSCC->pSocket = m_pConnectionSocket;
 	m_pConnectionSocket->GetPeerName(Ip4,uPort);	// connecting clients info??
 	m_pConnectionSocket->SetClientIp4(Ip4);
-	m_pConnectionSocket->m_pSCC->sClientIP4 = Ip4; // error reading character string
+	m_pConnectionSocket->m_pSCC->sClientIP4 = Ip4;
 	m_pConnectionSocket->m_pSCC->uClientPort = uPort;
+#endif
+	Ip4 = m_pConnectionSocket->m_pSCC->sClientIP4;
+	uPort = m_pConnectionSocket->m_pSCC->uClientPort;
 	m_pConnectionSocket->m_pElapseTimer = new CHwTimer();
 	m_pConnectionSocket->m_pSCC->szSocketName.Format(_T("ServerSocket Connection Skt[%d][%d]\n"),  m_nMyServer, m_nThreadIndex);
 
@@ -139,7 +145,7 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	m_pConnectionSocket->m_nOwningThreadType = eServerConnection;
 
 #ifdef _DEBUG
-		s.Format(_T("Client accepted to server on socket %s : %d\n"), Ip4, uPort);
+		s.Format(_T("Client socket at %s : %d connected to server\n"), Ip4, uPort);
 		TRACE(s);
 		TRACE(m_pConnectionSocket->m_pSCC->szSocketName);
 #endif

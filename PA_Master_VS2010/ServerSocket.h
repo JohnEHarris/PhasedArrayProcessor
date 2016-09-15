@@ -77,6 +77,7 @@ public:
 	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// pointer to my global structure instance 
 	int m_nMyServer;							// which server are we connected stSCM[MAX_SERVERS]
 	int m_nMyThreadIndex;						// which instance of pClientConnection[MAX_CLIENTS_PER_SERVER];
+	int m_nClientPortIndex;						// my offset from the base IP address of clients
 	CWinThread * m_pThread;						// ptr to thread which created the socket
 	int m_nOwningThreadType;					// 0=Listener, 1=ServerConnection thread owns this socket class
 	CString m_sClientIp4;						// IP4 address... 192.168.123.123 etc of server connected socket

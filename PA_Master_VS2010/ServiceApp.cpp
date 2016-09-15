@@ -439,6 +439,19 @@ void CServiceApp::SaveClientConnectionManagementInfo(void)
 		}
 	}
 
+// Assumes the first client connection from the PAP is to the Receiver or PAG
+// hence stSocketNames[0]
+// convert characters 192.168.10.200 to uint
+void CServiceApp::SetMy_PAM_Number(CString &Ip4, UINT uPort)
+	{
+	char txt[32];
+	CstringToChar(stSocketNames[0].sClientIP4, txt);
+	UINT uBaseIp = ntohl(inet_addr(txt));
+	CstringToChar(Ip4, txt);
+	UINT uMyIp = ntohl(inet_addr(txt));
+	m_nPamNumber = uMyIp - uBaseIp;
+	m_uPamPort = uPort;
+	}
 
 /******************************************************************/
 
@@ -1577,6 +1590,7 @@ CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNum
 // PAM's connection to the PAG is via a Client Connection Management socket, specifically CCM[0] instance
 // CCM[0] instance has a child class of CCM, namely CCM_PAG
 // NOTE!!! PamSendToPag DOES NOT DELETE THE MEMORY pointed to by pBuf
+// In the FakeData generation whihc calls PamSendToPag pBuf is deleted after the return to the fake data generator
 void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 	{
 	CString s;

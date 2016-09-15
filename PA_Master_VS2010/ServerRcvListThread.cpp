@@ -326,13 +326,19 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 	s = _T("\r\nPAM Output Data Packet\r\n");
 	SaveFakeData(s);
 	IDATA_PACKET *pOutputPacket = new (IDATA_PACKET);
-	pOutputPacket->bvChannelQty	= 1;
-	pOutputPacket->wLoc		= m_pSCC->InstrumentStatus.wLoc;
-	pOutputPacket->wAngle	= m_pSCC->InstrumentStatus.wAngle;
-	pOutputPacket->wPeriod	= m_pSCC->InstrumentStatus.wPeriod;
-	pOutputPacket->instNumber= m_pSCC->m_nMyThreadIndex;
-	pOutputPacket->wStatus	= m_pSCC->InstrumentStatus.wStatus;
-	pOutputPacket->uSync	= 0x5CEBDAAD;
+	pOutputPacket->bPAPNumber	= (BYTE) theApp.GetMy_PAM_Number();
+	pOutputPacket->instNumber	= m_pSCC->m_nMyThreadIndex;
+	pOutputPacket->bFiringSequenceLength	= 4;	// Come from gate board in header with gates and wall reading
+	pOutputPacket->bStartSeqNumber			= 3;	// Come from gate board in header with gates and wall reading
+	pOutputPacket->bNumberOfSeqPoints		= 3;
+	pOutputPacket->bMaxVChnlsPerSeqPoint	= 20;
+	pOutputPacket->wStatus		= 0x1234;
+	pOutputPacket->wLoc			= m_pSCC->InstrumentStatus.wLoc;
+	pOutputPacket->wAngle		= m_pSCC->InstrumentStatus.wAngle;
+	pOutputPacket->wPeriod		= m_pSCC->InstrumentStatus.wPeriod;
+	pOutputPacket->wStatus		= m_pSCC->InstrumentStatus.wStatus;
+	pOutputPacket->uMsgSeqCount = 50;
+	pOutputPacket->uSync		= 0x5CEBDAAD;
 
 	RESULTS *pR				= &pOutputPacket->Results[0];
 
@@ -418,7 +424,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 
 
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
-	if (pBuf->nLength == 1040)
+	if (pBuf->nLength == sizeof(SRawDataPacket))		// legacy 1040, future is ???
 		{
 		pRaw = (SRawDataPacket *) &pBuf->Msg;
 #ifdef MAKE_FAKE_DATA

@@ -65,7 +65,7 @@ class CServiceApp;
 // MAX_CHNLS_PER_MAIN_BANG. The max the number of channels in a transducer array is [16][32] = 512
 
 
-#define INSTRUMENT_PACKET_SIZE				1040
+#define INSTRUMENT_PACKET_SIZE				1456		//old 1040
 #define MASTER_PACKET_SIZE					1260
 
 
@@ -91,7 +91,7 @@ class CTscanDlg;
 extern THE_APP_CLASS theApp;
 
 
-#define INSTRUMENT_PACKET_SIZE				1040
+#define INSTRUMENT_PACKET_SIZE				1456		//old 1040
 #define MASTER_PACKET_SIZE					1260
 #define PAG_CMD_PACKET_SIZE					1040
 

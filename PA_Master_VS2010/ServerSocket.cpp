@@ -329,7 +329,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	else 	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread)
 
 		{
-		CAsyncSocket::OnClose(nErrorCode); // OnClose kills ServerSocketOwnerThread ... maybe should just be OnClose() 2016-08-29
+		CAsyncSocket::OnClose(nErrorCode); // OnClose kills ServerSocketOwnerTherad
 		TRACE("CServerSocketOwnerThread ALREADY exists... kill it\n");
 		CWinThread * pThread1 = 
 			(CWinThread *)m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread;
@@ -358,11 +358,11 @@ void CServerSocket::OnAccept(int nErrorCode)
 		m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
 		}
 
-	else	ASSERT(0);	// got a break here from real instrument 2016-09-08
+	else	ASSERT(0);
 
 
-	// create a new thread IN SUSPENDED STATE ....and turn off auto delete. Must explicitly delete thread to run destructor.
-	//  THIS DID NOT WORK. LEAVE AUTODELETE ON !!!
+	// create a new thread IN SUSPENDED STATE 
+	//  THIS DID NOT WORK. LEAVE AUTODELETE ON ....and turn off auto delete. Must explicitly delete thread to run destructor.
 	CServerSocketOwnerThread * pThread =
 	m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread = (CServerSocketOwnerThread *) AfxBeginThread(RUNTIME_CLASS (CServerSocketOwnerThread),
 	   	   					  				                                THREAD_PRIORITY_ABOVE_NORMAL,
@@ -377,14 +377,21 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// Init some things in the thread before it runs. We are now accessing things inside the new thread, not in this thread
 	if (pThread)
 		{
-		pThread->m_pConnectionSocket = new CServerSocket();
-		pThread->m_pMySCM		= m_pSCM;
-		pThread->m_pstSCM		= m_pSCM->m_pstSCM;
-		pThread->m_nMyServer	= m_pSCM->m_pstSCM->pSCM->m_nMyServer;
-		pThread->m_pSCC			= m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];
+		pThread->m_pConnectionSocket					= new CServerSocket();
+		pThread->m_pConnectionSocket->m_pSCM			=	pThread->m_pMySCM		= m_pSCM;
+		pThread->m_pConnectionSocket->m_pSCM->m_pstSCM	=	pThread->m_pstSCM		= m_pSCM->m_pstSCM;
+		pThread->m_pConnectionSocket->m_nMyServer		=	pThread->m_nMyServer	= m_pSCM->m_pstSCM->pSCM->m_nMyServer;
+		pThread->m_pConnectionSocket->m_pSCC			=	pThread->m_pSCC			= m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];
+		pThread->m_pConnectionSocket->m_pThread			=	pThread;
+		pThread->m_pConnectionSocket->m_pSCC->m_nMyThreadIndex = pThread->m_nThreadIndex	= nClientPortIndex;
+		pThread->m_pConnectionSocket->m_pSCC->pSocket	=	pThread->m_pConnectionSocket;
+		pThread->m_pConnectionSocket->GetPeerName(Ip4,uPort);
+		pThread->m_pConnectionSocket->SetClientIp4(Ip4);
+		pThread->m_pConnectionSocket->m_pSCC->sClientIP4 = Ip4;
+		pThread->m_pConnectionSocket->m_pSCC->uClientPort= uPort;
 
 		//pThread->m_pSCC->pSocket = NULL;
-		pThread->m_nThreadIndex	= nClientPortIndex;
+		
 		pThread->m_hConnectionSocket = Asocket.Detach();	// hand off the socket we just accepted to the thread
 		Sleep(10);
 		// Make the correct socket type selection in the thread resume
@@ -401,14 +408,14 @@ void CServerSocket::OnAccept(int nErrorCode)
 		
 	// Display the connect socket IP and port
 	Asocket.GetSockName(Ip4,uPort);	// my socket info??
-	s.Format(_T("Client on socket %s : %d accepted to server\n"), Ip4, uPort);
+	s.Format(_T("Client accepted to server on socket %s : %d\n"), Ip4, uPort);
 	TRACE(s);
 	theApp.SaveDebugLog(s);
 		
 	char buffer [80], txt[64];
 	strcpy(buffer,GetTimeStringPtr());
 	CstringToChar(Ip4, txt);
-	printf("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n", nClientPortIndex, txt, uPort, buffer);
+	printf("Instrument Client[%d] accepted to server on socket %s : %d at %s\n", nClientPortIndex, txt, uPort, buffer);
 	Sleep(10);
 			
 	// Asocket.Close();	not necessary. Since Asocket on stack, when this routine ends, Asocket deletes
@@ -718,7 +725,7 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 									// This socket is owned by ServerSocketOwnerThread
 	CServerSocketOwnerThread *pServerSocketOwnerThread;	// thread to control sending to a connected client
 	CServerRcvListThreadBase *pServerRcvListThread;	
-	CvChannel* pvChannel[MAX_CHNLS_PER_MAIN_BANG];	// array of ptrs to virtual channels associated with each client connection
+	CvChannel* pvChannel[MAX_CHNLS_PER_INSTRUMENT];	// array of ptrs to virtual channels associated with each client connection
 
 #endif
 

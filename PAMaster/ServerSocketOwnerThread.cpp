@@ -126,7 +126,7 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	m_pConnectionSocket->m_pSCC->pSocket = m_pConnectionSocket;
 	m_pConnectionSocket->GetPeerName(Ip4,uPort);	// connecting clients info??
 	m_pConnectionSocket->SetClientIp4(Ip4);
-	m_pConnectionSocket->m_pSCC->sClientIP4 = Ip4;
+	m_pConnectionSocket->m_pSCC->sClientIP4 = Ip4; // error reading character string
 	m_pConnectionSocket->m_pSCC->uClientPort = uPort;
 	m_pConnectionSocket->m_pElapseTimer = new CHwTimer();
 	m_pConnectionSocket->m_pSCC->szSocketName.Format(_T("ServerSocket Connection Skt[%d][%d]\n"),  m_nMyServer, m_nThreadIndex);
@@ -228,29 +228,33 @@ int CServerSocketOwnerThread::ExitInstance()
 		{
 		if (m_pSCC->pSocket)
 			{
-			//if (m_pSCC->m_pConnectionSocket->ShutDown(2))
-			if (m_pSCC->pSocket->ShutDown(2))
-				{
-				s = _T("Shutdown of client socket was successful\n");
-				TRACE(s);
-				m_pSCC->pSocket->Close();
-				}
-			else
-				{
-				s = _T("Shutdown of client socket failed\n");
-				TRACE(s);
-				}
+			if (((int)m_pSCC->pSocket->m_hSocket > 0) && ((int)m_pSCC->pSocket->m_hSocket < 32000))
+				{	// check socket handle range
 
-			if (m_pSCC->pSocket->m_pElapseTimer)
-				{
-				delete m_pSCC->pSocket->m_pElapseTimer;
-				m_pSCC->pSocket->m_pElapseTimer = 0;
-				}
+				//if (m_pSCC->m_pConnectionSocket->ShutDown(2))
+				if (m_pSCC->pSocket->ShutDown(2))
+					{
+					s = _T("Shutdown of client socket was successful\n");
+					TRACE(s);
+					m_pSCC->pSocket->Close();
+					}
+				else
+					{
+					s = _T("Shutdown of client socket failed\n");
+					TRACE(s);
+					}
 
-			// now destroy the socket which was created in ServerSocket::OnAccept
-			delete m_pSCC->pSocket;
+				if (m_pSCC->pSocket->m_pElapseTimer)
+					{
+					delete m_pSCC->pSocket->m_pElapseTimer;
+					m_pSCC->pSocket->m_pElapseTimer = 0;
+					}
+
+				// now destroy the socket which was created in ServerSocket::OnAccept
+				delete m_pSCC->pSocket;
+				}		// check socket handle range
+			m_pSCC->pSocket = 0;
 			}
-		m_pSCC->pSocket = 0;
 
 		if ( m_pSCC)	// this points to pClientConnection
 			{
@@ -391,6 +395,8 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 		delete m_pSCC->pSendPktList;		m_pSCC->pSendPktList	= NULL;
 		delete m_pSCC->pCSSendPkt;			m_pSCC->pCSSendPkt		= NULL;
 		}
+	// typically if the socket doesn't exist, the handle = -1 or 0xffffffff
+	// and typically on this machine the socket handle is somewhere between 1 and 1000 with 8xx being common.
 	if ( ((int)pscc->pSocket->m_hSocket > 0) && ((int)pscc->pSocket->m_hSocket < 32000))
 		{
 		delete pscc->pSocket;

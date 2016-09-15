@@ -303,6 +303,9 @@ void CServerSocket::OnAccept(int nErrorCode)
 	if (m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex] == NULL)	// first time thru
 		{
 		m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
+		// Notice that m_pSCC points to the same object as m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex]
+		// deleting pClientConnection[] will delete m_pSCC. But setting pClientConnection[] = 0
+		// will not automaticallyset m_pSCC to 0
 		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nClientPortIndex];
 		m_pSCC->pSocket = 0;		// hold off idle loop in ServiceApp. When not zero clear to run
 		// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info

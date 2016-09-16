@@ -94,7 +94,7 @@ void CServerSocketOwnerThread::MyDestructor()
 // Point this thread to its place in the static stSCM[MAX_SERVERS] structure
 //
 
-// Thread starst suspended. Set pointers and create the socket
+// Thread starts suspended. Set pointers and create the socket
 BOOL CServerSocketOwnerThread::InitInstance()
 	{
 	CString Ip4,s;
@@ -165,13 +165,18 @@ BOOL CServerSocketOwnerThread::InitInstance()
 
 #ifdef THIS_IS_SERVICE_APP
 	// PAM if here
-	CServerRcvListThreadBase *pThread =
 
 		// one rcv list thread for each client connection
 		// create suspended in theApp and set pointers to structures here
+	CServerRcvListThreadBase *pThread =
 		m_pSCC->pServerRcvListThread = theApp.CreateServerReceiverThread(m_nMyServer, m_pSCC->nSSRcvListThreadPriority);
+		// assuming that theApp returns the thread pointer pThread, then save the ID in SCC structure.
 		m_pSCC->ServerRcvListThreadID = pThread->m_nThreadID;
-		// PAM if here
+		// this is used to let OnClose() exit when it gets set to 1
+		m_pstSCM->nComThreadExited[m_nThreadIndex] = 0;
+		// ReceiveListThread knows nothing about m_pSCC or any other server structure as of 2016-09-15
+		// and maybe it doesn't have to know anything about those structures
+	// PAM if here
 #else
 	// not Service App if here -- PAG
 	extern CTscanDlg* pCTscanDlg;

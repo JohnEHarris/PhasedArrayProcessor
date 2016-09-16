@@ -353,7 +353,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 		TRACE(s);
 		if ( i == 50) ASSERT(0);
 
-		// redo what was above as if pClientConnection had never existed
+		// redo what was above as if pClientConnection had never existed <<<< crashed here on friday 9-16-16
+		// after instrument power cycle.
 		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];	
 		nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, nClientPortIndex);
 
@@ -642,32 +643,55 @@ void CServerSocket::OnClose(int nErrorCode)
 #if 1
 
 	// kill the socket's thread  .. a partial shutdown
-	// m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] = 1;
 	CAsyncSocket::OnClose(nErrorCode);	//0x2745 on a restart of instrument = 10053
 	// #define WSAECONNABORTED                  10053L
 
-	if (m_pSCM == NULL) 
+	if (nErrorCode)
 		{
-		TRACE1("CServerSocket::OnClose(%d) hopelessly lost due to m_pSCM or m_pstSCM \n", nErrorCode);
+		i = 1;
+		TRACE1("CServerSocket::OnClose(int nErrorCode= %d)\n", nErrorCode);
+		}
+
+	if (m_pSCM == NULL)
+		{
+		TRACE1("CServerSocket::OnClose(%d) hopelessly lost due to NULL m_pSCM\n", nErrorCode);
 		return;
 		}
-	if (m_pSCC)
-		{
-		if (m_pSCC->pServerSocketOwnerThread)
-			{
-			// wParam = m_nClientPortIndex , (LPARAM)m_pSCC
-			PostThreadMessage(m_pSCC->pServerSocketOwnerThread->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, 
-				(WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
 
-			while ( (i++ < 20) && (m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] == 0))
+	if (m_pSCM->m_pstSCM == NULL)
+		{
+		TRACE1("CServerSocket::OnClose(%d) hopelessly lost due to NULL m_pstSCM\n", nErrorCode);
+		return;
+		}
+	// Maximum of 8 instrument at 2016-09-16
+	if ( (m_nMyThreadIndex < 0) || (m_nMyThreadIndex > 7) )
+		{
+		TRACE1("CServerSocket::OnClose(%d) hopelessly lost due to out of range m_nMyThreadIndex\n", nErrorCode);
+		return;
+		}
+
+	if (m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex])
+		{
+		if (m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex]->pServerSocketOwnerThread)
+			{
+			m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex];
+			// wParam = m_nMyThreadIndex , (LPARAM)m_pSCC
+			PostThreadMessage(m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex]->pServerSocketOwnerThread->m_nThreadID,
+				WM_USER_KILL_OWNER_SOCKET, 	(WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
+
+#if 0
+			while ( (i++ < 100) && (m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] == 0))
 				Sleep(10);
 
-			if (i == 20)
+			if (i == 100)
 				TRACE("CServerSocket::OnClose timed out waiting to destroy the Owner Thread\n ");
+#endif
+			
 			}
 		}
+	//else TRACE1("CServerSocket::OnClose(%d) failed to kill ServerSocketOwnerThread Error =%d\n", nErrorCode);
 #endif
-
+	Sleep(10);
 	}
 
 

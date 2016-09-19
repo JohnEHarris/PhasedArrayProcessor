@@ -342,7 +342,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		// this will cause ServerSocketOwner to execute ExitInstance()
 		// ExitInstance() will close the socket and delete the pClientConnection structures
 #endif
-
+#if 0
 		for ( i = 0; i <50; i++)
 			{
 			if (m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex])	
@@ -352,7 +352,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		s.Format("Wait loop in OnAccept for ComThreadExited is %d\n", i);
 		TRACE(s);
 		if ( i == 50) ASSERT(0);
-
+#endif
 		// redo what was above as if pClientConnection had never existed <<<< crashed here on friday 9-16-16
 		// after instrument power cycle.
 		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];	
@@ -644,6 +644,7 @@ void CServerSocket::OnClose(int nErrorCode)
 	// kill off our pClientConnection before we leave
 	// KillpClientConnectionStruct();
 	int i = 0;
+	//CString s;
 
 #if 1
 
@@ -654,24 +655,36 @@ void CServerSocket::OnClose(int nErrorCode)
 	if (nErrorCode)
 		{
 		i = 1;
-		TRACE1("CServerSocket::OnClose(int nErrorCode= %d)\n", nErrorCode);
+		//s.Format(_T("CServerSocket::OnClose(int nErrorCode= %d)\n"), nErrorCode);
+		//theApp.SaveDebugLog(s);
+		//TRACE(s);
+		TRACE1(("CServerSocket::OnClose(int nErrorCode= %d)\n"), nErrorCode);
 		}
 
 	if (m_pSCM == NULL)
 		{
-		TRACE1("CServerSocket::OnClose(%d) hopelessly lost due to NULL m_pSCM\n", nErrorCode);
+		//s.Format(_T("CServerSocket::OnClose(%d) hopelessly lost due to NULL m_pSCM\n"), nErrorCode);
+		//theApp.SaveDebugLog(s);
+		//TRACE(s);
+		TRACE1(("CServerSocket::OnClose(%d) hopelessly lost due to NULL m_pSCM\n"), nErrorCode);
 		return;
 		}
 
 	if (m_pSCM->m_pstSCM == NULL)
 		{
-		TRACE1("CServerSocket::OnClose(%d) hopelessly lost due to NULL m_pstSCM\n", nErrorCode);
+		//s.Format(_T("CServerSocket::OnClose(%d) hopelessly lost due to NULL m_pstSCM\n"), nErrorCode);
+		//theApp.SaveDebugLog(s);
+		//TRACE(s);
+		TRACE1(("CServerSocket::OnClose(%d) hopelessly lost due to NULL m_pstSCM\n"), nErrorCode);
 		return;
 		}
 	// Maximum of 8 instrument at 2016-09-16
 	if ( (m_nMyThreadIndex < 0) || (m_nMyThreadIndex > 7) )
 		{
-		TRACE1("CServerSocket::OnClose(%d) hopelessly lost due to out of range m_nMyThreadIndex\n", nErrorCode);
+		//s.Format(_T("CServerSocket::OnClose(%d) hopelessly lost due to out of range m_nMyThreadIndex\n"), nErrorCode);
+		//theApp.SaveDebugLog(s);
+		//TRACE(s);
+		TRACE1(("CServerSocket::OnClose(%d) hopelessly lost due to out of range m_nMyThreadIndex\n"), nErrorCode);
 		return;
 		}
 
@@ -688,8 +701,13 @@ void CServerSocket::OnClose(int nErrorCode)
 			while ( (i++ < 100) && (m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] == 0))
 				Sleep(10);
 
-			if (i == 100)
+			if (i == 10)
+				{
+				//s.Format(_T("CServerSocket::OnClose timed out waiting to destroy the Owner Thread\n "));
+				//theApp.SaveDebugLog(s);
+				//TRACE(s);
 				TRACE("CServerSocket::OnClose timed out waiting to destroy the Owner Thread\n ");
+				}
 #endif
 			
 			}

@@ -456,6 +456,8 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 				{
 				k = j*nSeqQty;	// k points to beginning of a frame of data
 				pChannel = m_pSCC->pvChannel[0][i];
+				if ( NULL == pChannel)
+					continue;
 				// Get flaw Nc qualified Max values for this channel
 				bGateTmp = pChannel->InputFifo(eId, pRaw->RawData[i+k].bAmp2);	// output of the Nc peak holder
 				if (pChannel->m_GateID < bGateTmp)		pChannel->m_GateID = bGateTmp;

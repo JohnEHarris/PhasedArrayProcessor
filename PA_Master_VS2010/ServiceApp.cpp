@@ -1057,11 +1057,25 @@ WHILE_TARGET:
 				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 					{
 #if 1
+					if (0 == GetInstrumentListAccess(j))
+						continue;	// invalid client number - no access granted
+					// if we are here we have entered a critical section
+
+					// is there a reason to leave the critical section for server[i].client[j]?
 					k = (int) stSCM[i].pClientConnection[j];	// race condition of completing connection in debug
-					if ( k == 0) 
+					if ( k == 0)
+						{ 
+						// no client connection
+						ReleaseInstrumentListAccess(j);
 						continue;
+						}
 					if (stSCM[i].pSCM->m_pstSCM[i].nComThreadExited[j] == 1)
+						{ 
+						// no client connection
+						ReleaseInstrumentListAccess(j);
 						continue;
+						}
+
 					if(k > 0)	// break for debug
 						{	// empty the linked lists
 						k = (int) stSCM[i].pClientConnection[j]->pSocket;	//debug
@@ -1086,9 +1100,9 @@ WHILE_TARGET:
 								}
 							stSCM[i].pClientConnection[j]->pSocket->UnLockSendPktList();
 							}
-						}	// pClientConnection[j]
+						}	// empty the linked lists
 #endif
-
+					ReleaseInstrumentListAccess(j);
 					Sleep(10);
 
 					}	// j loop

@@ -160,7 +160,7 @@ CServiceApp::CServiceApp()
 	{
 //	WSADATA wsaData;
 //	int rv, 
-//	int i;
+	int i;
 	//pTheApp = this;
 
 	AfxSocketInit();
@@ -177,6 +177,13 @@ CServiceApp::CServiceApp()
 	m_nShutDownCount = 0;
 	pCSSaveDebug =new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pCSSaveDebug,4);
+
+	for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
+		{
+		pAppInstAccess[i] = new CRITICAL_SECTION();
+		InitializeCriticalSectionAndSpinCount(pAppInstAccess[i],4);
+		}
+
 
 	g_NcNx.Long[0] = 1;
 	g_NcNx.Long[1] = 1;
@@ -204,10 +211,6 @@ CServiceApp::CServiceApp()
 	// 
 #endif
 
-
-
-
-
 	}
 
 CServiceApp::~CServiceApp()
@@ -223,6 +226,11 @@ CServiceApp::~CServiceApp()
 
 	if (pCSSaveDebug)	// critical section access to debug log file
 		delete pCSSaveDebug;
+	
+	for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
+		{
+		delete pAppInstAccess[i];
+		}	
 	
 	ShutDown(); // first place when closing dos window
 
@@ -1049,11 +1057,25 @@ WHILE_TARGET:
 				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 					{
 #if 1
+					if (0 == GetInstrumentListAccess(j))
+						continue;	// invalid client number - no access granted
+					// if we are here we have entered a critical section
+
+					// is there a reason to leave the critical section for server[i].client[j]?
 					k = (int) stSCM[i].pClientConnection[j];	// race condition of completing connection in debug
-					if ( k == 0) 
+					if ( k == 0)
+						{ 
+						// no client connection
+						ReleaseInstrumentListAccess(j);
 						continue;
+						}
 					if (stSCM[i].pSCM->m_pstSCM[i].nComThreadExited[j] == 1)
+						{ 
+						// no client connection
+						ReleaseInstrumentListAccess(j);
 						continue;
+						}
+
 					if(k > 0)	// break for debug
 						{	// empty the linked lists
 						k = (int) stSCM[i].pClientConnection[j]->pSocket;	//debug
@@ -1078,9 +1100,9 @@ WHILE_TARGET:
 								}
 							stSCM[i].pClientConnection[j]->pSocket->UnLockSendPktList();
 							}
-						}	// pClientConnection[j]
+						}	// empty the linked lists
 #endif
-
+					ReleaseInstrumentListAccess(j);
 					Sleep(10);
 
 					}	// j loop
@@ -1629,6 +1651,33 @@ void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 
 	}
 
+// Input the client number for the instrument making the request
+// Client numbers are derived from the base IP address of the client range
+// and as of 2016-09-16 only range from 0-7
+// The client will still have to access its own linked list thru its own local critical sections
+//
+int CServiceApp::GetInstrumentListAccess(int nInstNumber)
+	{
+	if (( nInstNumber < 0) || (nInstNumber >= MAX_CLIENTS_PER_SERVER))
+		{
+		TRACE1("Invalid GetInstrumentListAccess number = %d\n", nInstNumber);
+		return 0;
+		}
+	EnterCriticalSection(pAppInstAccess[nInstNumber]);
+	return 1;
+	}
+
+void CServiceApp::ReleaseInstrumentListAccess(int nInstNumber)
+	{
+	if (( nInstNumber < 0) || (nInstNumber >= MAX_CLIENTS_PER_SERVER))
+		{
+		TRACE1("Invalid ReleaseInstrumentListAccess number = %d\n", nInstNumber);
+		return;
+		}
+	LeaveCriticalSection(pAppInstAccess[nInstNumber]);
+	}
+
+
 /**************************************** Nov 20120 ************************************/
 /**************************************** Nov 20120 ************************************/
 
@@ -1697,25 +1746,13 @@ void Inspection_Process_Control()
 
 
 int FindWhichSlave(int nChannel)
-{
-
-
-	return 0;	//nSlave;
-}
+{	return 0;		}//nSlave;
 
 
 int FindSlaveChannel(int nChannel)
-{
-
-
-	return 0;	//nSlaveCh;
-}
+{	return 0;	}//nSlaveCh;
 
 
 int FindDisplayChannel(int nArray, int nArrayCh)
-{
-
-
-	return 0;	//nDispCh;
-}
+{	return 0;	}//nDispCh;
 

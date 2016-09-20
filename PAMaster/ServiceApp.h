@@ -113,6 +113,17 @@ public:
 	void SetMy_PAM_Number(CString &Ip4, UINT uPort);
 	int  GetMy_PAM_Number(void)	{ return m_nPamNumber;	}
 	UINT GetMy_PAM_Port(void)	{ return m_uPamPort;	}
+	// Critical Sections to regulate linked list access by Instruemnt client threads and the Service App
+	// Could be two dimensional in the future for for now just one dimensional.
+	// Service App usually does something with the data from the instruments by accessing the instrumnets linked list
+
+	CRITICAL_SECTION *pAppInstAccess[MAX_CLIENTS_PER_SERVER];	//MAX_CLIENTS_PER_SERVER in ServiceConnectionManagement.h
+	
+	// All who want to access an instruments linked list must make this call to ServiceApp - including ServiceApp itself
+	int GetInstrumentListAccess(int nInstNumber);		// returns InstNumber when access is granted
+	void ReleaseInstrumentListAccess(int nInstNumber);	// Allow others to access the linked lists and critical sections.
+
+
 
 public:
 	virtual BOOL InitInstance();

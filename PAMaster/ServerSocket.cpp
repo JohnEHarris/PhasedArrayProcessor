@@ -329,7 +329,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 	/************************** What if already connected ?? *******************/
 
-	else 	if ((m_pSCC == m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]) && 
+	else 	if	(m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] && 
 				(m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread))
 		{
 		OnClose(nErrorCode); // OnClose kills ServerSocketOwnerTherad but the base Async OnClose does not
@@ -342,7 +342,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		// this will cause ServerSocketOwner to execute ExitInstance()
 		// ExitInstance() will close the socket and delete the pClientConnection structures
 #endif
-
+#if 0
 		for ( i = 0; i <50; i++)
 			{
 			if (m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex])	
@@ -352,8 +352,9 @@ void CServerSocket::OnAccept(int nErrorCode)
 		s.Format("Wait loop in OnAccept for ComThreadExited is %d\n", i);
 		TRACE(s);
 		if ( i == 50) ASSERT(0);
-
-		// redo what was above as if pClientConnection had never existed
+#endif
+		// redo what was above as if pClientConnection had never existed <<<< crashed here on friday 9-16-16
+		// after instrument power cycle.
 		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];	
 		nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, nClientPortIndex);
 
@@ -560,6 +561,9 @@ void CServerSocket::OnReceive(int nErrorCode)
 	if ( n > 0)
 		{
 		// put it in the linked list and let someone else decipher it
+		// Hang up here forever if the App doesn't release the critical section
+		theApp.GetInstrumentListAccess(m_pSCC->m_nMyThreadIndex);	// OnReceive is essentially an interrupt service routine
+		// hope we don't get stuck here forever
 		while ( pPacket = GetWholePacket(nPacketSize, &n))	// returns a ptr to void with length nPacketSize
 			{	// get packets
 			
@@ -608,6 +612,8 @@ void CServerSocket::OnReceive(int nErrorCode)
 				}	// if (m_pSCC)
 			} 	// get packets
 
+		theApp.ReleaseInstrumentListAccess(m_pSCC->m_nMyThreadIndex);
+
 		// Post a message to someone who cares and let that routine/class/function deal with the packet
 		// Posted message goes to CServerRcvListThread::ProcessRcvList()
 		// which calls CServerRcvListThread::ProcessInstrumentData()
@@ -638,36 +644,77 @@ void CServerSocket::OnClose(int nErrorCode)
 	// kill off our pClientConnection before we leave
 	// KillpClientConnectionStruct();
 	int i = 0;
+	//CString s;
 
 #if 1
 
 	// kill the socket's thread  .. a partial shutdown
-	// m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] = 1;
 	CAsyncSocket::OnClose(nErrorCode);	//0x2745 on a restart of instrument = 10053
 	// #define WSAECONNABORTED                  10053L
 
-	if (m_pSCM == NULL) 
+	if (nErrorCode)
 		{
-		TRACE1("CServerSocket::OnClose(%d) hopelessly lost due to m_pSCM or m_pstSCM \n", nErrorCode);
+		i = 1;
+		//s.Format(_T("CServerSocket::OnClose(int nErrorCode= %d)\n"), nErrorCode);
+		//theApp.SaveDebugLog(s);
+		//TRACE(s);
+		TRACE1(("CServerSocket::OnClose(int nErrorCode= %d)\n"), nErrorCode);
+		}
+
+	if (m_pSCM == NULL)
+		{
+		//s.Format(_T("CServerSocket::OnClose(%d) hopelessly lost due to NULL m_pSCM\n"), nErrorCode);
+		//theApp.SaveDebugLog(s);
+		//TRACE(s);
+		TRACE1(("CServerSocket::OnClose(%d) hopelessly lost due to NULL m_pSCM\n"), nErrorCode);
 		return;
 		}
-	if (m_pSCC)
-		{
-		if (m_pSCC->pServerSocketOwnerThread)
-			{
-			// wParam = m_nClientPortIndex , (LPARAM)m_pSCC
-			PostThreadMessage(m_pSCC->pServerSocketOwnerThread->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, 
-				(WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
 
-			while ( (i++ < 20) && (m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] == 0))
+	if (m_pSCM->m_pstSCM == NULL)
+		{
+		//s.Format(_T("CServerSocket::OnClose(%d) hopelessly lost due to NULL m_pstSCM\n"), nErrorCode);
+		//theApp.SaveDebugLog(s);
+		//TRACE(s);
+		TRACE1(("CServerSocket::OnClose(%d) hopelessly lost due to NULL m_pstSCM\n"), nErrorCode);
+		return;
+		}
+	// Maximum of 8 instrument at 2016-09-16
+	if ( (m_nMyThreadIndex < 0) || (m_nMyThreadIndex > 7) )
+		{
+		//s.Format(_T("CServerSocket::OnClose(%d) hopelessly lost due to out of range m_nMyThreadIndex\n"), nErrorCode);
+		//theApp.SaveDebugLog(s);
+		//TRACE(s);
+		TRACE1(("CServerSocket::OnClose(%d) hopelessly lost due to out of range m_nMyThreadIndex\n"), nErrorCode);
+		return;
+		}
+
+	if (m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex])
+		{
+		if (m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex]->pServerSocketOwnerThread)
+			{
+			m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex];
+			// wParam = m_nMyThreadIndex , (LPARAM)m_pSCC
+			PostThreadMessage(m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex]->pServerSocketOwnerThread->m_nThreadID,
+				WM_USER_KILL_OWNER_SOCKET, 	(WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
+
+#if 0
+			while ( (i++ < 100) && (m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] == 0))
 				Sleep(10);
 
-			if (i == 20)
+			if (i == 10)
+				{
+				//s.Format(_T("CServerSocket::OnClose timed out waiting to destroy the Owner Thread\n "));
+				//theApp.SaveDebugLog(s);
+				//TRACE(s);
 				TRACE("CServerSocket::OnClose timed out waiting to destroy the Owner Thread\n ");
+				}
+#endif
+			
 			}
 		}
+	//else TRACE1("CServerSocket::OnClose(%d) failed to kill ServerSocketOwnerThread Error =%d\n", nErrorCode);
 #endif
-
+	Sleep(10);
 	}
 
 

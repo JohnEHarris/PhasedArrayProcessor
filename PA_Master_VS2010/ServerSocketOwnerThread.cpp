@@ -239,7 +239,7 @@ int CServerSocketOwnerThread::ExitInstance()
 		{
 		if (m_pSCC->pSocket)
 			{
-			if (((int)m_pSCC->pSocket->m_hSocket > 0) && ((int)m_pSCC->pSocket->m_hSocket < 32000))
+			if ((int)m_pSCC->pSocket->m_hSocket > 0)	//&& ((int)m_pSCC->pSocket->m_hSocket < 32000))
 				{	// check socket handle range
 
 				//if (m_pSCC->m_pConnectionSocket->ShutDown(2))
@@ -409,7 +409,7 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 		}
 	// typically if the socket doesn't exist, the handle = -1 or 0xffffffff
 	// and typically on this machine the socket handle is somewhere between 1 and 1000 with 8xx being common.
-	if ( ((int)pscc->pSocket->m_hSocket > 0) && ((int)pscc->pSocket->m_hSocket < 32000))
+	if ((int)pscc->pSocket->m_hSocket > 0)	//&& ((int)pscc->pSocket->m_hSocket < 32000))
 		{
 		delete pscc->pSocket;
 		pscc->pSocket = NULL;
@@ -425,6 +425,7 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 			pscc->pvChannel[j][i] = 0;
 			}
 		}
+	// kill ServerSocket instance
 	nReturn = ExitInstance();	//thread message does not allow return of anything but void
 	t.Format(_T("%d\n"), nReturn);
 	s += t;

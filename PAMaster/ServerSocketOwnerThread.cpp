@@ -283,6 +283,7 @@ int CServerSocketOwnerThread::ExitInstance()
 			//delete m_pSCC->pSocket; corrupts heap STOPPED here on 2016-08-01 jeh .. need to delete?
 			m_pSCC->pSocket = NULL;	 // was deleted above under the name of m_pConnectionSocket 
 			//delete m_pSCC->pSocket; corrupts heap
+			// thread was created with AutoDelete turned on. So don't delete here
 			m_pSCC->pServerSocketOwnerThread = NULL;
 			}
 			Sleep(20);

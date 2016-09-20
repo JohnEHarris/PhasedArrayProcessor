@@ -426,12 +426,30 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 			}
 		}
 	// kill ServerSocket instance
+	KillServerSocketClass();
 	nReturn = ExitInstance();	//thread message does not allow return of anything but void
 	t.Format(_T("%d\n"), nReturn);
 	s += t;
 	TRACE(s);
 	//delete m_pSCC->pServerSocketOwnerThread;
 	}
+
+// The creation of this thread included the creation of the ServerSocket class before the thread was resumed.
+// Must deconstruct the class and release all things created with new
+//
+void CServerSocketOwnerThread::KillServerSocketClass(void)
+	{
+	if ( m_pConnectionSocket ==  NULL)	return;
+	if ( m_pConnectionSocket->m_pElapseTimer)
+		{
+		delete m_pConnectionSocket->m_pElapseTimer;
+		m_pConnectionSocket->m_pElapseTimer = 0;
+		}
+	delete m_pConnectionSocket;
+	m_pConnectionSocket = 0;
+	}
+
+
 
 // A message or messages have been placed into the linked list controlled by this thread
 // This function will empty the linked list by sending its contents out using the associated

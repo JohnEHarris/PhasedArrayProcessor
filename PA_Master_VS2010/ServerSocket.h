@@ -72,9 +72,9 @@ public:
 	void SetConnectionStatus(BYTE s)	{ if	 (m_pSCC)	m_pSCC->bConnected = s;							}
 
 	// variables
-	CServerConnectionManagement *m_pSCM;		// ptr to the controlling class
-	ST_SERVERS_CLIENT_CONNECTION *m_pSCC;		// ptr to my connection info/statistics/objects
-	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// pointer to my global structure instance 
+	CServerConnectionManagement *m_pSCM;		// ptr to the controlling class -- not created with 'new'
+	ST_SERVERS_CLIENT_CONNECTION *m_pSCC;		// ptr to my connection info/statistics/objects -- not created with 'new'
+	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// pointer to my global structure instance  -- not created with 'new'
 	int m_nMyServer;							// which server are we connected stSCM[MAX_SERVERS]
 	int m_nMyThreadIndex;						// which instance of pClientConnection[MAX_CLIENTS_PER_SERVER];
 	CWinThread * m_pThread;						// ptr to thread which created the socket

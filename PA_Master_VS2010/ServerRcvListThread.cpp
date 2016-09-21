@@ -187,6 +187,7 @@ BEGIN_MESSAGE_MAP(CServerRcvListThread, CServerRcvListThreadBase)
 #ifdef THIS_IS_SERVICE_APP
 	ON_THREAD_MESSAGE(WM_USER_SERVERSOCKET_PKT_RECEIVED, ProcessRcvList)// manually added by jeh 11-06-12
 //	ON_THREAD_MESSAGE(WM_USER_INIT_RUNNING_AVERAGE, InitRunningAverage)	// manually added by jeh 11-09-12
+	ON_THREAD_MESSAGE(WM_USER_FLUSH_LINKED_LISTS, FlushRcvList)			// manually added jeh 09-20-16
 #endif
 
 #ifdef _I_AM_PAG
@@ -223,6 +224,26 @@ afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 		}
 	}
 
+void CServerRcvListThread::FlushRcvList(WPARAM w, LPARAM lParam)
+	{
+	void *pV;
+	if (m_pSCC)
+		{
+		if (m_pSCC->pSocket)
+			{
+			m_pSCC->pSocket->LockRcvPktList();
+			while (m_pSCC->pRcvPktList->GetCount() )
+				{
+				pV = m_pSCC->pRcvPktList->RemoveHead();
+				m_pSCC->pSocket->UnLockRcvPktList();
+				delete pV;
+				m_pSCC->pSocket->LockRcvPktList();
+				}
+			m_pSCC->pSocket->UnLockRcvPktList();
+			}
+		}
+	}
+
 void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
 	{
 	pData->DataHead.bMsgID		= eRawInsp;	// raw data=10
@@ -239,6 +260,7 @@ void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
 	pData->DataHead.wClock = nLoc % 12;
 	pData->DataHead.wPeriod = 1465;	// 300 ms = 200 rpm
 	}
+
 
 // Random number between 0 and 100
 // Notice - not a class member

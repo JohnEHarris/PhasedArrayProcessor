@@ -113,7 +113,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	int sockerr;
 	SOCKADDR SockAddr;
 	int SockAddrLen = sizeof(SOCKADDR);
-	int i;
+//	int i;
 
 	// how are we going to set our pSCM pointer???
 	// get our threadID of the thread running me
@@ -562,7 +562,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 		{
 		// put it in the linked list and let someone else decipher it
 		// Hang up here forever if the App doesn't release the critical section
-		theApp.GetInstrumentListAccess(m_pSCC->m_nMyThreadIndex);	// OnReceive is essentially an interrupt service routine
+		//theApp.GetInstrumentListAccess(m_pSCC->m_nMyThreadIndex);	// OnReceive is essentially an interrupt service routine
 		// hope we don't get stuck here forever
 		while ( pPacket = GetWholePacket(nPacketSize, &n))	// returns a ptr to void with length nPacketSize
 			{	// get packets
@@ -612,7 +612,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 				}	// if (m_pSCC)
 			} 	// get packets
 
-		theApp.ReleaseInstrumentListAccess(m_pSCC->m_nMyThreadIndex);
+		//theApp.ReleaseInstrumentListAccess(m_pSCC->m_nMyThreadIndex);
 
 		// Post a message to someone who cares and let that routine/class/function deal with the packet
 		// Posted message goes to CServerRcvListThread::ProcessRcvList()

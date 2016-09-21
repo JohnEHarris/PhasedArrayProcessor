@@ -91,7 +91,7 @@ public:
 	int m_nMinRcvRqst;							// smallest packet requested to receive
 	int m_nMaxRcvRqst;
 	CString szName;
-	void *pWholePacket;
+	void *pWholePacket;				// -- not created with 'new'
 	CHwTimer *m_pElapseTimer;
 	int m_nElapseTime;
 	};

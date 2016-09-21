@@ -1037,14 +1037,27 @@ WHILE_TARGET:
 		Sleep(50);
 		uAppTimerTick++;
 		if (nDebugShutdown)	break;	// use quick watch to change value to 1 when stepping with debugger
-		void *pv;
+//		void *pv;
 		// attempt to make a connection attempted when the server was busy/non responsive
 
 #if 1
-		k = 0;	// debug  prevent accessing pClientConnection until configured
+		k = 1;	// debug  prevent accessing pClientConnection until configured
 		while (k)
 			{
-			Sleep(100);
+			Sleep(1000);
+			i = 0;
+			for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
+				{
+				if (stSCM[i].pClientConnection[j] > 0)
+					{
+					if ( (stSCM[i].pClientConnection[j]->pSocket)	) // && (stSCM[i].nComThreadExited[J] == 0))
+						{
+						// Tell ReceiverList thread to flush the received data
+						CWinThread * pThread = stSCM[i].pClientConnection[j]->pServerRcvListThread;
+						PostThreadMessageW(pThread->m_nThreadID,WM_USER_FLUSH_LINKED_LISTS, 0, 0);
+						}
+					}
+				}
 			}
 
 		for ( i = 0; i < MAX_SERVERS; i++)
@@ -1054,25 +1067,22 @@ WHILE_TARGET:
 				{
 				// for each server in the system, empyt the linked list created by the instruments
 				// Server 0 by convention is the server receiving data packets from the instruments
+				// This crashes the program when linked lists are being deleted when instruments go away
+				// Remove critical sections and instead send thread messages to ServerSocketOwners to flush their data
 				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 					{
 #if 1
-					if (0 == GetInstrumentListAccess(j))
-						continue;	// invalid client number - no access granted
-					// if we are here we have entered a critical section
-
-					// is there a reason to leave the critical section for server[i].client[j]?
 					k = (int) stSCM[i].pClientConnection[j];	// race condition of completing connection in debug
 					if ( k == 0)
 						{ 
 						// no client connection
-						ReleaseInstrumentListAccess(j);
+						//ReleaseInstrumentListAccess(j);
 						continue;
 						}
 					if (stSCM[i].pSCM->m_pstSCM[i].nComThreadExited[j] == 1)
 						{ 
 						// no client connection
-						ReleaseInstrumentListAccess(j);
+						// ReleaseInstrumentListAccess(j);
 						continue;
 						}
 
@@ -1081,7 +1091,11 @@ WHILE_TARGET:
 						k = (int) stSCM[i].pClientConnection[j]->pSocket;	//debug
 						if ( (stSCM[i].pClientConnection[j]->pSocket)	) // && (stSCM[i].nComThreadExited[J] == 0))
 							{
-							// received data
+							// Tell ReceiverList thread to flush the received data
+							CWinThread * pThread = stSCM[i].pClientConnection[j]->pServerRcvListThread;
+							PostThreadMessage(pThread->m_nThreadID,WM_USER_FLUSH_LINKED_LISTS, 0);
+							Sleep(10);
+#if 0
 							stSCM[i].pClientConnection[j]->pSocket->LockRcvPktList();
 							while (stSCM[i].pClientConnection[j]->pRcvPktList->GetCount())
 								{
@@ -1099,11 +1113,13 @@ WHILE_TARGET:
 								delete pv;
 								}
 							stSCM[i].pClientConnection[j]->pSocket->UnLockSendPktList();
+#endif
 							}
+
 						}	// empty the linked lists
 #endif
-					ReleaseInstrumentListAccess(j);
-					Sleep(10);
+					//ReleaseInstrumentListAccess(j);
+					Sleep(50);
 
 					}	// j loop
 				}
@@ -1567,14 +1583,15 @@ void CServiceApp::InitializeClientConnectionManagement(void)
 	}
 
 // When it is time to create the thread that services the client's data received into the RcvPacketList
-// Call back to the top level of the application and choose the correct thread type base on knowing 
+// Call back to the top level of the application and choose the correct thread type based on knowing 
 // the function of the server itself.
 // This call returns the thread ptr of the thread created.
 // The thread created will have custom processing of the RcvPacketList based on which server/client pair
 // is being processed. For Phased Array Master, the primary client on the other end is the PA Instrument.
 // It sends inspection data packets which are processed in a manner dictated by the Message ID of the packet.
 //
-//ifdef SERVER_RCVLIST_THREADBASE		// DEFINE in project defines under C/C++ | Preprocessor
+//ifdef SERVER_RCVLIST_THREADBASE		
+// DEFINE in project defines under C/C++ | Preprocessor
 CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNumber, int nPriority)
 	{
 	CString s;
@@ -1612,7 +1629,7 @@ CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNum
 // PAM's connection to the PAG is via a Client Connection Management socket, specifically CCM[0] instance
 // CCM[0] instance has a child class of CCM, namely CCM_PAG
 // NOTE!!! PamSendToPag DOES NOT DELETE THE MEMORY pointed to by pBuf
-// In the FakeData generation whihc calls PamSendToPag pBuf is deleted after the return to the fake data generator
+// In the FakeData generation whicH calls PamSendToPag pBuf is deleted after the return to the fake data generator
 void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 	{
 	CString s;

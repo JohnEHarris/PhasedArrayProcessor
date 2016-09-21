@@ -207,7 +207,7 @@ BOOL CServerSocketOwnerThread::InitInstance()
 		// chooses between CServerSocket and CServerSocketPA_Master
 		pThread->ResumeThread();
 		// Set Hardware elapse timer
-		m_pHwTimer = new CHwTimer();
+		m_pHwTimer = new CHwTimer();	// this belongs to ServerSocketOwnerThread, not ServerRcvListThread
 		}
 
 	else
@@ -371,7 +371,7 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 		{
 		if (pscc->pSocket)
 			{
-			i = sizeof(CServerSocket);	//65620
+			i = sizeof(CServerSocket);	//65624
 			if (i = pscc->pSocket->ShutDown(2))
 				{
 				s += _T(" servers client socket shut down\n");

@@ -78,6 +78,7 @@ see ServiceApp.cpp
 #define WM_USER_KILL_CMD_PROCESS_THREAD				WM_USER+0x21C
 #define WM_USER_KILL_RECV_THREAD					WM_USER+0x21D
 #define WM_USER_KILL_SEND_THREAD					WM_USER+0x21E
+#define WM_USER_FLUSH_LINKED_LISTS					WM_USER+0x21F
 
 
 #define ePAM_Client_Of_PAG_Server			0

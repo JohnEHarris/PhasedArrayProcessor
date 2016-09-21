@@ -225,6 +225,9 @@ typedef struct
 	int nServerThreadPriority;		// should normally be THREAD_PRIORITY_ABOVE_NORMAL
 	HWND hServerDlg;				// windows handle to the Server Dialog if one exists
 
+	// unfortunately it appears that pClientConnection needs it own array of critical sections to prevent races when accessing
+	// lists controlled by pClientConnection
+	CRITICAL_SECTION *pCS_ClientConnection[MAX_CLIENTS_PER_SERVER];
 	ST_SERVERS_CLIENT_CONNECTION *pClientConnection[MAX_CLIENTS_PER_SERVER];	// an array of pointers to 
 									// information about individual clients connected to this server.
 									// not all potential clients may be connected. These client connections will be

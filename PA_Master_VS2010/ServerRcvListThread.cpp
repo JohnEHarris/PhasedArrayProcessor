@@ -203,7 +203,15 @@ END_MESSAGE_MAP()
 afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 	{
 	void *pV;
-	if (m_pSCC)
+	int j = (int) w;
+	if ( m_pstSCM)
+		{
+		if (m_pstSCM->pCS_ClientConnection[j]) EnterCriticalSection(m_pstSCM->pCS_ClientConnection[j]);
+		}
+	else return;
+
+	// if here we are in a critical section
+		if (m_pSCC)
 		{
 		if (m_pSCC->pSocket)
 			{
@@ -222,11 +230,22 @@ afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 			m_pSCC->pSocket->UnLockRcvPktList();
 			}
 		}
+	LeaveCriticalSection(m_pstSCM->pCS_ClientConnection[j]);
 	}
 
+// this procedure activated by WM_USER_FLUSH_LINKED_LISTS
+// WPARAM is the specific client connection to flush 
 void CServerRcvListThread::FlushRcvList(WPARAM w, LPARAM lParam)
 	{
 	void *pV;
+	int j = (int) w;
+	if ( m_pstSCM)
+		{
+		if (m_pstSCM->pCS_ClientConnection[j]) EnterCriticalSection(m_pstSCM->pCS_ClientConnection[j]);
+		}
+	else return;
+
+	// if here we are in a critical section
 	if (m_pSCC)
 		{
 		if (m_pSCC->pSocket)
@@ -242,6 +261,7 @@ void CServerRcvListThread::FlushRcvList(WPARAM w, LPARAM lParam)
 			m_pSCC->pSocket->UnLockRcvPktList();
 			}
 		}
+	LeaveCriticalSection(m_pstSCM->pCS_ClientConnection[j]);
 	}
 
 void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)

@@ -618,7 +618,9 @@ void CServerSocket::OnReceive(int nErrorCode)
 		// Posted message goes to CServerRcvListThread::ProcessRcvList()
 		// which calls CServerRcvListThread::ProcessInstrumentData()
 		if (nWholePacketQty)
+			{
 			m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED,0,0L);
+			}
 
 		if (m_pSCC)
 			{
@@ -693,9 +695,9 @@ void CServerSocket::OnClose(int nErrorCode)
 		if (m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex]->pServerSocketOwnerThread)
 			{
 			m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex];
+			CServerSocketOwnerThread * pThread = m_pSCC->pServerSocketOwnerThread;
 			// wParam = m_nMyThreadIndex , (LPARAM)m_pSCC
-			PostThreadMessage(m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex]->pServerSocketOwnerThread->m_nThreadID,
-				WM_USER_KILL_OWNER_SOCKET, 	(WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
+			pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET, (WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
 
 #if 0
 			while ( (i++ < 100) && (m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] == 0))

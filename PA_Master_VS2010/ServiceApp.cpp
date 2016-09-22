@@ -472,6 +472,7 @@ BOOL CServiceApp :: InitInstance()
 	// The ini file will be store in the folder which has the executable code
 
 	int i;
+	TRACE1("_WIN32_WINNT  is 0x%0x\n", _WIN32_WINNT);
 	memset (&uVchannelConstructor,0, sizeof(uVchannelConstructor));
 	CString s,Fake;	// fake is a debug file with fake data and fake data msg to PAG
 	CString DeBug;	// another debug file to catch printf statements since vs2015 does not output to monitor screen
@@ -1053,12 +1054,15 @@ WHILE_TARGET:
 					if ( (stSCM[i].pClientConnection[j]->pSocket)	) // && (stSCM[i].nComThreadExited[J] == 0))
 						{
 						// Tell ReceiverList thread to flush the received data
+						// WPARAM = j
 						CWinThread * pThread = stSCM[i].pClientConnection[j]->pServerRcvListThread;
-						PostThreadMessageW(pThread->m_nThreadID,WM_USER_FLUSH_LINKED_LISTS, 0, 0);
+						//if (pThread)
+						//	pThread->PostThreadMessage(WM_USER_FLUSH_LINKED_LISTS, j, 0);
 						}
 					}
 				}
 			}
+#if 0
 
 		for ( i = 0; i < MAX_SERVERS; i++)
 			{
@@ -1071,7 +1075,6 @@ WHILE_TARGET:
 				// Remove critical sections and instead send thread messages to ServerSocketOwners to flush their data
 				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 					{
-#if 1
 					k = (int) stSCM[i].pClientConnection[j];	// race condition of completing connection in debug
 					if ( k == 0)
 						{ 
@@ -1093,7 +1096,8 @@ WHILE_TARGET:
 							{
 							// Tell ReceiverList thread to flush the received data
 							CWinThread * pThread = stSCM[i].pClientConnection[j]->pServerRcvListThread;
-							PostThreadMessage(pThread->m_nThreadID,WM_USER_FLUSH_LINKED_LISTS, 0);
+							if (pThread)
+								pThread->PostThreadMessage(WM_USER_FLUSH_LINKED_LISTS, j, 0);
 							Sleep(10);
 #if 0
 							stSCM[i].pClientConnection[j]->pSocket->LockRcvPktList();
@@ -1117,13 +1121,13 @@ WHILE_TARGET:
 							}
 
 						}	// empty the linked lists
-#endif
 					//ReleaseInstrumentListAccess(j);
 					Sleep(50);
 
 					}	// j loop
 				}
 			}
+#endif
 #endif
 		}		// the jeh do nothing main loop
 

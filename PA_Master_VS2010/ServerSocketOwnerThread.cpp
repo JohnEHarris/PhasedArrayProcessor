@@ -243,9 +243,9 @@ int CServerSocketOwnerThread::ExitInstance()
 				{	// check socket handle range
 
 				//if (m_pSCC->m_pConnectionSocket->ShutDown(2))
-				if (m_pSCC->pSocket->ShutDown(2))
+				if (i = m_pSCC->pSocket->ShutDown(2))
 					{
-					s = _T("Shutdown of client socket was successful\n");
+					s.Format(_T("Shutdown of client socket was successful status = %d\n"), i);
 					TRACE(s);
 					m_pSCC->pSocket->Close();
 					}
@@ -371,10 +371,10 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 		{
 		if (pscc->pSocket)
 			{
-			i = sizeof(CServerSocket);	//65624
+			i = sizeof(CServerSocket);	//65620
 			if (i = pscc->pSocket->ShutDown(2))
 				{
-				s += _T(" servers client socket shut down\n");
+				s.Format(_T("Shutdown of client socket was successful status = %d\n"), i);
 				TRACE(s);
 				pscc->pSocket->Close();
 				}
@@ -394,18 +394,22 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 			delete pV;
 			}
 		LeaveCriticalSection(pscc->pCSRcvPkt);
-		delete pscc->pRcvPktList;		pscc->pRcvPktList	= NULL;
-		delete pscc->pCSRcvPkt;			pscc->pCSRcvPkt	= NULL;
+		delete	pscc->pRcvPktList;		
+				pscc->pRcvPktList	= NULL;
+		delete	pscc->pCSRcvPkt;			
+				pscc->pCSRcvPkt		= NULL;
 
 		EnterCriticalSection(pscc->pCSSendPkt);
-		while ( m_pSCC->pSendPktList->GetCount() > 0)
+		while ( pscc->pSendPktList->GetCount() > 0)
 			{
-			pV = (void *) m_pSCC->pSendPktList->RemoveHead();
+			pV = (void *) pscc->pSendPktList->RemoveHead();
 			delete pV;
 			}
 		LeaveCriticalSection(pscc->pCSSendPkt);
-		delete m_pSCC->pSendPktList;		m_pSCC->pSendPktList	= NULL;
-		delete m_pSCC->pCSSendPkt;			m_pSCC->pCSSendPkt		= NULL;
+		delete	pscc->pSendPktList;		
+				pscc->pSendPktList	= NULL;
+		delete	pscc->pCSSendPkt;		
+				pscc->pCSSendPkt	= NULL;
 		}
 	// typically if the socket doesn't exist, the handle = -1 or 0xffffffff
 	// and typically on this machine the socket handle is somewhere between 1 and 1000 with 8xx being common.

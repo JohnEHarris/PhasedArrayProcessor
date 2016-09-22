@@ -320,6 +320,8 @@ public:
 	//void AddTailDebugOut(CString s)	{ m_pstCCM->pOutDebugMessageList->AddTail(&s);	}
 	void UnLockDebugOut(void)		{ LeaveCriticalSection(m_pstSCM->pCSDebugOut );	}
 
+	void LockClientConnection(int i)	{ EnterCriticalSection(m_pstSCM->pCS_ClientConnection[i]);	}
+	void UnLockClientConnection(int i)	{ LeaveCriticalSection(m_pstSCM->pCS_ClientConnection[i]);	}
 
 	int StartListenerThread(int nMyServer);
 	int StopListenerThread(int nMyServer);

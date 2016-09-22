@@ -386,30 +386,30 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 			}
 
 		pscc->bConnected = (BYTE) eNotConnected;
-		if (pscc->pCSRcvPkt) 
-			EnterCriticalSection(pscc->pCSRcvPkt);
-		while ( pscc->pRcvPktList->GetCount() > 0)
+		if (pscc->cpCSRcvPkt) 
+			EnterCriticalSection(pscc->cpCSRcvPkt);
+		while ( pscc->cpRcvPktList->GetCount() > 0)
 			{
-			pV = (void *) pscc->pRcvPktList->RemoveHead();
+			pV = (void *) pscc->cpRcvPktList->RemoveHead();
 			delete pV;
 			}
-		LeaveCriticalSection(pscc->pCSRcvPkt);
-		delete	pscc->pRcvPktList;		
-				pscc->pRcvPktList	= NULL;
-		delete	pscc->pCSRcvPkt;			
-				pscc->pCSRcvPkt		= NULL;
+		LeaveCriticalSection(pscc->cpCSRcvPkt);
+		delete	pscc->cpRcvPktList;		
+				pscc->cpRcvPktList	= NULL;
+		delete	pscc->cpCSRcvPkt;			
+				pscc->cpCSRcvPkt		= NULL;
 
-		EnterCriticalSection(pscc->pCSSendPkt);
-		while ( pscc->pSendPktList->GetCount() > 0)
+		EnterCriticalSection(pscc->cpCSSendPkt);
+		while ( pscc->cpSendPktList->GetCount() > 0)
 			{
-			pV = (void *) pscc->pSendPktList->RemoveHead();
+			pV = (void *) pscc->cpSendPktList->RemoveHead();
 			delete pV;
 			}
-		LeaveCriticalSection(pscc->pCSSendPkt);
-		delete	pscc->pSendPktList;		
-				pscc->pSendPktList	= NULL;
-		delete	pscc->pCSSendPkt;		
-				pscc->pCSSendPkt	= NULL;
+		LeaveCriticalSection(pscc->cpCSSendPkt);
+		delete	pscc->cpSendPktList;		
+				pscc->cpSendPktList	= NULL;
+		delete	pscc->cpCSSendPkt;		
+				pscc->cpCSSendPkt	= NULL;
 		}
 	// typically if the socket doesn't exist, the handle = -1 or 0xffffffff
 	// and typically on this machine the socket handle is somewhere between 1 and 1000 with 8xx being common.
@@ -479,10 +479,10 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		TRACE(_T("TransmitPackets m_pConnectionSocket->m_pSCC == NULL\n"));
 		return;
 		}
-	while (m_pConnectionSocket->m_pSCC->pSendPktList->GetCount() > 0 )
+	while (m_pConnectionSocket->m_pSCC->cpSendPktList->GetCount() > 0 )
 		{
 		m_pConnectionSocket->LockSendPktList();
-		pCmd = (PAM_INST_CHNL_INFO *) m_pConnectionSocket->m_pSCC->pSendPktList->RemoveHead();
+		pCmd = (PAM_INST_CHNL_INFO *) m_pConnectionSocket->m_pSCC->cpSendPktList->RemoveHead();
 		m_pConnectionSocket->UnLockSendPktList();
 			
 		//MMI_CMD *pCmd = (MMI_CMD *) &pBuf->Msg;
@@ -549,7 +549,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				{
 				m_pConnectionSocket->m_pSCC->uUnsentPackets++;
 				s.Format(_T("ServerSocketOwnerThread Sent=%d, expected=%d, list cnt=%d, Pkts sent=%d, Pkts lost=%d, msgSeq=%d, Error=%d\n"),
-					nSent, nSent, m_pConnectionSocket->m_pSCC->pSendPktList->GetCount(), m_pConnectionSocket->m_pSCC->uPacketsSent,
+					nSent, nSent, m_pConnectionSocket->m_pSCC->cpSendPktList->GetCount(), m_pConnectionSocket->m_pSCC->uPacketsSent,
 					m_pConnectionSocket->m_pSCC->uUnsentPackets, pCmd->wMsgSeqCnt, nError);
 				TRACE(s);
 				}

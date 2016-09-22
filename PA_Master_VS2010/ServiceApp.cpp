@@ -40,10 +40,11 @@ managed classes.
 #include "ClientConnectionManagement.h"	// 21-Jan-13 jeh
 #include "CCM_PAG.h"					// 22-Jan-13 jeh
 #include "ClientSocket.h"
+#include "ServerConnectionManagement.h"	// 22-Sep-16 jeh
 
 
 #define CURRENT_VERSION		"Version 1.1"
-#define BUILD_VERSION			3
+#define BUILD_VERSION			4
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           1
@@ -52,6 +53,7 @@ managed classes.
 
 #if 0
 
+1.0.004			22-Sep-16	Almost all created elements (critical sections, list, channels) created in Application
 1.0.003			06-Sep-16	CvChannel* pvChannel now two dimensional. [0][j] - fix 1st index later
 1.1.002			15-Jul-16	Eliminate Yanming code not being used
 1.1.001			May 2016	New Phased Array 2
@@ -164,25 +166,22 @@ CServiceApp::CServiceApp()
 	//pTheApp = this;
 
 	AfxSocketInit();
-	// unnecessary. Program nulls all that can be nulled on start
-#if 0
+
+
+	// Build all/most of the item which must be created with a 'new' operator here.
+	// Individual classes and components have pointer which point to these items
+	// The Application creates them and the application destroys them
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{
 		pSCM[i] = NULL;
-		//memset((void *) &stSCM[i], 0, sizeof(ST_SERVER_CONNECTION_MANAGEMENT));
 		}
-#endif
 
 
 	m_nShutDownCount = 0;
 	pCSSaveDebug =new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pCSSaveDebug,4);
 
-	for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
-		{
-		pAppInstAccess[i] = new CRITICAL_SECTION();
-		InitializeCriticalSectionAndSpinCount(pAppInstAccess[i],4);
-		}
+
 
 
 	g_NcNx.Long[0] = 1;
@@ -216,7 +215,9 @@ CServiceApp::CServiceApp()
 CServiceApp::~CServiceApp()
 	{
 	int i = 1;	// FOR DEBUG, lock in loop before stop event
-	//Stop();
+	int j;
+	void *pV;
+
 
 	if (m_nFakeDataExists)
 		m_FakeData.Close();
@@ -227,10 +228,37 @@ CServiceApp::~CServiceApp()
 	if (pCSSaveDebug)	// critical section access to debug log file
 		delete pCSSaveDebug;
 	
-	for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
+	for ( i = 0; i < 1; i++)	//only scm[0] is a PAP
 		{
-		delete pAppInstAccess[i];
-		}	
+		for ( j = 0; J < MAX_CLIENTS_PER_SERVER; j++)
+			{
+			if (pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j])
+				{
+				EnterCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j]);
+				while (pSCM[i]->m_pstSCM->pSendPktList[j]->GetCount())
+					{
+					pV = pSCM[i]->m_pstSCM->pSendPktList[j]->RemoveHead();
+					delete pV;
+					}
+				LeaveCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j]);
+				delete pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j];
+				}
+
+			if (pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j])
+				{
+				EnterCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j]);
+				while (pSCM[i]->m_pstSCM->pRcvPktList[j]->GetCount())
+					{
+					pV = pSCM[i]->m_pstSCM->pRcvPktList[j]->RemoveHead();
+					delete pV;
+					}
+				LeaveCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j]);
+				delete pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j];
+				}
+			}
+		delete pSCM[i];
+		}	// for ( i = 0; i < 1; i++)
+
 	
 	ShutDown(); // first place when closing dos window
 
@@ -1321,7 +1349,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 		case 0:		// There are multiple client instrument looking for the PAM server. This is the only server
 					// for instruments in this application.
 			pSCM[i] = new CServerConnectionManagement(i);
-			j = sizeof(CServerConnectionManagement);
+			j = sizeof(CServerConnectionManagement);		// general for sizeof class
 			if (pSCM[i])
 				{
 				s = gServerArray[i].Ip;			// a global static table of ip addresses define by an ini file
@@ -1335,6 +1363,26 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
 				// the connection socket's OnReceive will populate the input data linked list and post messages
 				// to the main dlg/application to process the data.
+				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
+					{
+					pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j]	= new CRITICAL_SECTION();
+					InitializeCriticalSectionAndSpinCount(pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j] ,4);
+					pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[J]	= new CRITICAL_SECTION();
+					InitializeCriticalSectionAndSpinCount(pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j] ,4);
+					pSCM[i]->m_pstSCM->pSendPktList[i]					= new CPtrList();
+					pSCM[i]->m_pstSCM->pRcvPktList[i]					= new CPtrList();
+
+					// Create ClientConnection Class instances
+					pSCM[i]->m_pstSCM->pClientConnection[j] = new ST_SERVERS_CLIENT_CONNECTION();
+					pSCM[i]->m_pstSCM->pClientConnection[j]->pServerSocketOwnerThread	= 0;
+					pSCM[i]->m_pstSCM->pClientConnection[j]->pSocket					= 0;
+					pSCM[i]->m_pstSCM->pClientConnection[j]->cpCSSendPkt	= pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j];
+					pSCM[i]->m_pstSCM->pClientConnection[j]->cpCSRcvPkt		= pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j];
+					pSCM[i]->m_pstSCM->pClientConnection[j]->cpSendPktList	= pSCM[i]->m_pstSCM->pSendPktList[i];
+					pSCM[i]->m_pstSCM->pClientConnection[j]->cpRcvPktList	= pSCM[i]->m_pstSCM->pRcvPktList[i];
+
+					}	// for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
+
 				nError = pSCM[i]->StartListenerThread(i);
 				if (nError)
 					{
@@ -1343,8 +1391,9 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 					//delete pSCM[i];
 					pSCM[i] = NULL;
 					}
-				}
+				}	// if (pSCM[i])
 			break;
+
 		default:
 			pSCM[i] = NULL;
 			break;
@@ -1677,6 +1726,7 @@ void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 // and as of 2016-09-16 only range from 0-7
 // The client will still have to access its own linked list thru its own local critical sections
 //
+#if 0
 int CServiceApp::GetInstrumentListAccess(int nInstNumber)
 	{
 	if (( nInstNumber < 0) || (nInstNumber >= MAX_CLIENTS_PER_SERVER))
@@ -1698,6 +1748,7 @@ void CServiceApp::ReleaseInstrumentListAccess(int nInstNumber)
 	LeaveCriticalSection(pAppInstAccess[nInstNumber]);
 	}
 
+#endif
 
 /**************************************** Nov 20120 ************************************/
 /**************************************** Nov 20120 ************************************/

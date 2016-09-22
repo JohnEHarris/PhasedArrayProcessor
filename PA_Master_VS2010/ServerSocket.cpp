@@ -300,9 +300,9 @@ void CServerSocket::OnAccept(int nErrorCode)
 	m_nMyServer = nMyServer;
 
 
-	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] == NULL)	// first time thru
+	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pSocket == 0)		//no connection yet
 		{
-		m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
+		//m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
 		// Notice that m_pSCC points to the same object as m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]
 		// deleting pClientConnection[] will delete m_pSCC. But setting pClientConnection[] = 0
 		// will not automaticallyset m_pSCC to 0
@@ -784,9 +784,9 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 
 #if 0
 // elements of ST_SERVERS_CLIENT_CONNECTION which are created and thus must be destroy eventually
-	CRITICAL_SECTION *pCSSendPkt;	// control access to output (send) list
+	CRITICAL_SECTION *cpCSSendPkt;	// control access to output (send) list
 	CPtrList* pSendPktList;			// list containing packets to send
-	CRITICAL_SECTION *pCSRcvPkt;	// control access to input (receive) list
+	CRITICAL_SECTION *cpCSRcvPkt;	// control access to input (receive) list
 	CPtrList* pRcvPktList;			// list containing packets received from client
 	CServerSocket * pSocket;		// ASync socket fills RcvPktList with OnReceive method.
 									// same socket is used to send packets to CLIENT
@@ -815,12 +815,12 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	pscc->sClientName		= _T("");
 	pscc->sClientIP4		= _T("");			
 	pscc->m_nMyThreadIndex	= m_nClientPortIndex;
-	pscc->pCSSendPkt		= new CRITICAL_SECTION();
-	pscc->pCSRcvPkt			= new CRITICAL_SECTION();
-	InitializeCriticalSectionAndSpinCount(pscc->pCSSendPkt,4);
-	InitializeCriticalSectionAndSpinCount(pscc->pCSRcvPkt,4);
-	pscc->pSendPktList		= new CPtrList(64);
-	pscc->pRcvPktList		= new CPtrList(64);
+	pscc->cpCSSendPkt		= new CRITICAL_SECTION();
+	pscc->cpCSRcvPkt			= new CRITICAL_SECTION();
+	InitializeCriticalSectionAndSpinCount(pscc->cpCSSendPkt,4);
+	InitializeCriticalSectionAndSpinCount(pscc->cpCSRcvPkt,4);
+	pscc->cpSendPktList		= new CPtrList(64);
+	pscc->cpRcvPktList		= new CPtrList(64);
 
 	pscc->pSocket					= NULL;		
 	pscc->pServerSocketOwnerThread	= NULL;
@@ -878,24 +878,24 @@ int CServerSocket::KillClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *p
 		m_pSCC->bConnected = (BYTE) eNotConnected;
 		Sleep(5);
 		LockRcvPktList();
-		while ( m_pSCC->pRcvPktList->GetCount() > 0)
+		while ( m_pSCC->cpRcvPktList->GetCount() > 0)
 			{
-			pV = (void *) m_pSCC->pRcvPktList->RemoveHead();
+			pV = (void *) m_pSCC->cpRcvPktList->RemoveHead();
 			delete pV;
 			}
 		UnLockRcvPktList();
-		delete m_pSCC->pRcvPktList;		m_pSCC->pRcvPktList	= NULL;
-		delete m_pSCC->pCSRcvPkt;		m_pSCC->pCSRcvPkt	= NULL;
+		delete m_pSCC->cpRcvPktList;		m_pSCC->cpRcvPktList	= NULL;
+		delete m_pSCC->cpCSRcvPkt;		m_pSCC->cpCSRcvPkt	= NULL;
 
 		LockSendPktList();
-		while ( m_pSCC->pSendPktList->GetCount() > 0)
+		while ( m_pSCC->cpSendPktList->GetCount() > 0)
 			{
-			pV = (void *) m_pSCC->pSendPktList->RemoveHead();
+			pV = (void *) m_pSCC->cpSendPktList->RemoveHead();
 			delete pV;
 			}
 		UnLockSendPktList();
-		delete m_pSCC->pSendPktList;		m_pSCC->pSendPktList	= NULL;
-		delete m_pSCC->pCSSendPkt;			m_pSCC->pCSSendPkt		= NULL;
+		delete m_pSCC->cpSendPktList;		m_pSCC->cpSendPktList	= NULL;
+		delete m_pSCC->cpCSSendPkt;			m_pSCC->cpCSSendPkt		= NULL;
 
 		}
 	// zero ptrs from thread and SCM class and structure

@@ -137,9 +137,8 @@ class CAsyncSocket;
 class CServerRcvListThreadBase;		// a thread to read the linked list filled from the data received from the client
 class CServerRcvListThread;			// a thread to read the linked list filled from the data received from the client
 class CvChannel;					// array of ptrs of this type to logically connect channels to instruments
-/** =============================================================================**/
-// A structure to define the operation of the server with one particular client.
-//
+
+
 enum {eMasterNotPresent, eMasterNotConnected, eMasterConnected };
 // NotPresent means slot in SCM structure, but no hardware
 // Not connected means master exists but has no data flow from any instrument it is managing
@@ -150,16 +149,21 @@ enum {eInstrumentNotPresent, eInstrumentNotConnected, eInstrumentConnected, eIns
 enum { eNotConnected = 0, eNotConfigured, eConfigured };
 
 
+/** =============================================================================**/
+// A structure to define the operation of the server with one particular client.
+//
+// cp??? indicates a 'constant pointer' but not constant in the normal c++ sense. These are not created with 'new'
+// but they point to pointers created with new.
 typedef struct
 	{
 	CString szSocketName;			// name of this server socket
 	CString sClientName;			// symbolic name of the client network address,  eg., MC_ACP_HOSTNAME = "mc-acp"
 	CString sClientIP4;				// IP4 dotted address of client, normally this computers NIC address, eg., 192.168.10.10 
 	UINT uClientPort;				// set when connection to server made
-	CRITICAL_SECTION *pCSSendPkt;	// control access to output (send) list
-	CPtrList* pSendPktList;			// list containing packets to send
-	CRITICAL_SECTION *pCSRcvPkt;	// control access to input (receive) list
-	CPtrList* pRcvPktList;			// list containing packets received from client
+	CRITICAL_SECTION *cpCSSendPkt;	// control access to output (send) list-- not created with 'new'
+	CPtrList* cpSendPktList;			// list containing packets to send-- not created with 'new'
+	CRITICAL_SECTION *cpCSRcvPkt;	// control access to input (receive) list-- not created with 'new'
+	CPtrList* cpRcvPktList;			// list containing packets received from client-- not created with 'new'
 	CServerSocket * pSocket;		// ASync socket fills RcvPktList with OnReceive method.
 									// same socket is used to send packets to CLIENT
 									// This socket is owned by ServerSocketOwnerThread
@@ -188,7 +192,8 @@ typedef struct
 	UINT uLastTick;					// Use with main app uAppTimerTick value to provide keep alive messages
 	// 2016-06-06 jeh
 	// initialized in CServerSocket::OnAcceptInitializeConnectionStats
-	CvChannel* pvChannel[MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];	// array of ptrs to virtual channels associated with each client connection
+	CvChannel* pvChannel[MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];	// array of ptrs to virtual channels associated 
+							// with each client connection. Pointer is
 	
 	RAW_INSTRUMENT_STATUS InstrumentStatus;	// Status info which comes with each TCPIP packet from an instrument
 
@@ -202,6 +207,10 @@ typedef struct
 // MAX_CLIENTS_PER_SERVER defines how many clients can be connected to a server.
 // Each connecte client has a structure (ST_SERVERS_CLIENT_CONNECTION) of regulate the sending and receiving
 // of packet with that client.
+//
+// The application populates and controls each SCM structure. Each SCM structure is static memory indexed by stSCM[]
+// Pointer with names that begin with 'cp' point to static memory and are considered const pointers ie, not created with
+// a new operator and not to be deleted.
 
 typedef struct
 	{
@@ -226,23 +235,29 @@ typedef struct
 	HWND hServerDlg;				// windows handle to the Server Dialog if one exists
 
 	// unfortunately it appears that pClientConnection needs it own array of critical sections to prevent races when accessing
-	// lists controlled by pClientConnection
-	CRITICAL_SECTION *pCS_ClientConnection[MAX_CLIENTS_PER_SERVER];
+	// lists controlled by pClientConnection - that is if ServiceApp and a clientConnection are both attempting to use
+	// the list, there must be a common critical section. And ServiceApp can not tolerate the situation where
+	// the clientConnection deletes the critical sections.
+	CRITICAL_SECTION *pCS_ClientConnectionSndList[MAX_CLIENTS_PER_SERVER];	// created by the app with new
+	CRITICAL_SECTION *pCS_ClientConnectionRcvList[MAX_CLIENTS_PER_SERVER];	// created by the app with new
+	CPtrList* pRcvPktList[MAX_CLIENTS_PER_SERVER];	// created by the app with new
+	CPtrList* pSendPktList[MAX_CLIENTS_PER_SERVER];	// created by the app with new
 	ST_SERVERS_CLIENT_CONNECTION *pClientConnection[MAX_CLIENTS_PER_SERVER];	// an array of pointers to 
 									// information about individual clients connected to this server.
 									// not all potential clients may be connected. These client connections will be
 									// some way indicative of the IP address of the Phased Array Masters connected
+	CvChannel* pvChannel[MAX_CLIENTS_PER_SERVER][MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];
 	int nComThreadExited[MAX_CLIENTS_PER_SERVER];	// when nonZero indicates thread has exited
 
 	// VARIOUS other controls common to the server	
 
-	CPtrList* pInDebugMessageList;	// input operations put messages into this list.. common for all connections
-	CPtrList* pOutDebugMessageList;
 	UINT uIdataAcksSent;			// Only for UDP protocol..count idata packets acks.. 10-Jan-11
 	CRITICAL_SECTION *pCSDebugIn;
 	CRITICAL_SECTION *pCSDebugOut;
+	CPtrList* pInDebugMessageList;	// input operations put messages into this list.. common for all connections
+	CPtrList* pOutDebugMessageList;
 
-	CServerConnectionManagement *pSCM;	// point to ourself. This is important. Pointer to a CLASS
+	CServerConnectionManagement *pSCM;	// point to ourself. This is important. Pointer to a CLASS  -- not created with 'new'
 
 	}	ST_SERVER_CONNECTION_MANAGEMENT;
 
@@ -320,8 +335,12 @@ public:
 	//void AddTailDebugOut(CString s)	{ m_pstCCM->pOutDebugMessageList->AddTail(&s);	}
 	void UnLockDebugOut(void)		{ LeaveCriticalSection(m_pstSCM->pCSDebugOut );	}
 
-	void LockClientConnection(int i)	{ EnterCriticalSection(m_pstSCM->pCS_ClientConnection[i]);	}
-	void UnLockClientConnection(int i)	{ LeaveCriticalSection(m_pstSCM->pCS_ClientConnection[i]);	}
+	// returns 0 on failure
+	int LockClientConnectionSndList(int i)		{ return TryEnterCriticalSection(m_pstSCM->pCS_ClientConnectionSndList[i]);	}
+	void UnLockClientConnectionSndList(int i)	{ LeaveCriticalSection(m_pstSCM->pCS_ClientConnectionSndList[i]);	}
+	
+	int LockClientConnectionRcvList(int i)		{ return TryEnterCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[i]);	}
+	void UnLockClientConnectionRcvList(int i)	{ LeaveCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[i]);	}
 
 	int StartListenerThread(int nMyServer);
 	int StopListenerThread(int nMyServer);
@@ -348,7 +367,7 @@ public:
 
 	/**************************************************************************************/
 
-	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// pointer to my global structure instance 
+	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// pointer to my global structure instance  -- not created with 'new'
 	int m_nMyServer;		// which one of the global ST_SERVER_CONNECTION_MANAGEMENT is mine
 
 	};	
@@ -361,6 +380,7 @@ public:
 //
 #ifdef I_AM_SCM
 CServerConnectionManagement *pSCM[MAX_SERVERS];	// global, static ptrs to class instances define outside of the class definition.
+												//  -- not created with 'new'
 #else
 CServerConnectionManagement *pSCM[];
 #endif

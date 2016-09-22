@@ -93,8 +93,10 @@ CServerConnectionManagement::CServerConnectionManagement(int nMyServerIndex)
 
 	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 		{
-		m_pstSCM->pCS_ClientConnection[i] = new CRITICAL_SECTION();
-		InitializeCriticalSectionAndSpinCount(m_pstSCM->pCS_ClientConnection[i],4);
+		m_pstSCM->pCS_ClientConnectionSndList[i] = new CRITICAL_SECTION();
+		InitializeCriticalSectionAndSpinCount(m_pstSCM->pCS_ClientConnectionSndList[i],4);
+		m_pstSCM->pCS_ClientConnectionRcvList[i] = new CRITICAL_SECTION();
+		InitializeCriticalSectionAndSpinCount(m_pstSCM->pCS_ClientConnectionRcvList[i],4);
 		m_pstSCM->pClientConnection[i]	= NULL;
 		m_pstSCM->nComThreadExited[i]	= 0;		// signify that previously running thread has exited.
 		}
@@ -177,7 +179,8 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 
 	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 		{
-		delete m_pstSCM->pCS_ClientConnection[i];
+		delete m_pstSCM->pCS_ClientConnectionSndList[i];
+		delete m_pstSCM->pCS_ClientConnectionRcvList[i];
 		}
 EXIT:
 	s.Format(_T("~CServerConnectionManagement Destructor[%d] has run\n"), m_nMyServer);

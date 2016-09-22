@@ -206,31 +206,27 @@ afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 	int j = (int) w;
 	if ( m_pstSCM)
 		{
-		if (m_pstSCM->pCS_ClientConnection[j]) EnterCriticalSection(m_pstSCM->pCS_ClientConnection[j]);
+		if (m_pstSCM->pCS_ClientConnectionRcvList[j]) 
+			{
+			if (0 == TryEnterCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]))	return;	 // try again later
+			}
 		}
 	else return;
 
 	// if here we are in a critical section
-		if (m_pSCC)
+
+	while (m_pSCC->cpRcvPktList->GetCount() )
 		{
-		if (m_pSCC->pSocket)
-			{
-			m_pSCC->pSocket->LockRcvPktList();
-			while (m_pSCC->pRcvPktList->GetCount() )
-				{
-				pV = m_pSCC->pRcvPktList->RemoveHead();
-				m_pSCC->pSocket->UnLockRcvPktList();
+		pV = m_pstSCM->pRcvPktList[j]->RemoveHead();				//m_pSCC->cpRcvPktList->RemoveHead();
+		//m_pSCC->pSocket->UnLockRcvPktList();
 #ifdef THIS_IS_SERVICE_APP
-				ProcessInstrumentData(pV);	// local call to this class memeber
+		ProcessInstrumentData(pV);	// local call to this class memeber
 #else
-				ProcessPAM_Data(pV);
+		ProcessPAM_Data(pV);
 #endif
-				m_pSCC->pSocket->LockRcvPktList();
-				}
-			m_pSCC->pSocket->UnLockRcvPktList();
-			}
 		}
-	LeaveCriticalSection(m_pstSCM->pCS_ClientConnection[j]);
+
+	LeaveCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]);
 	}
 
 // this procedure activated by WM_USER_FLUSH_LINKED_LISTS
@@ -241,27 +237,22 @@ void CServerRcvListThread::FlushRcvList(WPARAM w, LPARAM lParam)
 	int j = (int) w;
 	if ( m_pstSCM)
 		{
-		if (m_pstSCM->pCS_ClientConnection[j]) EnterCriticalSection(m_pstSCM->pCS_ClientConnection[j]);
+		if (m_pstSCM->pCS_ClientConnectionRcvList[j]) 
+			{
+			if (0 == TryEnterCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]))	return;	 // try again later
+			}
 		}
 	else return;
 
 	// if here we are in a critical section
-	if (m_pSCC)
+
+	while (m_pSCC->cpRcvPktList->GetCount() )
 		{
-		if (m_pSCC->pSocket)
-			{
-			m_pSCC->pSocket->LockRcvPktList();
-			while (m_pSCC->pRcvPktList->GetCount() )
-				{
-				pV = m_pSCC->pRcvPktList->RemoveHead();
-				m_pSCC->pSocket->UnLockRcvPktList();
-				delete pV;
-				m_pSCC->pSocket->LockRcvPktList();
-				}
-			m_pSCC->pSocket->UnLockRcvPktList();
-			}
+		pV = m_pstSCM->pRcvPktList[j]->RemoveHead();				//m_pSCC->cpRcvPktList->RemoveHead();
+
+		delete pV;
 		}
-	LeaveCriticalSection(m_pstSCM->pCS_ClientConnection[j]);
+	LeaveCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]);
 	}
 
 void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)

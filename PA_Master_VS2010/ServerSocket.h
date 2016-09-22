@@ -52,13 +52,13 @@ public:
 
 	//int SendPacket(BYTE *pB, int nBytes, int nDeleteFlag);
 
-	void LockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->pCSRcvPkt) EnterCriticalSection(m_pSCC->pCSRcvPkt);	}	}
-	void AddTailRcvPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->pRcvPktList) m_pSCC->pRcvPktList->AddTail(pV);	}	}
-	void UnLockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->pCSRcvPkt) LeaveCriticalSection(m_pSCC->pCSRcvPkt);	}	}
+	void LockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->cpCSRcvPkt) EnterCriticalSection(m_pSCC->cpCSRcvPkt);	}	}
+	void AddTailRcvPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->cpRcvPktList) m_pSCC->cpRcvPktList->AddTail(pV);	}	}
+	void UnLockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->cpCSRcvPkt) LeaveCriticalSection(m_pSCC->cpCSRcvPkt);	}	}
 
-	void LockSendPktList(void)		{ if (m_pSCC) { if (m_pSCC->pCSSendPkt) EnterCriticalSection(m_pSCC->pCSSendPkt);}	}
-	void AddTailSendPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->pSendPktList) m_pSCC->pSendPktList->AddTail(pV);}	}
-	void UnLockSendPktList(void)	{ if (m_pSCC) { if (m_pSCC->pCSSendPkt) LeaveCriticalSection(m_pSCC->pCSSendPkt);}	}
+	void LockSendPktList(void)		{ if (m_pSCC) { if (m_pSCC->cpCSSendPkt) EnterCriticalSection(m_pSCC->cpCSSendPkt);}	}
+	void AddTailSendPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->cpSendPktList) m_pSCC->cpSendPktList->AddTail(pV);}	}
+	void UnLockSendPktList(void)	{ if (m_pSCC) { if (m_pSCC->cpCSSendPkt) LeaveCriticalSection(m_pSCC->cpCSSendPkt);}	}
 
 	//void KillMyThread(void)			{ m_pSCC->bExitThread = 1;					}
 

@@ -103,7 +103,7 @@ typedef struct
 	CClientCommunicationThread *pSendThread;	// thread to control sending messages to server
 	//CTCPCommunicationDlg *pSendDlg;			// a dialog created byte the SendThread
 	//HWND hSendDlg;					// windows handle to the Send Dialog
-	CRITICAL_SECTION *pCSSendPkt;	// control access to output (send) list
+	CRITICAL_SECTION *cpCSSendPkt;	// control access to output (send) list
 	CPtrList* pSendPktList;	// list containing packets to send
 	int nSendPriority;				// should normally be THREAD_PRIORITY_BELOW_NORMAL
 
@@ -115,7 +115,7 @@ typedef struct
 	CClientCommunicationThread *pReceiveThread;	// thread to control receiving messages from server
 	//CTCPCommunicationDlg *pReceiveDlg;			// a dialog created by the ReceiveThread
 	//HWND hReceiveDlg;					// windows handle to the Receive Dialog
-	CRITICAL_SECTION *pCSRcvPkt;	// control access to input (receive) list
+	CRITICAL_SECTION *cpCSRcvPkt;	// control access to input (receive) list
 	CPtrList* pRcvPktPacketList;	// list containing packets received
 	int nReceivePriority;			// should normally be THREAD_PRIORITY_ABOVE_NORMAL
 
@@ -304,13 +304,13 @@ public:
 	void SendPacket(BYTE *pB, int nBytes, int nDeleteFlag);			
 
 	// To add data to the input data list, lock the critical section, add data to the list tail, and unlock critical section
-	void LockRcvPktList(void)		{ EnterCriticalSection(m_pstCCM->pCSRcvPkt);	}
+	void LockRcvPktList(void)		{ EnterCriticalSection(m_pstCCM->cpCSRcvPkt);	}
 	void AddTailRcvPkt(void *pV)	{ m_pstCCM->pRcvPktPacketList->AddTail(pV);		}
-	void UnLockRcvPktList(void)		{ LeaveCriticalSection(m_pstCCM->pCSRcvPkt);	}
+	void UnLockRcvPktList(void)		{ LeaveCriticalSection(m_pstCCM->cpCSRcvPkt);	}
 
-	void LockSendPktList(void)		{ EnterCriticalSection(m_pstCCM->pCSSendPkt);	}
+	void LockSendPktList(void)		{ EnterCriticalSection(m_pstCCM->cpCSSendPkt);	}
 	void AddTailSendPkt(void *pV)	{ m_pstCCM->pSendPktList->AddTail(pV);	}
-	void UnLockSendPktList(void)	{ LeaveCriticalSection(m_pstCCM->pCSSendPkt);	}
+	void UnLockSendPktList(void)	{ LeaveCriticalSection(m_pstCCM->cpCSSendPkt);	}
 
 	void LockDebugOut(void)			{ EnterCriticalSection(m_pstCCM->pCSDebugOut );	}
 	//void AddTailDebugOut(CString s)	{ m_pstCCM->pOutDebugMessageList->AddTail(&s);	}

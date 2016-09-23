@@ -192,7 +192,7 @@ typedef struct
 	UINT uLastTick;					// Use with main app uAppTimerTick value to provide keep alive messages
 	// 2016-06-06 jeh
 	// initialized in CServerSocket::OnAcceptInitializeConnectionStats
-	CvChannel* pvChannel[MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];	// array of ptrs to virtual channels associated 
+	CvChannel* pvChannel[MAX_CLIENTS_PER_SERVER][MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];	// array of ptrs to virtual channels associated 
 							// with each client connection. Pointer is
 	
 	RAW_INSTRUMENT_STATUS InstrumentStatus;	// Status info which comes with each TCPIP packet from an instrument

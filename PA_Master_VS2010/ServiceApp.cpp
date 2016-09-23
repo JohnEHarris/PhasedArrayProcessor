@@ -71,7 +71,7 @@ managed classes.
 CServiceApp theApp;		// the persistent instance of the application
 UINT uAppTimerTick;		// approximately 50 ms
 
-UINT uVchannelConstructor[4][40];	// count when constructor called. 4 inst, 40 chnl
+UINT uVchannelConstructor[8][16][32];	// count when constructor called. 8 inst, 16 seq pts, 32 chnl
 
 UINT CheckKey( void *dummy );
 
@@ -228,6 +228,19 @@ CServiceApp::~CServiceApp()
 	if (pCSSaveDebug)	// critical section access to debug log file
 		delete pCSSaveDebug;
 	
+	int nClients, nSeqCount, nChnlPerBang;
+	for ( nClients = 0; nClients < MAX_CLIENTS_PER_SERVER; nClients++)
+		{
+		for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
+			{
+			for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
+				{
+				pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nClients][nSeqCount][nChnlPerBang] = 
+					new CvChannel(nClients, nSeqCount, nChnlPerBang);
+				}
+			}
+		}
+
 	for ( i = 0; i < 1; i++)	//only scm[0] is a PAP
 		{
 		for ( j = 0; J < MAX_CLIENTS_PER_SERVER; j++)
@@ -1369,8 +1382,8 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 					InitializeCriticalSectionAndSpinCount(pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j] ,4);
 					pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[J]	= new CRITICAL_SECTION();
 					InitializeCriticalSectionAndSpinCount(pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j] ,4);
-					pSCM[i]->m_pstSCM->pSendPktList[i]					= new CPtrList();
-					pSCM[i]->m_pstSCM->pRcvPktList[i]					= new CPtrList();
+					pSCM[i]->m_pstSCM->pSendPktList[j]					= new CPtrList();
+					pSCM[i]->m_pstSCM->pRcvPktList[j]					= new CPtrList();
 
 					// Create ClientConnection Class instances
 					pSCM[i]->m_pstSCM->pClientConnection[j] = new ST_SERVERS_CLIENT_CONNECTION();
@@ -1378,10 +1391,28 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 					pSCM[i]->m_pstSCM->pClientConnection[j]->pSocket					= 0;
 					pSCM[i]->m_pstSCM->pClientConnection[j]->cpCSSendPkt	= pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j];
 					pSCM[i]->m_pstSCM->pClientConnection[j]->cpCSRcvPkt		= pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j];
-					pSCM[i]->m_pstSCM->pClientConnection[j]->cpSendPktList	= pSCM[i]->m_pstSCM->pSendPktList[i];
-					pSCM[i]->m_pstSCM->pClientConnection[j]->cpRcvPktList	= pSCM[i]->m_pstSCM->pRcvPktList[i];
+					pSCM[i]->m_pstSCM->pClientConnection[j]->cpSendPktList	= pSCM[i]->m_pstSCM->pSendPktList[j];
+					pSCM[i]->m_pstSCM->pClientConnection[j]->cpRcvPktList	= pSCM[i]->m_pstSCM->pRcvPktList[j];
 
 					}	// for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
+
+				int nClients, nSeqCount, nChnlPerBang;
+				for ( nClients = 0; nClients < MAX_CLIENTS_PER_SERVER; nClients++)
+					{
+					for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
+						{
+						for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
+							{
+							pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nClients][nSeqCount][nChnlPerBang] = 
+								new CvChannel(nClients, nSeqCount, nChnlPerBang);
+							}
+						}
+					}
+
+
+
+
+
 
 				nError = pSCM[i]->StartListenerThread(i);
 				if (nError)

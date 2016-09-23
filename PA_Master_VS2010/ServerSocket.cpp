@@ -49,7 +49,7 @@ CServerSocket::~CServerSocket()
 	switch (m_nOwningThreadType)
 		{
 	case eListener:
-		s = _T("Listener Socket Destructor called\n");
+		s = _T("Listener Socket Destructor called\n");	// called when Asocket on stack disappears in OnAccept
 		break;
 	case eServerConnection:
 		s.Format(_T("Server[%d] Connection Socket[%d] Destructor called\n"), m_nMyServer, m_nMyThreadIndex);
@@ -307,7 +307,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		// deleting pClientConnection[] will delete m_pSCC. But setting pClientConnection[] = 0
 		// will not automaticallyset m_pSCC to 0
 		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];
-		m_pSCC->pSocket = 0;		// hold off idle loop in ServiceApp. When not zero clear to run
+		//m_pSCC->pSocket = 0;		// hold off idle loop in ServiceApp. When not zero clear to run
 		// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
 		nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, nClientPortIndex);
 
@@ -619,7 +619,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 		// which calls CServerRcvListThread::ProcessInstrumentData()
 		if (nWholePacketQty)
 			{
-			m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED,0,0L);
+			m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED,(WORD)m_pSCC->m_nMyThreadIndex,0L);
 			}
 
 		if (m_pSCC)
@@ -806,6 +806,8 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	{
 	CString s;
 	int i;
+	CRITICAL_SECTION  *pTest1;
+	CPtrList *pTest2;
 
 	// skip over CStrings and zero the rest of the structure. Assume CString ptr is 4 bytes. 3 strings at beginning
 	//memset ( (void *) &pscc->uClientPort, 0, sizeof(ST_SERVERS_CLIENT_CONNECTION)-12);
@@ -815,12 +817,14 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	pscc->sClientName		= _T("");
 	pscc->sClientIP4		= _T("");			
 	pscc->m_nMyThreadIndex	= m_nClientPortIndex;
-	pscc->cpCSSendPkt		= new CRITICAL_SECTION();
-	pscc->cpCSRcvPkt			= new CRITICAL_SECTION();
-	InitializeCriticalSectionAndSpinCount(pscc->cpCSSendPkt,4);
-	InitializeCriticalSectionAndSpinCount(pscc->cpCSRcvPkt,4);
-	pscc->cpSendPktList		= new CPtrList(64);
-	pscc->cpRcvPktList		= new CPtrList(64);
+	pTest1 = pscc->cpCSSendPkt;
+	//pscc->cpCSSendPkt		=		//new CRITICAL_SECTION();
+	//pscc->cpCSRcvPkt			= new CRITICAL_SECTION();
+	//InitializeCriticalSectionAndSpinCount(pscc->cpCSSendPkt,4);
+	//InitializeCriticalSectionAndSpinCount(pscc->cpCSRcvPkt,4);
+	pTest2 = pscc->cpSendPktList;
+	//pscc->cpSendPktList		= new CPtrList(64);
+	//pscc->cpRcvPktList		= new CPtrList(64);
 
 	pscc->pSocket					= NULL;		
 	pscc->pServerSocketOwnerThread	= NULL;
@@ -852,7 +856,7 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	*/
 	for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
 		{
-		pscc->pvChannel[0][i] = new CvChannel(m_nClientPortIndex,i);
+		//pscc->pvChannel[0][i] =	new CvChannel(m_nClientPortIndex,i);
 		}
 	// create threads
 	i = sizeof(CvChannel);					// 112

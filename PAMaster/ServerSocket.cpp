@@ -49,7 +49,7 @@ CServerSocket::~CServerSocket()
 	switch (m_nOwningThreadType)
 		{
 	case eListener:
-		s = _T("Listener Socket Destructor called\n");
+		s = _T("Listener Socket Destructor called\n");	// called when Asocket on stack disappears in OnAccept
 		break;
 	case eServerConnection:
 		s.Format(_T("Server[%d] Connection Socket[%d] Destructor called\n"), m_nMyServer, m_nMyThreadIndex);
@@ -113,7 +113,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	int sockerr;
 	SOCKADDR SockAddr;
 	int SockAddrLen = sizeof(SOCKADDR);
-	int i;
+//	int i;
 
 	// how are we going to set our pSCM pointer???
 	// get our threadID of the thread running me
@@ -299,15 +299,20 @@ void CServerSocket::OnAccept(int nErrorCode)
 	//ST_SERVERS_CLIENT_CONNECTION *pscc;
 	m_nMyServer = nMyServer;
 
-
-	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] == NULL)	// first time thru
+	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] == 0)
 		{
-		m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
+		// should never happen since this is created by ServiceApp and destroyed by ServiceApp
+		ASSERT(0);
+		}
+
+	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pSocket == 0)		//no connection yet
+		{
+		//m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
 		// Notice that m_pSCC points to the same object as m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]
 		// deleting pClientConnection[] will delete m_pSCC. But setting pClientConnection[] = 0
 		// will not automaticallyset m_pSCC to 0
 		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];
-		m_pSCC->pSocket = 0;		// hold off idle loop in ServiceApp. When not zero clear to run
+		//m_pSCC->pSocket = 0;		// hold off idle loop in ServiceApp. When not zero clear to run
 		// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
 		nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, nClientPortIndex);
 
@@ -562,7 +567,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 		{
 		// put it in the linked list and let someone else decipher it
 		// Hang up here forever if the App doesn't release the critical section
-		theApp.GetInstrumentListAccess(m_pSCC->m_nMyThreadIndex);	// OnReceive is essentially an interrupt service routine
+		//theApp.GetInstrumentListAccess(m_pSCC->m_nMyThreadIndex);	// OnReceive is essentially an interrupt service routine
 		// hope we don't get stuck here forever
 		while ( pPacket = GetWholePacket(nPacketSize, &n))	// returns a ptr to void with length nPacketSize
 			{	// get packets
@@ -612,13 +617,15 @@ void CServerSocket::OnReceive(int nErrorCode)
 				}	// if (m_pSCC)
 			} 	// get packets
 
-		theApp.ReleaseInstrumentListAccess(m_pSCC->m_nMyThreadIndex);
+		//theApp.ReleaseInstrumentListAccess(m_pSCC->m_nMyThreadIndex);
 
 		// Post a message to someone who cares and let that routine/class/function deal with the packet
 		// Posted message goes to CServerRcvListThread::ProcessRcvList()
 		// which calls CServerRcvListThread::ProcessInstrumentData()
 		if (nWholePacketQty)
-			m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED,0,0L);
+			{
+			m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED,(WORD)m_pSCC->m_nMyThreadIndex,0L);
+			}
 
 		if (m_pSCC)
 			{
@@ -693,9 +700,9 @@ void CServerSocket::OnClose(int nErrorCode)
 		if (m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex]->pServerSocketOwnerThread)
 			{
 			m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex];
+			CServerSocketOwnerThread * pThread = m_pSCC->pServerSocketOwnerThread;
 			// wParam = m_nMyThreadIndex , (LPARAM)m_pSCC
-			PostThreadMessage(m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex]->pServerSocketOwnerThread->m_nThreadID,
-				WM_USER_KILL_OWNER_SOCKET, 	(WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
+			pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET, (WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
 
 #if 0
 			while ( (i++ < 100) && (m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] == 0))
@@ -780,20 +787,6 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 	return 0;
 	}
 
-#if 0
-// elements of ST_SERVERS_CLIENT_CONNECTION which are created and thus must be destroy eventually
-	CRITICAL_SECTION *pCSSendPkt;	// control access to output (send) list
-	CPtrList* pSendPktList;			// list containing packets to send
-	CRITICAL_SECTION *pCSRcvPkt;	// control access to input (receive) list
-	CPtrList* pRcvPktList;			// list containing packets received from client
-	CServerSocket * pSocket;		// ASync socket fills RcvPktList with OnReceive method.
-									// same socket is used to send packets to CLIENT
-									// This socket is owned by ServerSocketOwnerThread
-	CServerSocketOwnerThread *pServerSocketOwnerThread;	// thread to control sending to a connected client
-	CServerRcvListThreadBase *pServerRcvListThread;	
-	CvChannel* pvChannel[MAX_CHNLS_PER_MAIN_BANG];	// array of ptrs to virtual channels associated with each client connection
-
-#endif
 
 // Initialize the elements of the structure ST_SERVERS_CLIENT_CONNECTION
 // Create critical sections, linked lists and virtual channels
@@ -804,6 +797,8 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	{
 	CString s;
 	int i;
+	CRITICAL_SECTION  *pTest1;
+	CPtrList *pTest2;
 
 	// skip over CStrings and zero the rest of the structure. Assume CString ptr is 4 bytes. 3 strings at beginning
 	//memset ( (void *) &pscc->uClientPort, 0, sizeof(ST_SERVERS_CLIENT_CONNECTION)-12);
@@ -813,12 +808,14 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	pscc->sClientName		= _T("");
 	pscc->sClientIP4		= _T("");			
 	pscc->m_nMyThreadIndex	= m_nClientPortIndex;
-	pscc->pCSSendPkt		= new CRITICAL_SECTION();
-	pscc->pCSRcvPkt			= new CRITICAL_SECTION();
-	InitializeCriticalSectionAndSpinCount(pscc->pCSSendPkt,4);
-	InitializeCriticalSectionAndSpinCount(pscc->pCSRcvPkt,4);
-	pscc->pSendPktList		= new CPtrList(64);
-	pscc->pRcvPktList		= new CPtrList(64);
+	pTest1 = pscc->cpCSSendPkt;
+	//pscc->cpCSSendPkt		=		//new CRITICAL_SECTION();
+	//pscc->cpCSRcvPkt			= new CRITICAL_SECTION();
+	//InitializeCriticalSectionAndSpinCount(pscc->cpCSSendPkt,4);
+	//InitializeCriticalSectionAndSpinCount(pscc->cpCSRcvPkt,4);
+	pTest2 = pscc->cpSendPktList;
+	//pscc->cpSendPktList		= new CPtrList(64);
+	//pscc->cpRcvPktList		= new CPtrList(64);
 
 	pscc->pSocket					= NULL;		
 	pscc->pServerSocketOwnerThread	= NULL;
@@ -850,7 +847,7 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 	*/
 	for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
 		{
-		pscc->pvChannel[0][i] = new CvChannel(m_nClientPortIndex,i);
+		//pscc->pvChannel[0][i] =	new CvChannel(m_nClientPortIndex,i);
 		}
 	// create threads
 	i = sizeof(CvChannel);					// 112
@@ -876,24 +873,24 @@ int CServerSocket::KillClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *p
 		m_pSCC->bConnected = (BYTE) eNotConnected;
 		Sleep(5);
 		LockRcvPktList();
-		while ( m_pSCC->pRcvPktList->GetCount() > 0)
+		while ( m_pSCC->cpRcvPktList->GetCount() > 0)
 			{
-			pV = (void *) m_pSCC->pRcvPktList->RemoveHead();
+			pV = (void *) m_pSCC->cpRcvPktList->RemoveHead();
 			delete pV;
 			}
 		UnLockRcvPktList();
-		delete m_pSCC->pRcvPktList;		m_pSCC->pRcvPktList	= NULL;
-		delete m_pSCC->pCSRcvPkt;		m_pSCC->pCSRcvPkt	= NULL;
+		delete m_pSCC->cpRcvPktList;		m_pSCC->cpRcvPktList	= NULL;
+		delete m_pSCC->cpCSRcvPkt;		m_pSCC->cpCSRcvPkt	= NULL;
 
 		LockSendPktList();
-		while ( m_pSCC->pSendPktList->GetCount() > 0)
+		while ( m_pSCC->cpSendPktList->GetCount() > 0)
 			{
-			pV = (void *) m_pSCC->pSendPktList->RemoveHead();
+			pV = (void *) m_pSCC->cpSendPktList->RemoveHead();
 			delete pV;
 			}
 		UnLockSendPktList();
-		delete m_pSCC->pSendPktList;		m_pSCC->pSendPktList	= NULL;
-		delete m_pSCC->pCSSendPkt;			m_pSCC->pCSSendPkt		= NULL;
+		delete m_pSCC->cpSendPktList;		m_pSCC->cpSendPktList	= NULL;
+		delete m_pSCC->cpCSSendPkt;			m_pSCC->cpCSSendPkt		= NULL;
 
 		}
 	// zero ptrs from thread and SCM class and structure

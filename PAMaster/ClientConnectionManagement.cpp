@@ -131,14 +131,14 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 	m_pstCCM->bConnected				= 0;
 
 	// create critical sections, linked lists and events
-	m_pstCCM->pCSRcvPkt		= new CRITICAL_SECTION();
-	m_pstCCM->pCSSendPkt	= new CRITICAL_SECTION();
+	m_pstCCM->cpCSRcvPkt		= new CRITICAL_SECTION();
+	m_pstCCM->cpCSSendPkt	= new CRITICAL_SECTION();
 	m_pstCCM->pCSDebugIn	= new CRITICAL_SECTION();
 	m_pstCCM->pCSDebugOut	= new CRITICAL_SECTION();
 	i = sizeof(CRITICAL_SECTION);		// 24
 
-	InitializeCriticalSectionAndSpinCount(m_pstCCM->pCSRcvPkt,4);
-	InitializeCriticalSectionAndSpinCount(m_pstCCM->pCSSendPkt,4);
+	InitializeCriticalSectionAndSpinCount(m_pstCCM->cpCSRcvPkt,4);
+	InitializeCriticalSectionAndSpinCount(m_pstCCM->cpCSSendPkt,4);
 	InitializeCriticalSectionAndSpinCount(m_pstCCM->pCSDebugIn,4);
 	InitializeCriticalSectionAndSpinCount(m_pstCCM->pCSDebugOut,4);
 
@@ -247,7 +247,7 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	delete m_pstCCM->pRcvPktPacketList;
 	UnLockRcvPktList();
 	m_pstCCM->pRcvPktPacketList = 0;
-	if (m_pstCCM->pCSRcvPkt)		delete m_pstCCM->pCSRcvPkt;
+	if (m_pstCCM->cpCSRcvPkt)		delete m_pstCCM->cpCSRcvPkt;
 
 	/******************/
 	LockSendPktList();
@@ -260,7 +260,7 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	delete m_pstCCM->pSendPktList;
 	m_pstCCM->pSendPktList = 0;
 	UnLockSendPktList();
-	if (m_pstCCM->pCSSendPkt)		delete m_pstCCM->pCSSendPkt;
+	if (m_pstCCM->cpCSSendPkt)		delete m_pstCCM->cpCSSendPkt;
 
 	/******************/
 	LockDebugIn();

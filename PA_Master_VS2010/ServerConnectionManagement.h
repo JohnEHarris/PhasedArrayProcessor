@@ -137,8 +137,9 @@ class CAsyncSocket;
 class CServerRcvListThreadBase;		// a thread to read the linked list filled from the data received from the client
 class CServerRcvListThread;			// a thread to read the linked list filled from the data received from the client
 class CvChannel;					// array of ptrs of this type to logically connect channels to instruments
-
-
+/** =============================================================================**/
+// A structure to define the operation of the server with one particular client.
+//
 enum {eMasterNotPresent, eMasterNotConnected, eMasterConnected };
 // NotPresent means slot in SCM structure, but no hardware
 // Not connected means master exists but has no data flow from any instrument it is managing

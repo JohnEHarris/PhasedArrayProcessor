@@ -78,6 +78,7 @@ see ServiceApp.cpp
 #define WM_USER_KILL_CMD_PROCESS_THREAD				WM_USER+0x21C
 #define WM_USER_KILL_RECV_THREAD					WM_USER+0x21D
 #define WM_USER_KILL_SEND_THREAD					WM_USER+0x21E
+#define WM_USER_FLUSH_LINKED_LISTS					WM_USER+0x21F
 
 
 #define ePAM_Client_Of_PAG_Server			0
@@ -113,6 +114,7 @@ public:
 	void SetMy_PAM_Number(CString &Ip4, UINT uPort);
 	int  GetMy_PAM_Number(void)	{ return m_nPamNumber;	}
 	UINT GetMy_PAM_Port(void)	{ return m_uPamPort;	}
+#if 0
 	// Critical Sections to regulate linked list access by Instruemnt client threads and the Service App
 	// Could be two dimensional in the future for for now just one dimensional.
 	// Service App usually does something with the data from the instruments by accessing the instrumnets linked list
@@ -122,7 +124,7 @@ public:
 	// All who want to access an instruments linked list must make this call to ServiceApp - including ServiceApp itself
 	int GetInstrumentListAccess(int nInstNumber);		// returns InstNumber when access is granted
 	void ReleaseInstrumentListAccess(int nInstNumber);	// Allow others to access the linked lists and critical sections.
-
+#endif
 
 
 public:

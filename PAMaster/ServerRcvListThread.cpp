@@ -157,6 +157,7 @@ int CServerRcvListThread::ExitInstance()
 	// delete the client connection associated with this  thread see 
 	// pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
 	// may need to get rid of ServerSocketOwnerThread elements also
+#if 0
 	if ( m_pSCC)
 		{
 		for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
@@ -171,6 +172,7 @@ int CServerRcvListThread::ExitInstance()
 		// socket object belongs to ServerSockerOwnerThread so must have it to kill the linked lists
 		
 		}
+#endif
 
 
 #endif
@@ -187,6 +189,7 @@ BEGIN_MESSAGE_MAP(CServerRcvListThread, CServerRcvListThreadBase)
 #ifdef THIS_IS_SERVICE_APP
 	ON_THREAD_MESSAGE(WM_USER_SERVERSOCKET_PKT_RECEIVED, ProcessRcvList)// manually added by jeh 11-06-12
 //	ON_THREAD_MESSAGE(WM_USER_INIT_RUNNING_AVERAGE, InitRunningAverage)	// manually added by jeh 11-09-12
+	ON_THREAD_MESSAGE(WM_USER_FLUSH_LINKED_LISTS, FlushRcvList)			// manually added jeh 09-20-16
 #endif
 
 #ifdef _I_AM_PAG
@@ -202,25 +205,56 @@ END_MESSAGE_MAP()
 afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 	{
 	void *pV;
-	if (m_pSCC)
+	int j = (int) w;
+	if ( m_pstSCM)
 		{
-		if (m_pSCC->pSocket)
+		if (m_pstSCM->pCS_ClientConnectionRcvList[j]) 
 			{
-			m_pSCC->pSocket->LockRcvPktList();
-			while (m_pSCC->pRcvPktList->GetCount() )
-				{
-				pV = m_pSCC->pRcvPktList->RemoveHead();
-				m_pSCC->pSocket->UnLockRcvPktList();
-#ifdef THIS_IS_SERVICE_APP
-				ProcessInstrumentData(pV);	// local call to this class memeber
-#else
-				ProcessPAM_Data(pV);
-#endif
-				m_pSCC->pSocket->LockRcvPktList();
-				}
-			m_pSCC->pSocket->UnLockRcvPktList();
+			if (0 == TryEnterCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]))	return;	 // try again later
 			}
 		}
+	else return;
+
+	// if here we are in a critical section
+
+	while (m_pSCC->cpRcvPktList->GetCount() )
+		{
+		pV = m_pstSCM->pRcvPktList[j]->RemoveHead();				//m_pSCC->cpRcvPktList->RemoveHead();
+		//m_pSCC->pSocket->UnLockRcvPktList();
+#ifdef THIS_IS_SERVICE_APP
+		ProcessInstrumentData(pV);	// local call to this class memeber
+#else
+		ProcessPAM_Data(pV);
+#endif
+		}
+
+	LeaveCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]);
+	}
+
+// this procedure activated by WM_USER_FLUSH_LINKED_LISTS
+// WPARAM is the specific client connection to flush 
+void CServerRcvListThread::FlushRcvList(WPARAM w, LPARAM lParam)
+	{
+	void *pV;
+	int j = (int) w;
+	if ( m_pstSCM)
+		{
+		if (m_pstSCM->pCS_ClientConnectionRcvList[j]) 
+			{
+			if (0 == TryEnterCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]))	return;	 // try again later
+			}
+		}
+	else return;
+
+	// if here we are in a critical section
+
+	while (m_pSCC->cpRcvPktList->GetCount() )
+		{
+		pV = m_pstSCM->pRcvPktList[j]->RemoveHead();				//m_pSCC->cpRcvPktList->RemoveHead();
+
+		delete pV;
+		}
+	LeaveCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]);
 	}
 
 void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
@@ -239,6 +273,7 @@ void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
 	pData->DataHead.wClock = nLoc % 12;
 	pData->DataHead.wPeriod = 1465;	// 300 ms = 200 rpm
 	}
+
 
 // Random number between 0 and 100
 // Notice - not a class member
@@ -346,7 +381,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 		pOutputPacket->wLoc, pOutputPacket->wAngle, pOutputPacket->instNumber, pOutputPacket->wStatus);
 	SaveFakeData(s);
 	// Get Nc Nx info for 1st channel  -- for debug from output file
-	pChannel = m_pSCC->pvChannel[0][0];
+	pChannel = m_pSCC->pvChannel[m_pSCC->m_nMyThreadIndex][0][0];
 	nNcId		= pChannel->bGetNcId();
 	nNcOd		= pChannel->bGetNcOd();
 	nModId		= pChannel->bGetMId();
@@ -372,7 +407,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 
 	for ( i = 0; i < 32; i++)
 		{
-		pChannel = m_pSCC->pvChannel[0][i];
+		pChannel = m_pSCC->pvChannel[m_pSCC->m_nMyThreadIndex][0][i];
 		s.Format(_T("\r\n[%3d] "), i);
 		k = pR[i].bFlaw[0] = pChannel->bGetIdGateMax();
 		t.Format(_T("%3d  "),k); s += t;
@@ -455,7 +490,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 			for ( i = 0; i < nSeqQty; i++)
 				{
 				k = j*nSeqQty;	// k points to beginning of a frame of data
-				pChannel = m_pSCC->pvChannel[0][i];
+				pChannel = m_pSCC->pvChannel[m_nThreadIndex][0][i];
 				if ( NULL == pChannel)
 					continue;
 				// Get flaw Nc qualified Max values for this channel
@@ -497,7 +532,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 				m_nFrameCount = 0;
 				for ( i = 0; i < nSeqQty; i++)
 					{
-					m_pSCC->pvChannel[0][i]->ResetGatesAndWalls();	// replace [0] with [j]
+					m_pSCC->pvChannel[m_nThreadIndex][0][i]->ResetGatesAndWalls();	// replace [0] with [j]
 					}
 				}
 

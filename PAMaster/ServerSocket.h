@@ -52,13 +52,13 @@ public:
 
 	//int SendPacket(BYTE *pB, int nBytes, int nDeleteFlag);
 
-	void LockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->pCSRcvPkt) EnterCriticalSection(m_pSCC->pCSRcvPkt);	}	}
-	void AddTailRcvPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->pRcvPktList) m_pSCC->pRcvPktList->AddTail(pV);	}	}
-	void UnLockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->pCSRcvPkt) LeaveCriticalSection(m_pSCC->pCSRcvPkt);	}	}
+	void LockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->cpCSRcvPkt) EnterCriticalSection(m_pSCC->cpCSRcvPkt);	}	}
+	void AddTailRcvPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->cpRcvPktList) m_pSCC->cpRcvPktList->AddTail(pV);	}	}
+	void UnLockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->cpCSRcvPkt) LeaveCriticalSection(m_pSCC->cpCSRcvPkt);	}	}
 
-	void LockSendPktList(void)		{ if (m_pSCC) { if (m_pSCC->pCSSendPkt) EnterCriticalSection(m_pSCC->pCSSendPkt);}	}
-	void AddTailSendPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->pSendPktList) m_pSCC->pSendPktList->AddTail(pV);}	}
-	void UnLockSendPktList(void)	{ if (m_pSCC) { if (m_pSCC->pCSSendPkt) LeaveCriticalSection(m_pSCC->pCSSendPkt);}	}
+	void LockSendPktList(void)		{ if (m_pSCC) { if (m_pSCC->cpCSSendPkt) EnterCriticalSection(m_pSCC->cpCSSendPkt);}	}
+	void AddTailSendPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->cpSendPktList) m_pSCC->cpSendPktList->AddTail(pV);}	}
+	void UnLockSendPktList(void)	{ if (m_pSCC) { if (m_pSCC->cpCSSendPkt) LeaveCriticalSection(m_pSCC->cpCSSendPkt);}	}
 
 	//void KillMyThread(void)			{ m_pSCC->bExitThread = 1;					}
 
@@ -72,9 +72,9 @@ public:
 	void SetConnectionStatus(BYTE s)	{ if	 (m_pSCC)	m_pSCC->bConnected = s;							}
 
 	// variables
-	CServerConnectionManagement *m_pSCM;		// ptr to the controlling class
-	ST_SERVERS_CLIENT_CONNECTION *m_pSCC;		// ptr to my connection info/statistics/objects
-	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// pointer to my global structure instance 
+	CServerConnectionManagement *m_pSCM;		// ptr to the controlling class -- not created with 'new'
+	ST_SERVERS_CLIENT_CONNECTION *m_pSCC;		// ptr to my connection info/statistics/objects -- not created with 'new'
+	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// pointer to my global structure instance  -- not created with 'new'
 	int m_nMyServer;							// which server are we connected stSCM[MAX_SERVERS]
 	int m_nMyThreadIndex;						// which instance of pClientConnection[MAX_CLIENTS_PER_SERVER];
 	CWinThread * m_pThread;						// ptr to thread which created the socket
@@ -91,7 +91,7 @@ public:
 	int m_nMinRcvRqst;							// smallest packet requested to receive
 	int m_nMaxRcvRqst;
 	CString szName;
-	void *pWholePacket;
+	void *pWholePacket;				// -- not created with 'new'
 	CHwTimer *m_pElapseTimer;
 	int m_nElapseTime;
 	};

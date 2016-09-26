@@ -25,11 +25,11 @@ Revised:	modeled somewhat like RunningAverage. The two may be merged in the futu
 //#include <stdio.h>
 //#include "vChannel.h"
 #include "InstMsgProcess.h"
-extern UINT uVchannelConstructor[4][40];
+extern UINT uVchannelConstructor[8][16][32];
 
 // Every time an instrument connects, the constructor runs
 // Must reload from GUI or store last good Nc Nx info in a static table
-CvChannel::CvChannel(int nInst, int nChnl)
+CvChannel::CvChannel(int nInst, int nSeq, int nChnl)
 	{
 	// id/od, Nc, Thold, bMod
 	FifoInit(0,1,20,1);	// id
@@ -41,7 +41,7 @@ CvChannel::CvChannel(int nInst, int nChnl)
 	if ( nInst > 3) return;
 	if (nChnl > 39) return;
 	// counter of how many time constructor runs for each chnl/instrument
-	uVchannelConstructor[nInst][nChnl]++;
+	uVchannelConstructor[nInst][nSeq][nChnl]++;
 	};
 
 CvChannel::~CvChannel()

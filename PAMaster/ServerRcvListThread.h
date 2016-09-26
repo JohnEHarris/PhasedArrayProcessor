@@ -40,6 +40,7 @@ public:
 	virtual BOOL InitInstance();
 	virtual int ExitInstance();
 	afx_msg void ProcessRcvList(WPARAM w, LPARAM lParam);
+	afx_msg void FlushRcvList(WPARAM w, LPARAM lParam);
 
 #ifdef THIS_IS_SERVICE_APP
 //	afx_msg void InitRunningAverage(WPARAM w, LPARAM lParam);

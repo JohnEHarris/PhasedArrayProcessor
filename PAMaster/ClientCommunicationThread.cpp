@@ -349,7 +349,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 
 	m_pMyCCM->SetConnectionState(0);	// now assume we are not connected
 
-	EnterCriticalSection(m_pstCCM->pCSRcvPkt);
+	EnterCriticalSection(m_pstCCM->cpCSRcvPkt);
 //	if (m_pSocket)
 	if (m_pstCCM->pSocket)
 		{
@@ -380,7 +380,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 #endif
 
 
-	LeaveCriticalSection(m_pstCCM->pCSRcvPkt);
+	LeaveCriticalSection(m_pstCCM->cpCSRcvPkt);
 	
 	if( !m_pSocket )
 		{

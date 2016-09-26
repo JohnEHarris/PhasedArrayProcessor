@@ -40,10 +40,11 @@ managed classes.
 #include "ClientConnectionManagement.h"	// 21-Jan-13 jeh
 #include "CCM_PAG.h"					// 22-Jan-13 jeh
 #include "ClientSocket.h"
+#include "ServerConnectionManagement.h"	// 22-Sep-16 jeh
 
 
 #define CURRENT_VERSION		"Version 1.1"
-#define BUILD_VERSION			3
+#define BUILD_VERSION			4
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           1
@@ -52,6 +53,7 @@ managed classes.
 
 #if 0
 
+1.0.004			22-Sep-16	Almost all created elements (critical sections, list, channels) created in Application
 1.0.003			06-Sep-16	CvChannel* pvChannel now two dimensional. [0][j] - fix 1st index later
 1.1.002			15-Jul-16	Eliminate Yanming code not being used
 1.1.001			May 2016	New Phased Array 2
@@ -69,7 +71,7 @@ managed classes.
 CServiceApp theApp;		// the persistent instance of the application
 UINT uAppTimerTick;		// approximately 50 ms
 
-UINT uVchannelConstructor[4][40];	// count when constructor called. 4 inst, 40 chnl
+UINT uVchannelConstructor[8][16][32];	// count when constructor called. 8 inst, 16 seq pts, 32 chnl
 
 UINT CheckKey( void *dummy );
 
@@ -164,25 +166,22 @@ CServiceApp::CServiceApp()
 	//pTheApp = this;
 
 	AfxSocketInit();
-	// unnecessary. Program nulls all that can be nulled on start
-#if 0
+
+
+	// Build all/most of the item which must be created with a 'new' operator here.
+	// Individual classes and components have pointer which point to these items
+	// The Application creates them and the application destroys them
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{
 		pSCM[i] = NULL;
-		//memset((void *) &stSCM[i], 0, sizeof(ST_SERVER_CONNECTION_MANAGEMENT));
 		}
-#endif
 
 
 	m_nShutDownCount = 0;
 	pCSSaveDebug =new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pCSSaveDebug,4);
 
-	for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
-		{
-		pAppInstAccess[i] = new CRITICAL_SECTION();
-		InitializeCriticalSectionAndSpinCount(pAppInstAccess[i],4);
-		}
+
 
 
 	g_NcNx.Long[0] = 1;
@@ -216,7 +215,9 @@ CServiceApp::CServiceApp()
 CServiceApp::~CServiceApp()
 	{
 	int i = 1;	// FOR DEBUG, lock in loop before stop event
-	//Stop();
+	int j;
+	void *pV;
+
 
 	if (m_nFakeDataExists)
 		m_FakeData.Close();
@@ -227,10 +228,50 @@ CServiceApp::~CServiceApp()
 	if (pCSSaveDebug)	// critical section access to debug log file
 		delete pCSSaveDebug;
 	
-	for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
+	int nClients, nSeqCount, nChnlPerBang;
+	for ( nClients = 0; nClients < MAX_CLIENTS_PER_SERVER; nClients++)
+		{	// clients loop
+		for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
+			{
+			for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
+				{
+				delete pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nClients][nSeqCount][nChnlPerBang];
+				}
+			}
+		delete pSCM[i]->m_pstSCM->pClientConnection[nClients];
+		} 	// clients loop
+
+	for ( i = 0; i < 1; i++)	//only scm[0] is a PAP
 		{
-		delete pAppInstAccess[i];
-		}	
+		for ( j = 0; J < MAX_CLIENTS_PER_SERVER; j++)
+			{
+			if (pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j])
+				{
+				EnterCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j]);
+				while (pSCM[i]->m_pstSCM->pSendPktList[j]->GetCount())
+					{
+					pV = pSCM[i]->m_pstSCM->pSendPktList[j]->RemoveHead();
+					delete pV;
+					}
+				LeaveCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j]);
+				delete pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j];
+				}
+
+			if (pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j])
+				{
+				EnterCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j]);
+				while (pSCM[i]->m_pstSCM->pRcvPktList[j]->GetCount())
+					{
+					pV = pSCM[i]->m_pstSCM->pRcvPktList[j]->RemoveHead();
+					delete pV;
+					}
+				LeaveCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j]);
+				delete pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j];
+				}
+			}
+		//delete pSCM[i]; not made with new
+		}	// for ( i = 0; i < 1; i++)
+
 	
 	ShutDown(); // first place when closing dos window
 
@@ -472,6 +513,7 @@ BOOL CServiceApp :: InitInstance()
 	// The ini file will be store in the folder which has the executable code
 
 	int i;
+	TRACE1("_WIN32_WINNT  is 0x%0x\n", _WIN32_WINNT);
 	memset (&uVchannelConstructor,0, sizeof(uVchannelConstructor));
 	CString s,Fake;	// fake is a debug file with fake data and fake data msg to PAG
 	CString DeBug;	// another debug file to catch printf statements since vs2015 does not output to monitor screen
@@ -1037,15 +1079,31 @@ WHILE_TARGET:
 		Sleep(50);
 		uAppTimerTick++;
 		if (nDebugShutdown)	break;	// use quick watch to change value to 1 when stepping with debugger
-		void *pv;
+//		void *pv;
 		// attempt to make a connection attempted when the server was busy/non responsive
 
 #if 1
-		k = 0;	// debug  prevent accessing pClientConnection until configured
+		k = 1;	// debug  prevent accessing pClientConnection until configured
 		while (k)
 			{
-			Sleep(100);
+			Sleep(1000);
+			i = 0;
+			for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
+				{
+				if (stSCM[i].pClientConnection[j] > 0)
+					{
+					if ( (stSCM[i].pClientConnection[j]->pSocket)	) // && (stSCM[i].nComThreadExited[J] == 0))
+						{
+						// Tell ReceiverList thread to flush the received data
+						// WPARAM = j
+						CWinThread * pThread = stSCM[i].pClientConnection[j]->pServerRcvListThread;
+						//if (pThread)
+						//	pThread->PostThreadMessage(WM_USER_FLUSH_LINKED_LISTS, j, 0);
+						}
+					}
+				}
 			}
+#if 0
 
 		for ( i = 0; i < MAX_SERVERS; i++)
 			{
@@ -1054,25 +1112,21 @@ WHILE_TARGET:
 				{
 				// for each server in the system, empyt the linked list created by the instruments
 				// Server 0 by convention is the server receiving data packets from the instruments
+				// This crashes the program when linked lists are being deleted when instruments go away
+				// Remove critical sections and instead send thread messages to ServerSocketOwners to flush their data
 				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 					{
-#if 1
-					if (0 == GetInstrumentListAccess(j))
-						continue;	// invalid client number - no access granted
-					// if we are here we have entered a critical section
-
-					// is there a reason to leave the critical section for server[i].client[j]?
 					k = (int) stSCM[i].pClientConnection[j];	// race condition of completing connection in debug
 					if ( k == 0)
 						{ 
 						// no client connection
-						ReleaseInstrumentListAccess(j);
+						//ReleaseInstrumentListAccess(j);
 						continue;
 						}
 					if (stSCM[i].pSCM->m_pstSCM[i].nComThreadExited[j] == 1)
 						{ 
 						// no client connection
-						ReleaseInstrumentListAccess(j);
+						// ReleaseInstrumentListAccess(j);
 						continue;
 						}
 
@@ -1081,7 +1135,12 @@ WHILE_TARGET:
 						k = (int) stSCM[i].pClientConnection[j]->pSocket;	//debug
 						if ( (stSCM[i].pClientConnection[j]->pSocket)	) // && (stSCM[i].nComThreadExited[J] == 0))
 							{
-							// received data
+							// Tell ReceiverList thread to flush the received data
+							CWinThread * pThread = stSCM[i].pClientConnection[j]->pServerRcvListThread;
+							if (pThread)
+								pThread->PostThreadMessage(WM_USER_FLUSH_LINKED_LISTS, j, 0);
+							Sleep(10);
+#if 0
 							stSCM[i].pClientConnection[j]->pSocket->LockRcvPktList();
 							while (stSCM[i].pClientConnection[j]->pRcvPktList->GetCount())
 								{
@@ -1099,15 +1158,17 @@ WHILE_TARGET:
 								delete pv;
 								}
 							stSCM[i].pClientConnection[j]->pSocket->UnLockSendPktList();
-							}
-						}	// empty the linked lists
 #endif
-					ReleaseInstrumentListAccess(j);
-					Sleep(10);
+							}
+
+						}	// empty the linked lists
+					//ReleaseInstrumentListAccess(j);
+					Sleep(50);
 
 					}	// j loop
 				}
 			}
+#endif
 #endif
 		}		// the jeh do nothing main loop
 
@@ -1301,7 +1362,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 		case 0:		// There are multiple client instrument looking for the PAM server. This is the only server
 					// for instruments in this application.
 			pSCM[i] = new CServerConnectionManagement(i);
-			j = sizeof(CServerConnectionManagement);
+			j = sizeof(CServerConnectionManagement);		// general for sizeof class
 			if (pSCM[i])
 				{
 				s = gServerArray[i].Ip;			// a global static table of ip addresses define by an ini file
@@ -1315,6 +1376,44 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
 				// the connection socket's OnReceive will populate the input data linked list and post messages
 				// to the main dlg/application to process the data.
+				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
+					{
+					pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j]	= new CRITICAL_SECTION();
+					InitializeCriticalSectionAndSpinCount(pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j] ,4);
+					pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[J]	= new CRITICAL_SECTION();
+					InitializeCriticalSectionAndSpinCount(pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j] ,4);
+					pSCM[i]->m_pstSCM->pSendPktList[j]					= new CPtrList();
+					pSCM[i]->m_pstSCM->pRcvPktList[j]					= new CPtrList();
+
+					// Create ClientConnection Class instances
+					pSCM[i]->m_pstSCM->pClientConnection[j] = new ST_SERVERS_CLIENT_CONNECTION();
+					pSCM[i]->m_pstSCM->pClientConnection[j]->pServerSocketOwnerThread	= 0;
+					pSCM[i]->m_pstSCM->pClientConnection[j]->pSocket					= 0;
+					pSCM[i]->m_pstSCM->pClientConnection[j]->cpCSSendPkt	= pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j];
+					pSCM[i]->m_pstSCM->pClientConnection[j]->cpCSRcvPkt		= pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j];
+					pSCM[i]->m_pstSCM->pClientConnection[j]->cpSendPktList	= pSCM[i]->m_pstSCM->pSendPktList[j];
+					pSCM[i]->m_pstSCM->pClientConnection[j]->cpRcvPktList	= pSCM[i]->m_pstSCM->pRcvPktList[j];
+
+					}	// for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
+
+				int nClients, nSeqCount, nChnlPerBang;
+				for ( nClients = 0; nClients < MAX_CLIENTS_PER_SERVER; nClients++)
+					{
+					for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
+						{
+						for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
+							{
+							pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nClients][nSeqCount][nChnlPerBang] = 
+								new CvChannel(nClients, nSeqCount, nChnlPerBang);
+							}
+						}
+					}
+
+
+
+
+
+
 				nError = pSCM[i]->StartListenerThread(i);
 				if (nError)
 					{
@@ -1323,8 +1422,9 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 					//delete pSCM[i];
 					pSCM[i] = NULL;
 					}
-				}
+				}	// if (pSCM[i])
 			break;
+
 		default:
 			pSCM[i] = NULL;
 			break;
@@ -1567,14 +1667,15 @@ void CServiceApp::InitializeClientConnectionManagement(void)
 	}
 
 // When it is time to create the thread that services the client's data received into the RcvPacketList
-// Call back to the top level of the application and choose the correct thread type base on knowing 
+// Call back to the top level of the application and choose the correct thread type based on knowing 
 // the function of the server itself.
 // This call returns the thread ptr of the thread created.
 // The thread created will have custom processing of the RcvPacketList based on which server/client pair
 // is being processed. For Phased Array Master, the primary client on the other end is the PA Instrument.
 // It sends inspection data packets which are processed in a manner dictated by the Message ID of the packet.
 //
-//ifdef SERVER_RCVLIST_THREADBASE		// DEFINE in project defines under C/C++ | Preprocessor
+//ifdef SERVER_RCVLIST_THREADBASE		
+// DEFINE in project defines under C/C++ | Preprocessor
 CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNumber, int nPriority)
 	{
 	CString s;
@@ -1612,7 +1713,7 @@ CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNum
 // PAM's connection to the PAG is via a Client Connection Management socket, specifically CCM[0] instance
 // CCM[0] instance has a child class of CCM, namely CCM_PAG
 // NOTE!!! PamSendToPag DOES NOT DELETE THE MEMORY pointed to by pBuf
-// In the FakeData generation whihc calls PamSendToPag pBuf is deleted after the return to the fake data generator
+// In the FakeData generation whicH calls PamSendToPag pBuf is deleted after the return to the fake data generator
 void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 	{
 	CString s;
@@ -1656,6 +1757,7 @@ void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 // and as of 2016-09-16 only range from 0-7
 // The client will still have to access its own linked list thru its own local critical sections
 //
+#if 0
 int CServiceApp::GetInstrumentListAccess(int nInstNumber)
 	{
 	if (( nInstNumber < 0) || (nInstNumber >= MAX_CLIENTS_PER_SERVER))
@@ -1677,6 +1779,7 @@ void CServiceApp::ReleaseInstrumentListAccess(int nInstNumber)
 	LeaveCriticalSection(pAppInstAccess[nInstNumber]);
 	}
 
+#endif
 
 /**************************************** Nov 20120 ************************************/
 /**************************************** Nov 20120 ************************************/

@@ -24,7 +24,7 @@ Purpose:Simulate hardware processing of wall and flaw channels. One class instan
 class CvChannel
 	{
 public:
-	CvChannel(int nInst, int nChnl);
+	CvChannel(int nInst, int nSeq, int nChnl);
 	virtual ~CvChannel();
 
 	/*********************** Flaw processing routines ***********************/

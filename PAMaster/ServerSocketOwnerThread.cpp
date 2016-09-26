@@ -207,7 +207,7 @@ BOOL CServerSocketOwnerThread::InitInstance()
 		// chooses between CServerSocket and CServerSocketPA_Master
 		pThread->ResumeThread();
 		// Set Hardware elapse timer
-		m_pHwTimer = new CHwTimer();
+		m_pHwTimer = new CHwTimer();	// this belongs to ServerSocketOwnerThread, not ServerRcvListThread
 		}
 
 	else
@@ -239,13 +239,13 @@ int CServerSocketOwnerThread::ExitInstance()
 		{
 		if (m_pSCC->pSocket)
 			{
-			if (((int)m_pSCC->pSocket->m_hSocket > 0) && ((int)m_pSCC->pSocket->m_hSocket < 32000))
+			if ((int)m_pSCC->pSocket->m_hSocket > 0)	//&& ((int)m_pSCC->pSocket->m_hSocket < 32000))
 				{	// check socket handle range
 
 				//if (m_pSCC->m_pConnectionSocket->ShutDown(2))
-				if (m_pSCC->pSocket->ShutDown(2))
+				if (i = m_pSCC->pSocket->ShutDown(2))
 					{
-					s = _T("Shutdown of client socket was successful\n");
+					s.Format(_T("Shutdown of client socket was successful status = %d\n"), i);
 					TRACE(s);
 					m_pSCC->pSocket->Close();
 					}
@@ -284,7 +284,7 @@ int CServerSocketOwnerThread::ExitInstance()
 			m_pSCC->pSocket = NULL;	 // was deleted above under the name of m_pConnectionSocket 
 			//delete m_pSCC->pSocket; corrupts heap
 			// thread was created with AutoDelete turned on. So don't delete here
-			m_pSCC->pServerSocketOwnerThread = NULL;
+			//m_pSCC->pServerSocketOwnerThread = NULL;
 			}
 			Sleep(20);
 			m_pSCC->bConnected = (BYTE) eNotConnected;
@@ -327,8 +327,9 @@ int CServerSocketOwnerThread::ExitInstance()
 			if (m_pstSCM->pClientConnection[m_nThreadIndex])
 				{
 				m_pstSCM->pClientConnection[m_nThreadIndex]->pServerSocketOwnerThread = NULL;
-				delete m_pstSCM->pClientConnection[m_nThreadIndex];
-				m_pstSCM->pClientConnection[m_nThreadIndex] = NULL;
+				// Created in ServiceApp -- must be killed there on shutdown
+				//delete m_pstSCM->pClientConnection[m_nThreadIndex];
+				//m_pstSCM->pClientConnection[m_nThreadIndex] = NULL;
 				m_pstSCM->nComThreadExited[m_nThreadIndex] = 1;
 				}
 			}
@@ -361,7 +362,7 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 	CString t, s = _T("CServerSocketOwnerThread::ExitInstance()");
 	ST_SERVERS_CLIENT_CONNECTION *pscc;
 	void *pV;
-	int i,j;
+	int i;
 	// Close the socket and delete
 	// Kill the ServerRcvList thread
 	// delete linked lists and critical sections
@@ -374,7 +375,7 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 			i = sizeof(CServerSocket);	//65620
 			if (i = pscc->pSocket->ShutDown(2))
 				{
-				s += _T(" servers client socket shut down\n");
+				s.Format(_T("Shutdown of client socket was successful status = %d\n"), i);
 				TRACE(s);
 				pscc->pSocket->Close();
 				}
@@ -386,36 +387,47 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 			}
 
 		pscc->bConnected = (BYTE) eNotConnected;
-		if (pscc->pCSRcvPkt) 
-			EnterCriticalSection(pscc->pCSRcvPkt);
-		while ( pscc->pRcvPktList->GetCount() > 0)
+		if (pscc->cpCSRcvPkt) 
+			EnterCriticalSection(pscc->cpCSRcvPkt);
+		while ( pscc->cpRcvPktList->GetCount() > 0)
 			{
-			pV = (void *) pscc->pRcvPktList->RemoveHead();
+			pV = (void *) pscc->cpRcvPktList->RemoveHead();
 			delete pV;
 			}
-		LeaveCriticalSection(pscc->pCSRcvPkt);
-		delete pscc->pRcvPktList;		pscc->pRcvPktList	= NULL;
-		delete pscc->pCSRcvPkt;			pscc->pCSRcvPkt	= NULL;
+		LeaveCriticalSection(pscc->cpCSRcvPkt);
+		// These now global objects controlled by ServiceApp
+#if 0
+		delete	pscc->cpRcvPktList;		
+				pscc->cpRcvPktList	= NULL;
+		delete	pscc->cpCSRcvPkt;			
+				pscc->cpCSRcvPkt		= NULL;
+#endif
 
-		EnterCriticalSection(pscc->pCSSendPkt);
-		while ( m_pSCC->pSendPktList->GetCount() > 0)
+		EnterCriticalSection(pscc->cpCSSendPkt);
+		while ( pscc->cpSendPktList->GetCount() > 0)
 			{
-			pV = (void *) m_pSCC->pSendPktList->RemoveHead();
+			pV = (void *) pscc->cpSendPktList->RemoveHead();
 			delete pV;
 			}
-		LeaveCriticalSection(pscc->pCSSendPkt);
-		delete m_pSCC->pSendPktList;		m_pSCC->pSendPktList	= NULL;
-		delete m_pSCC->pCSSendPkt;			m_pSCC->pCSSendPkt		= NULL;
+		LeaveCriticalSection(pscc->cpCSSendPkt);
+#if 0
+		delete	pscc->cpSendPktList;		
+				pscc->cpSendPktList	= NULL;
+		delete	pscc->cpCSSendPkt;		
+				pscc->cpCSSendPkt	= NULL;
+#endif
 		}
 	// typically if the socket doesn't exist, the handle = -1 or 0xffffffff
 	// and typically on this machine the socket handle is somewhere between 1 and 1000 with 8xx being common.
-	if ( ((int)pscc->pSocket->m_hSocket > 0) && ((int)pscc->pSocket->m_hSocket < 32000))
+	if ((int)pscc->pSocket->m_hSocket > 0)	//&& ((int)pscc->pSocket->m_hSocket < 32000))
 		{
 		delete pscc->pSocket;
 		pscc->pSocket = NULL;
 		}
 
 	pscc->bStopSendRcv = 1;
+#if 0
+	By ServiceApp
 	for ( j = 0; j < MAX_SEQ_COUNT; j++)
 	for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
 		{
@@ -425,12 +437,32 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 			pscc->pvChannel[j][i] = 0;
 			}
 		}
+#endif
+	// kill ServerSocket instance
+	KillServerSocketClass();
 	nReturn = ExitInstance();	//thread message does not allow return of anything but void
 	t.Format(_T("%d\n"), nReturn);
 	s += t;
 	TRACE(s);
 	//delete m_pSCC->pServerSocketOwnerThread;
 	}
+
+// The creation of this thread included the creation of the ServerSocket class before the thread was resumed.
+// Must deconstruct the class and release all things created with new
+//
+void CServerSocketOwnerThread::KillServerSocketClass(void)
+	{
+	if ( m_pConnectionSocket ==  NULL)	return;
+	if ( m_pConnectionSocket->m_pElapseTimer)
+		{
+		delete m_pConnectionSocket->m_pElapseTimer;
+		m_pConnectionSocket->m_pElapseTimer = 0;
+		}
+	//delete m_pConnectionSocket;   ~ServiceApp deletes
+	//m_pConnectionSocket = 0;
+	}
+
+
 
 // A message or messages have been placed into the linked list controlled by this thread
 // This function will empty the linked list by sending its contents out using the associated
@@ -456,10 +488,10 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		TRACE(_T("TransmitPackets m_pConnectionSocket->m_pSCC == NULL\n"));
 		return;
 		}
-	while (m_pConnectionSocket->m_pSCC->pSendPktList->GetCount() > 0 )
+	while (m_pConnectionSocket->m_pSCC->cpSendPktList->GetCount() > 0 )
 		{
 		m_pConnectionSocket->LockSendPktList();
-		pCmd = (PAM_INST_CHNL_INFO *) m_pConnectionSocket->m_pSCC->pSendPktList->RemoveHead();
+		pCmd = (PAM_INST_CHNL_INFO *) m_pConnectionSocket->m_pSCC->cpSendPktList->RemoveHead();
 		m_pConnectionSocket->UnLockSendPktList();
 			
 		//MMI_CMD *pCmd = (MMI_CMD *) &pBuf->Msg;
@@ -526,7 +558,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				{
 				m_pConnectionSocket->m_pSCC->uUnsentPackets++;
 				s.Format(_T("ServerSocketOwnerThread Sent=%d, expected=%d, list cnt=%d, Pkts sent=%d, Pkts lost=%d, msgSeq=%d, Error=%d\n"),
-					nSent, nSent, m_pConnectionSocket->m_pSCC->pSendPktList->GetCount(), m_pConnectionSocket->m_pSCC->uPacketsSent,
+					nSent, nSent, m_pConnectionSocket->m_pSCC->cpSendPktList->GetCount(), m_pConnectionSocket->m_pSCC->uPacketsSent,
 					m_pConnectionSocket->m_pSCC->uUnsentPackets, pCmd->wMsgSeqCnt, nError);
 				TRACE(s);
 				}

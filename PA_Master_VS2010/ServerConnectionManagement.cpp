@@ -181,6 +181,7 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 		{
 		delete m_pstSCM->pCS_ClientConnectionSndList[i];
 		delete m_pstSCM->pCS_ClientConnectionRcvList[i];
+		delete m_pstSCM->pClientConnection[i];
 		}
 EXIT:
 	s.Format(_T("~CServerConnectionManagement Destructor[%d] has run\n"), m_nMyServer);
@@ -233,8 +234,9 @@ int CServerConnectionManagement::StopListenerThread(int nMyServer)
 	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
 		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);	
 	// post a message to init the listener thread. Feed in a pointer to this instance of SCM
-	//m_pstSCM->pServerListenThread->PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
-	PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID,WM_QUIT, 0L, 0L);
+	m_pstSCM->pServerListenThread->PostThreadMessage(WM_QUIT,0,0l);	
+	//PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
+	//PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID,WM_QUIT, 0L, 0L);
 	Sleep(20);
 	return 0;	// success
 	}

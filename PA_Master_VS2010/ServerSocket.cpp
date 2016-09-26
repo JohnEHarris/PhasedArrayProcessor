@@ -299,6 +299,11 @@ void CServerSocket::OnAccept(int nErrorCode)
 	//ST_SERVERS_CLIENT_CONNECTION *pscc;
 	m_nMyServer = nMyServer;
 
+	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] == 0)
+		{
+		// should never happen since this is created by ServiceApp and destroyed by ServiceApp
+		ASSERT(0);
+		}
 
 	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pSocket == 0)		//no connection yet
 		{
@@ -782,20 +787,6 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 	return 0;
 	}
 
-#if 0
-// elements of ST_SERVERS_CLIENT_CONNECTION which are created and thus must be destroy eventually
-	CRITICAL_SECTION *cpCSSendPkt;	// control access to output (send) list
-	CPtrList* pSendPktList;			// list containing packets to send
-	CRITICAL_SECTION *cpCSRcvPkt;	// control access to input (receive) list
-	CPtrList* pRcvPktList;			// list containing packets received from client
-	CServerSocket * pSocket;		// ASync socket fills RcvPktList with OnReceive method.
-									// same socket is used to send packets to CLIENT
-									// This socket is owned by ServerSocketOwnerThread
-	CServerSocketOwnerThread *pServerSocketOwnerThread;	// thread to control sending to a connected client
-	CServerRcvListThreadBase *pServerRcvListThread;	
-	CvChannel* pvChannel[MAX_CHNLS_PER_MAIN_BANG];	// array of ptrs to virtual channels associated with each client connection
-
-#endif
 
 // Initialize the elements of the structure ST_SERVERS_CLIENT_CONNECTION
 // Create critical sections, linked lists and virtual channels

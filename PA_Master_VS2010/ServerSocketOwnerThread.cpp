@@ -284,7 +284,7 @@ int CServerSocketOwnerThread::ExitInstance()
 			m_pSCC->pSocket = NULL;	 // was deleted above under the name of m_pConnectionSocket 
 			//delete m_pSCC->pSocket; corrupts heap
 			// thread was created with AutoDelete turned on. So don't delete here
-			m_pSCC->pServerSocketOwnerThread = NULL;
+			//m_pSCC->pServerSocketOwnerThread = NULL;
 			}
 			Sleep(20);
 			m_pSCC->bConnected = (BYTE) eNotConnected;
@@ -327,8 +327,9 @@ int CServerSocketOwnerThread::ExitInstance()
 			if (m_pstSCM->pClientConnection[m_nThreadIndex])
 				{
 				m_pstSCM->pClientConnection[m_nThreadIndex]->pServerSocketOwnerThread = NULL;
-				delete m_pstSCM->pClientConnection[m_nThreadIndex];
-				m_pstSCM->pClientConnection[m_nThreadIndex] = NULL;
+				// Created in ServiceApp -- must be killed there on shutdown
+				//delete m_pstSCM->pClientConnection[m_nThreadIndex];
+				//m_pstSCM->pClientConnection[m_nThreadIndex] = NULL;
 				m_pstSCM->nComThreadExited[m_nThreadIndex] = 1;
 				}
 			}
@@ -394,10 +395,13 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 			delete pV;
 			}
 		LeaveCriticalSection(pscc->cpCSRcvPkt);
+		// These now global objects controlled by ServiceApp
+#if 0
 		delete	pscc->cpRcvPktList;		
 				pscc->cpRcvPktList	= NULL;
 		delete	pscc->cpCSRcvPkt;			
 				pscc->cpCSRcvPkt		= NULL;
+#endif
 
 		EnterCriticalSection(pscc->cpCSSendPkt);
 		while ( pscc->cpSendPktList->GetCount() > 0)
@@ -406,10 +410,12 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 			delete pV;
 			}
 		LeaveCriticalSection(pscc->cpCSSendPkt);
+#if 0
 		delete	pscc->cpSendPktList;		
 				pscc->cpSendPktList	= NULL;
 		delete	pscc->cpCSSendPkt;		
 				pscc->cpCSSendPkt	= NULL;
+#endif
 		}
 	// typically if the socket doesn't exist, the handle = -1 or 0xffffffff
 	// and typically on this machine the socket handle is somewhere between 1 and 1000 with 8xx being common.
@@ -452,8 +458,8 @@ void CServerSocketOwnerThread::KillServerSocketClass(void)
 		delete m_pConnectionSocket->m_pElapseTimer;
 		m_pConnectionSocket->m_pElapseTimer = 0;
 		}
-	delete m_pConnectionSocket;
-	m_pConnectionSocket = 0;
+	//delete m_pConnectionSocket;   ~ServiceApp deletes
+	//m_pConnectionSocket = 0;
 	}
 
 

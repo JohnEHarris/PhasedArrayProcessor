@@ -230,16 +230,16 @@ CServiceApp::~CServiceApp()
 	
 	int nClients, nSeqCount, nChnlPerBang;
 	for ( nClients = 0; nClients < MAX_CLIENTS_PER_SERVER; nClients++)
-		{
+		{	// clients loop
 		for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
 			{
 			for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
 				{
-				pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nClients][nSeqCount][nChnlPerBang] = 
-					new CvChannel(nClients, nSeqCount, nChnlPerBang);
+				delete pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nClients][nSeqCount][nChnlPerBang];
 				}
 			}
-		}
+		delete pSCM[i]->m_pstSCM->pClientConnection[nClients];
+		} 	// clients loop
 
 	for ( i = 0; i < 1; i++)	//only scm[0] is a PAP
 		{
@@ -269,7 +269,7 @@ CServiceApp::~CServiceApp()
 				delete pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j];
 				}
 			}
-		delete pSCM[i];
+		//delete pSCM[i]; not made with new
 		}	// for ( i = 0; i < 1; i++)
 
 	

@@ -216,10 +216,12 @@ CServiceApp::~CServiceApp()
 	{
 	int i = 1;	// FOR DEBUG, lock in loop before stop event
 	int j;
+	int ns;		// server index
 	void *pV;
+	int nClients, nSeqCount, nChnlPerBang;
+	ST_SERVERS_CLIENT_CONNECTION *pSCC;
 
-
-	if (m_nFakeDataExists)
+	if (m_nFakeDataExists)	// gets here 1st when command window closes
 		m_FakeData.Close();
 
 	if (m_nDebugLogExists)
@@ -228,20 +230,33 @@ CServiceApp::~CServiceApp()
 	if (pCSSaveDebug)	// critical section access to debug log file
 		delete pCSSaveDebug;
 	
-	int nClients, nSeqCount, nChnlPerBang;
+	for ( ns = 0; ns < MAX_SERVERS; ns++)
+		{	// Server Loop ns
+		if (NULL == pSCM[ns])	break;
+		if (NULL == pSCM[ns]->m_pstSCM)	break;
+
+		// This is really case 0 of servers
 	for ( nClients = 0; nClients < MAX_CLIENTS_PER_SERVER; nClients++)
 		{	// clients loop
+		if (NULL == pSCM[ns]->m_pstSCM->pClientConnection[nClients])	break;
+		pSCC = pSCM[ns]->m_pstSCM->pClientConnection[nClients];
+		CServerSocketOwnerThread * pThread = pSCC->pServerSocketOwnerThread;
+		if (pThread) 
+			pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET, (WORD)nClients, (LPARAM) pSCC);
+
 		for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
 			{
 			for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
 				{
-				delete pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nClients][nSeqCount][nChnlPerBang];
+				if (NULL == pSCM[ns]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang]) break;
+				delete pSCM[ns]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang];
+				pSCM[ns]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang] = 0;
 				}
 			}
-		delete pSCM[i]->m_pstSCM->pClientConnection[nClients];
+		//delete pSCM[ns]->m_pstSCM->pClientConnection[nClients];
 		} 	// clients loop
 
-	for ( i = 0; i < 1; i++)	//only scm[0] is a PAP
+	for ( i = 0; i < MAX_SERVERS; i++)	//only scm[0] is a PAP
 		{
 		for ( j = 0; J < MAX_CLIENTS_PER_SERVER; j++)
 			{
@@ -271,6 +286,7 @@ CServiceApp::~CServiceApp()
 			}
 		//delete pSCM[i]; not made with new
 		}	// for ( i = 0; i < 1; i++)
+		}	// Server Loop ns
 
 	
 	ShutDown(); // first place when closing dos window
@@ -285,6 +301,86 @@ CServiceApp::~CServiceApp()
 
 }
 
+// jeh 2016-09-27 called by destructor of ServiceApp of from program for debugging
+// Could start by setting global Shutdown flag true
+void CServiceApp::ShutDownEasy(void)
+	{
+	int i = 1;	// FOR DEBUG, lock in loop before stop event
+	int j;
+	int ns;		// server index
+	void *pV;
+	int nClients, nSeqCount, nChnlPerBang;
+	ST_SERVERS_CLIENT_CONNECTION *pSCC;
+
+	if (m_nFakeDataExists)	// gets here 1st when command window closes
+		m_FakeData.Close();
+
+	if (m_nDebugLogExists)
+		m_DebugLog.Close();
+
+	if (pCSSaveDebug)	// critical section access to debug log file
+		delete pCSSaveDebug;
+	
+	for ( ns = 0; ns < MAX_SERVERS; ns++)
+		{	// Server Loop ns
+		if (NULL == pSCM[ns])	break;
+		if (NULL == pSCM[ns]->m_pstSCM)	break;
+
+		// This is really case 0 of servers
+	for ( nClients = 0; nClients < MAX_CLIENTS_PER_SERVER; nClients++)
+		{	// clients loop
+		if (NULL == pSCM[ns]->m_pstSCM->pClientConnection[nClients])	break;
+		pSCC = pSCM[ns]->m_pstSCM->pClientConnection[nClients];
+		CServerSocketOwnerThread * pThread = pSCC->pServerSocketOwnerThread;
+		if (pThread) 
+			pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET, (WORD)nClients, (LPARAM) pSCC);
+
+		for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
+			{ //nSeqCount
+			for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
+				{
+				if (NULL == pSCM[ns]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang]) break;
+				delete pSCM[ns]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang];
+				pSCM[ns]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang] = 0;
+				}
+			}//nSeqCount
+		//delete pSCM[ns]->m_pstSCM->pClientConnection[nClients];
+		} 	// clients loop
+		}	// Server Loop ns
+
+	for ( i = 0; i < MAX_SERVERS; i++)	//only scm[0] is a PAP
+		{	// loop i
+		for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
+			{	// loop j
+			if (pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j])
+				{
+				EnterCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j]);
+				while (pSCM[i]->m_pstSCM->pSendPktList[j]->GetCount())
+					{
+					pV = pSCM[i]->m_pstSCM->pSendPktList[j]->RemoveHead();
+					delete pV;
+					}
+				LeaveCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j]);
+				delete pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j];
+				}
+
+			if (pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j])
+				{
+				EnterCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j]);
+				while (pSCM[i]->m_pstSCM->pRcvPktList[j]->GetCount())
+					{
+					pV = pSCM[i]->m_pstSCM->pRcvPktList[j]->RemoveHead();
+					delete pV;
+					}
+				LeaveCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j]);
+				delete pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j];
+				}
+			}	// loop j
+		//delete pSCM[i]; not made with new
+		}	// for ( i = 0; i < 1; i++)
+
+
+	}
 
 // Next 4 registry operations copied from TscanDlg.cpp
 /***********
@@ -1173,7 +1269,7 @@ WHILE_TARGET:
 		}		// the jeh do nothing main loop
 
 	// ASSUMINMG WE GOT HERE WITH THE DEBUGGER BY FORCING A CALL TO Shutdown()
-	ShutDown();
+	ShutDownEasy();
 		
 	WSACleanup();  //  Free resources allocated by WSAStartup()	
 
@@ -1355,6 +1451,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 	for ( i = 0; i < gnMaxServers; i++)
 		{
 
+		j = sizeof(CServerConnectionManagement);	// sizeof() = 12
 		if (pSCM[i])	continue;	// instance already exists
 
 		switch (i)
@@ -1403,7 +1500,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 						{
 						for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
 							{
-							pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nClients][nSeqCount][nChnlPerBang] = 
+							pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang] = 
 								new CvChannel(nClients, nSeqCount, nChnlPerBang);
 							}
 						}

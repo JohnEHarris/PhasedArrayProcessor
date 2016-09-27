@@ -381,7 +381,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 		pOutputPacket->wLoc, pOutputPacket->wAngle, pOutputPacket->instNumber, pOutputPacket->wStatus);
 	SaveFakeData(s);
 	// Get Nc Nx info for 1st channel  -- for debug from output file
-	pChannel = m_pSCC->pvChannel[m_pSCC->m_nMyThreadIndex][0][0];
+	pChannel = m_pSCC->pvChannel[0][0];
 	nNcId		= pChannel->bGetNcId();
 	nNcOd		= pChannel->bGetNcOd();
 	nModId		= pChannel->bGetMId();
@@ -407,7 +407,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 
 	for ( i = 0; i < 32; i++)
 		{
-		pChannel = m_pSCC->pvChannel[m_pSCC->m_nMyThreadIndex][0][i];
+		pChannel = m_pSCC->pvChannel[0][i];
 		s.Format(_T("\r\n[%3d] "), i);
 		k = pR[i].bFlaw[0] = pChannel->bGetIdGateMax();
 		t.Format(_T("%3d  "),k); s += t;
@@ -490,7 +490,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 			for ( i = 0; i < nSeqQty; i++)
 				{
 				k = j*nSeqQty;	// k points to beginning of a frame of data
-				pChannel = m_pSCC->pvChannel[m_nThreadIndex][0][i];
+				pChannel = m_pSCC->pvChannel[0][i];
 				if ( NULL == pChannel)
 					continue;
 				// Get flaw Nc qualified Max values for this channel
@@ -532,7 +532,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 				m_nFrameCount = 0;
 				for ( i = 0; i < nSeqQty; i++)
 					{
-					m_pSCC->pvChannel[m_nThreadIndex][0][i]->ResetGatesAndWalls();	// replace [0] with [j]
+					m_pSCC->pvChannel[0][i]->ResetGatesAndWalls();	// replace [0] with [j]
 					}
 				}
 

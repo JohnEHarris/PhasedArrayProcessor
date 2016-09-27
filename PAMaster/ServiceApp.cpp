@@ -811,9 +811,9 @@ SERVERS_CLIENT_LOOP:
 			{
 			pSCM[i]->ServerShutDown(i);
 			//Sleep(200);
-			delete pSCM[i];
+			//delete pSCM[i]; <- DONE IN destructor of ServiceApp
 			}
-		pSCM[i] = NULL;
+		//pSCM[i] = NULL;
 		//Sleep(10);
 		}
 
@@ -1434,7 +1434,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 		TRACE(s);
 	}
 
-// undo the initialization
+// undo the initialization NEVER CALLED
 int CServiceApp :: KillServerConnectionManagement(int nServer)
 	{
 	int nError, nResult;

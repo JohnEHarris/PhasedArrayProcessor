@@ -91,6 +91,7 @@ class CServiceApp : public CWinApp, public CNTService
 public:
 	CServiceApp();
 	virtual ~CServiceApp();
+	void ShutDownEasy(void);
 	CTestThread *m_pTestThread;
 	//CTuboIni *m_pTuboIni;
 	int m_nShutDownCount;

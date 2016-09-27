@@ -384,6 +384,11 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 				s += _T(" servers client socket failed to shut down\n");
 				TRACE(s);
 				}
+			if (pscc->pSocket->m_pElapseTimer)
+				{
+				delete pscc->pSocket->m_pElapseTimer;
+				pscc->pSocket->m_pElapseTimer = 0;
+				}
 			}
 
 		pscc->bConnected = (BYTE) eNotConnected;

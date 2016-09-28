@@ -370,7 +370,15 @@ void CServerSocket::OnAccept(int nErrorCode)
 		m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
 		}
 
-	else	ASSERT(0);	// got a break here from real instrument 2016-09-08
+	else
+		{
+		ASSERT(0);	// got a break here from real instrument 2016-09-08
+		Asocket.Close();
+		CAsyncSocket::OnAccept(nErrorCode);
+		s.Format("Refused connection: no ClientConnection or no ServerSocketOwnerThread Error = %d\n",
+			nErrorCode);
+		return;
+		}
 
 
 	// create a new thread IN SUSPENDED STATE ....and turn off auto delete. Must explicitly delete thread to run destructor.
@@ -699,24 +707,16 @@ void CServerSocket::OnClose(int nErrorCode)
 		{
 		if (m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex]->pServerSocketOwnerThread)
 			{
+			// Have race with instrument for linked lists when executing this code
+			// ServiceApp is attempting to empty the Received list while ServerSocketOwnerThread in ExitInstance
+			// is executing m_pSCC->bConnected = (BYTE) eNotConnected; -- after having deleted the contents of the lists
+			// while the App was still working on them
+			// while (stSCM[i].pClientConnection[j]->cpRcvPktList->GetCount())
+			// First order of business for ServerSocketOwner will be to lock both list until done. 2016-09-28 jeh
 			m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex];
 			CServerSocketOwnerThread * pThread = m_pSCC->pServerSocketOwnerThread;
 			// wParam = m_nMyThreadIndex , (LPARAM)m_pSCC
 			pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET, (WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
-
-#if 0
-			while ( (i++ < 100) && (m_pSCM->m_pstSCM->nComThreadExited[m_nMyThreadIndex] == 0))
-				Sleep(10);
-
-			if (i == 10)
-				{
-				//s.Format(_T("CServerSocket::OnClose timed out waiting to destroy the Owner Thread\n "));
-				//theApp.SaveDebugLog(s);
-				//TRACE(s);
-				TRACE("CServerSocket::OnClose timed out waiting to destroy the Owner Thread\n ");
-				}
-#endif
-			
 			}
 		}
 	//else TRACE1("CServerSocket::OnClose(%d) failed to kill ServerSocketOwnerThread Error =%d\n", nErrorCode);

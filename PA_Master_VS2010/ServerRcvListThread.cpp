@@ -97,8 +97,6 @@ CServerRcvListThread::~CServerRcvListThread()
 	int nId = AfxGetThread()->m_nThreadID;
 	s.Format(_T("~CServerRcvListThread[%d][%d] = 0x%08x, Id=0x%04x has run\n"), m_nMyServer, m_nThreadIndex, this, nId);
 	TRACE(s);
-//	if (NULL == m_pSCC)			return;
-//	m_pSCC->pServerRcvListThread = NULL;
 	}
 
 // We have to over-ride the parents InitInstance since this thread is created by the parent in InitInstance()
@@ -157,23 +155,6 @@ int CServerRcvListThread::ExitInstance()
 	// delete the client connection associated with this  thread see 
 	// pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
 	// may need to get rid of ServerSocketOwnerThread elements also
-#if 0
-	if ( m_pSCC)
-		{
-		for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
-			{
-			if (m_pSCC->pvChannel[0][i])
-				{
-				delete m_pSCC->pvChannel[0][i];
-				m_pSCC->pvChannel[0][i] = NULL;
-				}
-			}	// for loop
-		// release storage and critical sections
-		// socket object belongs to ServerSockerOwnerThread so must have it to kill the linked lists
-		
-		}
-#endif
-
 
 #endif
 	s.Format(_T("CServerRcvListThread, Srv[%d]Instrument[%d] has exited\n"),m_nMyServer, m_nThreadIndex);

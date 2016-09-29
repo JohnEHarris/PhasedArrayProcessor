@@ -94,6 +94,7 @@ public:
 	void *pWholePacket;				// -- not created with 'new'
 	CHwTimer *m_pElapseTimer;
 	int m_nElapseTime;
+	int m_nOnAcceptClientIndex;		// cheating to let OnAccept pass info to OnClose
 	};
 
 #endif

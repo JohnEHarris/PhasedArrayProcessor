@@ -1077,6 +1077,8 @@ WHILE_TARGET:
 // JEH code for infinite while loop in Run()
 //	while (1)
 	void *pv;
+	ST_SERVERS_CLIENT_CONNECTION *pcc;
+
 	while( ::WaitForSingleObject(m_hStop, 10) != WAIT_OBJECT_0 )
 		{	// the jeh do nothing main loop
 		Sleep(50);
@@ -1085,27 +1087,7 @@ WHILE_TARGET:
 //		void *pv;
 		// attempt to make a connection attempted when the server was busy/non responsive
 
-#if 1
-		k = 1;	// debug  prevent accessing pClientConnection until configured
-		//while (k)
-			{
-			Sleep(1000);
-			i = 0;
-			for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
-				{
-				if (stSCM[i].pClientConnection[j] > 0)
-					{
-					if ( (stSCM[i].pClientConnection[j]->pSocket)	) // && (stSCM[i].nComThreadExited[J] == 0))
-						{
-						// Tell ReceiverList thread to flush the received data
-						// WPARAM = j
-						CWinThread * pThread = stSCM[i].pClientConnection[j]->pServerRcvListThread;
-						//if (pThread)
-						//	pThread->PostThreadMessage(WM_USER_FLUSH_LINKED_LISTS, j, 0);
-						}
-					}
-				}
-			}
+
 #if 1
 
 		for ( i = 0; i < MAX_SERVERS; i++)
@@ -1119,59 +1101,49 @@ WHILE_TARGET:
 				// Remove critical sections and instead send thread messages to ServerSocketOwners to flush their data
 				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 					{
-					k = (int) stSCM[i].pClientConnection[j];	// race condition of completing connection in debug
-					if ( k == 0)
+					pcc =  stSCM[i].pClientConnection[j];	// race condition of completing connection in debug
+					k = (int) pcc;	// just for debugging
+					if ( pcc == 0)
 						{ 
 						// no client connection
-						//ReleaseInstrumentListAccess(j);
 						continue;
 						}
 					if (stSCM[i].pSCM->m_pstSCM[i].nComThreadExited[j] == 1)
 						{ 
 						// no client connection
-						// ReleaseInstrumentListAccess(j);
 						continue;
 						}
 
-					if(k > 0)	// break for debug
+					if(pcc)	
 						{	// empty the linked lists
-						k = (int) stSCM[i].pClientConnection[j]->pSocket;	//debug
-						if ( (stSCM[i].pClientConnection[j]->pSocket)	) // && (stSCM[i].nComThreadExited[J] == 0))
+						// remove dependencies on pSocket being non-NULL
+						// Delete packets from instruments
+						EnterCriticalSection(pcc->cpCSRcvPkt);
+						while (pcc->cpRcvPktList->GetCount())
 							{
-							// Tell ReceiverList thread to flush the received data
-							CWinThread * pThread = stSCM[i].pClientConnection[j]->pServerRcvListThread;
-							if (pThread)
-								pThread->PostThreadMessage(WM_USER_FLUSH_LINKED_LISTS, j, 0);
-							Sleep(10);
-#if 1
-							stSCM[i].pClientConnection[j]->pSocket->LockRcvPktList();
-							while (stSCM[i].pClientConnection[j]->cpRcvPktList->GetCount())
-								{
-								pv = stSCM[i].pClientConnection[j]->cpRcvPktList->RemoveHead();
-								// normally would send data to PAG here???
-								delete pv;
-								}
-							stSCM[i].pClientConnection[j]->pSocket->UnLockRcvPktList();
-							// data to be sent
-							stSCM[i].pClientConnection[j]->pSocket->LockSendPktList();
-							while (stSCM[i].pClientConnection[j]->cpSendPktList->GetCount())
-								{
-								pv = stSCM[i].pClientConnection[j]->cpSendPktList->RemoveHead();
-								// Normally would send commands to Instrument here
-								delete pv;
-								}
-							stSCM[i].pClientConnection[j]->pSocket->UnLockSendPktList();
-#endif
+							pv = pcc->cpRcvPktList->RemoveHead();
+							// normally would send data to PAG here???
+							delete pv;
 							}
-
+						LeaveCriticalSection(pcc->cpCSRcvPkt);
+							
+						// delete data to be sent to instruments
+						EnterCriticalSection(pcc->cpCSSendPkt);
+						while (pcc->cpSendPktList->GetCount())
+							{
+							pv = pcc->cpSendPktList->RemoveHead();
+							// normally would send data to PAG here???
+							delete pv;
+							}
+						LeaveCriticalSection(pcc->cpCSSendPkt);	
 						}	// empty the linked lists
+
 					//ReleaseInstrumentListAccess(j);
 					Sleep(50);
 
 					}	// j loop
-				}
-			}
-#endif
+				}	// if (stSCM[i].pSCM)
+			}	// for ( i = 0; i < MAX_SERVERS; i++)
 #endif
 		}		// the jeh do nothing main loop
 
@@ -1397,6 +1369,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 					pSCM[i]->m_pstSCM->pClientConnection[j]->cpCSRcvPkt		= pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j];
 					pSCM[i]->m_pstSCM->pClientConnection[j]->cpSendPktList	= pSCM[i]->m_pstSCM->pSendPktList[j];
 					pSCM[i]->m_pstSCM->pClientConnection[j]->cpRcvPktList	= pSCM[i]->m_pstSCM->pRcvPktList[j];
+					pSCM[i]->m_pstSCM->pClientConnection[j]->bConnected		= 0;
 
 					}	// for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 

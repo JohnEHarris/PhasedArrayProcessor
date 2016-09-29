@@ -86,6 +86,7 @@ void CServerSocket::Init(void)
 	int nId = AfxGetThread()->m_nThreadID;
 	CString s;
 	s.Format(_T("CServerSocket::Init() invoked by thread ID = 0x%04x\n"), nId);
+	m_nOnAcceptClientIndex = -1;
 	TRACE(s);
 	}
 
@@ -148,7 +149,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		}
 
 	// If in shut down, refuse to accept a client
-	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)
+	if (m_pSCM->m_pstSCM->nSeverShutDownFlag) 
 		{
 		TRACE("Server ShutDown Flag is true, aborting OnAccept\n");
 		CAsyncSocket dummy;
@@ -273,6 +274,19 @@ void CServerSocket::OnAccept(int nErrorCode)
 		return;
 		}
 
+	// Stop crash when instrument power cycles
+	m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];
+	if (m_pSCC->bConnected )	// already has some level of being connected
+		{
+		Asocket.Close();
+		CAsyncSocket::OnAccept(nErrorCode);
+		s.Format(_T("Fatal error - Already connected, nClientPortIndex = %d, Error Code = %d\n"),
+			nClientPortIndex,nErrorCode);
+		TRACE(s);
+		return;
+		}
+
+
 
 	// May be redundant to set these in Asocket since same as the listening socket
 	sockerr = Asocket.SetSockOpt(SO_REUSEADDR, &bufBOOL, sizeof(int), SOL_SOCKET);
@@ -312,6 +326,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		// deleting pClientConnection[] will delete m_pSCC. But setting pClientConnection[] = 0
 		// will not automaticallyset m_pSCC to 0
 		m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];
+		m_nOnAcceptClientIndex = -1;	// cheat, but not too much
 		//m_pSCC->pSocket = 0;		// hold off idle loop in ServiceApp. When not zero clear to run
 		// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
 		nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, nClientPortIndex);
@@ -337,6 +352,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 	else 	if	(m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] && 
 				(m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread))
 		{
+		m_nOnAcceptClientIndex = nClientPortIndex;
+		// a little cheating here to get info to OnClose for this situation
 		OnClose(nErrorCode); // OnClose kills ServerSocketOwnerTherad but the base Async OnClose does not
 		TRACE("CServerSocketOwnerThread ALREADY exists... kill it\n");
 #if 0
@@ -659,7 +676,7 @@ void CServerSocket::OnClose(int nErrorCode)
 	// kill off our pClientConnection before we leave
 	// KillpClientConnectionStruct();
 	int i = 0;
-	//CString s;
+	CString s;
 
 #if 1
 
@@ -696,11 +713,17 @@ void CServerSocket::OnClose(int nErrorCode)
 	// Maximum of 8 instrument at 2016-09-16
 	if ( (m_nMyThreadIndex < 0) || (m_nMyThreadIndex > 7) )
 		{
-		//s.Format(_T("CServerSocket::OnClose(%d) hopelessly lost due to out of range m_nMyThreadIndex\n"), nErrorCode);
-		//theApp.SaveDebugLog(s);
-		//TRACE(s);
-		TRACE1(("CServerSocket::OnClose(%d) hopelessly lost due to out of range m_nMyThreadIndex\n"), nErrorCode);
-		return;
+		m_nMyThreadIndex = m_nOnAcceptClientIndex;
+		if ((m_nMyThreadIndex < 0) || (m_nMyThreadIndex > 7) )
+			{
+			//s.Format(_T("CServerSocket::OnClose(%d) hopelessly lost due to out of range m_nMyThreadIndex\n"), nErrorCode);
+			//theApp.SaveDebugLog(s);
+			//TRACE(s);
+			TRACE1(("CServerSocket::OnClose(%d) hopelessly lost due to out of range m_nMyThreadIndex\n"), nErrorCode);
+			return;
+			}
+		s.Format(_T("The m_nOnAcceptClientIndex = %d cheat may have worked??\n"), m_nMyThreadIndex);
+		TRACE(s);
 		}
 
 	if (m_pSCM->m_pstSCM->pClientConnection[m_nMyThreadIndex])
@@ -717,6 +740,8 @@ void CServerSocket::OnClose(int nErrorCode)
 			CServerSocketOwnerThread * pThread = m_pSCC->pServerSocketOwnerThread;
 			// wParam = m_nMyThreadIndex , (LPARAM)m_pSCC
 			pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET, (WORD)m_nMyThreadIndex, (LPARAM)m_pSCC);
+			Sleep(20);
+
 			}
 		}
 	//else TRACE1("CServerSocket::OnClose(%d) failed to kill ServerSocketOwnerThread Error =%d\n", nErrorCode);

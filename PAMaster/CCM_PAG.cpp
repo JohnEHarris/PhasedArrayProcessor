@@ -263,7 +263,7 @@ void CCCM_PAG::SetChannelInfo(PAM_INST_CHNL_INFO *pPamInstChnlInfo)
 		for ( i = 0; i < nChnlTypes; i++)
 			{
 			// [inst][seq][chnl]
-			pChannel = pSCC->pvChannel[0][0][k]; // one of up to 32 channels typically
+			pChannel = pSCC->pvChannel[0][k]; // one of up to 32 channels typically
 			pNcNx = &pPamInstChnlInfo->stNcNx[i]; // one of up to nChnlTypes
 			pChannel->FifoInit(0, pNcNx->bNcID,pNcNx->bTholdID, pNcNx->bModID); 
 			pChannel->FifoInit(1, pNcNx->bNcOD,pNcNx->bTholdOD, pNcNx->bModOD); 

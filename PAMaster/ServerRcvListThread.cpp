@@ -97,8 +97,6 @@ CServerRcvListThread::~CServerRcvListThread()
 	int nId = AfxGetThread()->m_nThreadID;
 	s.Format(_T("~CServerRcvListThread[%d][%d] = 0x%08x, Id=0x%04x has run\n"), m_nMyServer, m_nThreadIndex, this, nId);
 	TRACE(s);
-//	if (NULL == m_pSCC)			return;
-//	m_pSCC->pServerRcvListThread = NULL;
 	}
 
 // We have to over-ride the parents InitInstance since this thread is created by the parent in InitInstance()
@@ -157,23 +155,6 @@ int CServerRcvListThread::ExitInstance()
 	// delete the client connection associated with this  thread see 
 	// pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
 	// may need to get rid of ServerSocketOwnerThread elements also
-#if 0
-	if ( m_pSCC)
-		{
-		for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
-			{
-			if (m_pSCC->pvChannel[0][i])
-				{
-				delete m_pSCC->pvChannel[0][i];
-				m_pSCC->pvChannel[0][i] = NULL;
-				}
-			}	// for loop
-		// release storage and critical sections
-		// socket object belongs to ServerSockerOwnerThread so must have it to kill the linked lists
-		
-		}
-#endif
-
 
 #endif
 	s.Format(_T("CServerRcvListThread, Srv[%d]Instrument[%d] has exited\n"),m_nMyServer, m_nThreadIndex);
@@ -381,7 +362,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 		pOutputPacket->wLoc, pOutputPacket->wAngle, pOutputPacket->instNumber, pOutputPacket->wStatus);
 	SaveFakeData(s);
 	// Get Nc Nx info for 1st channel  -- for debug from output file
-	pChannel = m_pSCC->pvChannel[m_pSCC->m_nMyThreadIndex][0][0];
+	pChannel = m_pSCC->pvChannel[0][0];
 	nNcId		= pChannel->bGetNcId();
 	nNcOd		= pChannel->bGetNcOd();
 	nModId		= pChannel->bGetMId();
@@ -407,7 +388,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 
 	for ( i = 0; i < 32; i++)
 		{
-		pChannel = m_pSCC->pvChannel[m_pSCC->m_nMyThreadIndex][0][i];
+		pChannel = m_pSCC->pvChannel[0][i];
 		s.Format(_T("\r\n[%3d] "), i);
 		k = pR[i].bFlaw[0] = pChannel->bGetIdGateMax();
 		t.Format(_T("%3d  "),k); s += t;
@@ -490,7 +471,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 			for ( i = 0; i < nSeqQty; i++)
 				{
 				k = j*nSeqQty;	// k points to beginning of a frame of data
-				pChannel = m_pSCC->pvChannel[m_nThreadIndex][0][i];
+				pChannel = m_pSCC->pvChannel[0][i];
 				if ( NULL == pChannel)
 					continue;
 				// Get flaw Nc qualified Max values for this channel
@@ -532,7 +513,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 				m_nFrameCount = 0;
 				for ( i = 0; i < nSeqQty; i++)
 					{
-					m_pSCC->pvChannel[m_nThreadIndex][0][i]->ResetGatesAndWalls();	// replace [0] with [j]
+					m_pSCC->pvChannel[0][i]->ResetGatesAndWalls();	// replace [0] with [j]
 					}
 				}
 

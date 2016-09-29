@@ -215,36 +215,75 @@ CServiceApp::CServiceApp()
 CServiceApp::~CServiceApp()
 	{
 	int i = 1;	// FOR DEBUG, lock in loop before stop event
-	int j;
+	
+	ShutDownEasy();	// allows to be called from ServicApp for testing
+
+	ShutDown(); // first place when closing dos window
+
+
+	if( m_hStop )
+		::SetEvent(m_hStop);
+	
+	Sleep(6000);	// long enough to break out of Run infinite loop.. leave in for Yanming code
+
+	ReportStatus(SERVICE_STOP_PENDING, 11000);
+
+}
+
+// jeh 2016-09-27 called by destructor of ServiceApp of from program for debugging
+// Could start by setting global Shutdown flag true
+void CServiceApp::ShutDownEasy(void)
+	{
+	int i = 1;	// FOR DEBUG, lock in loop before stop event
+	int j,k;
+	int ns;		// server index
 	void *pV;
+	CString s;
+	int nClients, nSeqCount, nChnlPerBang;
+	ST_SERVERS_CLIENT_CONNECTION *pSCC;
 
-
-	if (m_nFakeDataExists)
-		m_FakeData.Close();
+	if (m_nFakeDataExists)	// gets here 1st when command window closes
+		{	m_FakeData.Close();	m_nFakeDataExists = 0;	}
 
 	if (m_nDebugLogExists)
-		m_DebugLog.Close();
+		{	m_DebugLog.Close();	m_nDebugLogExists = 0;	}
 
 	if (pCSSaveDebug)	// critical section access to debug log file
-		delete pCSSaveDebug;
+		{	delete pCSSaveDebug;	pCSSaveDebug = 0;	}
 	
-	int nClients, nSeqCount, nChnlPerBang;
+	for ( ns = 0; ns < MAX_SERVERS; ns++)
+		{	// Server Loop ns
+		if (NULL == pSCM[ns])	continue;
+		if (NULL == pSCM[ns]->m_pstSCM)	continue;
+
+		// This is really case 0 of servers
 	for ( nClients = 0; nClients < MAX_CLIENTS_PER_SERVER; nClients++)
 		{	// clients loop
+		if (NULL == pSCM[ns]->m_pstSCM->pClientConnection[nClients])	continue;
+		pSCC = pSCM[ns]->m_pstSCM->pClientConnection[nClients];
+		CServerSocketOwnerThread * pThread = pSCC->pServerSocketOwnerThread;
+		if (pThread) 
+			pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET, (WORD)nClients, (LPARAM) pSCC);
+
 		for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
-			{
+			{ //nSeqCount
 			for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
 				{
-				delete pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nClients][nSeqCount][nChnlPerBang];
+				if (NULL == pSCM[ns]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang]) break;
+				delete pSCM[ns]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang];
+				pSCM[ns]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang] = 0;
 				}
-			}
-		delete pSCM[i]->m_pstSCM->pClientConnection[nClients];
+			}//nSeqCount
+		//delete pSCM[ns]->m_pstSCM->pClientConnection[nClients];
 		} 	// clients loop
+		}	// Server Loop ns
 
-	for ( i = 0; i < 1; i++)	//only scm[0] is a PAP
-		{
-		for ( j = 0; J < MAX_CLIENTS_PER_SERVER; j++)
-			{
+	/********* Change loop variables *******************************/
+
+	for ( i = 0; i < MAX_SERVERS; i++)	//only scm[0] is a PAP
+		{	// loop i
+		for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
+			{	// loop j
 			if (pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j])
 				{
 				EnterCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j]);
@@ -268,23 +307,23 @@ CServiceApp::~CServiceApp()
 				LeaveCriticalSection(pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j]);
 				delete pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j];
 				}
-			}
+			for ( k = 0; k < 20; k++)
+				{
+				if (pSCM[i]->m_pstSCM->nComThreadExited[j]) break;
+				Sleep(10);
+				}
+			if ( k >= 20)
+				{
+				s.Format(_T("Server[%d].ClientConnection[%d] failed to shut down\n"), i,j);
+				TRACE(s);
+				}
+			}	// loop j
 		//delete pSCM[i]; not made with new
+
 		}	// for ( i = 0; i < 1; i++)
 
-	
-	ShutDown(); // first place when closing dos window
 
-
-	if( m_hStop )
-		::SetEvent(m_hStop);
-	
-	Sleep(6000);	// long enough to break out of Run infinite loop.. leave in for Yanming code
-
-	ReportStatus(SERVICE_STOP_PENDING, 11000);
-
-}
-
+	}
 
 // Next 4 registry operations copied from TscanDlg.cpp
 /***********
@@ -648,6 +687,9 @@ void CServiceApp::SaveDebugLog(CString& s)
 		TRACE(_T("Debug log file not available\n"));
 		return;
 		}
+
+	if ( m_DebugLog.m_hFile > 0)
+		{
 	EnterCriticalSection(pCSSaveDebug);
 	try
 		{
@@ -660,6 +702,7 @@ void CServiceApp::SaveDebugLog(CString& s)
 		e->Delete();
 		}
 	LeaveCriticalSection(pCSSaveDebug);
+		}
 #endif
 	}
 	
@@ -731,60 +774,15 @@ void CServiceApp::ShutDown(void)
 			s.Format(_T("Failed to shutdown Server%d Error = %d\n"), j, nError);
 			}
 
-		while (k)
-			{
-			Sleep(20);	// let debugger follow to ServerListenThread			
-			}
-#if 0
-		if (pstSCM->pCSDebugIn)
-			{
-			EnterCriticalSection(pstSCM->pCSDebugIn );
-			while (	pstSCM->pInDebugMessageList->GetCount() > 0)
-				{
-				pV = (void *) pstSCM->pInDebugMessageList->RemoveHead();
-				delete pV;
-				}
-			LeaveCriticalSection(pstSCM->pCSDebugIn );
-			delete pstSCM->pInDebugMessageList;
-			}
-
-			
-
-		if (pstSCM->pCSDebugOut)
-			{
-			EnterCriticalSection(pstSCM->pCSDebugOut );
-			while (	pstSCM->pOutDebugMessageList->GetCount() > 0)
-				{
-				pV = (void *) pstSCM->pOutDebugMessageList->RemoveHead();
-				delete pV;
-				}
-			LeaveCriticalSection(pstSCM->pCSDebugOut );
-			delete pstSCM->pOutDebugMessageList;
-			}
-
-#endif
+//		while (k)
+//			{
+//			Sleep(20);	// let debugger follow to ServerListenThread			
+//			}
 
 SERVERS_CLIENT_LOOP:
 		;
 
-#if 0
-		for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
-			{
-			if ( NULL == stSCM[j].pClientConnection[i]) continue;
-			for ( k = 0; k < MAX_CHNLS_PER_MAIN_BANG; k++)
-				{
-				if (stSCM[j].pClientConnection[i]->pvChannel[k] )
-					{
-					delete stSCM[j].pClientConnection[i]->pvChannel[k];
-					stSCM[j].pClientConnection[i]->pvChannel[k] = 0;
-					}
-				}
 
-			// delete linked lists and critical sections and Async socket
-			delete stSCM[j].pClientConnection[i];
-			
-			}
-#endif
 		}		// loop MAX_SERVERS
 #endif
 
@@ -804,16 +802,16 @@ SERVERS_CLIENT_LOOP:
 	Sleep(10);
 	m_pTestThread = 0;
 
-#if 1
+#if 0
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{
 		if (pSCM[i])
 			{
 			pSCM[i]->ServerShutDown(i);
 			//Sleep(200);
-			//delete pSCM[i]; <- DONE IN destructor of ServiceApp
+			delete pSCM[i];
 			}
-		//pSCM[i] = NULL;
+		pSCM[i] = NULL;
 		//Sleep(10);
 		}
 
@@ -831,43 +829,47 @@ SERVERS_CLIENT_LOOP:
 			{
 			if (pCCM_PAG->m_pstCCM->pSocket)
 				{	// socket exists
-				if (pCCM_PAG->m_pstCCM->pSocket->ShutDown(2))
+				if (pCCM_PAG->m_pstCCM->pSocket->m_hSocket > 0) 
 					{
-					s = _T("Shutdown of client socket was successful\n");
-					TRACE(s);					
-					nError = GetLastError();
-					}
-				else
-					{
-					nError = GetLastError();	// WSAENOTCONN                      10057L
-					s .Format(_T("Shutdown of client socket[%d] failed\n"), nError);
-					TRACE(s);
-					}
+					if (pCCM_PAG->m_pstCCM->pSocket->ShutDown(2))
+						{
+						s = _T("Shutdown of client socket was successful\n");
+						TRACE(s);					
+						nError = GetLastError();
+						}
+					else
+						{
+						nError = GetLastError();	// WSAENOTCONN                      10057L
+						s .Format(_T("Shutdown of client socket[%d] failed\n"), nError);
+						TRACE(s);
+						}
+					}	
 				}	// socket exists
 
-			pCCM_PAG->KillReceiveThread();
-			i = 0;
-			while (( i < 50 ) && ( pCCM_PAG->m_pstCCM->pReceiveThread != 0) )
-				{	Sleep (10);		i++;	}
-			if ( i >= 50) TRACE("CCM - Failed to kill Receive Thread");
-			
-			pCCM_PAG->KillSendThread();
-			i = 0;
-			while (( i < 50 ) && ( pCCM_PAG->m_pstCCM->pSendThread != 0) )
-				{	Sleep (10);		i++;	}
-			if ( i >= 50) TRACE("CCM - Failed to kill Send Thread");
+			}
 
-			pCCM_PAG->KillCmdProcessThread();
-			i = 0;
+		pCCM_PAG->KillReceiveThread();
+		i = 0;
+		while (( i < 50 ) && ( pCCM_PAG->m_pstCCM->pReceiveThread != 0) )
+			{	Sleep (10);		i++;	}
+		if ( i >= 50) TRACE("CCM - Failed to kill Receive Thread");
+			
+		pCCM_PAG->KillSendThread();
+		i = 0;
+		while (( i < 50 ) && ( pCCM_PAG->m_pstCCM->pSendThread != 0) )
+			{	Sleep (10);		i++;	}
+		if ( i >= 50) TRACE("CCM - Failed to kill Send Thread");
+
+		pCCM_PAG->KillCmdProcessThread();
+		i = 0;
 			while (( i < 50 ) && ( pCCM_PAG->m_pstCCM->pCmdProcessThread != 0) )
 				{	Sleep (10);		i++;	}
 			if ( i >= 50) TRACE("CCM - Failed to kill CmdProcess Thread");
 
-			}
-		// delete send thread and critical sections, delete receive thread and critical sections
-		delete pCCM_PAG;	
-		pCCM_PAG = NULL;		
 		}
+	// delete send thread and critical sections, delete receive thread and critical sections
+	delete pCCM_PAG;	
+	pCCM_PAG = NULL;		
 
 	for ( i = 0; i < MAX_CLIENTS; i++)
 		{
@@ -879,7 +881,7 @@ SERVERS_CLIENT_LOOP:
 	s = _T("Here we are trying to close CCM stuff");
 	TRACE(s);
 
-#if 1
+#if 0
 	ReportStatus(SERVICE_STOP_PENDING, 11000);
 	if( m_hStop )
 		::SetEvent(m_hStop);
@@ -1074,6 +1076,9 @@ WHILE_TARGET:
 #ifndef YANMING_CODE
 // JEH code for infinite while loop in Run()
 //	while (1)
+	void *pv;
+	ST_SERVERS_CLIENT_CONNECTION *pcc;
+
 	while( ::WaitForSingleObject(m_hStop, 10) != WAIT_OBJECT_0 )
 		{	// the jeh do nothing main loop
 		Sleep(50);
@@ -1082,28 +1087,8 @@ WHILE_TARGET:
 //		void *pv;
 		// attempt to make a connection attempted when the server was busy/non responsive
 
+
 #if 1
-		k = 1;	// debug  prevent accessing pClientConnection until configured
-		while (k)
-			{
-			Sleep(1000);
-			i = 0;
-			for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
-				{
-				if (stSCM[i].pClientConnection[j] > 0)
-					{
-					if ( (stSCM[i].pClientConnection[j]->pSocket)	) // && (stSCM[i].nComThreadExited[J] == 0))
-						{
-						// Tell ReceiverList thread to flush the received data
-						// WPARAM = j
-						CWinThread * pThread = stSCM[i].pClientConnection[j]->pServerRcvListThread;
-						//if (pThread)
-						//	pThread->PostThreadMessage(WM_USER_FLUSH_LINKED_LISTS, j, 0);
-						}
-					}
-				}
-			}
-#if 0
 
 		for ( i = 0; i < MAX_SERVERS; i++)
 			{
@@ -1116,67 +1101,57 @@ WHILE_TARGET:
 				// Remove critical sections and instead send thread messages to ServerSocketOwners to flush their data
 				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 					{
-					k = (int) stSCM[i].pClientConnection[j];	// race condition of completing connection in debug
-					if ( k == 0)
+					pcc =  stSCM[i].pClientConnection[j];	// race condition of completing connection in debug
+					k = (int) pcc;	// just for debugging
+					if ( pcc == 0)
 						{ 
 						// no client connection
-						//ReleaseInstrumentListAccess(j);
 						continue;
 						}
 					if (stSCM[i].pSCM->m_pstSCM[i].nComThreadExited[j] == 1)
 						{ 
 						// no client connection
-						// ReleaseInstrumentListAccess(j);
 						continue;
 						}
 
-					if(k > 0)	// break for debug
+					if(pcc)	
 						{	// empty the linked lists
-						k = (int) stSCM[i].pClientConnection[j]->pSocket;	//debug
-						if ( (stSCM[i].pClientConnection[j]->pSocket)	) // && (stSCM[i].nComThreadExited[J] == 0))
+						// remove dependencies on pSocket being non-NULL
+						// Delete packets from instruments
+						EnterCriticalSection(pcc->cpCSRcvPkt);
+						while (pcc->cpRcvPktList->GetCount())
 							{
-							// Tell ReceiverList thread to flush the received data
-							CWinThread * pThread = stSCM[i].pClientConnection[j]->pServerRcvListThread;
-							if (pThread)
-								pThread->PostThreadMessage(WM_USER_FLUSH_LINKED_LISTS, j, 0);
-							Sleep(10);
-#if 0
-							stSCM[i].pClientConnection[j]->pSocket->LockRcvPktList();
-							while (stSCM[i].pClientConnection[j]->pRcvPktList->GetCount())
-								{
-								pv = stSCM[i].pClientConnection[j]->pRcvPktList->RemoveHead();
-								// normally would send data to PAG here???
-								delete pv;
-								}
-							stSCM[i].pClientConnection[j]->pSocket->UnLockRcvPktList();
-							// data to be sent
-							stSCM[i].pClientConnection[j]->pSocket->LockSendPktList();
-							while (stSCM[i].pClientConnection[j]->pSendPktList->GetCount())
-								{
-								pv = stSCM[i].pClientConnection[j]->pSendPktList->RemoveHead();
-								// Normally would send commands to Instrument here
-								delete pv;
-								}
-							stSCM[i].pClientConnection[j]->pSocket->UnLockSendPktList();
-#endif
+							pv = pcc->cpRcvPktList->RemoveHead();
+							// normally would send data to PAG here???
+							delete pv;
 							}
-
+						LeaveCriticalSection(pcc->cpCSRcvPkt);
+							
+						// delete data to be sent to instruments
+						EnterCriticalSection(pcc->cpCSSendPkt);
+						while (pcc->cpSendPktList->GetCount())
+							{
+							pv = pcc->cpSendPktList->RemoveHead();
+							// normally would send data to PAG here???
+							delete pv;
+							}
+						LeaveCriticalSection(pcc->cpCSSendPkt);	
 						}	// empty the linked lists
+
 					//ReleaseInstrumentListAccess(j);
 					Sleep(50);
 
 					}	// j loop
-				}
-			}
-#endif
+				}	// if (stSCM[i].pSCM)
+			}	// for ( i = 0; i < MAX_SERVERS; i++)
 #endif
 		}		// the jeh do nothing main loop
 
 	// ASSUMINMG WE GOT HERE WITH THE DEBUGGER BY FORCING A CALL TO Shutdown()
-	ShutDown();
+	ShutDownEasy();
 		
 	WSACleanup();  //  Free resources allocated by WSAStartup()	
-
+	ShutDown();
 	Sleep(500);
 	ReportStatus(SERVICE_STOPPED);
 #if 0
@@ -1254,7 +1229,7 @@ void CServiceApp :: Stop()
 	// Note that the service might Sleep(), so we have to tell
 	// the SCM
 	//	"The next operation may take me up to 11 seconds. Please be patient."
-	//ReportStatus(SERVICE_STOP_PENDING, 11000);
+	ReportStatus(SERVICE_STOP_PENDING, 11000);
 	if( m_hStop )
 		::SetEvent(m_hStop);
 	Sleep(10);
@@ -1355,6 +1330,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 	for ( i = 0; i < gnMaxServers; i++)
 		{
 
+		j = sizeof(CServerConnectionManagement);	// sizeof() = 12
 		if (pSCM[i])	continue;	// instance already exists
 
 		switch (i)
@@ -1393,6 +1369,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 					pSCM[i]->m_pstSCM->pClientConnection[j]->cpCSRcvPkt		= pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j];
 					pSCM[i]->m_pstSCM->pClientConnection[j]->cpSendPktList	= pSCM[i]->m_pstSCM->pSendPktList[j];
 					pSCM[i]->m_pstSCM->pClientConnection[j]->cpRcvPktList	= pSCM[i]->m_pstSCM->pRcvPktList[j];
+					pSCM[i]->m_pstSCM->pClientConnection[j]->bConnected		= 0;
 
 					}	// for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 
@@ -1403,7 +1380,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 						{
 						for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
 							{
-							pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nClients][nSeqCount][nChnlPerBang] = 
+							pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang] = 
 								new CvChannel(nClients, nSeqCount, nChnlPerBang);
 							}
 						}
@@ -1434,9 +1411,10 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 		TRACE(s);
 	}
 
-// undo the initialization NEVER CALLED
+// undo the initialization -- never called
 int CServiceApp :: KillServerConnectionManagement(int nServer)
 	{
+#if 0
 	int nError, nResult;
 	int i;
 	CString s;
@@ -1464,6 +1442,8 @@ int CServiceApp :: KillServerConnectionManagement(int nServer)
 			}
 		}
 	return nResult;
+#endif
+	return 0;
 	}
 
 

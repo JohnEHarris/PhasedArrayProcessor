@@ -348,7 +348,7 @@ NO_SERVERLISTENTHREAD:
 		}	// for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 
 	return 0;
-	}	// ServerShutDown(int nMyServer)
+	}
 
 // Debug listener shutdown problem
 void CServerConnectionManagement::DoNothing(void)

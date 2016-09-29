@@ -261,7 +261,8 @@ int CServerSocketOwnerThread::ExitInstance()
 					m_pSCC->pSocket->m_pElapseTimer = 0;
 					}
 
-				// now destroy the socket which was created in ServerSocket::OnAccept
+				// now destroy the CServerSocket class which was created in ServerSocket::OnAccept
+				// This class has a 64k fifo included in its member variables which is why it is such a big class
 				delete m_pSCC->pSocket;
 				}		// check socket handle range
 			m_pSCC->pSocket = 0;

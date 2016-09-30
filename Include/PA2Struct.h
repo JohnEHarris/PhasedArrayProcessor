@@ -221,10 +221,10 @@ typedef struct
 	WORD wMsgID;		// 1
 	WORD wMsgSeqCnt;
 	BYTE bPamNumber;	// Which PAM
-	BYTE bInstNumber;	// Which Instrument connected to the above APAM
+	BYTE bInstNumber;	// Which Instrument connected to the above PAM
+	BYTE bSeqQty;	// how many times a given chnl type repeats in each instrument -- was bChnlRepeats 2016-09-30
 	BYTE bChnlTypes;	// how many different chnl types for each instrument
-	BYTE bChnlRepeats;	// how many times a given chnl type repeats in each instrument
-	BYTE bMaxVChnlPerInst;	// We assume 32 total vChnl per instrument max
+	BYTE bMaxVChnlPerInst;	// bSeqQty*bChnlTypes
 	BYTE bSpare[3];
 	ST_NC_NX stNcNx[32];	// Max unique sets of Nc Nx data per instrument. Size = 16*32 =512
 	} PAM_INST_CHNL_INFO; // SIZEOF() = 524 replaces CHANNEL_CMD_1

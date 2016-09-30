@@ -241,7 +241,7 @@ void CCCM_PAG::SetChannelInfo(PAM_INST_CHNL_INFO *pPamInstChnlInfo)
 	nPam		= pPamInstChnlInfo->bPamNumber;
 	nInst		= pPamInstChnlInfo->bInstNumber;
 	nChnlTypes	= pPamInstChnlInfo->bChnlTypes;
-	nRepeat		= pPamInstChnlInfo->bChnlRepeats;
+	nRepeat		= pPamInstChnlInfo->bSeqQty;
 	ST_NC_NX *pNcNx = pPamInstChnlInfo->stNcNx;
 	// PAM is always the [0] server to the instruments. A second PAM will be in another computer
 	// but will in the software structure still be server[0] in the second computer.
@@ -262,7 +262,7 @@ void CCCM_PAG::SetChannelInfo(PAM_INST_CHNL_INFO *pPamInstChnlInfo)
 		{
 		for ( i = 0; i < nChnlTypes; i++)
 			{
-			// [inst][seq][chnl]
+			// [seq][chnl]
 			pChannel = pSCC->pvChannel[0][k]; // one of up to 32 channels typically
 			pNcNx = &pPamInstChnlInfo->stNcNx[i]; // one of up to nChnlTypes
 			pChannel->FifoInit(0, pNcNx->bNcID,pNcNx->bTholdID, pNcNx->bModID); 

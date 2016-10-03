@@ -65,12 +65,12 @@ public:
 	// Max and min allowed wall are expressed in hardware counts
 	void WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut);
 
-	WORD wGetWallSum(void)	{ return NxFifo.uSum;	}
-	WORD wGetBadWallCount(void)	{ return NxFifo.wBadWall;	}
+	WORD wGetWallSum(void)			{ return NxFifo.uSum;	}
+	WORD wGetBadWallCount(void)		{ return NxFifo.wBadWall;	}
 	void ClearBadWallCount(void)	{ NxFifo.wBadWall = 0;	}
-	WORD wGetGoodConsecutiveCount(void)	{ return NxFifo.wGoodWall;	};
-	WORD wGetMaxWall(void);		// resets max wall to 0 in order to find a new max
-	WORD wGetMinWall(void);		// resets min wall to 0xffff in order to find new min
+	WORD wGetGoodWallCount(void)	{ return NxFifo.wGoodWall;	};
+	WORD wGetMaxWall(void);		// returns largest sum seen over 16 Ascans
+	WORD wGetMinWall(void);		// returns smallest sum seen over 16 Ascans
 	void ResetGatesAndWalls(void);	// Initialize max and min for next sampling period
 	float GetWallScaler(WORD Nx);	// return the wall scaler/Nx for deriving Max/Min wall from integer sums
 	void SetNx(BYTE bNx);
@@ -86,6 +86,9 @@ public:
 	WORD m_wTOFMaxSum, m_wTOFMinSum;	// Max, min wall sum reading over data sampling period
 	WORD m_wTOFMax, m_wTOFMin;
 	float m_fWallScaler;				// hardware count to 0.001 inch divided by Nx approx 1.452/Nx
+	BYTE m_bInputCnt;						// count the number of inputs. Generate max/min sums on every 16th input count
+										// then reset max min sum values
+	WORD m_wDropOutValue;
 	};	
 
 #endif

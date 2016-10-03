@@ -35,9 +35,10 @@ CvChannel::CvChannel(int nInst, int nSeq, int nChnl)
 	FifoInit(0,1,20,1);	// id
 	FifoInit(1,1,20,1);	// od
 	
+	m_bInputCnt = 0; 
 	// Wall processing routines
 	// Nx, Max allowed, Min, DropOut cnt
-	WFifoInit(1,1377,27,4);
+	WFifoInit(1,1377,27,4);	// nominal 1,1377,27,4
 	if ( nInst > 3) return;
 	if (nChnl > 39) return;
 	// counter of how many time constructor runs for each chnl/instrument
@@ -54,11 +55,13 @@ CvChannel::~CvChannel()
 // Sampling states (peak holds and averaging) are reset
 // The data within the FIFO's is not disturbed so max/min reading
 // can migrate across 16 frame boundaries
+// Since every channel does wall and flaw processing, only call this from wall input routine.
 void CvChannel::ResetGatesAndWalls(void)
 	{
 	m_GateID = m_GateOD = 0;	// byte values - range 0-127
 	m_wTOFMaxSum = 0;
 	m_wTOFMinSum = 0xffff;
+	NxFifo.wBadWall = NxFifo.wGoodWall = 0;
 	}
 
 /*********************** Flaw processing routines ***********************/
@@ -153,6 +156,7 @@ void CvChannel::WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut)
 	m_wTOFMinSum = 0xffff;
 	NxFifo.wDropOut = wDropOut;
 	m_fWallScaler = GetWallScaler((WORD)bNx);
+	m_bInputCnt = 0;
 	}
 
 WORD CvChannel::InputWFifo(WORD wWall)
@@ -163,22 +167,35 @@ WORD CvChannel::InputWFifo(WORD wWall)
 
 	if (pFifo->bNx ==0) return 10;	// not considered a wall channel
 
+	// reset peak hold of wall and flaw on every 16 Ascan
+	m_bInputCnt &= 0xf;	// modulo 16 counter
+	if (m_bInputCnt++ == 0) ResetGatesAndWalls();
+
+	// prevent out of range values from entering the fifo
 	if ( (wWall < pFifo->wWallMin) || (wWall > pFifo->wWallMax))
 		{
 		pFifo->wBadWall++;
-		pFifo->wGoodWall = 0;
-		return pFifo->wBadWall;
+		return m_wDropOutValue = 19;
 		}
 
-	pFifo->wGoodWall++;
+	pFifo->wGoodWall++;	// good wall = bad wall should == 16
+
+
 	i = pFifo->bInPt++;			// slot position in the fifo and increment to next
 	if ( i >= pFifo->bNx)
 		 i = 0;
 	if ( pFifo->bInPt >= pFifo->bNx)	
 		 pFifo->bInPt = 0;
-	wOldWall = pFifo->wCell[i];		// get oldest wall reading
-	pFifo->wCell[i] = wWall;		// replace oldest element with this one
+	wOldWall = pFifo->wCell[i];			// get oldest wall reading
+	pFifo->wCell[i] = wWall;			// replace oldest element with this one
 	pFifo->uSum += (wWall - wOldWall);	// change in sum is new - old
+	if (m_wTOFMaxSum < pFifo->uSum)
+		m_wTOFMaxSum = pFifo->uSum;
+	if (m_bInputCnt >= pFifo->bNx)		// Must wait for Nx samples before calculating min
+		{
+		if (m_wTOFMinSum > pFifo->uSum)
+			m_wTOFMinSum = pFifo->uSum;
+		}
 	return pFifo->uSum;
 	}
 

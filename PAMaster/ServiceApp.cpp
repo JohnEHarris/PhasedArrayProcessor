@@ -269,9 +269,9 @@ void CServiceApp::ShutDownEasy(void)
 			{ //nSeqCount
 			for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
 				{
-				if (NULL == pSCM[ns]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang]) break;
-				delete pSCM[ns]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang];
-				pSCM[ns]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang] = 0;
+				if (NULL == (pSCM[ns]->m_pstSCM->pvChannel[nClients][nSeqCount][nChnlPerBang]) ) continue;
+				delete pSCM[ns]->m_pstSCM->pvChannel[nClients][nSeqCount][nChnlPerBang];
+				pSCM[ns]->m_pstSCM->pvChannel[nClients][nSeqCount][nChnlPerBang] = 0;
 				}
 			}//nSeqCount
 		//delete pSCM[ns]->m_pstSCM->pClientConnection[nClients];
@@ -1337,8 +1337,12 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 			{
 		case 0:		// There are multiple client instrument looking for the PAM server. This is the only server
 					// for instruments in this application.
+			int nClients, nSeqCount, nChnlPerBang;
+
 			pSCM[i] = new CServerConnectionManagement(i);
-			j = sizeof(CServerConnectionManagement);		// general for sizeof class
+			j = sizeof(CServerConnectionManagement);		// general for sizeof class = 12
+			j = sizeof (ST_SERVER_CONNECTION_MANAGEMENT);	// 1300
+			j = sizeof (ST_SERVERS_CLIENT_CONNECTION);		// 244
 			if (pSCM[i])
 				{
 				s = gServerArray[i].Ip;			// a global static table of ip addresses define by an ini file
@@ -1352,6 +1356,15 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
 				// the connection socket's OnReceive will populate the input data linked list and post messages
 				// to the main dlg/application to process the data.
+				//
+				// The following is done to create ClientConnection objects at the top ServiceAppp level.
+				// List, critical sections and virtual Channel Nc Nx object are created at this level so that
+				// (1) they can be deleted at the ServicApp level if it shuts down and
+				// (2) so that they do not go out of existence because a lower level thread deleted one of these
+				// resources.
+				// Some things at the ClientConnection level are created/destroyed, but the critical sections and lists
+				// must not be destroyed while other threads are using them
+				//
 				for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 					{
 					pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j]	= new CRITICAL_SECTION();
@@ -1371,20 +1384,28 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 					pSCM[i]->m_pstSCM->pClientConnection[j]->cpRcvPktList	= pSCM[i]->m_pstSCM->pRcvPktList[j];
 					pSCM[i]->m_pstSCM->pClientConnection[j]->bConnected		= 0;
 
+					for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
+						{
+						for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
+							{
+							pSCM[i]->m_pstSCM->pvChannel[j][nSeqCount][nChnlPerBang] = 
+								new CvChannel(nClients, nSeqCount, nChnlPerBang);
+							}	// MAX_CHNLS_PER_MAIN_BANG
+						}	// MAX_SEQ_COUNT
+
 					}	// for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 
-				int nClients, nSeqCount, nChnlPerBang;
 				for ( nClients = 0; nClients < MAX_CLIENTS_PER_SERVER; nClients++)
 					{
 					for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
 						{
 						for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
 							{
-							pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang] = 
-								new CvChannel(nClients, nSeqCount, nChnlPerBang);
-							}
-						}
-					}
+							pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang] =
+								pSCM[i]->m_pstSCM->pvChannel[nClients][nSeqCount][nChnlPerBang];
+							}	// MAX_CHNLS_PER_MAIN_BANG
+						}	// MAX_SEQ_COUNT
+					}	// MAX_CLIENTS_PER_SERVER
 
 
 
@@ -1400,13 +1421,14 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 					pSCM[i] = NULL;
 					}
 				}	// if (pSCM[i])
+			// This is all case 0 so i == 0
 			break;
 
 		default:
 			pSCM[i] = NULL;
 			break;
 			}
-		}
+		}	 // for ( i = 0; i < gnMaxServers; i++)
 		s.Format(_T("\nSERVER CONNECTION MANAGEMENT has completed for MAX_SERVERS = %d \n"), MAX_SERVERS);
 		TRACE(s);
 	}

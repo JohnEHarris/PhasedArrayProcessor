@@ -488,6 +488,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 				if ( pChannel->wGetBadWallCount() >= pChannel->GetDropCount())
 					pChannel->m_wTOFMaxSum = wTOFSum = 1;	// coupling loss
 
+#if 0
 				l = pChannel->wGetGoodConsecutiveCount();
 				m = pChannel->bGetNx();
 				// else
@@ -498,6 +499,8 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 					// drop out count
 					pChannel->ClearBadWallCount();
 					}
+#endif
+
 				if (pChannel->m_wTOFMaxSum < wTOFSum)	pChannel->m_wTOFMaxSum = wTOFSum;
 				if (pChannel->m_wTOFMinSum > wTOFSum)	pChannel->m_wTOFMinSum = wTOFSum;
 				}

@@ -153,9 +153,9 @@ typedef struct
 
 #if 0
 typedef struct {
-    unsigned short wTof4;
+    unsigned short wTof4Max;
     unsigned short wTof3;
-    unsigned short wTof2;
+    unsigned short wTof4MaxMin;
     unsigned char bAmp3;
     unsigned char bAmp2;
 } SRawData; //8

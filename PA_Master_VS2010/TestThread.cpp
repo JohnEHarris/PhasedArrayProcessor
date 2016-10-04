@@ -110,7 +110,8 @@ void CTestThread::TestNc(void)
 	int i;
 	CvChannel *pCh = new CvChannel(0,0,0);	// inst 0, chnl 0
 	// Threshold = 30, Nc = 2, mod = 3
-	BYTE bAmp[] = {28,32,40,16,25,28,2,5,33,12,5,35,37,41,6,0,0,0,0,0};
+	BYTE bAmp[] = {28,32,40,16,25,28,2,5,33,12,5,35,37,41,6,0,
+		0,0,0,0};
 	BYTE bOut;
 	pCh->FifoInit(0,2,30,3);	// id, nc=2, thld=30, m=3
 	TRACE("Thld=30, Nc=2, Mod=3\n");
@@ -129,12 +130,20 @@ void CTestThread::TestNx(void)
 	int i;
 	CString s;
 	WORD wMax, wMin, wBadWall, wGoodWall;
-	CvChannel *pCh = new CvChannel(0,0,0);	// inst 0, chnl 0
+	CvChannel *pCh = new CvChannel(0,0,0);	// inst 0, seq 0, chnl 0
 	// Nx = 3, Max=1377, Min=110 , Drop=4
 	WORD Wall[] = {300,333,315,288,255,2200,000,324,326,366,400,000,000,298,320,322,
-				   100,100,100,100,000,000 ,300,321,333,400,374,300,288,243,220,189,199,212,333};
+				   100,100,100,100,000,000 ,300,321,333,400,374,300,288,243,220,189,
+				   199,212,333};
 	pCh->WFifoInit(3,1377,110,4);
-	TRACE("Nx = 3, Max=1377, Min=110 , Drop=4\n");
+		
+	BYTE bAmp[] = {28,32,40,16,25,28,02,05,33,12,05,35,37,41,06,00,
+				   38,44,28,37,29,33,16,33,10,20,10,30,29,32,31, 2, 
+				   5,12, 3,11};
+	BYTE bOut;
+	pCh->FifoInit(0,2,30,3);	// id, nc=2, thld=30, m=3
+	TRACE("Nx = 3, Max=1377, Min=110 , Drop=4  ---   ");
+	TRACE("ID Nc = 2, Thld=30, M = 3 \n");
 	for ( i = 0; i < sizeof(Wall)/2; i++)
 		{
 		pCh->InputWFifo(Wall[i]);
@@ -144,8 +153,11 @@ void CTestThread::TestNx(void)
 		//	pCh->ClearBadWallCount();	// reset bad wall counter after several good walls. 
 		wBadWall = pCh->wGetBadWallCount();
 		wGoodWall = pCh->wGetGoodWallCount();
-		s.Format("[%2d] In=%3d, Max=%4d, Min=%4d, Good=%d, Bad=%d\n", i, Wall[i],wMax, wMin, wGoodWall,wBadWall);
+		s.Format("[%2d] In=%3d, Max=%4d, Min=%5d, Good=%2d, Bad=%2d -- ", i, Wall[i],wMax, wMin, wGoodWall,wBadWall);
 		TRACE(s);
+		bOut = pCh->InputFifo(0,bAmp[i]);
+		TRACE2("In=%2d, Out=%2d\n",bAmp[i], bOut);
+
 		}
 
 	delete pCh;

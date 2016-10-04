@@ -51,11 +51,11 @@ typedef struct
 
 typedef struct 
 	{
-    WORD wTof4;     //time of flight of Gate 4
-    WORD wGateFlag; //Gate flag bits, BIT0=Gate 1
-    WORD wTof2;		//time of flight of Gate 2 .. not used 
-    BYTE bAmp3;		//Gate 3 amplitude (0-255)
     BYTE bAmp2;		//Gate 2 amplitude (0-255)
+    BYTE bAmp3;		//Gate 3 amplitude (0-255)
+    WORD wTof4Min;     //time of flight of Gate 4
+    WORD wTof4Max;     //time of flight of Gate 4
+    //WORD wGateFlag; //Gate flag bits, BIT0=Gate 1
 	} SRawData;		//8 bytes
 
 typedef struct 
@@ -88,6 +88,7 @@ typedef struct
 	BYTE bMaxTemp;	// Max value in FIFO w/o regard to Nc
 	BYTE bMod;		// active depth of FIFO.
 	BYTE bAboveThld;	// how many FIFO element above thold
+	BYTE bMaxFinal;	// A peak hold of the peak hold bMax until ResetGatesAndWalls
 	} Nc_FIFO;
 
 // Each wall reading goes into a wall averaging FIFO. The memory size of the FIFO is selected to be longer 

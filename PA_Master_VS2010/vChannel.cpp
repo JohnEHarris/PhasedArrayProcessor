@@ -50,9 +50,9 @@ CvChannel::~CvChannel()
 	};
 
 
-// Data is collected over a number of frames (typically 16)
+// Data is collected over a number of frames or main-bangs (typically 16)
 // After data is collected and reported out to the Mill Console system,
-// Sampling states (peak holds and averaging) are reset
+// Sampling states (peak holds) are reset
 // The data within the FIFO's is not disturbed so max/min reading
 // can migrate across 16 frame boundaries
 // Since every channel does wall and flaw processing, only call this from wall input routine.
@@ -62,6 +62,7 @@ void CvChannel::ResetGatesAndWalls(void)
 	m_wTOFMaxSum = 0;
 	m_wTOFMinSum = 0xffff;
 	NxFifo.wBadWall = NxFifo.wGoodWall = 0;
+	NcFifo[0].bMaxFinal = NcFifo[1].bMaxFinal = 0;
 	}
 
 /*********************** Flaw processing routines ***********************/
@@ -96,7 +97,7 @@ BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 	if (pFifo->bInPt >= pFifo->bMod)	pFifo->bInPt = 0;	// fifo is only bMod deep
 
 	pFifo->bAboveThld = 0;	// get ready to count fifo entries above or equal to thold
-	pFifo->bMaxTemp   = 0;
+	pFifo->bMaxTemp   = 0;	
 
 	for ( i = 0; i < pFifo->bMod; i++)
 		{
@@ -115,9 +116,11 @@ BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 	else if ((pFifo->bThold - pFifo->bMaxTemp) < 3)	pFifo->bMax = (pFifo->bThold*4)/5;
 
 	// max is more than 2 % below thold
-	else										pFifo->bMax = pFifo->bMaxTemp;
+	else	pFifo->bMax = pFifo->bMaxTemp;
 
-	return pFifo->bMax;
+	if (pFifo->bMaxFinal < pFifo->bMax)
+		pFifo->bMaxFinal = pFifo->bMax;
+	return pFifo->bMaxFinal;
 	};
 
 void CvChannel::FifoClear(BYTE bIdOd)	// zero fifo entries/cells, keep other parameters
@@ -159,6 +162,10 @@ void CvChannel::WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut)
 	m_bInputCnt = 0;
 	}
 
+// Wall data is summed over Nx samples. The sums are peak held for max wall and min held
+// for minimum wall. After 16 accepted inputs, the Max and Min are reset.
+// Min wall sum is only invalid for the first 16 inputs after the process starts. After that min
+// wall sum is valid until the FIFO is reinitialized.
 WORD CvChannel::InputWFifo(WORD wWall)
 	{
 	int i;
@@ -191,7 +198,9 @@ WORD CvChannel::InputWFifo(WORD wWall)
 	pFifo->uSum += (wWall - wOldWall);	// change in sum is new - old
 	if (m_wTOFMaxSum < pFifo->uSum)
 		m_wTOFMaxSum = pFifo->uSum;
-	if (m_bInputCnt >= pFifo->bNx)		// Must wait for Nx samples before calculating min
+	// Omitting the next line only results in a false min wall on the first sampling interval of 16
+	// Thereafter the min wall sum is correct.
+//	if (m_bInputCnt >= pFifo->bNx)
 		{
 		if (m_wTOFMinSum > pFifo->uSum)
 			m_wTOFMinSum = pFifo->uSum;

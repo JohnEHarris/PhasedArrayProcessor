@@ -295,9 +295,9 @@ void CServerRcvListThread::MakeFakeData(SRawDataPacket *pData)
 			t.Format(_T("%3d  "),(k)); s += t;
 			k = pData->RawData[i+offset].bAmp3 = 10 + (GetRand()/2);	// 10-60 amplitude
 			t.Format(_T("%3d  "),(k)); s += t;
-			k = pData->RawData[i+offset].wTof2 = 200 + GetRand();
+			k = pData->RawData[i+offset].wTof4Min = 200 + GetRand();
 			t.Format(_T("%4d    "),(k)); s += t;
-			k = pData->RawData[i+offset].wTof4 = 300 + GetRand();
+			k = pData->RawData[i+offset].wTof4Max = 300 + GetRand();
 			t.Format(_T("%4d    "),(k)); s += t;
 			if ( i < 1) SaveFakeData(s);
 			}
@@ -464,6 +464,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 			m_pSCC->InstrumentStatus.wPeriod	= pRaw->DataHead.wPeriod;
 			}
 
+
 		if (m_pElapseTimer)
 			m_pElapseTimer->Start();
 		for ( j = 0; j < nFrameQtyPerPacket; j++)	// Assumes the data packet contains whole frames
@@ -472,6 +473,8 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 				{
 				k = j*nSeqQty;	// k points to beginning of a frame of data
 				pChannel = m_pSCC->pvChannel[0][i];
+				pChannel->m_GateID = pChannel->m_GateOD = 0;
+
 				if ( NULL == pChannel)
 					continue;
 				// Get flaw Nc qualified Max values for this channel
@@ -481,12 +484,13 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 				if (pChannel->m_GateOD < bGateTmp)		pChannel->m_GateOD = bGateTmp;
 
 				// Get Max and min tof for this channel
-				wTOFSum = pChannel->InputWFifo(pRaw->RawData[i+k].wTof4);
+				wTOFSum = pChannel->InputWFifo(pRaw->RawData[i+k].wTof4Max);
 				// CHECK for bad wall above drop out count
 				l = pChannel->wGetBadWallCount(); // debugging
 				m = pChannel->GetDropCount();
 				if ( pChannel->wGetBadWallCount() >= pChannel->GetDropCount())
 					pChannel->m_wTOFMaxSum = wTOFSum = 1;	// coupling loss
+				// pChannel->m_wTOFMaxSum and pChannel->m_wTOFMinSum computed in InputWFifo routine
 
 #if 0
 				l = pChannel->wGetGoodConsecutiveCount();
@@ -499,10 +503,8 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 					// drop out count
 					pChannel->ClearBadWallCount();
 					}
-#endif
 
-				if (pChannel->m_wTOFMaxSum < wTOFSum)	pChannel->m_wTOFMaxSum = wTOFSum;
-				if (pChannel->m_wTOFMinSum > wTOFSum)	pChannel->m_wTOFMinSum = wTOFSum;
+#endif
 				}
 			k = i;
 
@@ -516,7 +518,8 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 				m_nFrameCount = 0;
 				for ( i = 0; i < nSeqQty; i++)
 					{
-					m_pSCC->pvChannel[0][i]->ResetGatesAndWalls();	// replace [0] with [j]
+					//m_pSCC->pvChannel[0][i]->ResetGatesAndWalls();	// replace [0] with [j]
+					// peak holding and resetting take plane in CvChannel routines.
 					}
 				}
 

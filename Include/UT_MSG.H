@@ -245,7 +245,7 @@ typedef struct
 #define	SET_NCNX			1004
 #define SET_FLAW_TOL		1006
 #define	SET_SCOPE_SELECT	1007
-#define	SET_DROPOUT			1008
+//#define	SET_DROPOUT			1008
 #define SET_RAW_IPX_MODE	1009
 #define SET_NO_CLOCK		1011
 #define	SET_PIPE_NUM		1018

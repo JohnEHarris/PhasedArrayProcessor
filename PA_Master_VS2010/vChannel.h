@@ -79,16 +79,36 @@ public:
 	WORD GetDropCount(void)				{ return NxFifo.wDropOut;	  }
 	WORD wGetMaxWallLimit(void)			{ return NxFifo.wWallMax;	}
 	WORD wGetMinWallLimit(void)			{ return NxFifo.wWallMin;	}
+	WORD wGetBadInARow(void)			{ return m_wBadInARow;		}
+	BYTE bGetAscansInFifo(void)			{ return m_bInputCnt;		}
 
 	/*********************** Wall processing routines ***********************/
+	/*********************** Result FIFO routines ***********************/
+	// Not a fifo at 2016-10-05. May grow to be one
+	stPeakData PeakData;
+	void SetBadWall(BYTE badWall);
+	void SetDropOut(void)			{ PeakData.wStatus |= SET_DROPOUT;	}
+	void ClearDropOut(void)			{ PeakData.wStatus &= CLR_DROPOUT;	}
+	void SetOverRun(void)			{ PeakData.wStatus |= SET_OVERRUN;	}
+	void ClearOverRun(void)			{ PeakData.wStatus &= CLR_OVERRUN;	}	
+	void PeakDataClear(void);		// Once PAP copies data into Ethernet Packet, clear PeakData
+	// pOut is a slot in the ethernet packet to be sent
+	void CopyPeakData(stPeakData *pOut);
+	BYTE GetAscanCounter(void)		{ return m_bInputCnt;				}
+
+	
+	
+	/*********************** Result FIFO routines ***********************/
 
 	BYTE m_GateID, m_GateOD;			// Nc qualified max gate value over data sampling period (16 Frames)
 	WORD m_wTOFMaxSum, m_wTOFMinSum;	// Max, min wall sum reading over data sampling period
 	WORD m_wTOFMax, m_wTOFMin;
 	float m_fWallScaler;				// hardware count to 0.001 inch divided by Nx approx 1.452/Nx
-	BYTE m_bInputCnt;						// count the number of inputs. Generate max/min sums on every 16th input count
+	BYTE m_bInputCnt;					// count the number of inputs. Generate max/min sums on every 16th input count
 										// then reset max min sum values
 	WORD m_wDropOutValue;
+	WORD m_wBadInARow;					// consecutive bad wall reading. Carries over 16 sample boundaries. Cleared
+										// with one reading within upper/lower limits.
 	};	
 
 #endif

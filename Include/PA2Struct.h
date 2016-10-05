@@ -53,10 +53,33 @@ typedef struct
 	{
     BYTE bAmp2;		//Gate 2 amplitude (0-255)
     BYTE bAmp3;		//Gate 3 amplitude (0-255)
-    WORD wTof4Min;     //time of flight of Gate 4
-    WORD wTof4Max;     //time of flight of Gate 4
+    WORD wTof;     //time of flight of Gate 4
+    //WORD wTof4Max;     //time of flight of Gate 4
     //WORD wGateFlag; //Gate flag bits, BIT0=Gate 1
-	} SRawData;		//8 bytes
+	} SRawData;		//4 bytes
+
+
+// More than just a structure, this may wind up being a fifo in the CvChannel class
+// peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure
+#define SET_DROPOUT		 ( 1 << 5)
+#define CLR_DROPOUT		~( 1 << 5)
+#define SET_OVERRUN		 ( 1 << 6)
+#define CLR_OVERRUN		~( 1 << 6)
+#define SET_READ		 ( 1 << 15)		// PAP sets when read. If vChannel resets fifo's with this 
+// not set, it is overrun condition
+#define STATUS_CLEAR_MASK	~SET_OVERRUN
+
+typedef struct
+	{
+	BYTE bId2;		// Gate 2 peak held data 0-255
+	BYTE bOd3;		// Gate 3 peak held data 0-255
+	WORD wTofMin;	// gate 4 min
+	WORD wTofMax;	// gate 4 max
+	WORD wStatus;	// bits 0..4 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
+					// ie, PAP did not service PeakData fast enough
+	} stPeakData;	// sizeof = 8
+
+
 
 typedef struct 
 	{
@@ -152,8 +175,8 @@ typedef struct
 	WORD wPeriod;		// period of rotation in 0.2048 ms
 	UINT uMsgSeqCount;	// counter to uniquely identify each packet
 	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	RESULTS Results[239];	// Some "channels" at the end may be channel-type NONE
-	} IDATA_PACKET;	// sizeof = 1460 - the maximum TCPIP packet size
+	stPeakData Results[179];	// Some "channels" at the end may be channel-type NONE
+	} IDATA_PACKET;	// sizeof = 1454 - the maximum TCPIP packet size
 
 #if 0
 

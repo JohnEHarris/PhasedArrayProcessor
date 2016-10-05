@@ -295,9 +295,7 @@ void CServerRcvListThread::MakeFakeData(SRawDataPacket *pData)
 			t.Format(_T("%3d  "),(k)); s += t;
 			k = pData->RawData[i+offset].bAmp3 = 10 + (GetRand()/2);	// 10-60 amplitude
 			t.Format(_T("%3d  "),(k)); s += t;
-			k = pData->RawData[i+offset].wTof4Min = 200 + GetRand();
-			t.Format(_T("%4d    "),(k)); s += t;
-			k = pData->RawData[i+offset].wTof4Max = 300 + GetRand();
+			k = pData->RawData[i+offset].wTof = 300 + GetRand();
 			t.Format(_T("%4d    "),(k)); s += t;
 			if ( i < 1) SaveFakeData(s);
 			}
@@ -356,7 +354,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 	pOutputPacket->uMsgSeqCount = 50;
 	pOutputPacket->uSync		= 0x5CEBDAAD;
 
-	RESULTS *pR				= &pOutputPacket->Results[0];
+	stPeakData *pR				= &pOutputPacket->Results[0];
 
 	s.Format(_T("Loc=%3d Angle=%3d Inst=%2d Stat=%04x Sync=0x5CEBDAAD\r\n"),
 		pOutputPacket->wLoc, pOutputPacket->wAngle, pOutputPacket->instNumber, pOutputPacket->wStatus);
@@ -388,6 +386,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 
 	for ( i = 0; i < 32; i++)
 		{
+#if 0
 		pChannel = m_pSCC->pvChannel[0][i];
 		s.Format(_T("\r\n[%3d] "), i);
 		k = pR[i].bFlaw[0] = pChannel->bGetIdGateMax();
@@ -399,6 +398,7 @@ void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 		k =pR[i].wTOFsum[1] = pChannel->wGetMaxWall();
 		t.Format(_T("%4d    "),k); s += t;
 		if ( i < 4) SaveFakeData(s);
+#endif
 		}
 	// Put the newly created packet into the linked list for output
 	// For now send this message directly. In future, put into linked list
@@ -479,33 +479,17 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 					continue;
 				// Get flaw Nc qualified Max values for this channel
 				bGateTmp = pChannel->InputFifo(eId, pRaw->RawData[i+k].bAmp2);	// output of the Nc peak holder
-				if (pChannel->m_GateID < bGateTmp)		pChannel->m_GateID = bGateTmp;
 				bGateTmp = pChannel->InputFifo(eOd, pRaw->RawData[i+k].bAmp3);
-				if (pChannel->m_GateOD < bGateTmp)		pChannel->m_GateOD = bGateTmp;
 
 				// Get Max and min tof for this channel
-				wTOFSum = pChannel->InputWFifo(pRaw->RawData[i+k].wTof4Max);
-				// CHECK for bad wall above drop out count
-				l = pChannel->wGetBadWallCount(); // debugging
-				m = pChannel->GetDropCount();
-				if ( pChannel->wGetBadWallCount() >= pChannel->GetDropCount())
-					pChannel->m_wTOFMaxSum = wTOFSum = 1;	// coupling loss
-				// pChannel->m_wTOFMaxSum and pChannel->m_wTOFMinSum computed in InputWFifo routine
-
-#if 0
-				l = pChannel->wGetGoodConsecutiveCount();
-				m = pChannel->bGetNx();
-				// else
-				if(pChannel->wGetGoodConsecutiveCount() >= pChannel->bGetNx())
-					{
-					// self healing. When Nx or greater good wall readings, clear bad wall reading count
-					// this means we may never know how many bad walls we have as long as they don't exceed
-					// drop out count
-					pChannel->ClearBadWallCount();
+				wTOFSum = pChannel->InputWFifo(pRaw->RawData[i+k].wTof);
+				if (pChannel->bGetAscansInFifo() == 15)
+					{	// time to move peak data into ouput structure
 					}
 
-#endif
-				}
+
+				}	// ( i = 0; i < nSeqQty; i++)
+			
 			k = i;
 
 			m_nFrameCount++;

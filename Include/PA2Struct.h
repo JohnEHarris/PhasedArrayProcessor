@@ -25,6 +25,7 @@ enum IdOdTypes {eId, eOd};
 #define MAX_PAM_QTY			1
 #define MAX_PAM_INSTS_QTY	8
 #define NC_NX_CMD_ID		1
+#define ASCANS_TO_AVG		8
 
 /*****************	STRUCTURES	*********************/
 // A channel is a UT echo or reflection assigned a physical position in the transducer.
@@ -75,8 +76,9 @@ typedef struct
 	BYTE bOd3;		// Gate 3 peak held data 0-255
 	WORD wTofMin;	// gate 4 min
 	WORD wTofMax;	// gate 4 max
-	WORD wStatus;	// bits 0..4 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
+	BYTE bStatus;	// bits 0..4 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
 					// ie, PAP did not service PeakData fast enough
+	BYTE bChNum;	// which channel number in the specific sequence is this.
 	} stPeakData;	// sizeof = 8
 
 

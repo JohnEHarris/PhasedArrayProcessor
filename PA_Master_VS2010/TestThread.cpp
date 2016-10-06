@@ -128,11 +128,11 @@ void CTestThread::TestNc(void)
 
 void CTestThread::TestNx(void)
 	{
-	int i, j;
+	int i,j = ASCANS_TO_AVG;
 	CString s;
 	WORD wMax, wMin, wBadWall, wGoodWall;
 	stPeakData LocalPeakData;
-	CvChannel *pCh = new CvChannel(0,0,0);	// inst 0, seq 0, chnl 0
+	CvChannel *pCh = new CvChannel(0,0,2);	// inst 0, seq 0, chnl 2
 	// Nx = 3, Max=1377, Min=110 , Drop=4
 	WORD Wall[] = {300,333,315,288,255,2200,000,324,326,366,400,000,000,298,320,322,
 				   100,100,100,100,000,000 ,300,321,333,400,374,300,288,243,220,189,
@@ -159,13 +159,14 @@ void CTestThread::TestNx(void)
 		TRACE(s);
 		bOut = pCh->InputFifo(0,bAmp[i]);
 		TRACE2("In=%2d, Out=%2d\n",bAmp[i], bOut);
-		j = pCh->bGetAscansInFifo();
-		if ( j== 1)
+		//j = pCh->bGetAscansInFifo();
+		if ( pCh->AscanInputDone() )
 			{	// transfer peak held data into ethernet packet
 			pCh->CopyPeakData(&LocalPeakData);
-			TRACE("\nPeak Data after 16 Ascans\n");
-			s.Format("IdGate=%2d  MinWall = %4d   MaxWall = %4d  Status = 0x%4x\n\n", 
-						LocalPeakData.bId2, LocalPeakData.wTofMin,LocalPeakData.wTofMax, LocalPeakData.wStatus);
+			TRACE1("\nPeak Data after %d Ascans\n", j);
+			s.Format("Ch=%2d  IdGate=%2d  MinWall = %4d   MaxWall = %4d  Status = 0x%04x\n\n", 
+						LocalPeakData.bChNum, LocalPeakData.bId2, LocalPeakData.wTofMin,
+						LocalPeakData.wTofMax, LocalPeakData.bStatus);
 			TRACE(s);
 			}
 

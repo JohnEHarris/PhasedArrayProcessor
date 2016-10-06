@@ -44,6 +44,7 @@ CvChannel::CvChannel(int nInst, int nSeq, int nChnl)
 	// counter of how many time constructor runs for each chnl/instrument
 	uVchannelConstructor[nInst][nSeq][nChnl]++;
 	memset(&PeakData,0, sizeof (stPeakData));
+	PeakData.bChNum = nChnl;	// remember my channel number
 	};
 
 CvChannel::~CvChannel()
@@ -176,12 +177,12 @@ WORD CvChannel::InputWFifo(WORD wWall)
 
 	if (pFifo->bNx ==0) return 10;	// not considered a wall channel
 
-	// reset peak hold of wall and flaw on every 16 Ascan
-	m_bInputCnt &= 0xf;	// modulo 16 counter
+	// reset peak hold of wall and flaw on every 16 Ascan NOW (10/6/16) ASCANS_TO_AVG
+	m_bInputCnt %= ASCANS_TO_AVG;	// modulo 16 counter
 	// if CServerRcvListThread::ProcessInstrumentData() hasn't read data before now, it will be over run
 	if (m_bInputCnt++ == 0)
 		{
-		if ( (PeakData.wStatus & SET_READ) == 0)
+		if ( (PeakData.bStatus & SET_READ) == 0)
 			SetOverRun();
 		else ClearOverRun();
 		PeakData.bId2 = NcFifo[0].bMaxFinal;
@@ -262,9 +263,9 @@ void CvChannel::SetNx(BYTE bNx)
 void CvChannel::SetBadWall(BYTE badWall)
 	{
 	BYTE bOld;	// get bottom 5 bits of wStatus
-	bOld = PeakData.wStatus & 0x1f;
+	bOld = PeakData.bStatus & 0x1f;
 	if ((badWall > bOld) && (badWall < 0x1f))
-		PeakData.wStatus |= badWall;
+		PeakData.bStatus |= badWall;
 	}
 
 // Once ServerRcvListThread has read the data, clear the structure for the next 16 Ascans

@@ -291,6 +291,7 @@ void CServerRcvListThread::MakeFakeData(SRawDataPacket *pData)
 		for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
 			{
 			s.Format(_T("\r\n[%3d] "), i+offset);
+			// Input flaw gates before wall since the 16 Ascan reset is done by the wall code
 			k = pData->RawData[i+offset].bAmp2 = 5 + (GetRand()/2);	// 5-55 amplitude
 			t.Format(_T("%3d  "),(k)); s += t;
 			k = pData->RawData[i+offset].bAmp3 = 10 + (GetRand()/2);	// 10-60 amplitude
@@ -332,7 +333,7 @@ int CServerRcvListThread::GetSequenceModulo(SRawDataPacket *pData)
 // Fill the new packet with max/min data from each pChannel instance
 void CServerRcvListThread::BuildOutputPacket(SRawDataPacket *pRaw)
 	{
-	int i, k;
+	int i;
 	CString s,t;
 	CvChannel *pChannel;
 	int nNcId, nNcOd, nModId, nModOd, nThdlId, nThldOd, nNx, nMaxLimit, nMinLimit, nDrop; 
@@ -431,7 +432,6 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 	int nSeqQty;
 	SRawDataPacket *pRaw;
 	int i, j, nFrameQtyPerPacket;
-	int l,m;
 	int k;
 	BYTE bGateTmp;
 	WORD wTOFSum;

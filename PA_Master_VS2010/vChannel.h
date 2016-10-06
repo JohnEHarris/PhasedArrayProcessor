@@ -87,14 +87,15 @@ public:
 	// Not a fifo at 2016-10-05. May grow to be one
 	stPeakData PeakData;
 	void SetBadWall(BYTE badWall);
-	void SetDropOut(void)			{ PeakData.wStatus |= SET_DROPOUT;	}
-	void ClearDropOut(void)			{ PeakData.wStatus &= CLR_DROPOUT;	}
-	void SetOverRun(void)			{ PeakData.wStatus |= SET_OVERRUN;	}
-	void ClearOverRun(void)			{ PeakData.wStatus &= CLR_OVERRUN;	}	
+	void SetDropOut(void)			{ PeakData.bStatus |= SET_DROPOUT;	}
+	void ClearDropOut(void)			{ PeakData.bStatus &= CLR_DROPOUT;	}
+	void SetOverRun(void)			{ PeakData.bStatus |= SET_OVERRUN;	}
+	void ClearOverRun(void)			{ PeakData.bStatus &= CLR_OVERRUN;	}	
 	void PeakDataClear(void);		// Once PAP copies data into Ethernet Packet, clear PeakData
 	// pOut is a slot in the ethernet packet to be sent
 	void CopyPeakData(stPeakData *pOut);
-	BYTE GetAscanCounter(void)		{ return m_bInputCnt;				}
+	//BYTE GetAscanCounter(void)		{ return m_bInputCnt;				}
+	BYTE AscanInputDone(void)		{ return (m_bInputCnt == 1);		}	// 0 if not all 16 Ascans
 
 	
 	

@@ -14,9 +14,8 @@
 using namespace std;
 #include "NTService.h"
 #include "../Include/PA2Struct.h"
-#include "../include/cfg100.h"
 #include "../include/udp_msg.h"
-#include "../include/ut_msg.h"
+//#include "../include/ut_msg.h"
 //#include "../include/nios_msg.h"
 #include "afxmt.h"
 #include "HwTimer.h"

@@ -797,21 +797,20 @@ typedef struct
 	} calREC;
 
 
-// Assume no more than 8 chnl types per instrument
-// With 32 vChnls, this means every chnl type repeats at least 4 times.
-// If more than 8 chnl types change the dimesion on stNcNx[]
+// Clive decrees no virtual channel repeats until all sequences have run
+// thus if there are 40 virtual channels per sequence and 10 sequence steps
+// there are 400 separate channels. No vChannel repeats until the sequence 
+// starts over.
 typedef struct
 	{
 	WORD wMsgID;		// 1
 	WORD wMsgSeqCnt;
-	BYTE bPamNumber;	// Which PAM
+	BYTE bPapNumber;	// Which PAM
 	BYTE bInstNumber;	// Which Instrument connected to the above PAM
-	BYTE bSeqQty;	// how many times a given chnl type repeats in each instrument -- was bChnlRepeats 2016-09-30
-	BYTE bChnlTypes;	// how many different chnl types for each Sequence number
-	BYTE bMaxVChnlPerInst;	// bSeqQty*bChnlTypes
+	BYTE bSeqNumber;	// think of it as a multiplexer.
 	BYTE bSpare[3];
-	ST_NC_NX stNcNx[32];	// Max unique sets of Nc Nx data per instrument. Size = 16*32 =512
-	} PAM_INST_CHNL_INFO; // SIZEOF() = 524
+	ST_NC_NX stNcNx[MAX_CHNLS_PER_MAIN_BANG];
+	} PAM_INST_CHNL_INFO; // SIZEOF() = 1034
 	
 // a record for setting the phased array 2 Nc Nx dialog parameters
 // If there are 4 chnls types in an instrument and each type repeats 8 times, then there are 32 virtual channels
@@ -830,7 +829,7 @@ typedef struct
 	{
 	WORD wMsgID;		// 1
 	WORD wMsgSeqCnt;
-	BYTE bPamNumber;	// Which PAM
+	BYTE bPapNumber;	// Which PAM
 	BYTE bInstNumber;	// Which Instrument connected to the above APAM
 	BYTE bChnlTypes;	// how many different chnl types for each instrument
 	BYTE bChnlRepeats;	// how many times a given chnl type repeats in each instrument

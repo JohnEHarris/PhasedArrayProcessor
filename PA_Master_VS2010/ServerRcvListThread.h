@@ -5,8 +5,7 @@
 
 #ifdef THIS_IS_SERVICE_APP
 #include "ServiceApp.h"
-#include "../include/cfg100.h"
-//class CRunningAverage;
+#include "../include/pa2struct.h"
 class CInstState;
 extern  CInspState InspState;
 

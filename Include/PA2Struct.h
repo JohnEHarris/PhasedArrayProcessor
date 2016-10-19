@@ -27,6 +27,29 @@ enum IdOdTypes {eId, eOd};
 #define NC_NX_CMD_ID		1
 #define ASCANS_TO_AVG		8
 
+
+// edit this value if more client connections to servers are needed
+#define	MAX_SERVERS							1
+// Likely will have at least 2 server types. 1 for inspetion data and 1 for pulsers
+// Mixing pulsers in with gate boards will make it more difficult to put dimensions on things like virtual channels. 2016-10-19
+
+#define MAX_CLIENTS_PER_SERVER				8
+
+// An instrument client can have up to this many virtual channels for each UT firing or Main Bang
+// Each MAIN BANG is a "sequence" until the sequence number repeats
+#define MAX_CHNLS_PER_MAIN_BANG			64
+// Channels may be redefined on each main bang. The counter which counts main bangs is called the sequence counter
+// the maximum value the sequence counter can have is =
+#define MAX_SEQ_COUNT					4
+// The number of virtual channels is finite. Channels repeat after MAX_SEQ_COUNT number of main bangs.
+// On any given main bang (sequence count) there can only be a max number of channels define by 
+// MAX_CHNLS_PER_MAIN_BANG. The max the number of channels in a transducer array is [16][32] = 512
+
+
+#define INSTRUMENT_PACKET_SIZE				1456		//old 1040
+#define MASTER_PACKET_SIZE					1260
+
+
 /*****************	STRUCTURES	*********************/
 // A channel is a UT echo or reflection assigned a physical position in the transducer.
 // Since this is a multiplexed system, the same channel repeats eventually.
@@ -155,6 +178,7 @@ typedef struct
 /*
 2016-09-08 New definition of Idata Packet
 */
+#if 1
 typedef struct
 	{
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
@@ -180,8 +204,8 @@ typedef struct
 	stPeakData Results[179];	// Some "channels" at the end may be channel-type NONE
 	} IDATA_PACKET;	// sizeof = 1454 - the maximum TCPIP packet size
 
-#if 0
 
+#else
 typedef struct
 	{
 	BYTE bvChannelQty;	// How many channels in this packet.
@@ -246,7 +270,7 @@ typedef struct
 	{
 	WORD wMsgID;		// 1
 	WORD wMsgSeqCnt;
-	BYTE bPamNumber;	// Which PAM
+	BYTE bPapNumber;	// Which PAM
 	BYTE bInstNumber;	// Which Instrument connected to the above PAM
 	BYTE bSeqQty;	// how many times a given chnl type repeats in each instrument -- was bChnlRepeats 2016-09-30
 	BYTE bChnlTypes;	// how many different chnl types for each instrument

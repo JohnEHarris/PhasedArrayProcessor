@@ -27,11 +27,11 @@ Revised:	20-Jan-13
 
 //extern THE_APP_CLASS theApp;
 
-extern 	C_MSG_ALL_THOLD  g_AllTholds;
-extern 	C_MSG_NC_NX g_NcNx;
-extern I_MSG_RUN SendBuf;
-extern DWORD  g_nStation2JointNum;// = 0;
-extern I_MSG_RUN SendCalBuf;
+//extern 	C_MSG_ALL_THOLD  g_AllTholds;
+//extern 	C_MSG_NC_NX g_NcNx;
+//extern I_MSG_RUN SendBuf;
+//extern DWORD  g_nStation2JointNum;// = 0;
+//extern I_MSG_RUN SendCalBuf;
 
 
 
@@ -87,7 +87,7 @@ typedef struct
 	{
 	WORD wMsgID;		// 1
 	WORD wMsgSeqCnt;
-	BYTE bPamNumber;	// Which PAM
+	BYTE bPapNumber;	// Which PAM
 	BYTE bInstNumber;	// Which Instrument connected to the above APAM
 	BYTE bChnlTypes;	// how many different chnl types for each instrument
 	BYTE bChnlRepeats;	// how many times a given chnl type repeats in each instrument
@@ -238,10 +238,11 @@ void CCCM_PAG::SetChannelInfo(PAM_INST_CHNL_INFO *pPamInstChnlInfo)
 
 	ST_SERVER_CONNECTION_MANAGEMENT *pPAM_SCM = GetPAM_SCM();
 
-	nPam		= pPamInstChnlInfo->bPamNumber;
+	nPam		= pPamInstChnlInfo->bPapNumber;
 	nInst		= pPamInstChnlInfo->bInstNumber;
-	nChnlTypes	= pPamInstChnlInfo->bChnlTypes;
-	nRepeat		= pPamInstChnlInfo->bSeqQty;
+//	nChnlTypes	= pPamInstChnlInfo->bChnlTypes;
+	nChnlTypes = 1;  // fix this soon
+	nRepeat		= pPamInstChnlInfo->bSeqNumber;
 	ST_NC_NX *pNcNx = pPamInstChnlInfo->stNcNx;
 	// PAM is always the [0] server to the instruments. A second PAM will be in another computer
 	// but will in the software structure still be server[0] in the second computer.

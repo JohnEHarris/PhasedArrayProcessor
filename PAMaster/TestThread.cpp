@@ -133,19 +133,21 @@ void CTestThread::TestNx(void)
 	WORD wMax, wMin, wBadWall, wGoodWall;
 	stPeakData LocalPeakData;
 	CvChannel *pCh = new CvChannel(0,0,2);	// inst 0, seq 0, chnl 2
-	// Nx = 3, Max=1377, Min=110 , Drop=4
 	WORD Wall[] = {300,333,315,288,255,2200,000,324,326,366,400,000,000,298,320,322,
 				   100,100,100,100,000,000 ,300,321,333,400,374,300,288,243,220,189,
 				   199,212,333};
+	// Nx = 3, Max=1377, Min=110 , Drop=4
 	pCh->WFifoInit(3,1377,110,4);
 		
 	BYTE bAmp[] = {28,32,40,16,25,28,02,05,33,12,05,35,37,41,06,00,
 				   38,44,28,37,29,33,16,33,10,20,10,30,29,32,31, 2, 
 				   5,12, 3,11};
 	BYTE bOut;
-	pCh->FifoInit(0,2,30,3);	// id, nc=2, thld=30, m=3
+	pCh->FifoInit(0,1,30,3);	// id, nc=1, thld=30, m=3
+	
 	TRACE("Nx = 3, Max=1377, Min=110 , Drop=4  ---   ");
-	TRACE("ID Nc = 2, Thld=30, M = 3 \n");
+	TRACE("ID Nc = 1, Thld=30, M = 3 \n");
+	
 	for ( i = 0; i < sizeof(Wall)/2; i++)
 		{
 		pCh->InputWFifo(Wall[i]);

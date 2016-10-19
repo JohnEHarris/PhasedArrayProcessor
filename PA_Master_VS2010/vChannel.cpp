@@ -25,7 +25,7 @@ Revised:	modeled somewhat like RunningAverage. The two may be merged in the futu
 //#include <stdio.h>
 //#include "vChannel.h"
 #include "InstMsgProcess.h"
-extern UINT uVchannelConstructor[8][16][32];
+extern UINT uVchannelConstructor[MAX_CLIENTS_PER_SERVER][MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];
 
 // Every time an instrument connects, the constructor runs
 // Must reload from GUI or store last good Nc Nx info in a static table
@@ -84,12 +84,14 @@ void CvChannel::FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
 
 // An amplitued is input and an Nc qualified reading is returned.
 // bIdOd selects which FIFO id=0, od=1
+// If Nc is 0 return immediately
 BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 	{
 	int i = 0;
 	Nc_FIFO *pFifo;
 	bIdOd &= 1;	// limit range to 0-1
 	pFifo = &NcFifo[bIdOd];
+	if (pFifo->bNc == 0) return 0;	// nothing or a wall channel only
 	if (bAmp > 0xc0)
 		i = i+3;
 

@@ -484,7 +484,7 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 	PAM_GENERIC_MSG *pCmd =( PAM_GENERIC_MSG *) pB;
 
 
-//	pCmd->bPamNumber = nClientIndex;
+//	pCmd->bPapNumber = nClientIndex;
 //	pCmd->ChnlNum = nChannelInPam;
 
 #if 0

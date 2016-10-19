@@ -26,32 +26,23 @@ static char THIS_FILE[] = __FILE__;
 // THIS_IS_SERVICE_APP is defined in the PAM project under C++ | Preprocessor Definitions 
 
 #ifdef THIS_IS_SERVICE_APP
-//#include "RunningAverage.h"
-#include "../include/cfg100.h"
+#include "../include/pa2struct.h"
 
 // for rnadom number generator
 #include <stdlib.h>
 
 class CInstState;
 extern  CInspState InspState;
-extern 	C_MSG_ALL_THOLD  g_AllTholds;
-extern 	C_MSG_NC_NX g_NcNx;
-extern I_MSG_RUN SendBuf;
-extern DWORD  g_nStation2JointNum;// = 0;
-extern I_MSG_RUN SendCalBuf;
+//extern 	C_MSG_ALL_THOLD  g_AllTholds;
+//extern 	C_MSG_NC_NX g_NcNx;
+//extern I_MSG_RUN SendBuf;
+//extern DWORD  g_nStation2JointNum;// = 0;
+//extern I_MSG_RUN SendCalBuf;
 
 extern UINT uAppTimerTick;
 extern CServiceApp theApp;
 
 
-static int nRecvCnt = 0;
-static short wClock_old = 100;
-int xloc = 0;   /* temporary */
-DWORD  NextPacketNum = 0;
-BOOL  bGetSlaveRev = TRUE;
-SITE_SPECIFIC_DEFAULTS SiteDefault;
-int nSendCnt = 0;
-int nOldXloc=-1;
 int nLoc = 20;
 
 /** External function prototypes... mostly in Service.cpp   **/

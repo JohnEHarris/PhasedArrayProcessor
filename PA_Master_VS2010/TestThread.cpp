@@ -133,7 +133,7 @@ void CTestThread::TestNx(void)
 	WORD wMax, wMin, wBadWall, wGoodWall;
 	stPeakData LocalPeakData;
 		
-	i = sizeof(PAM_INST_CHNL_INFO);
+	i = sizeof(PAP_INST_CHNL_NCNX);
 
 	CvChannel *pCh = new CvChannel(0,0,2);	// inst 0, seq 0, chnl 2
 	WORD Wall[] = {300,333,315,288,255,2200,000,324,326,366,400,000,000,298,320,322,

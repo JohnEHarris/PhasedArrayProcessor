@@ -44,10 +44,14 @@ public:
 #ifdef THIS_IS_SERVICE_APP
 //	afx_msg void InitRunningAverage(WPARAM w, LPARAM lParam);
 	void ProcessInstrumentData(void *pData);
-	void MakeFakeDataHead(SRawDataPacket *pData);
-	void MakeFakeData(SRawDataPacket *pData);
-	int GetSequenceModulo(SRawDataPacket *pData);
-	void BuildOutputPacket(SRawDataPacket *pRaw);
+	
+	//void MakeFakeDataHead(SRawDataPacketOld *pData); worked with Yiqing simulator
+	//void MakeFakeData(SRawDataPacketOld *pData);
+	void MakeFakeDataHead(SBigRawDataPacket *pData);
+	void MakeFakeData(SBigRawDataPacket *pData);
+	int GetSequenceModulo(SRawDataPacketOld *pData);
+	//void BuildOutputPacket(SRawDataPacketOld *pRaw);
+	void BuildOutputPacket(SBigRawDataPacket *pRaw);
 	void SaveFakeData(CString& s);
 	// create a processing class instance for each wall channel
 //	CRunningAverage *m_pRunAvg[MAX_WALL_CHANNELS];

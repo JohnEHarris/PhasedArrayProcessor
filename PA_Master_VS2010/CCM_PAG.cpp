@@ -102,7 +102,7 @@ typedef struct
 
 	//MMI_CMD *pMmiCmd;
 	PAM_GENERIC_MSG *pMmiCmd;
-	PAM_INST_CHNL_INFO *pPamChnlInfo;
+	PAP_INST_CHNL_NCNX *pPamChnlInfo;
 	WORD MsgId;
 
 	if (m_pstCCM->pRcvPktPacketList == NULL) return;
@@ -129,7 +129,7 @@ typedef struct
 			// The only message as of 2016-06-27
 			// Does not get sent to instruments, sets Nc and Nx parameters for the PAM to use
 
-			pPamChnlInfo = (PAM_INST_CHNL_INFO *)pMmiCmd;
+			pPamChnlInfo = (PAP_INST_CHNL_NCNX *)pMmiCmd;
 			TRACE(_T("Received NC_NX_CMD_ID for Instrument %d from Phased Array GUI - now deleting\n"),pMmiCmd->bInstNumber);
 			SetChannelInfo(pPamChnlInfo);
 			delete pMmiCmd;
@@ -229,7 +229,7 @@ int CCCM_PAG::FindDisplayChannel(int nArray, int nArrayCh)
 // Only sets Nc Nx parameters. Knows not what type the channel is
 //void CInstMsgProcess::SetChannelInfo(void)
 
-void CCCM_PAG::SetChannelInfo(PAM_INST_CHNL_INFO *pPamInstChnlInfo)
+void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	{
 	int nPam, nInst, nChnlTypes, nRepeat;
 	int i,j,k;
@@ -244,9 +244,9 @@ void CCCM_PAG::SetChannelInfo(PAM_INST_CHNL_INFO *pPamInstChnlInfo)
 	nChnlTypes = 1;  // fix this soon
 	nRepeat		= pPamInstChnlInfo->bSeqNumber;
 	ST_NC_NX *pNcNx = pPamInstChnlInfo->stNcNx;
-	// PAM is always the [0] server to the instruments. A second PAM will be in another computer
+	// PAP is always the [0] server to the instruments. A second PAM will be in another computer
 	// but will in the software structure still be server[0] in the second computer.
-	// If for some reason PAM needs to be a server to another type client, it will have to be
+	// If for some reason PAP needs to be a server to another type client, it will have to be
 	// something other than [0]
 	//
 	ST_SERVERS_CLIENT_CONNECTION *pSCC = stSCM[0].pClientConnection[nInst];

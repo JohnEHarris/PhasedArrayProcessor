@@ -484,7 +484,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	int nMsgSize;
 	int i = -1;
 	int nError;
-	PAM_INST_CHNL_INFO *pCmd;
+	PAP_INST_CHNL_NCNX *pCmd;
 	//stSEND_PACKET *pBuf; 
 	//CServerSocket *pSocket = &m_ConnectionSocket;
 	CServerSocket *pSocket = m_pConnectionSocket;
@@ -499,7 +499,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	while (m_pConnectionSocket->m_pSCC->cpSendPktList->GetCount() > 0 )
 		{
 		m_pConnectionSocket->LockSendPktList();
-		pCmd = (PAM_INST_CHNL_INFO *) m_pConnectionSocket->m_pSCC->cpSendPktList->RemoveHead();
+		pCmd = (PAP_INST_CHNL_NCNX *) m_pConnectionSocket->m_pSCC->cpSendPktList->RemoveHead();
 		m_pConnectionSocket->UnLockSendPktList();
 			
 		//MMI_CMD *pCmd = (MMI_CMD *) &pBuf->Msg;
@@ -526,7 +526,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		case NC_NX_CMD_ID:
 			s.Format(_T("NC_NX_CMD_ID Msg seq cnt =%d\n"), pCmd->wMsgSeqCnt);
 			pCmd->wMsgSeqCnt = m_pConnectionSocket->m_pSCC->wMsgSeqCnt++;
-			nMsgSize = sizeof(PAM_INST_CHNL_INFO);
+			nMsgSize = sizeof(PAP_INST_CHNL_NCNX);
 
 		default:
 			break;

@@ -60,7 +60,7 @@ CvChannel::~CvChannel()
 // Since every channel does wall and flaw processing, only call this from wall input routine.
 void CvChannel::ResetGatesAndWalls(void)
 	{
-	m_GateID = m_GateOD = 0;	// byte values - range 0-127
+	//m_GateID = m_GateOD = 0;	// byte values - range 0-127
 	m_wTOFMaxSum = 0;
 	m_wTOFMinSum = 0xffff;
 	NxFifo.wBadWall = NxFifo.wGoodWall = 0;
@@ -79,7 +79,7 @@ void CvChannel::FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
 	if ( bThld < 3) bThld = 2;		// 2 % is minimum thold allowed.
 	pFifo->bThold = bThld;
 	pFifo->bMod = bMod;
-	m_GateID = m_GateOD = 0;
+	//m_GateID = m_GateOD = 0;
 	};
 
 // An amplitued is input and an Nc qualified reading is returned.
@@ -124,6 +124,8 @@ BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 
 	if (pFifo->bMaxFinal < pFifo->bMax)
 		pFifo->bMaxFinal = pFifo->bMax;
+	//if (bIdOd == 0)		m_GateID = pFifo->bMax;
+	//else				m_GateOD = pFifo->bMax;
 	return pFifo->bMaxFinal;
 	};
 
@@ -187,11 +189,14 @@ WORD CvChannel::InputWFifo(WORD wWall)
 		if ( (PeakData.bStatus & SET_READ) == 0)
 			SetOverRun();
 		else ClearOverRun();
+		ClrRead();
+#if 0
 		PeakData.bId2 = NcFifo[0].bMaxFinal;
 		PeakData.bOd3 = NcFifo[1].bMaxFinal;
 		PeakData.wTofMin =	wGetMinWall();
 		PeakData.wTofMax =	wGetMaxWall();
 		ResetGatesAndWalls();
+#endif
 		}
 
 	// prevent out of range values from entering the fifo

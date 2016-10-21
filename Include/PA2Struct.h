@@ -3,6 +3,12 @@ Define structures and definitions for PhasedArray2 project
 jeh
 2016-05-17
 
+Naming convention:
+This project began in 2013. Originally the server to the instruments was called PAM - Phased Array Master
+in 2016 it was redesignated as PAP - Phased Array Processor.  PAP = PAM
+In this scheme, anything that communicates with the PAP via an Ethernet connection as a client is called an Instrument.
+This includes pulser boards and phased array processor boards built by Tuboscope.
+
 */
 
 #ifndef PA2_STRUCTS_H
@@ -25,7 +31,7 @@ enum IdOdTypes {eId, eOd};
 #define MAX_PAM_QTY			1
 #define MAX_PAM_INSTS_QTY	8
 #define NC_NX_CMD_ID		1
-#define ASCANS_TO_AVG		8
+#define ASCANS_TO_AVG		16
 
 
 // edit this value if more client connections to servers are needed
@@ -38,12 +44,16 @@ enum IdOdTypes {eId, eOd};
 // An instrument client can have up to this many virtual channels for each UT firing or Main Bang
 // Each MAIN BANG is a "sequence" until the sequence number repeats
 #define MAX_CHNLS_PER_MAIN_BANG			64
+
 // Channels may be redefined on each main bang. The counter which counts main bangs is called the sequence counter
 // the maximum value the sequence counter can have is =
-#define MAX_SEQ_COUNT					4
+#define MAX_SEQ_COUNT					5
+// choose 5 for seq length while doing simulated input data so that one packet has all the virtual channels in it
+
 // The number of virtual channels is finite. Channels repeat after MAX_SEQ_COUNT number of main bangs.
 // On any given main bang (sequence count) there can only be a max number of channels define by 
-// MAX_CHNLS_PER_MAIN_BANG. The max the number of channels in a transducer array is [16][32] = 512
+// MAX_CHNLS_PER_MAIN_BANG. The max the number of channels in a transducer array is 
+// [MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG] = 256
 
 
 #define INSTRUMENT_PACKET_SIZE				1456		//old 1040
@@ -58,6 +68,20 @@ enum IdOdTypes {eId, eOd};
 // Raw data begins with the first channel of the frame. This channel can be of type NONE
 // For this particular implementation it is assumed that there are up to 32 A-Scans in a data frame.
 // bSeqModulo would be 32 in this case.
+
+// REVISED 2016-10-20
+
+// Data coming from the Tuboscope electronics, that is the phased array boards.
+typedef struct 
+	{
+    BYTE bAmp2;		//Gate 2 amplitude (0-255)
+    BYTE bAmp3;		//Gate 3 amplitude (0-255)
+    WORD wTof;     //time of flight of Gate 4
+    //WORD wTof4Max;     //time of flight of Gate 4
+    //WORD wGateFlag; //Gate flag bits, BIT0=Gate 1
+	} SRawData;		//4 bytes
+
+// keep old versions for a while to use with Yiqing's simulator.
 typedef struct 
 	{
     BYTE bMsgID;		// = eIdataTypes
@@ -70,18 +94,59 @@ typedef struct
     WORD wLocation;		//x location in motion pulses
     WORD wClock;		//unit in .2048ms
     WORD wPeriod;		//unit in .2048ms
-	} SDataHead;		//16 bytes
+	} SDataHeadOld;		//16 bytes
+
+typedef struct 
+	{
+    SDataHeadOld DataHead;		// 16 bytes
+    SRawData RawData[128];	// raw data of 128 consecutive pulses 128*8=1024
+	} SRawDataPacketOld;		//1040 bytes
 
 
 typedef struct 
 	{
-    BYTE bAmp2;		//Gate 2 amplitude (0-255)
-    BYTE bAmp3;		//Gate 3 amplitude (0-255)
-    WORD wTof;     //time of flight of Gate 4
-    //WORD wTof4Max;     //time of flight of Gate 4
-    //WORD wGateFlag; //Gate flag bits, BIT0=Gate 1
-	} SRawData;		//4 bytes
+	BYTE bSeqNumber;	// range [0..n] data following this header
+						// starts at the first virtual channel of this sequence number
+	BYTE bChnlsInSeq;	// how many virtual channel in this sequence number
+	} SDataHead;		// 2 bytes
 
+
+
+// Includes SeqNumber, ChnlsInSeq, and 64 RawData samples
+typedef struct
+	{
+	SDataHead DataHead;
+	SRawData RawData[MAX_CHNLS_PER_MAIN_BANG];
+	} SRawPacket;
+
+
+// Raw data packet is built over 5 main bang periods
+// at 5k prf this is 1 packet every millisecond or 1k packets per second.
+typedef struct 
+	{
+	BYTE bMsgID;		// = eIdataTypes
+    BYTE bDin;			//digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+    WORD wMsgSeqCnt;
+    WORD wLocation;		//x location in motion pulses
+    WORD wClock;		//unit in .2048ms
+    WORD wPeriod;		//unit in .2048ms
+
+#if 0
+	SDataHead DataHead1;	// 2 bytes
+    SRawData RawData1[64];	// raw data of 64 virtual channels. 64*4= 256 .. one sequence point
+	SDataHead DataHead2;	// 2 bytes
+    SRawData RawData2[64];	// raw data of 64 virtual channels. 64*4= 256 .. one sequence point
+    SDataHead DataHead3;	// 2 bytes
+    SRawData RawData3[64];	// raw data of 64 virtual channels. 64*4= 256 .. one sequence point
+    SDataHead DataHead4;	// 2 bytes
+    SRawData RawData4[64];	// raw data of 64 virtual channels. 64*4= 256 .. one sequence point
+    SDataHead DataHead5;	// 2 bytes
+    SRawData RawData5[64];	// raw data of 64 virtual channels. 64*4= 256 .. one sequence point
+	// replaced with structure below in order to subscript through the individual sequences
+#endif
+
+	SRawPacket SSeqPkt[5];	// Raw data for 5 sequence points
+	} SBigRawDataPacket;		//sizeof = 258*5 + 10 = 1300 bytes
 
 // More than just a structure, this may wind up being a fifo in the CvChannel class
 // peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure
@@ -89,34 +154,37 @@ typedef struct
 #define CLR_DROPOUT		~( 1 << 5)
 #define SET_OVERRUN		 ( 1 << 6)
 #define CLR_OVERRUN		~( 1 << 6)
-#define SET_READ		 ( 1 << 15)		// PAP sets when read. If vChannel resets fifo's with this 
+#define DATA_READY		 ( 1 << 7)		// 16 Ascan peak held and copied to local PeakData Structure
+#define CLR_DATA_READY	~( 1 >> 7)
+#define SET_READ		 ( 1 << 15)		// PAP sets when read. If vChannel resets fifo's with this
+#define CLR_READ		~( 1 << 15) 
 // not set, it is overrun condition
 #define STATUS_CLEAR_MASK	~SET_OVERRUN
 
+// Processed data sent from the PAP
 typedef struct
 	{
+	BYTE bStatus;	// bits 0..4 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
+					// ie, PAP did not service PeakData fast enough
+	BYTE bSeqNum;	// sequence number for this peak held data
+	BYTE bChNum;	// which channel number in the specific sequence is this.
 	BYTE bId2;		// Gate 2 peak held data 0-255
 	BYTE bOd3;		// Gate 3 peak held data 0-255
 	WORD wTofMin;	// gate 4 min
 	WORD wTofMax;	// gate 4 max
-	BYTE bStatus;	// bits 0..4 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
-					// ie, PAP did not service PeakData fast enough
-	BYTE bChNum;	// which channel number in the specific sequence is this.
-	} stPeakData;	// sizeof = 8
+	} stPeakData;	// sizeof = 9
 
-
-
+// Command format from User interface systems to the PAP
 typedef struct 
 	{
-    SDataHead DataHead;		// 16 bytes
-    SRawData RawData[128];	// raw data of 128 consecutive pulses 128*8=1024
-	} SRawDataPacket;		//1040 bytes
-
-typedef struct 
-	{
-    SDataHead DataHead;
-    WORD wData[512];
-	} SCmdPacket; //1040 bytes
+    WORD wMsgId;		// commands are identified by their ID
+	WORD wMsgSeqCnt;	// counter to sequence command stream
+	BYTE bPapNumber;	// which PAP is the command for
+	BYTE bInstNumber;	// which PAP network device (pulser, phase array board) is the intended target
+	BYTE bSeqNUmber;	// when relevant, which sequence of virtual probes the command affects
+	BYTE bSpare[5];		// 12 bytes
+    WORD wCmd[730];		// 730 words or 1460 bytes
+	} SCmdPacket;		// 1472 bytes -- the maximum data delivery size for tcp/ip
 
 // If we want 2 out of 3 above threshold for Nc qualified, then bMod = 3. The Fifo is 3 elements deep.
 // Each flaw reading goes into the fifo at location bInPt and overwrites the oldest element in the fifo.
@@ -151,7 +219,7 @@ typedef struct
 // If the bad wall reading reaches a dropout value, the output reading from the FIFO 
 // will be set to size of the averaging length (the average will be 1).
 // The approximate conversion from machine reading to 0.001" increments is 1.452*hardware value
-// Machine hardware readings for bad wall therefore are < 27 or > 1377
+// Machine hardware readings for bad wall therefore are w < 27 or w > 1377
 //
 
 typedef struct
@@ -168,12 +236,14 @@ typedef struct
 	} Nx_FIFO;
 
 // Data structures returned to Robert/PT
+// replaced by stPeakData
+#if 0
 typedef struct
 	{
 	BYTE bFlaw[2];		// id = gate 2 /od = gate 3 0-255  
 	WORD wTOFsum[2];	// divide by Nx and multiply by scaling factor for this vChannel
 	}	RESULTS;		// sizeof = 6
-
+#endif
 
 /*
 2016-09-08 New definition of Idata Packet
@@ -221,6 +291,7 @@ typedef struct
 
 #endif
 
+
 typedef struct
 	{
 	WORD wStatus;		// tbd
@@ -260,24 +331,18 @@ typedef struct
 // much like the fixed channel types in Truscope where every channel type (for example Long) is replicated
 // in each of the 4 shoes.
 //
-#if 0
-See cfg100.h
 
-// Assume no more than 8 chnl types per instrument
-// With 32 vChnls, this means every chnl type repeats at least 4 times.
-// If more than 8 chnl types change the dimesion on stNcNx[]
+// Assume 64 chnl types per sequence per instrument
 typedef struct
 	{
 	WORD wMsgID;		// 1
 	WORD wMsgSeqCnt;
 	BYTE bPapNumber;	// Which PAM
 	BYTE bInstNumber;	// Which Instrument connected to the above PAM
-	BYTE bSeqQty;	// how many times a given chnl type repeats in each instrument -- was bChnlRepeats 2016-09-30
-	BYTE bChnlTypes;	// how many different chnl types for each instrument
-	BYTE bMaxVChnlPerInst;	// bSeqQty*bChnlTypes
+	BYTE bSeqNumber;	/// think of it as a multiplexer.
 	BYTE bSpare[3];
-	ST_NC_NX stNcNx[32];	// Max unique sets of Nc Nx data per instrument. Size = 16*32 =512
-	} PAM_INST_CHNL_INFO; // SIZEOF() = 524 replaces CHANNEL_CMD_1
+	ST_NC_NX stNcNx[MAX_CHNLS_PER_MAIN_BANG];	
+	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1034 replaces CHANNEL_CMD_1
 	
 typedef struct
 	{
@@ -291,7 +356,6 @@ typedef struct
 	} CHANNEL_CMD_1;	// sizeof(CHANNEL_CMD_1) = 520
 
 
-#endif
 
 /*****************	STRUCTURES	END *********************/
 

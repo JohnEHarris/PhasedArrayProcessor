@@ -1382,6 +1382,8 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 
 					}	// for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 
+				// ==============================================================
+
 				for ( nClients = 0; nClients < MAX_CLIENTS_PER_SERVER; nClients++)
 					{
 					for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)

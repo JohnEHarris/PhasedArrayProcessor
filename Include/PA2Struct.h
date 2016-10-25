@@ -31,7 +31,7 @@ enum IdOdTypes {eId, eOd};
 #define MAX_PAM_QTY			1
 #define MAX_PAM_INSTS_QTY	8
 #define NC_NX_CMD_ID		1
-#define ASCANS_TO_AVG		16
+#define ASCANS_TO_AVG		8
 
 
 // edit this value if more client connections to servers are needed
@@ -120,8 +120,10 @@ typedef struct
 	} SRawPacket;
 
 
-// Raw data packet is built over 5 main bang periods
+// Raw data packet is built by the instrument over 5 main bang periods
 // at 5k prf this is 1 packet every millisecond or 1k packets per second.
+// This is the packet which is sent to the Receiver system
+//
 typedef struct 
 	{
 	BYTE bMsgID;		// = eIdataTypes
@@ -146,7 +148,7 @@ typedef struct
 #endif
 
 	SRawPacket SSeqPkt[5];	// Raw data for 5 sequence points
-	} SBigRawDataPacket;		//sizeof = 258*5 + 10 = 1300 bytes
+	} SInputRawDataPacket;		//sizeof = 258*5 + 10 = 1300 bytes
 
 // More than just a structure, this may wind up being a fifo in the CvChannel class
 // peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure

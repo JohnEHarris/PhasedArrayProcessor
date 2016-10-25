@@ -43,8 +43,9 @@ CvChannel::CvChannel(int nInst, int nSeq, int nChnl)
 	if (nChnl > 39) return;
 	// counter of how many time constructor runs for each chnl/instrument
 	uVchannelConstructor[nInst][nSeq][nChnl]++;
-	memset(&PeakData,0, sizeof (stPeakData));
-	PeakData.bChNum = nChnl;	// remember my channel number
+	memset(&m_PeakData,0, sizeof (stPeakData));
+	m_PeakData.bChNum = nChnl;	// remember my channel number
+	m_PeakData.bSeqNum = nSeq;
 	};
 
 CvChannel::~CvChannel()
@@ -182,19 +183,20 @@ WORD CvChannel::InputWFifo(WORD wWall)
 	if (pFifo->bNx ==0) return 10;	// not considered a wall channel
 
 	// reset peak hold of wall and flaw on every 16 Ascan NOW (10/6/16) ASCANS_TO_AVG
-	m_bInputCnt %= ASCANS_TO_AVG;	// modulo 16 counter
+	++m_bInputCnt;		// %= ASCANS_TO_AVG;	// modulo 16 counter
 	// if CServerRcvListThread::ProcessInstrumentData() hasn't read data before now, it will be over run
-	if (m_bInputCnt++ == 0)
+	if (m_bInputCnt >= ASCANS_TO_AVG)
 		{
-		if ( (PeakData.bStatus & SET_READ) == 0)
+		if ( (m_PeakData.bStatus & SET_READ) == 0)
 			SetOverRun();
 		else ClearOverRun();
 		ClrRead();
+		m_bInputCnt = 0;
 #if 0
-		PeakData.bId2 = NcFifo[0].bMaxFinal;
-		PeakData.bOd3 = NcFifo[1].bMaxFinal;
-		PeakData.wTofMin =	wGetMinWall();
-		PeakData.wTofMax =	wGetMaxWall();
+		m_PeakData.bId2 = NcFifo[0].bMaxFinal;
+		m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
+		m_PeakData.wTofMin =	wGetMinWall();
+		m_PeakData.wTofMax =	wGetMaxWall();
 		ResetGatesAndWalls();
 #endif
 		}
@@ -270,13 +272,23 @@ void CvChannel::SetNx(BYTE bNx)
 void CvChannel::SetBadWall(BYTE badWall)
 	{
 	BYTE bOld;	// get bottom 5 bits of wStatus
-	bOld = PeakData.bStatus & 0x1f;
+	bOld = m_PeakData.bStatus & 0x1f;
 	if ((badWall > bOld) && (badWall < 0x1f))
-		PeakData.bStatus |= badWall;
+		m_PeakData.bStatus |= badWall;
 	}
 
 // Once ServerRcvListThread has read the data, clear the structure for the next 16 Ascans
 void CvChannel::CopyPeakData(stPeakData *pOut)
 	{
-	memcpy( (void *)pOut, (void *) &PeakData, sizeof(PeakData));
+	GetPeakData();
+	memcpy( (void *)pOut, (void *) &m_PeakData, sizeof(m_PeakData));
+	}
+
+// copy FIFO variables to PeakData structure after the peak hold is complete
+void CvChannel::GetPeakData(void)
+	{
+	m_PeakData.bId2 = NcFifo[0].bMaxFinal;
+	m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
+	m_PeakData.wTofMin = m_wTOFMinSum;
+	m_PeakData.wTofMax = m_wTOFMaxSum;
 	}

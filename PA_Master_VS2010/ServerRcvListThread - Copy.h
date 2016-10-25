@@ -1,20 +1,5 @@
 #pragma once
 
-/*
-1.  Raw Data  |
-2.  Raw Data  |
-:             |-> m_pOutputRawDataPacket same structure, collected from 16 inputs
-16. Raw Data  |
-
-m_pOutputRawDataPacket(ch1), m_pOutputRawDataPacket(ch2), m_pOutputRawDataPacket(ch30.. -> stPeakData(1), stPeakData(2) etc
-Final output to PT/Receiver system is 
-{
-header inf0+
-stPeakData Results[179];
-} IDATA_PACKET
-
-*/
-
 #ifndef SERVER_RCV_LIST_THREAD_H
 #define SERVER_RCV_LIST_THREAD_H
 
@@ -68,8 +53,6 @@ public:
 	//void BuildOutputPacket(SRawDataPacketOld *pRaw);
 	void BuildOutputPacket(SInputRawDataPacket *pRaw);
 	void SaveFakeData(CString& s);
-
-	void AddToIdataPacket(CvChannel *pChannel, int nSeqint, int nSendFlag);
 	// create a processing class instance for each wall channel
 //	CRunningAverage *m_pRunAvg[MAX_WALL_CHANNELS];
 		
@@ -90,10 +73,7 @@ public:
 
 	// the input packet is received 16 times. The output packet has the same structure but is only generated
 	// after 16 input packets have been received. Effectively compressing the input by a factor of 16
-	// SInputRawDataPacket comes from the instrument
 	SInputRawDataPacket *m_pOutputRawDataPacket;		// our class ptr to the packet to send
-	IDATA_PACKET *m_pIdataPacket;
-	int m_IdataInPt;			// insertion point in stPeakData Results
 
 #endif
 

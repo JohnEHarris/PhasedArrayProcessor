@@ -29,8 +29,8 @@ Revised:
 
 class CInstState;
 extern  CInspState InspState;
-extern 	C_MSG_ALL_THOLD  g_AllTholds;
-extern 	C_MSG_NC_NX g_NcNx;
+//extern 	C_MSG_ALL_THOLD  g_AllTholds;
+//extern 	C_MSG_NC_NX g_NcNx;
 
 int FindDisplayChannel(int nArray, int nArrayCh);
 

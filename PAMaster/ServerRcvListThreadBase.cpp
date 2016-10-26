@@ -18,7 +18,7 @@ Revised:
 
 #ifdef THIS_IS_SERVICE_APP
 #include "ServiceApp.h"
-#include "../include/cfg100.h"
+#include "../include/pa2struct.h"
 #else
 #include "Truscan.h"
 #include "TScanDlg.h"

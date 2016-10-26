@@ -71,9 +71,10 @@ managed classes.
 CServiceApp theApp;		// the persistent instance of the application
 UINT uAppTimerTick;		// approximately 50 ms
 
-UINT uVchannelConstructor[8][16][32];	// count when constructor called. 8 inst, 16 seq pts, 32 chnl
+UINT uVchannelConstructor[MAX_CLIENTS_PER_SERVER][MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];	
+// count when constructor called. 8 inst, 1 seq pts, 64 chnl
 
-UINT CheckKey( void *dummy );
+//UINT CheckKey( void *dummy );
 
 void ShutDownSystem();
 
@@ -83,8 +84,8 @@ BOOL repeat = TRUE;     /* Global repeat flag and video variable */
 // global flags to regulate how often or 'if' a thread is created/run
 
 CInspState InspState;		// one instance of a state keeping class.. not a pointer!
-C_MSG_ALL_THOLD  g_AllTholds;
-C_MSG_NC_NX g_NcNx;
+//C_MSG_ALL_THOLD  g_AllTholds;
+//C_MSG_NC_NX g_NcNx;
 float  g_fMotionPulseLen = 0.506329f;
 
 /*  End Globals */
@@ -181,22 +182,6 @@ CServiceApp::CServiceApp()
 	pCSSaveDebug =new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pCSSaveDebug,4);
 
-
-
-
-	g_NcNx.Long[0] = 1;
-	g_NcNx.Long[1] = 1;
-	g_NcNx.Tran[0] = 1;
-	g_NcNx.Tran[1] = 1;
-	g_NcNx.Oblq1[0] = 1;
-	g_NcNx.Oblq1[1] = 1;
-	g_NcNx.Oblq2[0] = 1;
-	g_NcNx.Oblq2[1] = 1;
-	g_NcNx.Oblq3[0] = 1;
-	g_NcNx.Oblq3[1] = 1;
-	g_NcNx.Lamin[0] = 1;
-	g_NcNx.Lamin[1] = 1;
-	g_NcNx.Wall[0] = 1;
 
 #if 0
 	// debug running average tested for 1,2,4,8 nx values and works
@@ -1058,11 +1043,13 @@ Size of SRawDataPacket is 1040
 
 WHILE_TARGET:
 	// jeh code for Run()
+#if 0
 	I_MSG_RUN sendBuf;
 	I_MSG_NET *pNetBuf;
 	pNetBuf = (I_MSG_NET *) &sendBuf;
 	pNetBuf->MstrHdr.MsgId = NET_MODE;
 	pNetBuf->bConnected[0] = 1;
+#endif
 
 	// testing only
 	//int j;
@@ -1394,6 +1381,8 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 						}	// MAX_SEQ_COUNT
 
 					}	// for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
+
+				// ==============================================================
 
 				for ( nClients = 0; nClients < MAX_CLIENTS_PER_SERVER; nClients++)
 					{

@@ -153,6 +153,8 @@ void CTestThread::TestNx(void)
 	
 	for ( i = 0; i < sizeof(Wall)/2; i++)
 		{
+		// must do flaws before walls. Wall input reset all FIFO when input qty = ASCANS_TO_AVG
+		bOut = pCh->InputFifo(0,bAmp[i]);
 		pCh->InputWFifo(Wall[i]);
 		wMax = pCh->wGetMaxWall();
 		wMin = pCh->wGetMinWall();
@@ -162,12 +164,12 @@ void CTestThread::TestNx(void)
 		wGoodWall = pCh->wGetGoodWallCount();
 		s.Format("[%2d] In=%3d, Max=%4d, Min=%5d, Good=%2d, Bad=%2d -- ", i, Wall[i],wMax, wMin, wGoodWall,wBadWall);
 		TRACE(s);
-		bOut = pCh->InputFifo(0,bAmp[i]);
 		TRACE2("In=%2d, Out=%2d\n",bAmp[i], bOut);
 		//j = pCh->bGetAscansInFifo();
 		if ( pCh->AscanInputDone() )
 			{	// transfer peak held data into ethernet packet
 			pCh->CopyPeakData(&LocalPeakData);
+			pCh->ResetGatesAndWalls();
 			TRACE1("\nPeak Data after %d Ascans\n", j);
 			s.Format("Ch=%2d  IdGate=%2d  MinWall = %4d   MaxWall = %4d  Status = 0x%04x\n\n", 
 						LocalPeakData.bChNum, LocalPeakData.bId2, LocalPeakData.wTofMin,

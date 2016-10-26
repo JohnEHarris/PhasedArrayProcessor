@@ -43,8 +43,8 @@ public:
 	// bMod is >= Nc
 	void FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod);
 	void FifoClear(BYTE bIdOd);	// zero fifo entries, keep other parameters
-	BYTE bGetIdGateMax(void)	{ return m_GateID;	}
-	BYTE bGetOdGateMax(void)	{ return m_GateOD;	}
+	BYTE bGetIdGateMax(void)	{ return NcFifo[0].bMaxFinal;	}
+	BYTE bGetOdGateMax(void)	{ return NcFifo[1].bMaxFinal;;	}
 
 	BYTE bGetNcId(void)			{ return NcFifo[0].bNc;	}
 	BYTE bGetNcOd(void)			{ return NcFifo[1].bNc;	}
@@ -85,23 +85,28 @@ public:
 	/*********************** Wall processing routines ***********************/
 	/*********************** Result FIFO routines ***********************/
 	// Not a fifo at 2016-10-05. May grow to be one
-	stPeakData PeakData;
+	stPeakData m_PeakData;
 	void SetBadWall(BYTE badWall);
-	void SetDropOut(void)			{ PeakData.bStatus |= SET_DROPOUT;	}
-	void ClearDropOut(void)			{ PeakData.bStatus &= CLR_DROPOUT;	}
-	void SetOverRun(void)			{ PeakData.bStatus |= SET_OVERRUN;	}
-	void ClearOverRun(void)			{ PeakData.bStatus &= CLR_OVERRUN;	}	
+	void SetDropOut(void)			{ m_PeakData.bStatus |= SET_DROPOUT;	}
+	void ClearDropOut(void)			{ m_PeakData.bStatus &= CLR_DROPOUT;	}
+	void SetOverRun(void)			{ m_PeakData.bStatus |= SET_OVERRUN;	}
+	void ClearOverRun(void)			{ m_PeakData.bStatus &= CLR_OVERRUN;	}
+	void SetPeakDataReady(void)		{ m_PeakData.bStatus |= DATA_READY;	}
+	void ClearPeakDataReady(void)	{ m_PeakData.bStatus &= CLR_DATA_READY;	}
+	void SetRead(void)				{ m_PeakData.bStatus |= SET_READ;		}
+	void ClrRead(void)				{ m_PeakData.bStatus &= CLR_READ;		}
+	void GetPeakData(void);
 	void PeakDataClear(void);		// Once PAP copies data into Ethernet Packet, clear PeakData
 	// pOut is a slot in the ethernet packet to be sent
 	void CopyPeakData(stPeakData *pOut);
 	//BYTE GetAscanCounter(void)		{ return m_bInputCnt;				}
-	BYTE AscanInputDone(void)		{ return (m_bInputCnt == 1);		}	// 0 if not all 16 Ascans
+	BYTE AscanInputDone(void)		{ return (m_bInputCnt == 0);		}	// 0 if not all 16 Ascans
 
 	
 	
 	/*********************** Result FIFO routines ***********************/
 
-	BYTE m_GateID, m_GateOD;			// Nc qualified max gate value over data sampling period (16 Frames)
+	//BYTE m_GateID, m_GateOD;			// Nc qualified max gate value over data sampling period (16 Frames)
 	WORD m_wTOFMaxSum, m_wTOFMinSum;	// Max, min wall sum reading over data sampling period
 	WORD m_wTOFMax, m_wTOFMin;
 	float m_fWallScaler;				// hardware count to 0.001 inch divided by Nx approx 1.452/Nx

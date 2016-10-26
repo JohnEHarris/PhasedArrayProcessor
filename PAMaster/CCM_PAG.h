@@ -42,7 +42,7 @@ public:
 	// get the CHANNEL_CONFIG2 info from InspState.. usually when an MMI command is received
 	// Then SetChannelInfo will set the channel types for this instrument
 	// 2016-06-27 sets only NcNx type info. Don't know specific chnl type
-	void SetChannelInfo(PAM_INST_CHNL_INFO *pPamInstChnlInfo);
+	void SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo);
 	// return a pointer to the channel info associated with this instrument
 //	CHANNEL_INFO *GetChannelInfoPtr(void)		{ return &m_ChannelInfo[0];	}
 	int FindWhichSlave(int nChannel);

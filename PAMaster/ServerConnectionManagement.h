@@ -53,17 +53,25 @@ class CServiceApp;
 #define THE_APP_CLASS	NULL
 #define MAIN_DLG_NAME	NULL
 
+#if 0
 // edit this value if more client connections to servers are needed
 #define	MAX_SERVERS							1
+// Likely will have at least 2 server types. 1 for inspetion data and 1 for pulsers
+// Mixing pulsers in with gate boards will make it more difficult to put dimensions on things like virtual channels. 2016-10-19
+
 #define MAX_CLIENTS_PER_SERVER				8
+
 // An instrument client can have up to this many virtual channels for each UT firing or Main Bang
-#define MAX_CHNLS_PER_MAIN_BANG			32
-// Channels may be redefined on each main bang. The counter which counts main bangs is called
+// Each MAIN BANG is a "sequence" until the sequence number repeats
+#define MAX_CHNLS_PER_MAIN_BANG			64
+// Channels may be redefined on each main bang. The counter which counts main bangs is called the sequence counter
+// the maximum value the sequence counter can have is =
 #define MAX_SEQ_COUNT					1
 // The number of virtual channels is finite. Channels repeat after MAX_SEQ_COUNT number of main bangs.
 // On any given main bang (sequence count) there can only be a max number of channels define by 
 // MAX_CHNLS_PER_MAIN_BANG. The max the number of channels in a transducer array is [16][32] = 512
 
+#endif
 
 #define INSTRUMENT_PACKET_SIZE				1456		//old 1040
 #define MASTER_PACKET_SIZE					1260

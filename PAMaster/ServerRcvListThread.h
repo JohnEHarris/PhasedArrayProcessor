@@ -1,12 +1,26 @@
 #pragma once
 
+/*
+1.  Raw Data  |
+2.  Raw Data  |
+:             |-> m_pOutputRawDataPacket same structure, collected from 16 inputs
+16. Raw Data  |
+
+m_pOutputRawDataPacket(ch1), m_pOutputRawDataPacket(ch2), m_pOutputRawDataPacket(ch30.. -> stPeakData(1), stPeakData(2) etc
+Final output to PT/Receiver system is 
+{
+header inf0+
+stPeakData Results[179];
+} IDATA_PACKET
+
+*/
+
 #ifndef SERVER_RCV_LIST_THREAD_H
 #define SERVER_RCV_LIST_THREAD_H
 
 #ifdef THIS_IS_SERVICE_APP
 #include "ServiceApp.h"
-#include "../include/cfg100.h"
-//class CRunningAverage;
+#include "../include/pa2struct.h"
 class CInstState;
 extern  CInspState InspState;
 
@@ -45,11 +59,17 @@ public:
 #ifdef THIS_IS_SERVICE_APP
 //	afx_msg void InitRunningAverage(WPARAM w, LPARAM lParam);
 	void ProcessInstrumentData(void *pData);
-	void MakeFakeDataHead(SRawDataPacket *pData);
-	void MakeFakeData(SRawDataPacket *pData);
-	int GetSequenceModulo(SRawDataPacket *pData);
-	void BuildOutputPacket(SRawDataPacket *pRaw);
+	
+	//void MakeFakeDataHead(SRawDataPacketOld *pData); worked with Yiqing simulator
+	//void MakeFakeData(SRawDataPacketOld *pData);
+	void MakeFakeDataHead(SInputRawDataPacket *pData);
+	void MakeFakeData(SInputRawDataPacket *pData);
+	int GetSequenceModulo(SRawDataPacketOld *pData);
+	//void BuildOutputPacket(SRawDataPacketOld *pRaw);
+	void BuildOutputPacket(SInputRawDataPacket *pRaw);
 	void SaveFakeData(CString& s);
+
+	void AddToIdataPacket(CvChannel *pChannel, int nSeqint, int nSendFlag);
 	// create a processing class instance for each wall channel
 //	CRunningAverage *m_pRunAvg[MAX_WALL_CHANNELS];
 		
@@ -67,6 +87,13 @@ public:
 	void SetChannelInfo(void);		// move from CInstMsgProcess
 	// return a pointer to the channel info associated with this instrument
 	CHANNEL_INFO *GetChannelInfoPtr(void)		{ return &m_ChannelInfo[0];	}
+
+	// the input packet is received 16 times. The output packet has the same structure but is only generated
+	// after 16 input packets have been received. Effectively compressing the input by a factor of 16
+	// SInputRawDataPacket comes from the instrument
+	SInputRawDataPacket *m_pOutputRawDataPacket;		// our class ptr to the packet to send
+	IDATA_PACKET *m_pIdataPacket;
+	int m_IdataInPt;			// insertion point in stPeakData Results
 
 #endif
 

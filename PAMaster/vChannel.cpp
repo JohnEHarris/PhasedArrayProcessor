@@ -25,7 +25,7 @@ Revised:	modeled somewhat like RunningAverage. The two may be merged in the futu
 //#include <stdio.h>
 //#include "vChannel.h"
 #include "InstMsgProcess.h"
-extern UINT uVchannelConstructor[8][16][32];
+extern UINT uVchannelConstructor[MAX_CLIENTS_PER_SERVER][MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];
 
 // Every time an instrument connects, the constructor runs
 // Must reload from GUI or store last good Nc Nx info in a static table
@@ -43,8 +43,9 @@ CvChannel::CvChannel(int nInst, int nSeq, int nChnl)
 	if (nChnl > 39) return;
 	// counter of how many time constructor runs for each chnl/instrument
 	uVchannelConstructor[nInst][nSeq][nChnl]++;
-	memset(&PeakData,0, sizeof (stPeakData));
-	PeakData.bChNum = nChnl;	// remember my channel number
+	memset(&m_PeakData,0, sizeof (stPeakData));
+	m_PeakData.bChNum = nChnl;	// remember my channel number
+	m_PeakData.bSeqNum = nSeq;
 	};
 
 CvChannel::~CvChannel()
@@ -60,7 +61,7 @@ CvChannel::~CvChannel()
 // Since every channel does wall and flaw processing, only call this from wall input routine.
 void CvChannel::ResetGatesAndWalls(void)
 	{
-	m_GateID = m_GateOD = 0;	// byte values - range 0-127
+	//m_GateID = m_GateOD = 0;	// byte values - range 0-127
 	m_wTOFMaxSum = 0;
 	m_wTOFMinSum = 0xffff;
 	NxFifo.wBadWall = NxFifo.wGoodWall = 0;
@@ -79,17 +80,19 @@ void CvChannel::FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
 	if ( bThld < 3) bThld = 2;		// 2 % is minimum thold allowed.
 	pFifo->bThold = bThld;
 	pFifo->bMod = bMod;
-	m_GateID = m_GateOD = 0;
+	//m_GateID = m_GateOD = 0;
 	};
 
 // An amplitued is input and an Nc qualified reading is returned.
 // bIdOd selects which FIFO id=0, od=1
+// If Nc is 0 return immediately
 BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 	{
 	int i = 0;
 	Nc_FIFO *pFifo;
 	bIdOd &= 1;	// limit range to 0-1
 	pFifo = &NcFifo[bIdOd];
+	if (pFifo->bNc == 0) return 0;	// nothing or a wall channel only
 	if (bAmp > 0xc0)
 		i = i+3;
 
@@ -122,6 +125,8 @@ BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 
 	if (pFifo->bMaxFinal < pFifo->bMax)
 		pFifo->bMaxFinal = pFifo->bMax;
+	//if (bIdOd == 0)		m_GateID = pFifo->bMax;
+	//else				m_GateOD = pFifo->bMax;
 	return pFifo->bMaxFinal;
 	};
 
@@ -177,20 +182,7 @@ WORD CvChannel::InputWFifo(WORD wWall)
 
 	if (pFifo->bNx ==0) return 10;	// not considered a wall channel
 
-	// reset peak hold of wall and flaw on every 16 Ascan NOW (10/6/16) ASCANS_TO_AVG
-	m_bInputCnt %= ASCANS_TO_AVG;	// modulo 16 counter
-	// if CServerRcvListThread::ProcessInstrumentData() hasn't read data before now, it will be over run
-	if (m_bInputCnt++ == 0)
-		{
-		if ( (PeakData.bStatus & SET_READ) == 0)
-			SetOverRun();
-		else ClearOverRun();
-		PeakData.bId2 = NcFifo[0].bMaxFinal;
-		PeakData.bOd3 = NcFifo[1].bMaxFinal;
-		PeakData.wTofMin =	wGetMinWall();
-		PeakData.wTofMax =	wGetMaxWall();
-		ResetGatesAndWalls();
-		}
+
 
 	// prevent out of range values from entering the fifo
 	if ( (wWall < pFifo->wWallMin) || (wWall > pFifo->wWallMax))
@@ -200,7 +192,7 @@ WORD CvChannel::InputWFifo(WORD wWall)
 		if (m_wBadInARow >= NxFifo.wDropOut)
 			SetDropOut();
 		else ClearDropOut();
-		return 2;
+		goto COUNT_INPUTS;
 		}
 
 	pFifo->wGoodWall++;	// good wall = bad wall should == 16
@@ -222,6 +214,24 @@ WORD CvChannel::InputWFifo(WORD wWall)
 		{
 		if (m_wTOFMinSum > pFifo->uSum)
 			m_wTOFMinSum = pFifo->uSum;
+		}
+
+COUNT_INPUTS:
+	// reset peak hold of wall and flaw on every 16 Ascan NOW (10/6/16) ASCANS_TO_AVG
+	++m_bInputCnt;		// %= ASCANS_TO_AVG;	// modulo 16 counter
+	// if CServerRcvListThread::ProcessInstrumentData() hasn't read data before now, it will be over run
+	if (m_bInputCnt >= ASCANS_TO_AVG)
+		{
+		if ( (m_PeakData.bStatus & SET_READ) == 0)
+			SetOverRun();
+		else ClearOverRun();
+		ClrRead();
+		m_bInputCnt = 0;
+		m_PeakData.bId2 = NcFifo[0].bMaxFinal;
+		m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
+		m_PeakData.wTofMin =	m_wTOFMinSum;
+		m_PeakData.wTofMax =	m_wTOFMaxSum;
+		//ResetGatesAndWalls();
 		}
 	return pFifo->uSum;
 	}
@@ -263,13 +273,23 @@ void CvChannel::SetNx(BYTE bNx)
 void CvChannel::SetBadWall(BYTE badWall)
 	{
 	BYTE bOld;	// get bottom 5 bits of wStatus
-	bOld = PeakData.bStatus & 0x1f;
+	bOld = m_PeakData.bStatus & 0x1f;
 	if ((badWall > bOld) && (badWall < 0x1f))
-		PeakData.bStatus |= badWall;
+		m_PeakData.bStatus |= badWall;
 	}
 
 // Once ServerRcvListThread has read the data, clear the structure for the next 16 Ascans
 void CvChannel::CopyPeakData(stPeakData *pOut)
 	{
-	memcpy( (void *)pOut, (void *) &PeakData, sizeof(PeakData));
+	//GetPeakData();
+	memcpy( (void *)pOut, (void *) &m_PeakData, sizeof(m_PeakData));
+	}
+
+// copy FIFO variables to PeakData structure after the peak hold is complete
+void CvChannel::GetPeakData(void)
+	{
+	m_PeakData.bId2 = NcFifo[0].bMaxFinal;
+	m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
+	m_PeakData.wTofMin = m_wTOFMinSum;
+	m_PeakData.wTofMax = m_wTOFMaxSum;
 	}

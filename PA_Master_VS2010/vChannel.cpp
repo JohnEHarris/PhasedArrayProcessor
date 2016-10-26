@@ -182,24 +182,7 @@ WORD CvChannel::InputWFifo(WORD wWall)
 
 	if (pFifo->bNx ==0) return 10;	// not considered a wall channel
 
-	// reset peak hold of wall and flaw on every 16 Ascan NOW (10/6/16) ASCANS_TO_AVG
-	++m_bInputCnt;		// %= ASCANS_TO_AVG;	// modulo 16 counter
-	// if CServerRcvListThread::ProcessInstrumentData() hasn't read data before now, it will be over run
-	if (m_bInputCnt >= ASCANS_TO_AVG)
-		{
-		if ( (m_PeakData.bStatus & SET_READ) == 0)
-			SetOverRun();
-		else ClearOverRun();
-		ClrRead();
-		m_bInputCnt = 0;
-#if 0
-		m_PeakData.bId2 = NcFifo[0].bMaxFinal;
-		m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
-		m_PeakData.wTofMin =	wGetMinWall();
-		m_PeakData.wTofMax =	wGetMaxWall();
-		ResetGatesAndWalls();
-#endif
-		}
+
 
 	// prevent out of range values from entering the fifo
 	if ( (wWall < pFifo->wWallMin) || (wWall > pFifo->wWallMax))
@@ -209,7 +192,7 @@ WORD CvChannel::InputWFifo(WORD wWall)
 		if (m_wBadInARow >= NxFifo.wDropOut)
 			SetDropOut();
 		else ClearDropOut();
-		return 2;
+		goto COUNT_INPUTS;
 		}
 
 	pFifo->wGoodWall++;	// good wall = bad wall should == 16
@@ -231,6 +214,24 @@ WORD CvChannel::InputWFifo(WORD wWall)
 		{
 		if (m_wTOFMinSum > pFifo->uSum)
 			m_wTOFMinSum = pFifo->uSum;
+		}
+
+COUNT_INPUTS:
+	// reset peak hold of wall and flaw on every 16 Ascan NOW (10/6/16) ASCANS_TO_AVG
+	++m_bInputCnt;		// %= ASCANS_TO_AVG;	// modulo 16 counter
+	// if CServerRcvListThread::ProcessInstrumentData() hasn't read data before now, it will be over run
+	if (m_bInputCnt >= ASCANS_TO_AVG)
+		{
+		if ( (m_PeakData.bStatus & SET_READ) == 0)
+			SetOverRun();
+		else ClearOverRun();
+		ClrRead();
+		m_bInputCnt = 0;
+		m_PeakData.bId2 = NcFifo[0].bMaxFinal;
+		m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
+		m_PeakData.wTofMin =	m_wTOFMinSum;
+		m_PeakData.wTofMax =	m_wTOFMaxSum;
+		//ResetGatesAndWalls();
 		}
 	return pFifo->uSum;
 	}
@@ -280,7 +281,7 @@ void CvChannel::SetBadWall(BYTE badWall)
 // Once ServerRcvListThread has read the data, clear the structure for the next 16 Ascans
 void CvChannel::CopyPeakData(stPeakData *pOut)
 	{
-	GetPeakData();
+	//GetPeakData();
 	memcpy( (void *)pOut, (void *) &m_PeakData, sizeof(m_PeakData));
 	}
 

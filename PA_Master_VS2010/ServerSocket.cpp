@@ -869,7 +869,7 @@ int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *
 		for ( i = 0; i < MaxChnlPerSeq; i++)
 			pscc->pvChannel[j][i] = new CvChannel(m_nClientPortIndex, (i + j*MaxChnlPerSeq));
 		}
-	for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
+	for ( i = 0; i < gMaxChnlsPerMainBang; i++)
 		{
 		//pscc->pvChannel[0][i] =	new CvChannel(m_nClientPortIndex,i);
 		}

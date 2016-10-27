@@ -437,7 +437,7 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 #if 0
 	By ServiceApp
 	for ( j = 0; j < MAX_SEQ_COUNT; j++)
-	for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
+	for ( i = 0; i < gMaxChnlsPerMainBang; i++)
 		{
 		if (pscc->pvChannel[j][i])
 			{

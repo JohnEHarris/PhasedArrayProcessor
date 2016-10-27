@@ -55,9 +55,12 @@ enum IdOdTypes {eId, eOd};
 // MAX_CHNLS_PER_MAIN_BANG. The max the number of channels in a transducer array is 
 // [MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG] = 256
 
+// How many peak held data Results can we get in the max size tcpip packet.
+// stPeakData Results[179]
+#define MAX_RESULTS						179
 
-#define INSTRUMENT_PACKET_SIZE				1456		//old 1040
-#define MASTER_PACKET_SIZE					1260
+#define INSTRUMENT_PACKET_SIZE			1456		//old 1040
+#define MASTER_PACKET_SIZE				1260
 
 
 /*****************	STRUCTURES	*********************/
@@ -71,15 +74,6 @@ enum IdOdTypes {eId, eOd};
 
 // REVISED 2016-10-20
 
-// Data coming from the Tuboscope electronics, that is the phased array boards.
-typedef struct 
-	{
-    BYTE bAmp2;		//Gate 2 amplitude (0-255)
-    BYTE bAmp3;		//Gate 3 amplitude (0-255)
-    WORD wTof;     //time of flight of Gate 4
-    //WORD wTof4Max;     //time of flight of Gate 4
-    //WORD wGateFlag; //Gate flag bits, BIT0=Gate 1
-	} SRawData;		//4 bytes
 
 // keep old versions for a while to use with Yiqing's simulator.
 typedef struct 
@@ -96,6 +90,16 @@ typedef struct
     WORD wPeriod;		//unit in .2048ms
 	} SDataHeadOld;		//16 bytes
 
+// Data coming from the Tuboscope electronics, that is the phased array boards.
+typedef struct 
+	{
+    BYTE bAmp2;		//Gate 2 amplitude (0-255)
+    BYTE bAmp3;		//Gate 3 amplitude (0-255)
+    WORD wTof;     //time of flight of Gate 4
+    //WORD wTof4Max;     //time of flight of Gate 4
+    //WORD wGateFlag; //Gate flag bits, BIT0=Gate 1
+	} SRawData;		//4 bytes
+
 typedef struct 
 	{
     SDataHeadOld DataHead;		// 16 bytes
@@ -103,11 +107,11 @@ typedef struct
 	} SRawDataPacketOld;		//1040 bytes
 
 
+// NEW SDataHead  .. compare to old
 typedef struct 
 	{
-	BYTE bSeqNumber;	// range [0..n] data following this header
-						// starts at the first virtual channel of this sequence number
-	BYTE bChnlsInSeq;	// how many virtual channel in this sequence number
+	BYTE bSeqNumber;	// sequence number of the first element in SRawData
+	BYTE bChnlNumber;	// channel number of  the first element in SRawData
 	} SDataHead;		// 2 bytes
 
 
@@ -116,8 +120,8 @@ typedef struct
 typedef struct
 	{
 	SDataHead DataHead;
-	SRawData RawData[MAX_CHNLS_PER_MAIN_BANG];
-	} SRawPacket;
+	SRawData RawData[MAX_CHNLS_PER_MAIN_BANG];	// sizeof = 64*4 = 256
+	} SRawPacket;	// sizeof = 258
 
 
 // Raw data packet is built by the instrument over 5 main bang periods
@@ -158,23 +162,69 @@ typedef struct
 #define CLR_OVERRUN		~( 1 << 6)
 #define DATA_READY		 ( 1 << 7)		// 16 Ascan peak held and copied to local PeakData Structure
 #define CLR_DATA_READY	~( 1 >> 7)
-#define SET_READ		 ( 1 << 15)		// PAP sets when read. If vChannel resets fifo's with this
-#define CLR_READ		~( 1 << 15) 
+#define SET_READ		 ( 1 << 4)		// PAP sets when read. If vChannel resets fifo's with this
+#define CLR_READ		~( 1 << 4) 
 // not set, it is overrun condition
 #define STATUS_CLEAR_MASK	~SET_OVERRUN
 
 // Processed data sent from the PAP
 typedef struct
 	{
-	BYTE bStatus;	// bits 0..4 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
+	WORD wStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
 					// ie, PAP did not service PeakData fast enough
-	BYTE bSeqNum;	// sequence number for this peak held data
-	BYTE bChNum;	// which channel number in the specific sequence is this.
+//	BYTE bSeqNum;	// sequence number for this peak held data
+//	BYTE bChNum;	// which channel number in the specific sequence is this.
 	BYTE bId2;		// Gate 2 peak held data 0-255
 	BYTE bOd3;		// Gate 3 peak held data 0-255
 	WORD wTofMin;	// gate 4 min
 	WORD wTofMax;	// gate 4 max
-	} stPeakData;	// sizeof = 9
+	} stPeakData;	// sizeof = 8
+/*
+2016-09-08 New definition of Idata Packet
+*/
+#if 1
+typedef struct
+	{
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bStartSeqNumber;	// sequence number at beginning of stPeakData Results[]
+	BYTE bSequenceLength;	// how many main bangs before repeating the virtual channels
+	BYTE bStartChannel;	// First channel in peak data Results
+	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.
+								// Some sequence points may have channel type NOTHING
+	WORD wStatus;		// tbd
+	WORD wLoc;			// x location in motion pulses relative to 1st packet from instrument
+	WORD wAngle;		// angle in degrees from TOP relative to 1st packet from instrument
+	WORD wPeriod;		// period of rotation in 0.2048 ms
+	UINT uMsgSeqCount;	// counter to uniquely identify each packet
+	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	stPeakData Results[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 179*8=1432
+	} IDATA_PACKET;	// sizeof = 1454 - the maximum TCPIP packet size
+
+
+#else
+typedef struct
+	{
+	BYTE bvChannelQty;	// How many channels in this packet.
+	BYTE instNumber;	// 0-255. Inst 0 -> base ip address of instruments
+	WORD wStatus;		// tbd
+	WORD wLoc;			// x location in motion pulses relative to 1 packet from instrument
+	WORD wAngle;		// angle in degrees from TOP relative to 1 packet from instrument
+	WORD wPeriod;		// period of rotation in 0.2048 ms
+	UINT uMsgSeqCount;	// counter to uniquely identify each packet
+	UINT uSync;			// 0x5CEBDAAD ... 18 bytes to here
+	RESULTS Results[32];	// Some "channels" at the end may be channel type NONE
+	} IDATA_PACKET;	// sizeof = 210
+
+#endif
+
+
+
+
+
 
 // Command format from User interface systems to the PAP
 typedef struct 
@@ -245,52 +295,6 @@ typedef struct
 	BYTE bFlaw[2];		// id = gate 2 /od = gate 3 0-255  
 	WORD wTOFsum[2];	// divide by Nx and multiply by scaling factor for this vChannel
 	}	RESULTS;		// sizeof = 6
-#endif
-
-/*
-2016-09-08 New definition of Idata Packet
-*/
-#if 1
-typedef struct
-	{
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE instNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
-	BYTE bFiringSequenceLength;	// how many main bangs before repeating the virtual channels
-	BYTE bStartSeqNumber;	// this packet may start somewhere in the middle of the sequence
-							// range is [0 - bFiringSequenceLength-1]
-	BYTE bNumberOfSeqPoints;	// how many different sets of virtual channels in this packet
-								// that is, how many main bangs included in this packet
-								// range is [1 - bFiringSequenceLength]
-	BYTE bMaxVChnlsPerSeqPoint;	// maximum number of virtual channels generated on a firing.
-								// Some sequence points may have channel type NOTHING
-								//
-	WORD wStatus;		// tbd
-	WORD wLoc;			// x location in motion pulses relative to 1st packet from instrument
-	WORD wAngle;		// angle in degrees from TOP relative to 1st packet from instrument
-	WORD wPeriod;		// period of rotation in 0.2048 ms
-	UINT uMsgSeqCount;	// counter to uniquely identify each packet
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	stPeakData Results[179];	// Some "channels" at the end may be channel-type NONE
-	} IDATA_PACKET;	// sizeof = 1454 - the maximum TCPIP packet size
-
-
-#else
-typedef struct
-	{
-	BYTE bvChannelQty;	// How many channels in this packet.
-	BYTE instNumber;	// 0-255. Inst 0 -> base ip address of instruments
-	WORD wStatus;		// tbd
-	WORD wLoc;			// x location in motion pulses relative to 1 packet from instrument
-	WORD wAngle;		// angle in degrees from TOP relative to 1 packet from instrument
-	WORD wPeriod;		// period of rotation in 0.2048 ms
-	UINT uMsgSeqCount;	// counter to uniquely identify each packet
-	UINT uSync;			// 0x5CEBDAAD ... 18 bytes to here
-	RESULTS Results[32];	// Some "channels" at the end may be channel type NONE
-	} IDATA_PACKET;	// sizeof = 210
-
 #endif
 
 

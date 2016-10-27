@@ -85,16 +85,17 @@ public:
 	/*********************** Wall processing routines ***********************/
 	/*********************** Result FIFO routines ***********************/
 	// Not a fifo at 2016-10-05. May grow to be one
+	// 10-27-16 change bStatus to wStatus
 	stPeakData m_PeakData;
 	void SetBadWall(BYTE badWall);
-	void SetDropOut(void)			{ m_PeakData.bStatus |= SET_DROPOUT;	}
-	void ClearDropOut(void)			{ m_PeakData.bStatus &= CLR_DROPOUT;	}
-	void SetOverRun(void)			{ m_PeakData.bStatus |= SET_OVERRUN;	}
-	void ClearOverRun(void)			{ m_PeakData.bStatus &= CLR_OVERRUN;	}
-	void SetPeakDataReady(void)		{ m_PeakData.bStatus |= DATA_READY;	}
-	void ClearPeakDataReady(void)	{ m_PeakData.bStatus &= CLR_DATA_READY;	}
-	void SetRead(void)				{ m_PeakData.bStatus |= SET_READ;		}
-	void ClrRead(void)				{ m_PeakData.bStatus &= CLR_READ;		}
+	void SetDropOut(void)			{ m_PeakData.wStatus |= SET_DROPOUT;	}
+	void ClearDropOut(void)			{ m_PeakData.wStatus &= CLR_DROPOUT;	}
+	void SetOverRun(void)			{ m_PeakData.wStatus |= SET_OVERRUN;	}
+	void ClearOverRun(void)			{ m_PeakData.wStatus &= CLR_OVERRUN;	}
+	void SetPeakDataReady(void)		{ m_PeakData.wStatus |= DATA_READY;	}
+	void ClearPeakDataReady(void)	{ m_PeakData.wStatus &= CLR_DATA_READY;	}
+	void SetRead(void)				{ m_PeakData.wStatus |= SET_READ;		}
+	void ClrRead(void)				{ m_PeakData.wStatus &= CLR_READ;		}
 	void GetPeakData(void);
 	void PeakDataClear(void);		// Once PAP copies data into Ethernet Packet, clear PeakData
 	// pOut is a slot in the ethernet packet to be sent
@@ -112,9 +113,10 @@ public:
 	float m_fWallScaler;				// hardware count to 0.001 inch divided by Nx approx 1.452/Nx
 	BYTE m_bInputCnt;					// count the number of inputs. Generate max/min sums on every 16th input count
 										// then reset max min sum values
-	WORD m_wDropOutValue;
 	WORD m_wBadInARow;					// consecutive bad wall reading. Carries over 16 sample boundaries. Cleared
 										// with one reading within upper/lower limits.
+	BYTE m_bChnl;
+	BYTE m_bSeq;
 	};	
 
 #endif

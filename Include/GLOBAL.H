@@ -65,6 +65,7 @@ Revised:
 extern int gChannel,  gGate;
 #else
 PubExt int gChannel,  gGate;
+
 #endif
 
 PubExt int gCopyTo, gPrf, gSysInitFlag;
@@ -87,5 +88,6 @@ typedef struct
 	}	GLOBAL_DLG_PTRS;
 
 PubExt	GLOBAL_DLG_PTRS gDlg;
+PubExt int gMaxChnlsPerMainBang;
 
 #endif		/* include global_h */

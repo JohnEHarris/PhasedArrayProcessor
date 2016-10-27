@@ -179,6 +179,7 @@ CServiceApp::CServiceApp()
 
 
 	m_nShutDownCount = 0;
+	gMaxChnlsPerMainBang = MAX_CHNLS_PER_MAIN_BANG;
 	pCSSaveDebug =new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pCSSaveDebug,4);
 
@@ -252,7 +253,7 @@ void CServiceApp::ShutDownEasy(void)
 
 		for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
 			{ //nSeqCount
-			for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
+			for ( nChnlPerBang = 0; nChnlPerBang < gMaxChnlsPerMainBang; nChnlPerBang++)
 				{
 				if (NULL == (pSCM[ns]->m_pstSCM->pvChannel[nClients][nSeqCount][nChnlPerBang]) ) continue;
 				delete pSCM[ns]->m_pstSCM->pvChannel[nClients][nSeqCount][nChnlPerBang];
@@ -1373,11 +1374,11 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 
 					for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
 						{
-						for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
+						for ( nChnlPerBang = 0; nChnlPerBang < gMaxChnlsPerMainBang; nChnlPerBang++)
 							{
 							pSCM[i]->m_pstSCM->pvChannel[j][nSeqCount][nChnlPerBang] = 
-								new CvChannel(nClients, nSeqCount, nChnlPerBang);
-							}	// MAX_CHNLS_PER_MAIN_BANG
+								new CvChannel(j, nSeqCount, nChnlPerBang);
+							}	// gMaxChnlsPerMainBang
 						}	// MAX_SEQ_COUNT
 
 					}	// for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
@@ -1388,7 +1389,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 					{
 					for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
 						{
-						for ( nChnlPerBang = 0; nChnlPerBang < MAX_CHNLS_PER_MAIN_BANG; nChnlPerBang++)
+						for ( nChnlPerBang = 0; nChnlPerBang < gMaxChnlsPerMainBang; nChnlPerBang++)
 							{
 							pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang] =
 								pSCM[i]->m_pstSCM->pvChannel[nClients][nSeqCount][nChnlPerBang];

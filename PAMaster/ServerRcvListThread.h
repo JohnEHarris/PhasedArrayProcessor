@@ -69,7 +69,7 @@ public:
 	void BuildOutputPacket(SInputRawDataPacket *pRaw);
 	void SaveFakeData(CString& s);
 
-	void AddToIdataPacket(CvChannel *pChannel, int nSeqint, int nSendFlag);
+	void AddToIdataPacket(CvChannel *pChannel, int nCh, int nSeq, int nSendFlag);
 	// create a processing class instance for each wall channel
 //	CRunningAverage *m_pRunAvg[MAX_WALL_CHANNELS];
 		
@@ -94,6 +94,7 @@ public:
 	SInputRawDataPacket *m_pOutputRawDataPacket;		// our class ptr to the packet to send
 	IDATA_PACKET *m_pIdataPacket;
 	int m_IdataInPt;			// insertion point in stPeakData Results
+	int GetIdataPacketIndex(void);
 
 #endif
 

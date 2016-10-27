@@ -146,10 +146,10 @@ void CTestThread::TestNx(void)
 				   38,44,28,37,29,33,16,33,10,20,10,30,29,32,31, 2, 
 				   5,12, 3,11};
 	BYTE bOut;
-	pCh->FifoInit(0,1,30,3);	// id, nc=1, thld=30, m=3
+	pCh->FifoInit(0,2,30,3);	// id, nc=2, thld=30, m=3
 	
 	TRACE("Nx = 3, Max=1377, Min=110 , Drop=4  ---   ");
-	TRACE("ID Nc = 1, Thld=30, M = 3 \n");
+	TRACE("ID Nc = 2, Thld=30, M = 3 \n");
 	
 	for ( i = 0; i < sizeof(Wall)/2; i++)
 		{
@@ -158,7 +158,7 @@ void CTestThread::TestNx(void)
 		pCh->InputWFifo(Wall[i]);
 		wMax = pCh->wGetMaxWall();
 		wMin = pCh->wGetMinWall();
-		//if (pCh->wGetGoodConsecutiveCount() >= 4)
+		//if (pCh->wGetGoodWallCount() >= 4)
 		//	pCh->ClearBadWallCount();	// reset bad wall counter after several good walls. 
 		wBadWall = pCh->wGetBadWallCount();
 		wGoodWall = pCh->wGetGoodWallCount();
@@ -171,9 +171,9 @@ void CTestThread::TestNx(void)
 			pCh->CopyPeakData(&LocalPeakData);
 			pCh->ResetGatesAndWalls();
 			TRACE1("\nPeak Data after %d Ascans\n", j);
-			s.Format("Ch=%2d  IdGate=%2d  MinWall = %4d   MaxWall = %4d  Status = 0x%04x\n\n", 
-						LocalPeakData.bChNum, LocalPeakData.bId2, LocalPeakData.wTofMin,
-						LocalPeakData.wTofMax, LocalPeakData.bStatus);
+			s.Format("IdGate=%2d  MinWall = %4d   MaxWall = %4d  Status = 0x%04x\n\n", 
+						LocalPeakData.bId2, LocalPeakData.wTofMin,
+						LocalPeakData.wTofMax, LocalPeakData.wStatus);
 			TRACE(s);
 			}
 

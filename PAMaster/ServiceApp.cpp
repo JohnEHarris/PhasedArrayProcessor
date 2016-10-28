@@ -611,6 +611,7 @@ BOOL CServiceApp :: InitInstance()
 		DeBug, fileException.m_cause );
 		}
 	else m_nDebugLogExists = 1;
+	m_uMsgSeqCount = 0;
 
 	RegisterService(__argc, __argv);
 	//printf("Starting the Service/n"); // causes an exception 
@@ -1705,10 +1706,13 @@ CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNum
 // PAM's connection to the PAG is via a Client Connection Management socket, specifically CCM[0] instance
 // CCM[0] instance has a child class of CCM, namely CCM_PAG
 // NOTE!!! PamSendToPag DOES NOT DELETE THE MEMORY pointed to by pBuf
-// In the FakeData generation whicH calls PamSendToPag pBuf is deleted after the return to the fake data generator
+// In the FakeData generation which calls PamSendToPag pBuf is deleted after the return to the fake data generator
+// The inspection message sent thru this mechanism is an IDATA_PACKET.
+// Keep the message sequence number in a CServiceApp member variable and increment here.
 void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 	{
 	CString s;
+	IDATA_PACKET *pIdata = (IDATA_PACKET *)pBuf;
 	int i = ePAM_Client_Of_PAG_Server;	// normally 0
 	if (nLen < 1) 
 		{
@@ -1735,11 +1739,24 @@ void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 		}
 	i = pSocket->Send(&pNew->Msg, pNew->nLength, 0);
 #endif
+	pIdata->uMsgSeqCount = m_uMsgSeqCount++;
 	i = pSocket->Send(pBuf, nLen, 0);
 	if ( i != nLen)
 		{
-		s.Format(_T("CServiceApp::PamSendToPag requested to send %d bytes, sent %d\n"), nLen, i);
+		s.Format(_T("CServiceApp::PamSendToPag requested to send %d bytes, but sent %d\n"), nLen, i);
 		TRACE(s);
+		}
+	else
+		{
+		pSocket->m_pCCM->m_pstCCM->uBytesSent += i;
+		pSocket->m_pCCM->m_pstCCM->uPacketsSent++;
+		if (pSocket->m_pCCM->m_pstCCM->uPacketsSent < 20)
+			{
+			s.Format(_T("[%d]PAM sent PAG %d bytes-Start seq=%d, Start chnl=%d MsgSeq=%d\n"), 
+				pSocket->m_pCCM->m_pstCCM->uPacketsSent, i,
+				pIdata->bStartSeqNumber, pIdata->bStartChannel,pIdata->uMsgSeqCount);
+			TRACE(s);
+			}
 		}
 
 	}

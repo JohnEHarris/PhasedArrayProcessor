@@ -46,6 +46,7 @@ CvChannel::CvChannel(int nInst, int nSeq, int nChnl)
 	memset(&m_PeakData,0, sizeof (stPeakData));
 	m_bChnl = nChnl;
 	m_bSeq  = nSeq;
+	w_DefaultConfig = DEFAULT_CFG;
 	};
 
 CvChannel::~CvChannel()
@@ -76,11 +77,16 @@ void CvChannel::FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
 	bIdOd &= 1;	// limit range to 0-1
 	pFifo = &NcFifo[bIdOd];
 	memset( (void *) pFifo,0, sizeof (Nc_FIFO));
+	if (bNc > 16)  bNc = 16;
+	if (bMod > 16) bMod = 16;
+	if (bMod < bNc) bMod = bNc;
 	pFifo->bNc = bNc;
 	if ( bThld < 3) bThld = 2;		// 2 % is minimum thold allowed.
 	pFifo->bThold = bThld;
 	pFifo->bMod = bMod;
-	//m_GateID = m_GateOD = 0;
+	w_DefaultConfig = 0;	// not using default config
+	// Constructor sets this true after calling FifoInit()
+	// NcNx command does not.
 	};
 
 // An amplitued is input and an Nc qualified reading is returned.
@@ -93,8 +99,8 @@ BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 	bIdOd &= 1;	// limit range to 0-1
 	pFifo = &NcFifo[bIdOd];
 	if (pFifo->bNc == 0) return 0;	// nothing or a wall channel only
-	if (bAmp > 0xc0)
-		i = i+3;
+	//if (bAmp > 0xc0)
+	//	i = i+3;
 
 	i = pFifo->bInPt;		// slot position in the fifo
 	pFifo->bCell[i] = bAmp;	// replace oldest element
@@ -144,6 +150,7 @@ void CvChannel::SetNc(BYTE bIdOd, BYTE bNc)
 	Nc_FIFO *pFifo;
 	bIdOd &= 1;	// limit range to 0-1
 	pFifo = &NcFifo[bIdOd];
+	if (bNc > 16)  bNc = 16;
 	pFifo->bNc = pFifo->bMod = bNc;
 	}
 /*********************** Flaw processing routines ***********************/
@@ -293,7 +300,9 @@ void CvChannel::SetBadWall(BYTE badWall)
 // Once ServerRcvListThread has read the data, clear the structure for the next 16 Ascans
 void CvChannel::CopyPeakData(stPeakData *pOut)
 	{
-	//GetPeakData();
+	// Check for default constructor before copying data
+	if (w_DefaultConfig)	m_PeakData.wStatus |= DEFAULT_CFG;	// Still using default values
+	else					m_PeakData.wStatus &= ~DEFAULT_CFG;	// clear default bit
 	memcpy( (void *)pOut, (void *) &m_PeakData, sizeof(m_PeakData));
 	}
 

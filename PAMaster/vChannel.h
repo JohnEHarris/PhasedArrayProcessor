@@ -83,16 +83,18 @@ public:
 	BYTE bGetAscansInFifo(void)			{ return m_bInputCnt;		}
 
 	/*********************** Wall processing routines ***********************/
+	
 	/*********************** Result FIFO routines ***********************/
 	// Not a fifo at 2016-10-05. May grow to be one
 	// 10-27-16 change bStatus to wStatus
 	stPeakData m_PeakData;
+
 	void SetBadWall(BYTE badWall);
 	void SetDropOut(void)			{ m_PeakData.wStatus |= SET_DROPOUT;	}
 	void ClearDropOut(void)			{ m_PeakData.wStatus &= CLR_DROPOUT;	}
 	void SetOverRun(void)			{ m_PeakData.wStatus |= SET_OVERRUN;	}
 	void ClearOverRun(void)			{ m_PeakData.wStatus &= CLR_OVERRUN;	}
-	void SetPeakDataReady(void)		{ m_PeakData.wStatus |= DATA_READY;	}
+	void SetPeakDataReady(void)		{ m_PeakData.wStatus |= DATA_READY;		}
 	void ClearPeakDataReady(void)	{ m_PeakData.wStatus &= CLR_DATA_READY;	}
 	void SetRead(void)				{ m_PeakData.wStatus |= SET_READ;		}
 	void ClrRead(void)				{ m_PeakData.wStatus &= CLR_READ;		}
@@ -117,6 +119,11 @@ public:
 										// with one reading within upper/lower limits.
 	BYTE m_bChnl;
 	BYTE m_bSeq;
+	WORD w_DefaultConfig;				// NcNx using default parameters
+	// A reset/disconnect/reconnect should not impact the NcNx values held in PAP since they are maintained 
+	// in the ServiceApp along with the linked lists. Layers below ServiceApp are destroyed/recreated on a disconnect.
+	// However, a reconnect will need to have NcNx refreshed to the instrument
+	// by PAP transparent to the rest of the system.
 	};	
 
 #endif

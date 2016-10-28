@@ -519,6 +519,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
 	{
 	int nRole;
 	CString s;
+	int nSent;
 	int nId = AfxGetThread()->m_nThreadID;
 	if (nId != m_nThreadIdOld)
 		{
@@ -602,7 +603,17 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
 		pSendPkt = (stSEND_PACKET *) m_pstCCM->pSendPktList->RemoveHead();
 		m_pMyCCM->UnLockSendPktList();	// give a higher priority thread a chance to add packets
 		// do the socket send
-		m_pstCCM->pSocket->Send(&pSendPkt->Msg[0], (int) pSendPkt->nLength);
+		nSent = m_pstCCM->pSocket->Send(&pSendPkt->Msg[0], (int) pSendPkt->nLength);
+		if (nSent > 0)
+			{
+			m_pstCCM->uBytesSent += nSent;
+			m_pstCCM->uPacketsSent++;
+			if (m_pstCCM->uPacketsSent < 10)
+				{
+				s.Format(_T("[%d]CCT::PAM sent PAG %d bytes\n"),m_pstCCM->uPacketsSent, nSent);
+				TRACE(s);
+				}
+			}
 		delete pSendPkt;
 		m_uXmitLoopCount++;
 		}

@@ -62,11 +62,11 @@ public:
 	
 	//void MakeFakeDataHead(SRawDataPacketOld *pData); worked with Yiqing simulator
 	//void MakeFakeData(SRawDataPacketOld *pData);
-	void MakeFakeDataHead(SInputRawDataPacket *pData);
-	void MakeFakeData(SInputRawDataPacket *pData);
+	void MakeFakeDataHead(InputRawDataPacket *pData);
+	void MakeFakeData(InputRawDataPacket *pData);
 	int GetSequenceModulo(SRawDataPacketOld *pData);
 	//void BuildOutputPacket(SRawDataPacketOld *pRaw);
-	void BuildOutputPacket(SInputRawDataPacket *pRaw);
+	void BuildOutputPacket(InputRawDataPacket *pRaw);
 	void SaveFakeData(CString& s);
 
 	void AddToIdataPacket(CvChannel *pChannel, int nCh, int nSeq, int nSendFlag);
@@ -90,8 +90,8 @@ public:
 
 	// the input packet is received 16 times. The output packet has the same structure but is only generated
 	// after 16 input packets have been received. Effectively compressing the input by a factor of 16
-	// SInputRawDataPacket comes from the instrument
-	SInputRawDataPacket *m_pOutputRawDataPacket;		// our class ptr to the packet to send
+	// InputRawDataPacket comes from the instrument
+	InputRawDataPacket *m_pOutputRawDataPacket;		// our class ptr to the packet to send
 	IDATA_PACKET *m_pIdataPacket;
 	int m_IdataInPt;			// insertion point in stPeakData Results
 	int GetIdataPacketIndex(void);

@@ -132,7 +132,7 @@ typedef struct
     unsigned short wClock; //unit in .2048ms
     unsigned short wPeriod; //.2048ms
     unsigned char bSpare2[4];
-	} SDataHead; //16
+	} stDataHead; //16
 
 #endif
 
@@ -158,7 +158,7 @@ typedef struct {
     unsigned short wTof4MaxMin;
     unsigned char bAmp3;
     unsigned char bAmp2;
-} SRawData; //8
+} stRawData; //8
 #endif
 
 
@@ -170,13 +170,13 @@ typedef struct {
 #if 0
 typedef struct 
 	{
-    SDataHead DataHead;
-    SRawData RawData[128];
+    stDataHead DataHead;
+    stRawData RawData[128];
 	} SRawDataPacket; //1040 bytes
 #endif
 
 typedef struct {
-    SDataHead DataHead;
+    stDataHead DataHead;
     SData Data;
 } SDataPacket; //24 bytes
 
@@ -188,7 +188,7 @@ typedef struct
 
 #if 0
 typedef struct {
-    SDataHead DataHead;
+    stDataHead DataHead;
     unsigned short wData[512];
 } SCmdPacket; //1040 bytes
 #endif

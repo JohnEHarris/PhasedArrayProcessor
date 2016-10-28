@@ -134,6 +134,8 @@ typedef struct
 	UINT uLostReceivedPackets;
 	// count the jumps in message sequence count
 	UINT uDuplicateReceivedPackets;	// same packet received again
+	UINT uPacketsSent;
+	UINT uBytesSent;
 
 	// VARIOUS other controls common to the socket	
 	//	BOOL *lpKillThread;

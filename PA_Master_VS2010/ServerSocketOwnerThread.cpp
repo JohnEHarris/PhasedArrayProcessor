@@ -544,7 +544,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				// debug info to trace output.. losing connection when attempting to download config file
 				if ((m_pConnectionSocket->m_pSCC->uPacketsSent & 0xff) == 0)
 					{
-					s.Format(_T("ServerSocketOwnerThread Pkts sent = %d, Pkts lost = %d\n"),
+					s.Format(_T("ServerSocketOwnerThread Pkts sent to instrument = %d, Pkts lost = %d\n"),
 					m_pConnectionSocket->m_pSCC->uPacketsSent, m_pConnectionSocket->m_pSCC->uUnsentPackets);
 					TRACE(s);
 					}

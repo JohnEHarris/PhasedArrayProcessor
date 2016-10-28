@@ -98,30 +98,29 @@ typedef struct
     WORD wTof;     //time of flight of Gate 4
     //WORD wTof4Max;     //time of flight of Gate 4
     //WORD wGateFlag; //Gate flag bits, BIT0=Gate 1
-	} SRawData;		//4 bytes
+	} stRawData;		//4 bytes
 
 typedef struct 
 	{
     SDataHeadOld DataHead;		// 16 bytes
-    SRawData RawData[128];	// raw data of 128 consecutive pulses 128*8=1024
+    stRawData RawData[128];	// raw data of 128 consecutive pulses 128*8=1024
 	} SRawDataPacketOld;		//1040 bytes
 
 
-// NEW SDataHead  .. compare to old
+// NEW stDataHead  .. compare to old
 typedef struct 
 	{
-	BYTE bSeqNumber;	// sequence number of the first element in SRawData
-	BYTE bChnlNumber;	// channel number of  the first element in SRawData
-	} SDataHead;		// 2 bytes
+	BYTE bSeqNumber;	// sequence number of the first element in stRawData
+	BYTE bChnlNumber;	// channel number of  the first element in stRawData
+	} stDataHead;		// 2 bytes
 
 
 
-// Includes SeqNumber, ChnlsInSeq, and 64 RawData samples
 typedef struct
 	{
-	SDataHead DataHead;
-	SRawData RawData[MAX_CHNLS_PER_MAIN_BANG];	// sizeof = 64*4 = 256
-	} SRawPacket;	// sizeof = 258
+	stDataHead DataHead;
+	stRawData RawData[MAX_CHNLS_PER_MAIN_BANG];	// sizeof = 64*4 = 256
+	} stRawPacket;	// sizeof = 258
 
 
 // Raw data packet is built by the instrument over 5 main bang periods
@@ -136,25 +135,10 @@ typedef struct
     WORD wLocation;		//x location in motion pulses
     WORD wClock;		//unit in .2048ms
     WORD wPeriod;		//unit in .2048ms
+	stRawPacket stSeqPkt[5];	// Raw data for 5 sequence points
+	} InputRawDataPacket;		//sizeof = 258*5 + 10 = 1300 bytes
 
-#if 0
-	SDataHead DataHead1;	// 2 bytes
-    SRawData RawData1[64];	// raw data of 64 virtual channels. 64*4= 256 .. one sequence point
-	SDataHead DataHead2;	// 2 bytes
-    SRawData RawData2[64];	// raw data of 64 virtual channels. 64*4= 256 .. one sequence point
-    SDataHead DataHead3;	// 2 bytes
-    SRawData RawData3[64];	// raw data of 64 virtual channels. 64*4= 256 .. one sequence point
-    SDataHead DataHead4;	// 2 bytes
-    SRawData RawData4[64];	// raw data of 64 virtual channels. 64*4= 256 .. one sequence point
-    SDataHead DataHead5;	// 2 bytes
-    SRawData RawData5[64];	// raw data of 64 virtual channels. 64*4= 256 .. one sequence point
-	// replaced with structure below in order to subscript through the individual sequences
-#endif
-
-	SRawPacket SSeqPkt[5];	// Raw data for 5 sequence points
-	} SInputRawDataPacket;		//sizeof = 258*5 + 10 = 1300 bytes
-
-// More than just a structure, this may wind up being a fifo in the CvChannel class
+// More than just a structure, this may wind up being a fifo in the CvChannel class -- NOT
 // peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure
 #define SET_DROPOUT		 ( 1 << 5)
 #define CLR_DROPOUT		~( 1 << 5)
@@ -163,8 +147,8 @@ typedef struct
 #define DATA_READY		 ( 1 << 7)		// 16 Ascan peak held and copied to local PeakData Structure
 #define CLR_DATA_READY	~( 1 >> 7)
 #define SET_READ		 ( 1 << 4)		// PAP sets when read. If vChannel resets fifo's with this
-#define CLR_READ		~( 1 << 4) 
-// not set, it is overrun condition
+#define CLR_READ		~( 1 << 4)		// not set, it is overrun condition
+#define DEFAULT_CFG		 ( 1 << 8)		// Nc Nx have default constructor values
 #define STATUS_CLEAR_MASK	~SET_OVERRUN
 
 // Processed data sent from the PAP
@@ -172,8 +156,6 @@ typedef struct
 	{
 	WORD wStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
 					// ie, PAP did not service PeakData fast enough
-//	BYTE bSeqNum;	// sequence number for this peak held data
-//	BYTE bChNum;	// which channel number in the specific sequence is this.
 	BYTE bId2;		// Gate 2 peak held data 0-255
 	BYTE bOd3;		// Gate 3 peak held data 0-255
 	WORD wTofMin;	// gate 4 min

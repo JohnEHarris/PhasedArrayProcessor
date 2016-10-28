@@ -129,6 +129,8 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 	m_pstCCM->uMaxPacketReceived		= 0;
 	m_pstCCM->uPacketsReceived			= 0;
 	m_pstCCM->bConnected				= 0;
+	m_pstCCM->uBytesSent				= 0;
+	m_pstCCM->uPacketsSent				= 0;
 
 	// create critical sections, linked lists and events
 	m_pstCCM->cpCSRcvPkt		= new CRITICAL_SECTION();

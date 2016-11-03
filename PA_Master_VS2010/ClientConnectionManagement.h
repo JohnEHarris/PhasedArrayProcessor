@@ -29,6 +29,7 @@ Revised:	12-Jun-12 Abandon 'C' worker threads in favor of using a class method f
 #pragma once
 
 #include "..\Include\MC_SysCp_constants.h"
+#include "CCmdFifo.h"
 
 // also in tscandlg.h
 #define WM_USER_INIT_TCP_THREAD						WM_USER+0x207
@@ -328,7 +329,7 @@ public:
 
 	// read the received messages from ClientSocket Class instance
 	void OnReceive(CClientSocket *pSocket);	// Called by CClientSocket::OnReceive()
-	void* GetWholePacket(int nPacketSize, int nMsgSize, int *pFirstCall);
+	
 	void UnknownRcvdPacket(void *pV);
 	virtual void ProcessReceivedMessage(void);		// Main dlg calls thru our ccm to process msg in linked list
 
@@ -352,16 +353,11 @@ public:
 	ST_CLIENT_CONNECTION_MANAGEMENT *m_pstCCM;	// pointer to my global structure instance 
 	int m_nMyConnection;		// which one of the global ST_CLIENT_CONNECTION_MANAGEMENT is mine
 
-	int m_nStart;								// used by GetWholePacket
-	BYTE m_RcvBuf[0x10000];						// 16 k receiver buffer.. now 64k
-	int m_BufOffset;
+	//BYTE m_RcvBuf[0x10000];						// 16 k receiver buffer.. now 64k
+	// replace above with CmdFifo
+	CCmdFifo *m_pFifo;
 	void *pWholePacket;
 	// debug info
-	int m_nMaxBufOffset;
-	int m_nMaxStart;
-	int m_nRcvRqst;								// how many can we take
-	int m_nMinRcvRqst;							// smallest packet requested to receive
-	int m_nMaxRcvRqst;
 	CString szName;
 	};	
 // End of CClientConnectionManagement class declaration.

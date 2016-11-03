@@ -156,6 +156,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\Include\PA2Struct.h" />
+    <ClInclude Include="CCmdFifo.h" />
     <ClInclude Include="CCM_PAG.h" />
     <ClInclude Include="ClientCommunicationThread.h" />
     <ClInclude Include="ClientConnectionManagement.h" />
@@ -185,6 +186,7 @@
     <ClInclude Include="vChannel.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CCmdFifo.cpp" />
     <ClCompile Include="CCM_PAG.cpp" />
     <ClCompile Include="ClientCommunicationThread.cpp" />
     <ClCompile Include="ClientConnectionManagement.cpp" />

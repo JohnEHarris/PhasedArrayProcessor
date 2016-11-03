@@ -96,13 +96,8 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 	int i;
 	m_pstCCM = NULL;
 	m_nMyConnection = -1;
-	m_BufOffset = m_nStart = 0;
-	memset((void *) m_RcvBuf,0,sizeof(m_RcvBuf));
+	//memset((void *) m_RcvBuf,0,sizeof(m_RcvBuf)); THIS STUFF repalce by m_pFifo on 2016-11-03 jeh
 
-	m_nMaxBufOffset	= 0;
-	m_nMaxStart		= 0;
-	m_nMinRcvRqst	= 0x10000;
-	m_nMaxRcvRqst	= 0;
 	szName			= _T("CCM-Skt ");
 
 	if (nMyConnection < 0)
@@ -166,6 +161,7 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 
 	// if (NULL == m_pstCCM)	return;		//fatal flaw
 
+	m_pFifo = new CCmdFifo(1454);		// FIFO control for receiving cmd packets from PAG	
 	}
 
 
@@ -292,6 +288,8 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	if (m_pstCCM->pCSDebugOut)		
 		delete m_pstCCM->pCSDebugOut;
 
+	if (m_pFifo != NULL)
+		delete m_pFifo;
 #endif
 	}
 
@@ -515,67 +513,6 @@ void CClientConnectionManagement::UnknownRcvdPacket(void *pV)
 	// Collect received data into expected packet lengths. That is
 	// reconstruct packet from received data.  Its a feature of TCPIP.
 	// nMsgSize is amount received by hardware. Can be greater or less than desired packet size
-void * CClientConnectionManagement::GetWholePacket(int nPacketSize, int nMsgSize, int *pFirstCall)
-	{
-	CString s, t;
-
-	if (!nPacketSize)
-		{	// can't ask for 0 bytes
-		m_BufOffset = 0;
-		return NULL;
-		}
-
-	if (*pFirstCall)		
-		{
-		m_nStart = 0;	// 1st time called from OnReceive 
-		m_BufOffset += nMsgSize;
-#ifdef _DEBUG
-		if ( m_nMaxBufOffset < m_BufOffset)
-			{
-			m_nMaxBufOffset = m_BufOffset;
-			s.Format(_T("New max offset = %d, RcvRqst = %d, Start = %d\n"),
-			m_BufOffset, m_nRcvRqst, m_nStart );
-			t = szName + s;
-			TRACE(t);			
-			}
-
-		// TESTING ONLY
-		if (nMsgSize % nPacketSize)
-			{
-			pWholePacket = NULL;	// BREAK POINT does not occur at 6 ms between packets
-			}
-#endif
-
-		*pFirstCall = 0;		// value in caller set to 0
-		}	// if (*pReceived)
-
-	if ( m_BufOffset >= nPacketSize )
-		{	// accumulated at least one nPacketSize
-		pWholePacket = (void *) &m_RcvBuf[m_nStart];
-		m_nStart += nPacketSize;
-		m_BufOffset -= nPacketSize;
-#ifdef _DEBUG
-		if (m_nMaxStart < m_nStart)
-			{
-			m_nMaxStart = m_nStart;
-			s.Format(_T("New max start = %d, RcvRqst = %d, Offset = %d\n"),
-			m_nStart, m_nRcvRqst, m_BufOffset );
-			t = szName + s;
-			TRACE(t);
-			}
-#endif
-		return pWholePacket;
-		}	// if ( m_BufOffset >= nPacketSize )
-
-	else
-		{	// move residual data to front of m_RcvBuf and adjust insertion point
-		if (!m_BufOffset) return NULL;
-		memcpy ( (void *) m_RcvBuf, (void *) &m_RcvBuf[m_nStart], m_BufOffset);
-		return NULL;
-		}
-
-	}
-
 
 // The Async socket has received a/many packet(s). Rather than handling the packet
 // in the socket driver, let the next management level up store the packet into
@@ -592,7 +529,6 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 	{
 
 	int n;
-	int nFirstCall;
 	CString s,t;
 
 #ifdef THIS_IS_SERVICE_APP
@@ -605,51 +541,27 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 		return;
 		}
 
-	m_nRcvRqst = (sizeof(m_RcvBuf) - m_BufOffset - 1);
-#ifdef _DEBUG
-	if (m_nRcvRqst < m_nMinRcvRqst)
-		{
-		m_nMinRcvRqst = m_nRcvRqst;
-		s.Format(_T("New min request to receive = %d, Offset = %d, Start = %d\n"),
-			m_nMinRcvRqst, m_BufOffset, m_nStart );
-		t = szName + s;
-		TRACE(t);
-		}
-
-	if ( m_nMaxRcvRqst < m_nRcvRqst)
-		{
-		m_nMaxRcvRqst = m_nRcvRqst;
-		s.Format(_T("New max request to receive = %d, Offset = %d, Start = %d\n"),
-			m_nMaxRcvRqst, m_BufOffset, m_nStart );
-		t = szName + s;
-		TRACE(t);
-		}
-#endif
-
-	n = pSocket->Receive( (void *) &m_RcvBuf[m_BufOffset], m_nRcvRqst, 0 );
-	// Put the data into a big circular buffer. May be multiple messages received at one time.
-//	n = pSocket->Receive( (void *) &m_RcvBuf[m_BufOffset], (sizeof(m_RcvBuf) - m_BufOffset - 1), 0 );
+	BYTE *pCmd = m_pFifo->GetInLoc();
+	// Receive() receives data into fifo memory pointed to by pCmd
+	n = pSocket->Receive( (void *) pCmd, 0x2000, 0 );	// ask for 8k byte into 16k buffer
 	//PAM assumes we will get partial packets and have to extract whole packets
 	if ( n > 0)
 		{
+		m_pFifo->AddBytesToFifo(n);
 		// reduce output to trace. When whole multiples of msg arrive, don't show
 		//if ( n % nPacketSize)
 			{
 			s.Format(_T("CCM OnReceive got %d bytes"), n);
 			DebugOut(s);
 			}
-		// put it in the linked list and let someone else decipher it
-			nPacketSize = 1454;	//n;	// assuming we only have one msg from PAG 2016-06-28 JEH
-		// debugging
-//		while (n > nPacketSize) 
-//			{
-//			t = "OK";
-		nFirstCall = 1;
-		while ( pPacket = GetWholePacket(nPacketSize, n, &nFirstCall))	// returns a ptr to void with length nPacketSize
+		nPacketSize = m_pFifo->GetPacketSize();	//1454;	//n;	// assuming we only have one msg from PAG 2016-06-28 JEH
+
+		while ( m_pFifo->GetSizeBytes() >= nPacketSize)
 			{	// get packets
+			pPacket = m_pFifo->GetNextPacket();
 			BYTE *pB2 = new BYTE[nPacketSize];	// resize the buffer that will actually be used
 			memcpy( (void *) pB2, (void *) pPacket, nPacketSize);	// move all data to the new buffer
-		// put it in the linked list and let someone else decipher it
+			// put it in the linked list and let someone else decipher it
 			LockRcvPktList();
 			AddTailRcvPkt(pB2);	// put the buffer into the recd data linked list
 			nWholePacketQty++;
@@ -679,9 +591,8 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 					TRACE(s);
 					}
 #endif
-			n -= nPacketSize;
 			} 	// get packets
-//			}	// while (n > nPacketSize)
+		m_pFifo->Reset();	// if FIFO is empty will reset pointer to start of memory
 
 		if (( nWholePacketQty) && (m_pstCCM))
 			// This messages causes void CCmdProcessThread::ProcessReceivedMessage() to execute

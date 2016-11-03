@@ -6,6 +6,10 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PA_Master2015", "MFCService.vcxproj", "{D91686D0-B387-4DA2-A484-7FAE55E01383}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{338625F8-5B1B-401F-94DC-4F6512B86E2D}"
+	ProjectSection(SolutionItems) = preProject
+		CCmdFifo.cpp = CCmdFifo.cpp
+		CCmdFifo.h = CCmdFifo.h
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

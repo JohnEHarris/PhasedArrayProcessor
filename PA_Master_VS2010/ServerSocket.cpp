@@ -38,6 +38,7 @@ CServerSocket::CServerSocket(CServerConnectionManagement *pSCM)
 CServerSocket::CServerSocket()
 	{
 	Init();
+	m_pFifo = new CCmdFifo(1454);		// FIFO control for receiving instrument packets	
 	}
 
 CServerSocket::~CServerSocket()
@@ -67,6 +68,9 @@ CServerSocket::~CServerSocket()
 		delete m_pElapseTimer;
 		m_pElapseTimer = NULL;
 		}
+		
+	if (m_pFifo != NULL)
+		delete m_pFifo;
 	}
 
 void CServerSocket::Init(void)
@@ -75,13 +79,7 @@ void CServerSocket::Init(void)
 	m_pSCC = NULL;
 	m_pstSCM = NULL;
 	m_nOwningThreadType = -1;
-	m_BufOffset = m_nStart = 0;
-	memset((void *) m_RcvBuf,0,sizeof(m_RcvBuf));
 	m_pElapseTimer = new CHwTimer();
-	m_nMaxBufOffset	= 0;
-	m_nMaxStart		= 0;
-	m_nMinRcvRqst	= 0x10000;
-	m_nMaxRcvRqst	= 0;
 	szName			= _T("SCM-Skt ");
 	int nId = AfxGetThread()->m_nThreadID;
 	CString s;
@@ -467,66 +465,6 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 	// Collect received data into expected packet lengths. That is
 	// reconstruct packet from received data.  Its a feature of TCPIP.
-void * CServerSocket::GetWholePacket(int nPacketSize, int *pReceived)
-	{
-	CString s,t;
-
-	if (!nPacketSize)
-		{	// can't ask for 0 bytes
-		m_BufOffset = 0;
-		return NULL;
-		}
-
-	if (*pReceived)		// pReceived = &n, count of data already received
-		{
-		m_nStart = 0;	// 1st time called from OnReceive 
-		m_BufOffset += *pReceived;
-#ifdef _DEBUG
-		if ( m_nMaxBufOffset < m_BufOffset)
-			{
-			m_nMaxBufOffset = m_BufOffset;
-			s.Format(_T("New max offset = %d, RcvRqst = %d, Start = %d\n"),
-			m_BufOffset, m_nRcvRqst, m_nStart );
-			t = szName + s;
-			TRACE(t);
-			}
-
-		// TESTING ONLY
-		if (*pReceived % nPacketSize)
-			{
-			pWholePacket = NULL;	// BREAK POINT does not occur at 6 ms between packets
-			}
-#endif
-
-		*pReceived = 0;		// value in caller set to 0
-		}
-
-	if ( m_BufOffset >= nPacketSize )
-		{	// accumulated at least one nPacketSize
-		pWholePacket = (void *) &m_RcvBuf[m_nStart];
-		m_nStart += nPacketSize;
-		m_BufOffset -= nPacketSize;
-#ifdef _DEBUG
-		if (m_nMaxStart < m_nStart)
-			{
-			m_nMaxStart = m_nStart;
-			s.Format(_T("New max start = %d, RcvRqst = %d, Offset = %d\n"),
-			m_nStart, m_nRcvRqst, m_BufOffset );
-			t = szName + s;
-			TRACE(t);
-			}
-#endif
-		return pWholePacket;
-		}
-
-	else
-		{	// move residual data to front of m_RcvBuf and adjust insertion point
-		if (!m_BufOffset) return NULL;
-		memcpy ( (void *) m_RcvBuf, (void *) &m_RcvBuf[m_nStart], m_BufOffset);
-		return NULL;
-		}
-
-	}
 
 // Packets received are "repackaged" to include the length of the packet as the first item in the new packet
 // [length of packet = n][packet data ... n bytes]
@@ -534,52 +472,22 @@ void CServerSocket::OnReceive(int nErrorCode)
 	{
 	// TODO: Add your specialized code here and/or call the base class
 	//BYTE Buf[MAX_PAM_BYTES+8];			// put it on the stack instead of the heap. Probably quicker
+	
+	int nWholePacketQty = 0;
+
 	BYTE *pB;	// debug
 	void *pPacket = 0;
 	int nPacketSize;
-
 	nPacketSize = gServerArray[m_nMyServer].nPacketSize;	// 1040 as of 9-13-16 but likely bigger in the future
+
 	//TCPDUMMY * Data = new TCPDUMMY;
-	int n, m;
-	int nWholePacketQty = 0;
+	int n, m = 0;
 	CString s, t;
-	// Put the data into a big circular buffer. May be multiple messages received at one time.
-	m_nRcvRqst = (sizeof(m_RcvBuf) - m_BufOffset - 1);
-#ifdef _DEBUG
-	if (m_nRcvRqst < m_nMinRcvRqst)
-		{
-		m_nMinRcvRqst = m_nRcvRqst;
-		s.Format(_T("New min request to receive = %d, Offset = %d, Start = %d\n"),
-			m_nMinRcvRqst, m_BufOffset, m_nStart );
-		t = szName + s;
-		TRACE(t);
-		}
-
-	if ( m_nMaxRcvRqst < m_nRcvRqst)
-		{
-		m_nMaxRcvRqst = m_nRcvRqst;
-		s.Format(_T("New max request to receive = %d, Offset = %d, Start = %d\n"),
-			m_nMaxRcvRqst, m_BufOffset, m_nStart );
-		TRACE(s);
-		}
-#endif
-
-	n = m = Receive( (void *) &m_RcvBuf[m_BufOffset], m_nRcvRqst, 0 );
-	// n = Receive( (void *) Buf, MAX_PAM_BYTES, 0 );	// read all data available into Buf
 
 	// If shutting down and stop send/receive set, throw away the data
 	if (m_pSCM->m_pstSCM == NULL)				return;	
 	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)	return;
 	if (m_pSCC == NULL)							return;
-#if 1
-	//if (m_pSCC->uPacketsReceived < 8)
-		{
-		s.Format(_T("[%4d]Server[%d]Socket[%d] got %d bytes\n"), 
-		m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, n);
-		TRACE(s);
-		}
-#endif
-
 
 	if (m_pSCC->bStopSendRcv)
 			{
@@ -587,16 +495,27 @@ void CServerSocket::OnReceive(int nErrorCode)
 			m_pSCC->bConnected = (BYTE) eNotConnected;
 			}
 
-
+	BYTE *pCmd = m_pFifo->GetInLoc();
+	// Receive() receives data into fifo memory pointed to by pCmd
+	n = Receive( (void *) pCmd, 0x2000, 0 );	// ask for 8k byte into 16k buffer
+	//PAM assumes we will get partial packets and have to extract whole packets
 	if ( n > 0)
 		{
-		// put it in the linked list and let someone else decipher it
-		// Hang up here forever if the App doesn't release the critical section
-		//theApp.GetInstrumentListAccess(m_pSCC->m_nMyThreadIndex);	// OnReceive is essentially an interrupt service routine
-		// hope we don't get stuck here forever
-		while ( pPacket = GetWholePacket(nPacketSize, &n))	// returns a ptr to void with length nPacketSize
+		m_pFifo->AddBytesToFifo(n);
+		// reduce output to trace. When whole multiples of msg arrive, don't show
+		//if ( n % nPacketSize)
+			{
+			s.Format(_T("[%4d]Server[%d]Socket[%d] got %d bytes\n"), 
+			m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, n);
+			TRACE(s);
+			}
+		nPacketSize = m_pFifo->GetPacketSize();	//1454;	whatever Instrument package size is. 2016-06-28 JEH
+
+		while ( m_pFifo->GetSizeBytes() >= nPacketSize)
 			{	// get packets
 			
+			pPacket = m_pFifo->GetNextPacket();
+
 			stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[nPacketSize+sizeof(int)];	// resize the buffer that will actually be used
 			memcpy( (void *) &pBuf->Msg, pPacket, nPacketSize);	// move all data to the new buffer
 			pBuf->nLength = nPacketSize;
@@ -641,6 +560,9 @@ void CServerSocket::OnReceive(int nErrorCode)
 					}
 				}	// if (m_pSCC)
 			} 	// get packets
+				
+		m_pFifo->Reset();	// if FIFO is empty will reset pointer to start of memory
+
 
 		//theApp.ReleaseInstrumentListAccess(m_pSCC->m_nMyThreadIndex);
 
@@ -656,7 +578,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 			{
 			if (m_pSCC->bConnected == (BYTE) eNotConnected)
 				m_pSCC->bConnected = (BYTE) eNotConfigured;
-			if (m_pSCC->uMaxPacketReceived < (unsigned) m)	m_pSCC->uMaxPacketReceived = m;
+			//if (m_pSCC->uMaxPacketReceived < (unsigned) m)	m_pSCC->uMaxPacketReceived = m;
 			}
 		}	// if ( n > 0)
 	else	

@@ -32,6 +32,7 @@ using namespace std;
 #include "TuboIni.h"					//12-Feb-2013
 #include "CCM_PAG.h"					//12-May-16 jeh
 #include "vChannel.h"					//02-Jun-16 jeh
+#include "CCmdFifo.h"					//03-Nov-16 jeh
 
 
 /*

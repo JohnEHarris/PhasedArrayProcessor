@@ -73,7 +73,7 @@ class CServiceApp;
 
 #endif
 
-#define INSTRUMENT_PACKET_SIZE				1456		//old 1040
+#define INSTRUMENT_PACKET_SIZE				1454		//old 1040
 #define MASTER_PACKET_SIZE					1260
 
 
@@ -99,7 +99,7 @@ class CTscanDlg;
 extern THE_APP_CLASS theApp;
 
 
-#define INSTRUMENT_PACKET_SIZE				1456		//old 1040
+#define INSTRUMENT_PACKET_SIZE				1454		//old 1040
 #define MASTER_PACKET_SIZE					1260
 #define PAG_CMD_PACKET_SIZE					1040
 

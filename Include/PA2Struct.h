@@ -59,7 +59,7 @@ enum IdOdTypes {eId, eOd};
 // stPeakData Results[179]
 #define MAX_RESULTS						179
 
-#define INSTRUMENT_PACKET_SIZE			1456		//old 1040
+#define INSTRUMENT_PACKET_SIZE			1454		//old 1040
 #define MASTER_PACKET_SIZE				1260
 
 
@@ -186,6 +186,8 @@ typedef struct
 	stPeakData Results[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 179*8=1432
 	} IDATA_PACKET;	// sizeof = 1454 - the maximum TCPIP packet size
 
+// https://blog.apnic.net/2014/12/15/ip-mtu-and-tcp-mss-missmatch-an-evil-for-network-performance/
+// 1460 is max
 
 #else
 typedef struct

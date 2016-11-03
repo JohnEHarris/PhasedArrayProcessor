@@ -1706,7 +1706,7 @@ CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNum
 // PAM's connection to the PAG is via a Client Connection Management socket, specifically CCM[0] instance
 // CCM[0] instance has a child class of CCM, namely CCM_PAG
 // NOTE!!! PamSendToPag DOES NOT DELETE THE MEMORY pointed to by pBuf
-// In the FakeData generation which calls PamSendToPag pBuf is deleted after the return to the fake data generator
+// In the FakeData generation which calls PamSendToPag, pBuf is deleted after the return to the fake data generator
 // The inspection message sent thru this mechanism is an IDATA_PACKET.
 // Keep the message sequence number in a CServiceApp member variable and increment here.
 void CServiceApp::PamSendToPag(void *pBuf, int nLen)
@@ -1790,8 +1790,8 @@ void CServiceApp::ReleaseInstrumentListAccess(int nInstNumber)
 
 #endif
 
-/**************************************** Nov 20120 ************************************/
-/**************************************** Nov 20120 ************************************/
+/**************************************** Nov 2012 ************************************/
+/**************************************** Nov 2012 ************************************/
 
 /* CheckKey - Thread to wait for a keystroke, then clear repeat flag. */
 UINT CheckKey( void *dummy )

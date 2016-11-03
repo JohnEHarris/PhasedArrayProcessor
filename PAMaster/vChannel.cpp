@@ -8,9 +8,6 @@ Revised:	modeled somewhat like RunningAverage. The two may be merged in the futu
 
 */
 
-#include "stdafx.h"
-#include "ServiceApp.h"
-
 
 #include "stdafx.h"
 #include "ServiceApp.h"

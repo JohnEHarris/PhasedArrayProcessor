@@ -68,7 +68,7 @@ CCCM_PAG::~CCCM_PAG(void)
 
 
 // For this class , the received message comes from the PAG
-// All commands from PAG are message type MMI_CMD
+// All commands from PAG are message type PAM_GENERIC_MSG
 // Over rides base class ProcessReceivedMessage()
 // PAG messages are variable length - must handle each as it arrives and assume
 // the whole message arrives in one packet - assumption is that it works like UDP
@@ -81,28 +81,6 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 	USES_CONVERSION;
 	CString s;
 	int i;
-//	BYTE *pB;
-
-/****
-typedef struct
-	{
-	WORD wMsgID;		// 1
-	WORD wMsgSeqCnt;
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
-	BYTE bStartSeqNumber;	// sequence number at beginning of stPeakData Results[]
-	BYTE bSequenceLength;	// how many main bangs before repeating the virtual channels
-	BYTE bStartChannel;	// First channel in peak data Results
-	BYTE bMaxVChnlsPerSequence;	// 10 bytes to here
-	BYTE bMsg[1444];	// Max unique sets of Nc Nx data per instrument.
-	} PAM_GENERIC_MSG; // SIZEOF() = 1454
-
-
-	****/
-
 			
 	// 2016-06-27 ditch legacy command structure and use PA2 structure
 
@@ -139,14 +117,11 @@ typedef struct
 			TRACE(_T("Received NC_NX_CMD_ID for Instrument %d from Phased Array GUI - now deleting\n"),pMmiCmd->bInstNumber);
 			SetChannelInfo(pPamChnlInfo);
 			delete pMmiCmd;
-			return;
-
 			break;
 
 		default:
 			TRACE(_T("No command recognized\nDeleting command from Phased Array GUI\n"));
 			delete pMmiCmd;
-			return;
 			}	// end switch(MsgId)
 
 

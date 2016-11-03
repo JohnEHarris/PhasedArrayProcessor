@@ -15,6 +15,7 @@
 #ifndef SERVER_CONNECTION_MANAGEMENT_H
 #include "afxsock.h"
 #include "ServerConnectionManagement.h"
+#include "CCmdFifo.h"
 #endif
 #include "HwTimer.h"
 
@@ -81,15 +82,9 @@ public:
 	int m_nOwningThreadType;					// 0=Listener, 1=ServerConnection thread owns this socket class
 	CString m_sClientIp4;						// IP4 address... 192.168.123.123 etc of server connected socket
 
-	int m_nStart;								// used by GetWholePacket
-	BYTE m_RcvBuf[0x10000];						// 16 k receiver buffer .. now 64k
-	int m_BufOffset;
+	CCmdFifo *m_pFifo;		// In ClientConnectionManagement get PAG commands. Here gets instrument data
+	//BYTE m_RcvBuf[0x10000];						// 16 k receiver buffer .. now 64k
 	// debug info
-	int m_nMaxBufOffset;
-	int m_nMaxStart;
-	int m_nRcvRqst;								// how many can we take
-	int m_nMinRcvRqst;							// smallest packet requested to receive
-	int m_nMaxRcvRqst;
 	CString szName;
 	void *pWholePacket;				// -- not created with 'new'
 	CHwTimer *m_pElapseTimer;

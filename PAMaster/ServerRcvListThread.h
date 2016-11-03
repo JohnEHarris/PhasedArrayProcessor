@@ -66,7 +66,7 @@ public:
 	void MakeFakeData(InputRawDataPacket *pData);
 	int GetSequenceModulo(SRawDataPacketOld *pData);
 	//void BuildOutputPacket(SRawDataPacketOld *pRaw);
-	void BuildOutputPacket(InputRawDataPacket *pRaw);
+	void BuildOutputPacket(InputRawDataPacket *pInput);
 	void SaveFakeData(CString& s);
 
 	void AddToIdataPacket(CvChannel *pChannel, int nCh, int nSeq, int nSendFlag);

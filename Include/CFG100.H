@@ -829,15 +829,14 @@ typedef struct
 	{
 	WORD wMsgID;		// 1
 	WORD wMsgSeqCnt;
-	BYTE bPapNumber;	// Which PAM
-	BYTE bInstNumber;	// Which Instrument connected to the above APAM
-	BYTE bChnlTypes;	// how many different chnl types for each instrument
-	BYTE bChnlRepeats;	// how many times a given chnl type repeats in each instrument
-	BYTE bMaxVChnlPerInst;	// We assume 32 total vChnl per instrument max
-	BYTE bSpare[3];
-	BYTE bMsg[1024];	// Max unique sets of Nc Nx data per instrument. Size = 16*32 =512 words
-	} PAM_GENERIC_MSG; // SIZEOF() = 1036
-
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bSpare[4];	// sequence number at beginning of stPeakData Results[]
+	BYTE bMsg[1444];	// Max unique sets of Nc Nx data per instrument.
+	} PAM_GENERIC_MSG; // SIZEOF() = 1454
 
 
 

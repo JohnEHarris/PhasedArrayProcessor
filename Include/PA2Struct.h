@@ -293,8 +293,11 @@ typedef struct
 // If Nx = 0, the output wall value will be 10. This will decrease processing time in the PAM
 // Effectively the associated channel will be a flaw channel or nothing
 //
+// When received as a command, bSeqNumber < 0 means end of command
 typedef struct
 	{
+	BYTE bSeqNumber;	// Sequence number of this channel
+	BYTE bChnlNumber;	// channel number in the above sequence for this channel
 	// Flaw Nc for ID
 	BYTE bNcID;		// how many flaw values required at or above threshold
 	BYTE bTholdID;	// Threshold value 0-127
@@ -304,7 +307,6 @@ typedef struct
 	BYTE bNcOD;		// how many flaw values required at or above threshold
 	BYTE bTholdOD;	// Threshold value 0-127
 	BYTE bModOD;	// active depth of FIFO. This is the 'm' in Nc out of m. eg., 2 out of 3 above thold
-	BYTE bSpare[2];
 	// Wall Nx portion
 	WORD wNx;		// Number of wall readings to average. Typically not more than 8
 	WORD wWallMax;	// maximum allowed hardware wall reading. 2.000" -> 1377 typically
@@ -320,18 +322,25 @@ typedef struct
 // in each of the 4 shoes.
 //
 
-// Assume 64 chnl types per sequence per instrument
+// Assume 64 chnl types per sequence per instrument.
+// Doubtful that we will have more than 64 channels in a sequence.
+// The easy way to do this is to send messages which terminate at the end
+// of a sequence in which case the start channel number is always 0
 typedef struct
 	{
 	WORD wMsgID;		// 1
 	WORD wMsgSeqCnt;
-	BYTE bPapNumber;	// Which PAM
-	BYTE bInstNumber;	// Which Instrument connected to the above PAM
-	BYTE bSeqNumber;	/// think of it as a multiplexer.
-	BYTE bSpare[3];
-	ST_NC_NX stNcNx[MAX_CHNLS_PER_MAIN_BANG];	
-	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1034 replaces CHANNEL_CMD_1
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+
+	BYTE bSpare[8];
+	ST_NC_NX stNcNx[90];		// 1440	
+	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1454 replaces CHANNEL_CMD_1
 	
+#if 0
 typedef struct
 	{
 	WORD wMsgID;		// 1		
@@ -342,6 +351,7 @@ typedef struct
 	BYTE bChannelTypeRepetition;	// number of sets of ChannelTypes in this message
 	ST_NC_NX stNcNx[32];
 	} CHANNEL_CMD_1;	// sizeof(CHANNEL_CMD_1) = 520
+#endif
 
 
 

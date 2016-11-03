@@ -328,7 +328,7 @@ public:
 
 	// read the received messages from ClientSocket Class instance
 	void OnReceive(CClientSocket *pSocket);	// Called by CClientSocket::OnReceive()
-	void* GetWholePacket(int nPacketSize, int *pReceived);
+	void* GetWholePacket(int nPacketSize, int nMsgSize, int *pFirstCall);
 	void UnknownRcvdPacket(void *pV);
 	virtual void ProcessReceivedMessage(void);		// Main dlg calls thru our ccm to process msg in linked list
 

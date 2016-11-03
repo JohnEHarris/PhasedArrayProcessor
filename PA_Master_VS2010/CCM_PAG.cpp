@@ -80,6 +80,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 	{
 	USES_CONVERSION;
 	CString s;
+	int i;
 //	BYTE *pB;
 
 /****
@@ -87,14 +88,19 @@ typedef struct
 	{
 	WORD wMsgID;		// 1
 	WORD wMsgSeqCnt;
-	BYTE bPapNumber;	// Which PAM
-	BYTE bInstNumber;	// Which Instrument connected to the above APAM
-	BYTE bChnlTypes;	// how many different chnl types for each instrument
-	BYTE bChnlRepeats;	// how many times a given chnl type repeats in each instrument
-	BYTE bMaxVChnlPerInst;	// We assume 32 total vChnl per instrument max
-	BYTE bSpare[3];
-	BYTE bMsg[1024];	// Max unique sets of Nc Nx data per instrument. Size = 16*32 =512
-	} PAM_GENERIC_MSG; // SIZEOF() = 1036
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bStartSeqNumber;	// sequence number at beginning of stPeakData Results[]
+	BYTE bSequenceLength;	// how many main bangs before repeating the virtual channels
+	BYTE bStartChannel;	// First channel in peak data Results
+	BYTE bMaxVChnlsPerSequence;	// 10 bytes to here
+	BYTE bMsg[1444];	// Max unique sets of Nc Nx data per instrument.
+	} PAM_GENERIC_MSG; // SIZEOF() = 1454
+
+
 	****/
 
 			
@@ -107,7 +113,7 @@ typedef struct
 
 	if (m_pstCCM->pRcvPktPacketList == NULL) return;
 
-	while (m_pstCCM->pRcvPktPacketList->GetCount())
+	while (i = m_pstCCM->pRcvPktPacketList->GetCount())
 		{
 		LockRcvPktList();
 		pMmiCmd = (PAM_GENERIC_MSG *) m_pstCCM->pRcvPktPacketList->RemoveHead();
@@ -231,19 +237,21 @@ int CCCM_PAG::FindDisplayChannel(int nArray, int nArrayCh)
 
 void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	{
-	int nPam, nInst, nChnlTypes, nRepeat;
-	int i,j,k;
+	int nPam, nInst, nSeq, nCh, msgcnt;
+	//int i,j,k;
+	int i;
 	CString s;
 	CvChannel *pChannel;
 
 	ST_SERVER_CONNECTION_MANAGEMENT *pPAM_SCM = GetPAM_SCM();
 
-	nPam		= pPamInstChnlInfo->bPapNumber;
+	nPam		= pPamInstChnlInfo->bPAPNumber;
 	nInst		= pPamInstChnlInfo->bInstNumber;
-//	nChnlTypes	= pPamInstChnlInfo->bChnlTypes;
-	nChnlTypes = 1;  // fix this soon
-	nRepeat		= pPamInstChnlInfo->bSeqNumber;
+	msgcnt		= 0;
+
 	ST_NC_NX *pNcNx = pPamInstChnlInfo->stNcNx;
+
+
 	// PAP is always the [0] server to the instruments. A second PAM will be in another computer
 	// but will in the software structure still be server[0] in the second computer.
 	// If for some reason PAP needs to be a server to another type client, it will have to be
@@ -257,25 +265,30 @@ void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 		return;
 		}
 
-	// outter loop is repeat count, inner loop is unique channel type
-	k = 0;
-	for ( j = 0; j < nRepeat; j++)
+	// packet has 90 max valid readings.
+	s.Format(_T("Start seq=%d, ch=%d ....."),pNcNx->bSeqNumber, pNcNx->bChnlNumber);
+	TRACE(s);
+	while ( (pNcNx->bSeqNumber != 255) && (msgcnt < 90) )
 		{
-		for ( i = 0; i < nChnlTypes; i++)
-			{
-			// [seq][chnl]
-			pChannel = pSCC->pvChannel[0][k]; // one of up to 32 channels typically
-			pNcNx = &pPamInstChnlInfo->stNcNx[i]; // one of up to nChnlTypes
-			pChannel->FifoInit(0, pNcNx->bNcID,pNcNx->bTholdID, pNcNx->bModID); 
-			pChannel->FifoInit(1, pNcNx->bNcOD,pNcNx->bTholdOD, pNcNx->bModOD); 
-			//FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
-			pChannel->WFifoInit((BYTE)pNcNx->wNx, pNcNx->wWallMax, pNcNx->wWallMin, pNcNx->wDropOut);
-			//WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut)
-			k++;
-			}
+		// debug helper
+		if ( (pNcNx->bSeqNumber == 4) && (pNcNx->bChnlNumber > 12) )
+			i = pNcNx->bChnlNumber;
+
+		nCh = pNcNx->bChnlNumber;
+		nSeq = pNcNx->bSeqNumber;
+		// [seq][chnl]
+		pChannel = pSCC->pvChannel[nSeq][nCh];
+		pChannel->FifoInit(0, pNcNx->bNcID,pNcNx->bTholdID, pNcNx->bModID); 
+		pChannel->FifoInit(1, pNcNx->bNcOD,pNcNx->bTholdOD, pNcNx->bModOD); 
+		//FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
+		pChannel->WFifoInit((BYTE)pNcNx->wNx, pNcNx->wWallMax, pNcNx->wWallMin, pNcNx->wDropOut);
+		//WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut)
+		pNcNx++;
+		msgcnt++;
 		}
 
-
+	s.Format(_T("End seq=%d, ch=%d, msgcnt=%d\n"),nSeq, nCh, msgcnt-1);
+	TRACE(s);
 
 	}
 

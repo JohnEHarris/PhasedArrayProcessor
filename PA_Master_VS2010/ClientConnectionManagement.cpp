@@ -514,7 +514,8 @@ void CClientConnectionManagement::UnknownRcvdPacket(void *pV)
 }
 	// Collect received data into expected packet lengths. That is
 	// reconstruct packet from received data.  Its a feature of TCPIP.
-void * CClientConnectionManagement::GetWholePacket(int nPacketSize, int *pReceived)
+	// nMsgSize is amount received by hardware. Can be greater or less than desired packet size
+void * CClientConnectionManagement::GetWholePacket(int nPacketSize, int nMsgSize, int *pFirstCall)
 	{
 	CString s, t;
 
@@ -524,10 +525,10 @@ void * CClientConnectionManagement::GetWholePacket(int nPacketSize, int *pReceiv
 		return NULL;
 		}
 
-	if (*pReceived)		// pReceived = &n, count of data already received
+	if (*pFirstCall)		
 		{
 		m_nStart = 0;	// 1st time called from OnReceive 
-		m_BufOffset += *pReceived;
+		m_BufOffset += nMsgSize;
 #ifdef _DEBUG
 		if ( m_nMaxBufOffset < m_BufOffset)
 			{
@@ -539,14 +540,14 @@ void * CClientConnectionManagement::GetWholePacket(int nPacketSize, int *pReceiv
 			}
 
 		// TESTING ONLY
-		if (*pReceived % nPacketSize)
+		if (nMsgSize % nPacketSize)
 			{
 			pWholePacket = NULL;	// BREAK POINT does not occur at 6 ms between packets
 			}
 #endif
 
-		*pReceived = 0;		// value in caller set to 0
-		}
+		*pFirstCall = 0;		// value in caller set to 0
+		}	// if (*pReceived)
 
 	if ( m_BufOffset >= nPacketSize )
 		{	// accumulated at least one nPacketSize
@@ -564,7 +565,7 @@ void * CClientConnectionManagement::GetWholePacket(int nPacketSize, int *pReceiv
 			}
 #endif
 		return pWholePacket;
-		}
+		}	// if ( m_BufOffset >= nPacketSize )
 
 	else
 		{	// move residual data to front of m_RcvBuf and adjust insertion point
@@ -591,6 +592,7 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 	{
 
 	int n;
+	int nFirstCall;
 	CString s,t;
 
 #ifdef THIS_IS_SERVICE_APP
@@ -637,8 +639,13 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 			DebugOut(s);
 			}
 		// put it in the linked list and let someone else decipher it
-			nPacketSize = n;	// assuming we only have one msg from PAG 2016-06-28 JEH
-		while ( pPacket = GetWholePacket(nPacketSize, &n))	// returns a ptr to void with length nPacketSize
+			nPacketSize = 1454;	//n;	// assuming we only have one msg from PAG 2016-06-28 JEH
+		// debugging
+//		while (n > nPacketSize) 
+//			{
+//			t = "OK";
+		nFirstCall = 1;
+		while ( pPacket = GetWholePacket(nPacketSize, n, &nFirstCall))	// returns a ptr to void with length nPacketSize
 			{	// get packets
 			BYTE *pB2 = new BYTE[nPacketSize];	// resize the buffer that will actually be used
 			memcpy( (void *) pB2, (void *) pPacket, nPacketSize);	// move all data to the new buffer
@@ -672,7 +679,9 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 					TRACE(s);
 					}
 #endif
+			n -= nPacketSize;
 			} 	// get packets
+//			}	// while (n > nPacketSize)
 
 		if (( nWholePacketQty) && (m_pstCCM))
 			// This messages causes void CCmdProcessThread::ProcessReceivedMessage() to execute

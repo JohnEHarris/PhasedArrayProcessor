@@ -1740,7 +1740,9 @@ void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 	i = pSocket->Send(&pNew->Msg, pNew->nLength, 0);
 #endif
 	pIdata->uMsgSeqCount = m_uMsgSeqCount++;
-	i = pSocket->Send(pBuf, nLen, 0);
+	
+	i = pSocket->Send(pBuf, nLen, 0);	// <-------------
+	
 	if ( i != nLen)
 		{
 		s.Format(_T("CServiceApp::PamSendToPag requested to send %d bytes, but sent %d\n"), nLen, i);

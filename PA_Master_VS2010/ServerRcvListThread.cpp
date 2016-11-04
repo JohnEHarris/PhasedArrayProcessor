@@ -536,7 +536,7 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
 	i = sizeof(SRawDataPacketOld);
-	if (pBuf->nLength == 1040)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
+	if (pBuf->nLength == INSTRUMENT_PACKET_SIZE)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
 		{
 		/******************************************************************/
 		//  2016-10-20 start to migrate to new input data structures

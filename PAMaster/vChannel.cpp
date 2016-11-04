@@ -24,7 +24,8 @@ Revised:	modeled somewhat like RunningAverage. The two may be merged in the futu
 #include "InstMsgProcess.h"
 extern UINT uVchannelConstructor[MAX_CLIENTS_PER_SERVER][MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];
 
-// Every time an instrument connects, the constructor runs
+// NcNx values are loaded by the ServiceApp program and are data structures in that program.
+// When an instrument disconnects and then reconnects, these structures remain in place.
 // Must reload from GUI or store last good Nc Nx info in a static table
 CvChannel::CvChannel(int nInst, int nSeq, int nChnl)
 	{

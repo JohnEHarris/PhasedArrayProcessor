@@ -59,7 +59,7 @@ enum IdOdTypes {eId, eOd};
 // stPeakData Results[179]
 #define MAX_RESULTS						179
 
-#define INSTRUMENT_PACKET_SIZE			1454		//old 1040
+#define INSTRUMENT_PACKET_SIZE			1460		//old 1040
 #define MASTER_PACKET_SIZE				1260
 
 
@@ -183,11 +183,12 @@ typedef struct
 	WORD wPeriod;		// period of rotation in 0.2048 ms
 	UINT uMsgSeqCount;	// counter to uniquely identify each packet
 	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	BYTE bSpare[6];		// makes maximum tcpip packet .... 28 bytes to here
 	stPeakData Results[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 179*8=1432
-	} IDATA_PACKET;	// sizeof = 1454 - the maximum TCPIP packet size
+	} IDATA_PACKET;	// sizeof = 1460 - the maximum TCPIP packet size for data
 
 // https://blog.apnic.net/2014/12/15/ip-mtu-and-tcp-mss-missmatch-an-evil-for-network-performance/
-// 1460 is max
+// 1460 is max but each result is 8 bytes so if we used Max_Results= 180 the packet would be 1454+8=1462
 
 #else
 typedef struct
@@ -330,7 +331,7 @@ typedef struct
 // of a sequence in which case the start channel number is always 0
 typedef struct
 	{
-	WORD wMsgID;		// 1
+	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	WORD wMsgSeqCnt;
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42

@@ -1,0 +1,23 @@
+{
+HWND hWnd;						
+CString sServerName;			
+CString sServerIP4;				
+UINT uServerPort;				
+int nServerType;				
+int nProtocolSelector;			
+int nSeverShutDownFlag;			
+CServerListenThread 
+	*pServerListenThread;
+DWORD ListenThreadID;			
+CServerSocket *pServerListenSocket;	
+int nServerThreadPriority;		
+HWND hServerDlg;				
+ST_SERVERS_CLIENT_CONNECTION 
+	*pClientConnection[MAX_CLIENTS_PER_SERVER];	
+int nComThreadExited[MAX_CLIENTS_PER_SERVER];
+CPtrList* pOutDebugMessageList;
+UINT uIdataAcksSent;
+CRITICAL_SECTION *pCSDebugIn;
+CRITICAL_SECTION *pCSDebugOut;
+CServerConnectionManagement *pSCM;
+}	ST_SERVER_CONNECTION_MANAGEMENT;

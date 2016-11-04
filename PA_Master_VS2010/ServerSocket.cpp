@@ -33,12 +33,13 @@ CServerSocket::CServerSocket(CServerConnectionManagement *pSCM)
 	{
 	Init();
 	m_pSCM = pSCM;
+	m_pFifo = new CCmdFifo(INSTRUMENT_PACKET_SIZE);		// FIFO control for receiving instrument packets	
 	}
 
 CServerSocket::CServerSocket()
 	{
 	Init();
-	m_pFifo = new CCmdFifo(1454);		// FIFO control for receiving instrument packets	
+	m_pFifo = new CCmdFifo(INSTRUMENT_PACKET_SIZE);		// FIFO control for receiving instrument packets	
 	}
 
 CServerSocket::~CServerSocket()
@@ -478,7 +479,10 @@ void CServerSocket::OnReceive(int nErrorCode)
 	BYTE *pB;	// debug
 	void *pPacket = 0;
 	int nPacketSize;
-	nPacketSize = gServerArray[m_nMyServer].nPacketSize;	// 1040 as of 9-13-16 but likely bigger in the future
+//	nPacketSize = gServerArray[m_nMyServer].nPacketSize;	// 1040 as of 9-13-16 but likely bigger in the future
+// Yiqing simulator sends 1460
+
+
 
 	//TCPDUMMY * Data = new TCPDUMMY;
 	int n, m = 0;
@@ -488,6 +492,16 @@ void CServerSocket::OnReceive(int nErrorCode)
 	if (m_pSCM->m_pstSCM == NULL)				return;	
 	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)	return;
 	if (m_pSCC == NULL)							return;
+
+	// A Kludge for now --- how to correctly set packet size??
+	//if (m_pSCC->uPacketsReceived == 0)
+	//	{
+	//	nPacketSize = 1456;		// real data INSTRUMENT_PACKET_SIZE = 1454
+	//	m_pFifo->SetPacketSize(nPacketSize);
+	//	}
+
+
+
 
 	if (m_pSCC->bStopSendRcv)
 			{

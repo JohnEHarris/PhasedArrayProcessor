@@ -43,25 +43,26 @@ enum IdOdTypes {eId, eOd};
 
 // An instrument client can have up to this many virtual channels for each UT firing or Main Bang
 // Each MAIN BANG is a "sequence" until the sequence number repeats
-#define MAX_CHNLS_PER_MAIN_BANG			64
+// 64 until 11-08-16 then 32
+#define MAX_CHNLS_PER_MAIN_BANG			32
 
 // Channels may be redefined on each main bang. The counter which counts main bangs is called the sequence counter
 // the maximum value the sequence counter can have is =
-#define MAX_SEQ_COUNT					5
+#define MAX_SEQ_COUNT					16
 // choose 5 for seq length while doing simulated input data so that one packet has all the virtual channels in it
 
 // The number of virtual channels is finite. Channels repeat after MAX_SEQ_COUNT number of main bangs.
 // On any given main bang (sequence count) there can only be a max number of channels define by 
 // MAX_CHNLS_PER_MAIN_BANG. The max the number of channels in a transducer array is 
-// [MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG] = 256
+// [MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG] = 16*32 = 512
 
 // How many peak held data Results can we get in the max size tcpip packet.
 // stPeakData Results[179]
 #define MAX_RESULTS						179
 
-#define INSTRUMENT_PACKET_SIZE			1460		//old 1040
+#define INSTRUMENT_PACKET_SIZE			1460		//old 1040.. 1460 is max TCPIP size
 #define MASTER_PACKET_SIZE				1260
-
+#define SYNC							0x5CEBDAAD
 
 /*****************	STRUCTURES	*********************/
 // A channel is a UT echo or reflection assigned a physical position in the transducer.
@@ -93,12 +94,12 @@ typedef struct
 // Data coming from the Tuboscope electronics, that is the phased array boards.
 typedef struct 
 	{
+	BYTE bStatus;	// tbd
+	BYTE bAmp1;		// interface gate
     BYTE bAmp2;		//Gate 2 amplitude (0-255)
     BYTE bAmp3;		//Gate 3 amplitude (0-255)
     WORD wTof;     //time of flight of Gate 4
-    //WORD wTof4Max;     //time of flight of Gate 4
-    //WORD wGateFlag; //Gate flag bits, BIT0=Gate 1
-	} stRawData;		//4 bytes
+	} stRawData;		//6 bytes
 
 typedef struct 
 	{
@@ -118,14 +119,14 @@ typedef struct
 
 typedef struct
 	{
-	stDataHead DataHead;
-	stRawData RawData[MAX_CHNLS_PER_MAIN_BANG];	// sizeof = 64*4 = 256
-	} stRawPacket;	// sizeof = 258
+	stDataHead DataHead;	// 2 bytes
+	stRawData RawData[MAX_CHNLS_PER_MAIN_BANG];	// sizeof = 32*6 = 192
+	} stRawPacket;	// sizeof = 194
 
 
 // Raw data packet is built by the instrument over 5 main bang periods
 // at 5k prf this is 1 packet every millisecond or 1k packets per second.
-// This is the packet which is sent to the Receiver system
+// This is the packet which is sent to the PAP
 //
 typedef struct 
 	{
@@ -133,10 +134,11 @@ typedef struct
     BYTE bDin;			//digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
     WORD wMsgSeqCnt;
     WORD wLocation;		//x location in motion pulses
-    WORD wClock;		//unit in .2048ms
+    WORD wClock;		//unit in .2048ms - ticks from TOP OF PIPE
     WORD wPeriod;		//unit in .2048ms
-	stRawPacket stSeqPkt[5];	// Raw data for 5 sequence points
-	} InputRawDataPacket;		//sizeof = 258*5 + 10 = 1300 bytes
+	BYTE bSpare[92];
+	stRawPacket stSeqPkt[7];	// Raw data for 7 sequence points
+	} InputRawDataPacket;		//sizeof = 194*7 + 102 = 1460 bytes
 
 // More than just a structure, this may wind up being a fifo in the CvChannel class -- NOT
 // peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure
@@ -167,6 +169,9 @@ typedef struct
 #if 1
 typedef struct
 	{
+	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	UINT uMsgSeqCount;	// counter to uniquely identify each packet
+	WORD wMsgID;		// In case there are more messages later
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
 	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
@@ -179,11 +184,9 @@ typedef struct
 								// Some sequence points may have channel type NOTHING
 	WORD wStatus;		// tbd
 	WORD wLoc;			// x location in motion pulses relative to 1st packet from instrument
-	WORD wAngle;		// angle in degrees from TOP relative to 1st packet from instrument
+	WORD wAngle;		// 0.2048 ms clock counts from TOP relative to 1st packet from instrument
 	WORD wPeriod;		// period of rotation in 0.2048 ms
-	UINT uMsgSeqCount;	// counter to uniquely identify each packet
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	BYTE bSpare[6];		// makes maximum tcpip packet .... 28 bytes to here
+	BYTE bSpare[4];		// makes maximum tcpip packet .... 28 bytes to here
 	stPeakData Results[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 179*8=1432
 	} IDATA_PACKET;	// sizeof = 1460 - the maximum TCPIP packet size for data
 

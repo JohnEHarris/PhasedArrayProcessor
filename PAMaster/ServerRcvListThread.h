@@ -79,6 +79,17 @@ public:
 	int m_nFrameCount;	// every 16th frame send data to the PAG/Receiver
 	int m_nFakeDataCallCount;	// how many times fake data called.
 
+	// Add state variable for Fake Data to determine start seq and start chnl
+	int m_FDstartSeq, m_FDstartCh;
+	int GetFDstartSeq(void) 	{ return m_FDstartSeq;	}
+	int GetFDstartCh(void)		{ return m_FDstartCh;	}
+	// increment the starting channel number. Wrap around to next sequence when at end of sequence
+	void IncFDstartCh(void);
+	void IncFDstartSeq(void);
+	// For processing real or fake data
+	int GetSeqStart(InputRawDataPacket *pData);
+	int GetSeqCh(InputRawDataPacket *pData);
+
 	CInspState *GetInspState(void)	{	return &InspState;	}
 
 	CHANNEL_INFO m_ChannelInfo[MAX_CHANNEL_PER_INSTRUMENT];

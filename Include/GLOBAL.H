@@ -89,5 +89,6 @@ typedef struct
 
 PubExt	GLOBAL_DLG_PTRS gDlg;
 PubExt int gMaxChnlsPerMainBang;
+PubExt int gMaxSeqCount;
 
 #endif		/* include global_h */

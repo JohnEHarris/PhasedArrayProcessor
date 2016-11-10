@@ -75,9 +75,32 @@ public:
 		
 	int m_nInspectMode;
 	int m_nMotionTime;
-	//int m_nFakeDataSeqNumber;
-	int m_nFrameCount;	// every 16th frame send data to the PAG/Receiver
 	int m_nFakeDataCallCount;	// how many times fake data called.
+
+	// Add state variable for Fake Data to determine start seq and start chnl
+	/****** FAKE DATA ******/
+
+	int m_FDstartSeq, m_FDstartCh;
+	int GetFDstartSeq(void) 	{ return m_FDstartSeq;	}
+	int GetFDstartCh(void)		{ return m_FDstartCh;	}
+	// increment the starting channel number. Wrap around to next sequence when at end of sequence
+	void IncFDstartCh(void);
+	void IncFDstartSeq(void);
+
+	/****** FAKE DATA ******/
+
+	/****** INSTRUMENT DATA ******/
+
+	// Instrument data can be in process while fake data is in process during simulation
+	// Once testing has ended, fake data will go away.
+	int m_Seq, m_Ch;
+	int GetStartSeq(void) 	{ return m_Seq;	}
+	int GetStartCh(void)	{ return m_Ch;		}
+	void IncStartCh(void);
+	void IncStartSeq(void);
+
+	/****** INSTRUMENT DATA ******/
+
 
 	CInspState *GetInspState(void)	{	return &InspState;	}
 

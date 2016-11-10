@@ -179,7 +179,9 @@ CServiceApp::CServiceApp()
 
 
 	m_nShutDownCount = 0;
-	gMaxChnlsPerMainBang = MAX_CHNLS_PER_MAIN_BANG;
+	// DEFAULT VALUES - CAN BE OVERWRIDDEN WITH COMMAND FROM PAG
+	gMaxChnlsPerMainBang	= MAX_CHNLS_PER_MAIN_BANG;
+	gMaxSeqCount = MAX_SEQ_COUNT;
 	pCSSaveDebug =new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pCSSaveDebug,4);
 
@@ -251,7 +253,7 @@ void CServiceApp::ShutDownEasy(void)
 		if (pThread) 
 			pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET, (WORD)nClients, (LPARAM) pSCC);
 
-		for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
+		for ( nSeqCount = 0; nSeqCount < gMaxSeqCount; nSeqCount++)
 			{ //nSeqCount
 			for ( nChnlPerBang = 0; nChnlPerBang < gMaxChnlsPerMainBang; nChnlPerBang++)
 				{
@@ -1373,14 +1375,14 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 					pSCM[i]->m_pstSCM->pClientConnection[j]->cpRcvPktList	= pSCM[i]->m_pstSCM->pRcvPktList[j];
 					pSCM[i]->m_pstSCM->pClientConnection[j]->bConnected		= 0;
 
-					for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
+					for ( nSeqCount = 0; nSeqCount < gMaxSeqCount; nSeqCount++)
 						{
 						for ( nChnlPerBang = 0; nChnlPerBang < gMaxChnlsPerMainBang; nChnlPerBang++)
 							{
 							pSCM[i]->m_pstSCM->pvChannel[j][nSeqCount][nChnlPerBang] = 
 								new CvChannel(j, nSeqCount, nChnlPerBang);
 							}	// gMaxChnlsPerMainBang
-						}	// MAX_SEQ_COUNT
+						}	// gMaxSeqCount
 
 					}	// for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 
@@ -1388,14 +1390,14 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 
 				for ( nClients = 0; nClients < MAX_CLIENTS_PER_SERVER; nClients++)
 					{
-					for ( nSeqCount = 0; nSeqCount < MAX_SEQ_COUNT; nSeqCount++)
+					for ( nSeqCount = 0; nSeqCount < gMaxSeqCount; nSeqCount++)
 						{
 						for ( nChnlPerBang = 0; nChnlPerBang < gMaxChnlsPerMainBang; nChnlPerBang++)
 							{
 							pSCM[i]->m_pstSCM->pClientConnection[nClients]->pvChannel[nSeqCount][nChnlPerBang] =
 								pSCM[i]->m_pstSCM->pvChannel[nClients][nSeqCount][nChnlPerBang];
 							}	// MAX_CHNLS_PER_MAIN_BANG
-						}	// MAX_SEQ_COUNT
+						}	// gMaxSeqCount
 					}	// MAX_CLIENTS_PER_SERVER
 
 

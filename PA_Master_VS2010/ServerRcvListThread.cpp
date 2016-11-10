@@ -77,14 +77,13 @@ IMPLEMENT_DYNCREATE(CServerRcvListThread, CServerRcvListThreadBase)
 
 CServerRcvListThread::CServerRcvListThread()
 	{
-	//m_nFakeDataSeqNumber = 0;
-	m_nFrameCount = 0;
 	m_nFakeDataCallCount = 0;
 	srand( (unsigned)time( NULL ) );	// seed random number generator
 	// The output packet has the same structure and the input. It is a compress version of the input
 	m_pOutputRawDataPacket = new InputRawDataPacket;
 	memset(m_pOutputRawDataPacket, 0, sizeof (InputRawDataPacket));
 	m_pIdataPacket = NULL;
+	//m_uMsgSeqCount = 0;
 	}
 
 CServerRcvListThread::~CServerRcvListThread()
@@ -121,9 +120,8 @@ BOOL CServerRcvListThread::InitInstance()
 	CServerRcvListThreadBase::InitInstance();
 	m_pElapseTimer = new CHwTimer();
 	i = sizeof(CHwTimer);		// 364
-
-		//InitRunningAverage(0,0);
-		return TRUE;
+	m_FDstartSeq = m_FDstartCh = 0;	// Fake data simulator state variables
+	return TRUE;
 
 
 #else
@@ -243,13 +241,14 @@ void CServerRcvListThread::FlushRcvList(WPARAM w, LPARAM lParam)
 //void CServerRcvListThread::MakeFakeDataHead(SRawDataPacketOld *pData)
 void CServerRcvListThread::MakeFakeDataHead(InputRawDataPacket *pData)
 	{
-	pData->bMsgID		= eRawInsp;	// raw data=10
-	pData->bDin = FORWARD | PIPE_PRESENT;
+	pData->bMsgID	= eRawInsp;	// raw data=10
+	pData->bDin		= FORWARD | PIPE_PRESENT;
 	pData->wMsgSeqCnt++;
 	pData->wLocation = nLoc++;
-	if (nLoc > 500) nLoc = 20;
-	pData->wClock = nLoc % 12;
-	pData->wPeriod = 1465;	// 300 ms = 200 rpm
+	if (nLoc > 500) 
+		nLoc = 20;
+	pData->wClock	= nLoc % 12;
+	pData->wPeriod	= 1465;	// 300 ms = 200 rpm
 	}
 
 
@@ -264,12 +263,36 @@ BYTE GetRand(void)
 	return (BYTE)(wReturn % 100);
 	}
 
+void CServerRcvListThread::IncFDstartCh(void)
+	{
+	m_FDstartCh++;
+	if (m_FDstartCh >= gMaxChnlsPerMainBang)
+		{
+		m_FDstartCh = 0;
+		IncFDstartSeq();
+		}
+	}
+
+//Only call from IncFDstartCh
+void CServerRcvListThread::IncFDstartSeq(void)
+	{
+	m_FDstartSeq++;
+	if (m_FDstartSeq >= gMaxSeqCount)
+		{
+		m_FDstartSeq = 0;
+		}
+	}
+
 // Make fake data to test Nc and Nx operations
 // change input data type to InputRawDataPacket
 //void CServerRcvListThread::MakeFakeData(SRawDataPacketOld *pData)
+// ADD state variable to keep track of start sequence and start channel number
+// Can be different start location on every call.
+// Loop here until we get MAX_RESULTS and then return fake data to caller.
+//
 void CServerRcvListThread::MakeFakeData(InputRawDataPacket *pData)
 	{
-	int i, jSeq, k;
+	int i, jSeq, k, n, iSeqPkt;
 	CString s,t;
 
 	s.Format(_T("\r\n\r\nFake Data Call = %5d\r\n      ID   OD   TOF2    TOF4\r\n"), m_nFakeDataCallCount++);
@@ -278,35 +301,56 @@ void CServerRcvListThread::MakeFakeData(InputRawDataPacket *pData)
 	MakeFakeDataHead(pData);
 
 	// Assuming only 5 sequences to fit the data size. Need to do something different if not 5 sequences in packet
-	for ( jSeq = 0; jSeq < 5; jSeq++)	
+	// Doing something different
+	for (iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
 		{
-		pData->stSeqPkt[jSeq].DataHead.bSeqNumber = jSeq;
-		pData->stSeqPkt[jSeq].DataHead.bChnlNumber = 0;
-;
+		pData->stSeqPkt[iSeqPkt].DataHead.bSeqNumber = GetFDstartSeq();
+		pData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber = GetFDstartCh();
+		n = 0;	// channel counter. Will create gMaxChnlsPerMainBang*gMaxSeqCount channels
+		jSeq = GetFDstartSeq();
+
 		s.Format(_T("\r\n[%3d] Sequence Begins"), jSeq);
-		for ( i = 0; i < gMaxChnlsPerMainBang; i++)
+		while (1)
 			{
-			if ( i == 0)
+			jSeq = GetFDstartSeq();
+			i = GetFDstartCh();			
+			if (i == 0)
 				{
 				t.Format(_T("\r\n[%3d] "), i); s += t;
 				// Input flaw gates before wall since the 16 Ascan reset is done by the wall code
-				k = pData->stSeqPkt[jSeq].RawData[i].bAmp2 = 5 + (GetRand()/2);	// 5-55 amplitude
-				t.Format(_T("%3d  "),(k)); s += t;
-				k = pData->stSeqPkt[jSeq].RawData[i].bAmp3 = 10 + (GetRand()/2);	// 10-60 amplitude
-				t.Format(_T("%3d  "),(k)); s += t;
-				k = pData->stSeqPkt[jSeq].RawData[i].wTof = 300 + GetRand();
-				t.Format(_T("%4d    "),(k)); s += t;
+				k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp1 = 1 + (GetRand() / 2);	// 1-51 amplitude
+				t.Format(_T("%3d  "), (k)); s += t;
+				k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp2 = 5 + (GetRand() / 2);	// 5-55 amplitude
+				t.Format(_T("%3d  "), (k)); s += t;
+				k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp3 = 10 + (GetRand() / 2);	// 10-60 amplitude
+				t.Format(_T("%3d  "), (k)); s += t;
+				k = pData->stSeqPkt[iSeqPkt].RawData[i].wTof = 300 + GetRand();
+				t.Format(_T("%4d    "), (k)); s += t;
 				SaveFakeData(s);
 				}
 			else
 				{
-				pData->stSeqPkt[jSeq].RawData[i].bAmp2 = 5 + (GetRand()/2);	// 5-55 amplitude
-				pData->stSeqPkt[jSeq].RawData[i].bAmp3 = 10 + (GetRand()/2);	// 10-60 amplitude
-				pData->stSeqPkt[jSeq].RawData[i].wTof = 300 + GetRand();
+				pData->stSeqPkt[iSeqPkt].RawData[i].bAmp1 = 1 + (GetRand() / 2);
+				pData->stSeqPkt[iSeqPkt].RawData[i].bAmp2 = 5 + (GetRand() / 2);	// 5-55 amplitude
+				pData->stSeqPkt[iSeqPkt].RawData[i].bAmp3 = 10 + (GetRand() / 2);	// 10-60 amplitude
+				pData->stSeqPkt[iSeqPkt].RawData[i].wTof = 300 + GetRand();
 				}
-			}
 
-		}	// for ( jSeq = 0; jSeq < 5; jSeq++)
+			IncFDstartCh();		// move to the next channel... maybe in the next sequence
+
+			n++;
+			if (n == gMaxChnlsPerMainBang)
+				{
+				break;	// jump into for loop at top
+				}
+			if (n == (7 * gMaxChnlsPerMainBang))	// never gets here, n reset at top of for loop
+				return;		// the fake data packet is complete
+
+			jSeq = GetFDstartSeq();
+			i = GetFDstartCh();
+
+			}	// while (1)
+		}	// for (iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
 	}
 
 // For debugging, save the fake data and the contents of the output tcpip packet made from fake data
@@ -346,6 +390,9 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int n
 
 	if (m_pIdataPacket->uSync == 0)
 		{
+		m_pIdataPacket->uSync		= SYNC;
+		m_pIdataPacket->uMsgSeqCount = 0;	// m_uMsgSeqCount++;
+		m_pIdataPacket->wMsgID		= 1;
 		m_pIdataPacket->bStartSeqNumber = nSeq;	// Come from gate board in header with gates and wall
 		m_pIdataPacket->bStartChannel	= nCh;
 		m_pIdataPacket->bSequenceLength	= gMaxChnlsPerMainBang;	// Come from gate board in header with gates and wall reading
@@ -355,11 +402,9 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int n
 		m_pIdataPacket->wAngle		= m_pSCC->InstrumentStatus.wAngle;
 		m_pIdataPacket->wPeriod		= m_pSCC->InstrumentStatus.wPeriod;
 		m_pIdataPacket->wStatus		= m_pSCC->InstrumentStatus.wStatus;
-		m_pIdataPacket->uMsgSeqCount = 50;
-		m_pIdataPacket->uSync		= 0x5CEBDAAD;
-		m_IdataInPt						= 0;	// insertion index in output data structrure
-
+		m_IdataInPt					= 0;	// insertion index in output data structrure
 		}
+
 #if 0
 	WORD wStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
 					// ie, PAP did not service PeakData fast enough
@@ -518,6 +563,26 @@ void CServerRcvListThread::BuildOutputPacket(InputRawDataPacket *pInput)
 
 #ifdef THIS_IS_SERVICE_APP
 
+void CServerRcvListThread::IncStartCh(void)
+	{
+	m_Ch++;
+	if (m_Ch >= gMaxChnlsPerMainBang)
+		{
+		m_Ch = 0;
+		IncStartSeq();
+		}
+	}
+
+//Only call from IncStartCh
+void CServerRcvListThread::IncStartSeq(void)
+	{
+	m_Seq++;
+	if (m_Seq >= gMaxSeqCount)
+		{
+		m_Seq = 0;
+		}
+	}
+
 void CServerRcvListThread::ProcessInstrumentData(void *pData)
 	{
 	// see ServicApp.cpp the procedure tInstMsgProcess() for legacy operation
@@ -526,8 +591,9 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 	//int nStartSeqCount, nSeqQty;
 	//SRawDataPacketOld *pOutput; before 2016-10-20
 	InputRawDataPacket *pFakeData;
-	int i, j;	//, nFrameQtyPerPacket;
-	int iSeq;
+	InputRawDataPacket *pIData;
+	int i, j;
+	int iSeqPkt;
 	BYTE bGateTmp;
 	WORD wTOFSum;
 	CvChannel *pChannel;
@@ -552,53 +618,42 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 #ifdef MAKE_FAKE_DATA
 	// Basically Yqing's simulator gave us some bytes. Generate test data in place of those bytes.
 	// Run the fake data through the Nc Nx operations and keep the Max, Min values
-		pFakeData = new InputRawDataPacket;
+		pIData = pFakeData = new InputRawDataPacket;
 		// 1 Ascan reading for every virtual channel. For now assuming this is 5 sequence points.
 		MakeFakeData(pFakeData);
 		// Now that we have fake data, process it
 		// How many vChannels?
 #endif
 		// debugging
-#if 0
-		pChannel = m_pSCC->pvChannel[MAX_SEQ_COUNT-1][MAX_CHNLS_PER_MAIN_BANG-1];	// the last vChannel
-		i = pChannel->bGetAscansInFifo() % ASCANS_TO_AVG;
-		if ( i == 0) 
-			m_nFrameCount = 0;
-		else m_nFrameCount = 1;
-		// Capture starting status info regarding pipe location
-		//m_nFrameCount &= 0xf;	// modulo 16 counter
-		if ( 0 == m_nFrameCount)
-			{
-			m_pSCC->InstrumentStatus.wStatus	= 0;
-			m_pSCC->InstrumentStatus.wLoc		= pFakeData->wLocation;
-			m_pSCC->InstrumentStatus.wAngle		= pFakeData->wClock;
-			m_pSCC->InstrumentStatus.wPeriod	= pFakeData->wPeriod;
-			}
-#endif
 
 		/***************** The peak hold opertion on all channels by PAP ********************/
 		if (m_pElapseTimer)
 			m_pElapseTimer->Start();
 		//for ( i = 0; i < nSeqQty; i++)
-		for ( iSeq = 0; iSeq < 5; iSeq++)
+		for ( iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
 			{
+			// get the starting sequence number and channel from the instument data
+			m_Seq = pIData->stSeqPkt[iSeqPkt].DataHead.bSeqNumber;	// only used to find which pChannel
+			m_Ch  = pIData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber;
+
 			for ( j = 0; j < gMaxChnlsPerMainBang; j++)	// Assumes the data packet contains whole frames
 				{
-				pChannel = m_pSCC->pvChannel[iSeq][j];
+				pChannel = m_pSCC->pvChannel[m_Seq][m_Ch];
 				//pChannel->m_GateID = pChannel->m_GateOD = 0;
 
 				if ( NULL == pChannel)
 					continue;
 				// Get flaw Nc qualified Max values for this channel
-				bGateTmp = pChannel->InputFifo(eId, pFakeData->stSeqPkt[iSeq].RawData[j].bAmp2);	// output of the Nc peak holder
-				bGateTmp = pChannel->InputFifo(eOd, pFakeData->stSeqPkt[iSeq].RawData[j].bAmp3);
+				// Not defined what to do with bAmp1 or status ???????
+				bGateTmp = pChannel->InputFifo(eId, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp2);	// output of the Nc peak holder
+				bGateTmp = pChannel->InputFifo(eOd, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp3);
 
 				// Get Max and min tof for this channel
-				wTOFSum = pChannel->InputWFifo(pFakeData->stSeqPkt[iSeq].RawData[j].wTof);
+				wTOFSum = pChannel->InputWFifo(pIData->stSeqPkt[iSeqPkt].RawData[j].wTof);
 				if (pChannel->AscanInputDone())
 					{// time to move peak data into ouput structure
 					// AddToIdataPacket will create the IdataPacket if it does not already exist.
-					AddToIdataPacket(pChannel, j, iSeq, 0);
+					AddToIdataPacket(pChannel, j, iSeqPkt, 0);
 					pChannel->ResetGatesAndWalls();
 					if (MAX_RESULTS == GetIdataPacketIndex())
 						{
@@ -610,15 +665,17 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 					// If message is complete, signal to send it
 					// and create a new buffer to hold the next output message
 					}
+				IncStartCh();
 
-
-				}	// for ( j = 0; j < gMaxChnlsPerMainBang; j++)
-			
-			}	// for ( iSeq = 0; iSeq < 5; iSeq++)
+				m_Seq = GetStartSeq();
+				m_Ch = GetStartCh(); // used only to select which pChannel
+				}	// for ( j = 0; j < gMaxChnlsPerMainBang; j++)	
+			}	// for ( iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
 
 
 		m_nElapseTime = m_pElapseTimer->Stop();		// elapse time in uSec for 128 AScans
-		s.Format(_T("Nc Nx processing for 320 VChnls in %d uSec\n"), m_nElapseTime);
+		s.Format(_T("Nc Nx processing for %d VChnls in %d uSec\n"), 
+			7*gMaxChnlsPerMainBang, m_nElapseTime);
 		TRACE(s);
 		theApp.SaveDebugLog(s);
 		}	// if (pBuf->nLength == 1040)

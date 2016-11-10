@@ -196,11 +196,11 @@ WORD CvChannel::InputWFifo(WORD wWall)
 		m_wBadInARow++;
 		if (m_wBadInARow <= 0xf)
 			{
-			m_PeakData.wStatus &= 0xfff0;	// preserve upper 3 nibbles
-			m_PeakData.wStatus |= m_wBadInARow;
+			m_wStatus &= 0xfff0;	// preserve upper 3 nibbles
+			m_wStatus |= m_wBadInARow;
 			}
 		else						
-			m_PeakData.wStatus |= 0xf;	// limit to bits 0..3
+			m_wStatus |= 0xf;	// limit to bits 0..3
 
 		if (m_wBadInARow >= NxFifo.wDropOut)
 			SetDropOut();
@@ -238,7 +238,7 @@ COUNT_INPUTS:
 	// if CServerRcvListThread::ProcessInstrumentData() hasn't read data before now, it will be over run
 	if (m_bInputCnt >= ASCANS_TO_AVG)
 		{
-		if ( (m_PeakData.wStatus & SET_READ) == 0)	// previous peak data has not been read yet
+		if ( (m_wStatus & SET_READ) == 0)	// previous peak data has not been read yet
 			SetOverRun();
 		else ClearOverRun();
 		ClrRead();
@@ -290,17 +290,17 @@ void CvChannel::SetNx(BYTE bNx)
 void CvChannel::SetBadWall(BYTE badWall)
 	{
 	BYTE bOld;	// get bottom 5 bits of wStatus
-	bOld = m_PeakData.wStatus & 0x1f;
+	bOld = m_wStatus & 0x1f;
 	if ((badWall > bOld) && (badWall < 0x1f))
-		m_PeakData.wStatus |= badWall;
+		m_wStatus |= badWall;
 	}
 
 // Once ServerRcvListThread has read the data, clear the structure for the next 16 Ascans
 void CvChannel::CopyPeakData(stPeakData *pOut)
 	{
 	// Check for default constructor before copying data
-	if (w_DefaultConfig)	m_PeakData.wStatus |= DEFAULT_CFG;	// Still using default values
-	else					m_PeakData.wStatus &= ~DEFAULT_CFG;	// clear default bit
+	if (w_DefaultConfig)	m_wStatus |= DEFAULT_CFG;	// Still using default values
+	else					m_wStatus &= ~DEFAULT_CFG;	// clear default bit
 	memcpy( (void *)pOut, (void *) &m_PeakData, sizeof(m_PeakData));
 	}
 

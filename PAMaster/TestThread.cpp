@@ -171,9 +171,9 @@ void CTestThread::TestNx(void)
 			pCh->CopyPeakData(&LocalPeakData);
 			pCh->ResetGatesAndWalls();
 			TRACE1("\nPeak Data after %d Ascans\n", j);
-			s.Format("IdGate=%2d  MinWall = %4d   MaxWall = %4d  Status = 0x%04x\n\n", 
+			s.Format("IdGate=%2d  MinWall = %4d   MaxWall = %4d  Status = 0x%02x\n\n", 
 						LocalPeakData.bId2, LocalPeakData.wTofMin,
-						LocalPeakData.wTofMax, LocalPeakData.wStatus);
+						LocalPeakData.wTofMax, LocalPeakData.bStatus);
 			TRACE(s);
 			}
 

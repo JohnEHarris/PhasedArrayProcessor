@@ -87,19 +87,21 @@ public:
 	/*********************** Result FIFO routines ***********************/
 	// Not a fifo at 2016-10-05. May grow to be one
 	// 10-27-16 change bStatus to wStatus
+	// 11-10-16 wStatus becomes m_wStatus and bStatus joins Peak Data
+	WORD m_wStatus;
 	stPeakData m_PeakData;
 
 	void SetBadWall(BYTE badWall);
-	void SetDropOut(void)			{ m_PeakData.wStatus |= SET_DROPOUT;	}
-	void ClearDropOut(void)			{ m_PeakData.wStatus &= CLR_DROPOUT;	}
-	void SetOverRun(void)			{ m_PeakData.wStatus |= SET_OVERRUN;	}
-	void ClearOverRun(void)			{ m_PeakData.wStatus &= CLR_OVERRUN;	}
-	void SetPeakDataReady(void)		{ m_PeakData.wStatus |= DATA_READY;		}
-	void ClearPeakDataReady(void)	{ m_PeakData.wStatus &= CLR_DATA_READY;	}
-	void SetRead(void)				{ m_PeakData.wStatus |= SET_READ;		}
-	void ClrRead(void)				{ m_PeakData.wStatus &= CLR_READ;		}
+	void SetDropOut(void)			{ m_wStatus |= SET_DROPOUT;	}
+	void ClearDropOut(void)			{ m_wStatus &= CLR_DROPOUT;	}
+	void SetOverRun(void)			{ m_wStatus |= SET_OVERRUN;	}
+	void ClearOverRun(void)			{ m_wStatus &= CLR_OVERRUN;	}
+	void SetPeakDataReady(void)		{ m_wStatus |= DATA_READY;		}
+	void ClearPeakDataReady(void)	{ m_wStatus &= CLR_DATA_READY;	}
+	void SetRead(void)				{ m_wStatus |= SET_READ;		}
+	void ClrRead(void)				{ m_wStatus &= CLR_READ;		}
 	void GetPeakData(void);
-	void PeakDataClear(void);		// Once PAP copies data into Ethernet Packet, clear PeakData
+	//void PeakDataClear(void);		// Once PAP copies data into Ethernet Packet, clear PeakData
 	// pOut is a slot in the ethernet packet to be sent
 	void CopyPeakData(stPeakData *pOut);
 	//BYTE GetAscanCounter(void)		{ return m_bInputCnt;				}

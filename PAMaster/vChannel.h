@@ -14,6 +14,8 @@ Purpose:Simulate hardware processing of wall and flaw channels. One class instan
 		of the ut instrument. The will be an instantiated class instance for each "channel" based on its position
 		in the sequence of Ascans.
 
+		2016-11-11 Add interface gate (gate 1) and FIFO into vChnl. Use default setting for now. NO direct command
+					to set gate parameters at this time.
 */
 
 #ifndef V_CHANNEL_H
@@ -29,7 +31,7 @@ public:
 
 	/*********************** Flaw processing routines ***********************/
 	// Nc_FIFO is defined in PA2Struct.h
-	Nc_FIFO NcFifo[2];	// id=0, od=1
+	Nc_FIFO NcFifo[3];	// id=0, od=1, interface=2
 
 	// An amplitued is input and an Nc qualified reading is returned.
 	// bIdOd selects which FIFO id=0, od=1,bAmp is the input to the fifo
@@ -45,13 +47,19 @@ public:
 	void FifoClear(BYTE bIdOd);	// zero fifo entries, keep other parameters
 	BYTE bGetIdGateMax(void)	{ return NcFifo[0].bMaxFinal;	}
 	BYTE bGetOdGateMax(void)	{ return NcFifo[1].bMaxFinal;;	}
+	BYTE bGetIfGateMax(void)	{ return NcFifo[2].bMaxFinal;;	}
 
 	BYTE bGetNcId(void)			{ return NcFifo[0].bNc;	}
 	BYTE bGetNcOd(void)			{ return NcFifo[1].bNc;	}
+	BYTE bGetNcIf(void)			{ return NcFifo[2].bNc;	}
+
 	BYTE bGetMId(void)			{ return NcFifo[0].bMod;	}
 	BYTE bGetMOd(void)			{ return NcFifo[1].bMod;	}
+	BYTE bGetMIf(void)			{ return NcFifo[2].bMod;	}
+
 	BYTE bGetThldId(void)		{ return NcFifo[0].bThold;	}
 	BYTE bGetThldOd(void)		{ return NcFifo[1].bThold;	}
+	BYTE bGetThldIf(void)		{ return NcFifo[2].bThold;	}
 		
 	/*********************** Flaw processing routines ***********************/
 	/*======================================================================*/
@@ -105,7 +113,7 @@ public:
 	// pOut is a slot in the ethernet packet to be sent
 	void CopyPeakData(stPeakData *pOut);
 	//BYTE GetAscanCounter(void)		{ return m_bInputCnt;				}
-	BYTE AscanInputDone(void)		{ return (m_bInputCnt == 0);		}	// 0 if not all 16 Ascans
+	BYTE AscanInputDone(void)		{ return (m_bInputCnt == 0);		}	// 0 if all 16 Ascans
 
 	
 	

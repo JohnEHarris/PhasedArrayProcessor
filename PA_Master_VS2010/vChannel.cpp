@@ -32,6 +32,7 @@ CvChannel::CvChannel(int nInst, int nSeq, int nChnl)
 	// id/od, Nc, Thold, bMod
 	FifoInit(0,1,20,1);	// id
 	FifoInit(1,1,20,1);	// od
+	FifoInit(2,1,20,1);	// interface gate1
 	
 	m_bInputCnt = 0; 
 	// Wall processing routines
@@ -72,7 +73,8 @@ void CvChannel::ResetGatesAndWalls(void)
 void CvChannel::FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
 	{
 	Nc_FIFO *pFifo;
-	bIdOd &= 1;	// limit range to 0-1
+	if (bIdOd > 2)	 bIdOd = 2;
+	//bIdOd &= 1;	// limit range to 0-1
 	pFifo = &NcFifo[bIdOd];
 	memset( (void *) pFifo,0, sizeof (Nc_FIFO));
 	if (bNc > 16)  bNc = 16;
@@ -94,7 +96,7 @@ BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 	{
 	int i = 0;
 	Nc_FIFO *pFifo;
-	bIdOd &= 1;	// limit range to 0-1
+	if (bIdOd > 2)	 bIdOd = 2;
 	pFifo = &NcFifo[bIdOd];
 	if (pFifo->bNc == 0) return 0;	// nothing or a wall channel only
 	//if (bAmp > 0xc0)
@@ -129,15 +131,14 @@ BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 
 	if (pFifo->bMaxFinal < pFifo->bMax)
 		pFifo->bMaxFinal = pFifo->bMax;
-	//if (bIdOd == 0)		m_GateID = pFifo->bMax;
-	//else				m_GateOD = pFifo->bMax;
 	return pFifo->bMaxFinal;
 	};
 
 void CvChannel::FifoClear(BYTE bIdOd)	// zero fifo entries/cells, keep other parameters
 	{
 	Nc_FIFO *pFifo;
-	bIdOd &= 1;	// limit range to 0-1
+	//bIdOd &= 1;	// limit range to 0-1
+	if (bIdOd > 2)	 bIdOd = 2;
 	pFifo = &NcFifo[bIdOd];
 	memset( (void*) &pFifo->bCell[0], 0, sizeof (pFifo->bCell));
 	}
@@ -146,7 +147,8 @@ void CvChannel::FifoClear(BYTE bIdOd)	// zero fifo entries/cells, keep other par
 void CvChannel::SetNc(BYTE bIdOd, BYTE bNc)
 	{
 	Nc_FIFO *pFifo;
-	bIdOd &= 1;	// limit range to 0-1
+	//bIdOd &= 1;	// limit range to 0-1
+	if (bIdOd > 2)	 bIdOd = 2;
 	pFifo = &NcFifo[bIdOd];
 	if (bNc > 16)  bNc = 16;
 	pFifo->bNc = pFifo->bMod = bNc;
@@ -161,7 +163,7 @@ void CvChannel::SetNc(BYTE bIdOd, BYTE bNc)
 // as erroneous readings
 void CvChannel::WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut)
 	{
-	memset((void *) &NxFifo,0, sizeof(NxFifo));
+	memset((void *) &NxFifo, 0, sizeof(NxFifo));
 	if (bNx > 8) bNx = 8;
 	//else if (bNx < 1) bNx = 1; // 2016-06-15 bNx = 0 -> not a wall channel
 	NxFifo.bNx = bNx;
@@ -245,6 +247,7 @@ COUNT_INPUTS:
 		m_bInputCnt = 0;
 		m_PeakData.bId2 = NcFifo[0].bMaxFinal;
 		m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
+		m_PeakData.bG1  = NcFifo[2].bMaxFinal;
 		m_PeakData.wTofMin =	m_wTOFMinSum;
 		m_PeakData.wTofMax =	m_wTOFMaxSum;
 		//ResetGatesAndWalls(); -- done after CServerRcvListThread::AddToIdataPacket() 

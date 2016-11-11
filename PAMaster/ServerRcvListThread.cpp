@@ -295,7 +295,7 @@ void CServerRcvListThread::MakeFakeData(InputRawDataPacket *pData)
 	int i, jSeq, k, n, iSeqPkt;
 	CString s,t;
 
-	s.Format(_T("\r\n\r\nFake Data Call = %5d\r\n      ID   OD   TOF2    TOF4\r\n"), m_nFakeDataCallCount++);
+	s.Format(_T("\r\n\r\nFake Data Call = %5d\r\n       G1   ID   OD   TOF4\r\n"), m_nFakeDataCallCount++);
 	SaveFakeData(s);
 
 	MakeFakeDataHead(pData);
@@ -343,8 +343,6 @@ void CServerRcvListThread::MakeFakeData(InputRawDataPacket *pData)
 				{
 				break;	// jump into for loop at top
 				}
-			if (n == (7 * gMaxChnlsPerMainBang))	// never gets here, n reset at top of for loop
-				return;		// the fake data packet is complete
 
 			jSeq = GetFDstartSeq();
 			i = GetFDstartCh();
@@ -380,16 +378,11 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int n
 	{
 	if (m_pIdataPacket == NULL)
 		{
-		m_pIdataPacket = new (IDATA_PACKET);	// sizeof = 1454 179 RESULTS
+		m_pIdataPacket = new (IDATA_PACKET);	// sizeof = 1460 179 RESULTS
 		memset((void *) m_pIdataPacket,0, sizeof(IDATA_PACKET));
 		m_pIdataPacket->bPAPNumber	= (BYTE) theApp.GetMy_PAM_Number();
 		m_pIdataPacket->bInstNumber	= m_pSCC->m_nMyThreadIndex;
-		}
 
-	//How to tell when an Idata structures begins and what is the first channel inserted?
-
-	if (m_pIdataPacket->uSync == 0)
-		{
 		m_pIdataPacket->uSync		= SYNC;
 		m_pIdataPacket->uMsgSeqCount = 0;	// m_uMsgSeqCount++;
 		m_pIdataPacket->wMsgID		= 1;
@@ -405,14 +398,6 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int n
 		m_IdataInPt					= 0;	// insertion index in output data structrure
 		}
 
-#if 0
-	WORD wStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
-					// ie, PAP did not service PeakData fast enough
-	BYTE bId2;		// Gate 2 peak held data 0-255
-	BYTE bOd3;		// Gate 3 peak held data 0-255
-	WORD wTofMin;	// gate 4 min
-	WORD wTofMax;	// gate 4 max
-#endif
 	pChannel->CopyPeakData(&m_pIdataPacket->Results[m_IdataInPt++]);
 	pChannel->ClearDropOut();
 	pChannel->ClearOverRun();
@@ -644,7 +629,8 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 				if ( NULL == pChannel)
 					continue;
 				// Get flaw Nc qualified Max values for this channel
-				// Not defined what to do with bAmp1 or status ???????
+				// Not defined what to do with status ???????
+				bGateTmp = pChannel->InputFifo(eIf, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp1);
 				bGateTmp = pChannel->InputFifo(eId, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp2);	// output of the Nc peak holder
 				bGateTmp = pChannel->InputFifo(eOd, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp3);
 

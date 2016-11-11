@@ -26,7 +26,7 @@ typedef unsigned int	UINT;
 #endif
 
 enum IdataTypes {eRawInsp=10, eAscan=12, eKeepAlive=0xff};
-enum IdOdTypes {eId, eOd};
+enum IdOdTypes {eId, eOd, eIf};
 
 #define MAX_PAM_QTY			1
 #define MAX_PAM_INSTS_QTY	8

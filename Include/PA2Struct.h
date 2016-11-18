@@ -124,8 +124,8 @@ typedef struct
 	} stRawPacket;	// sizeof = 194
 
 
-// Raw data packet is built by the instrument over 5 main bang periods
-// at 5k prf this is 1 packet every millisecond or 1k packets per second.
+// Raw data packet is built by the instrument over 7 main bang periods
+// at 7k prf this is 1 packet every millisecond or 1k packets per second.
 // This is the packet which is sent to the PAP
 //
 typedef struct 
@@ -136,7 +136,11 @@ typedef struct
     WORD wLocation;		//x location in motion pulses
     WORD wClock;		//unit in .2048ms - ticks from TOP OF PIPE
     WORD wPeriod;		//unit in .2048ms
-	BYTE bSpare[92];
+	WORD wRotationCnt;	// Number of rotations since pipe present signal
+
+						// NIOS has limited memory. Q likely to be [8][1460] = 11,680 bytes
+	BYTE bCmdQDepth;	// How deep is the command queue in the instrument NIOS processor
+	BYTE bSpare[89];
 	stRawPacket stSeqPkt[7];	// Raw data for 7 sequence points
 	} InputRawDataPacket;		//sizeof = 194*7 + 102 = 1460 bytes
 
@@ -343,9 +347,9 @@ typedef struct
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 
-	BYTE bSpare[8];
+	BYTE bSpare[14];
 	ST_NC_NX stNcNx[90];		// 1440	
-	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1454 replaces CHANNEL_CMD_1
+	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1460 replaces CHANNEL_CMD_1
 	
 #if 0
 typedef struct

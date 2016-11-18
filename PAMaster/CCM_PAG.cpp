@@ -112,7 +112,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		case NC_NX_CMD_ID:
 			// The only message as of 2016-06-27
 			// Does not get sent to instruments, sets Nc and Nx parameters for the PAM to use
-
+			i = sizeof(PAP_INST_CHNL_NCNX);
 			pPamChnlInfo = (PAP_INST_CHNL_NCNX *)pMmiCmd;
 			TRACE(_T("Received NC_NX_CMD_ID for Instrument %d from Phased Array GUI - now deleting\n"),pMmiCmd->bInstNumber);
 			SetChannelInfo(pPamChnlInfo);

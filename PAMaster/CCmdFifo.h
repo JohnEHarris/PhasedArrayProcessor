@@ -14,7 +14,7 @@ Purpose:TCP/IP Can fragment messages and can combine them. In order to extract j
 class CCmdFifo
 	{
 	private:
-		BYTE m_Mem[0x4000];		//16k for FIFO
+		BYTE m_Mem[0x4000];		//4k for FIFO
 		int m_In;		// index in m_Mem where next set of input bytes will start
 		int m_Out;		// index in m_Mem where next output from FIFO will start
 		int m_Size;		// number of bytes unread in FIFO
@@ -26,9 +26,9 @@ class CCmdFifo
 		void Reset(void);
 		BYTE *GetInLoc(void) { return (&m_Mem[m_In]); }	// starting point where next packet will be stored
 		BYTE *GetNextPacket(void);
-		int  GetSizeBytes(void) { return m_Size; }
+		int  GetFIFOBytes(void) { return m_Size; }
 		void AddBytesToFifo(int n);	// moves In back by n, increases size by n
-		int GetPacketSize(void) { return m_PacketSize; }
+		int GetPacketSize(void);	// { return m_PacketSize; }
 		void SetPacketSize(int n) { m_PacketSize = n; }
 
 	};

@@ -31,7 +31,13 @@ CCmdFifo::~CCmdFifo()
 // Or get the size and only call reset when size < packet size.
 void CCmdFifo::Reset(void)
 	{
-	if ( m_Size >= m_PacketSize)	return;		// cant reset now, still have at least 1 packet in FIFO
+	//if ( m_Size >= m_PacketSize)	return;		// cant reset now, still have at least 1 packet in FIFO
+	if (m_In == m_Out)
+		{
+		m_In = m_Out = m_Size = 0;
+		return;
+		}
+	if ( m_Size >= 1460)	return;		// cant reset now, still have at least 1 packet in FIFO
 	//if here the size is < m_PacketSize
 	// move fragment from current location to front of FIFO
 	if (m_Size > 0)		// fragment
@@ -41,8 +47,8 @@ void CCmdFifo::Reset(void)
 		m_Out	= 0;
 		return;
 		}
-	// Fifo is empty
-	m_In = m_Out = 0;
+	// ELSE Fifo is empty
+	m_In = m_Out = m_Size = 0;
 	}
 
 // Normally we would store individual byte into the FIFO one byte at a time
@@ -55,14 +61,39 @@ void CCmdFifo::AddBytesToFifo(int n)
 	m_Size += n;
 	}
 
-// Remove a PacketSize chung from the FIFO. May leave a partion packet in the FIFO
+// after 2016-12-13 packet size is not fixed.
+int CCmdFifo::GetPacketSize(void)
+	{
+	GenericPacketHeader *pHeader = (GenericPacketHeader *)&m_Mem[m_Out];
+	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > 1460) )
+		{	// we are lost in the data, reset the FIFO and set an error bit
+		m_In = 0;
+		m_Out = 0;
+		m_Size = 0;
+		return 0;
+		}
+	return pHeader->wByteCount;
+	}
+// Remove a PacketSize chunk from the FIFO. May leave a partion packet in the FIFO
 // If the size falls to 0 bytes, reset the FIFO to avoid wrap around problems associated
 // with typical software FIFO's
+// 2016-12-12 Allow variable size packets. Cmd and data packets will have the sync word and a 
+// byte count at a fixed location in the packet header. If the sync word is not found, the FIFO will be
+// flushed and a status bit in the Idata will be set to inform the down stream processors that the 
+// command queue has been flushed by the PAP.
 BYTE *CCmdFifo::GetNextPacket(void)
 	{ 
-	BYTE *pEnd = &m_Mem[m_Out];		// beginning of last whole packet memory
-	m_Out += m_PacketSize;
-	m_Size -= m_PacketSize;
+	BYTE *pEnd = &m_Mem[m_Out];		// beginning of NEXT whole packet(s) memory
+	GenericPacketHeader *pHeader = (GenericPacketHeader *)pEnd;
+	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > 1460) )
+		{	// we are lost in the data, reset the FIFO and set an error bit
+		m_In = 0;
+		m_Out = 0;
+		m_Size = 0;
+		return NULL;
+		}
+	m_Out += pHeader->wByteCount;	// m_PacketSize move to next packet
+	m_Size -= pHeader->wByteCount;	// m_PacketSize;
 	// can't reset the FIFO here because the caller has not yet used the data
 	// caller will have to check size after extracting the packet and call reset
 	// when the size is 0

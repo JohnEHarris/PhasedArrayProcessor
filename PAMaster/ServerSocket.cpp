@@ -468,7 +468,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// reconstruct packet from received data.  Its a feature of TCPIP.
 
 // Packets received are "repackaged" to include the length of the packet as the first item in the new packet
-// [length of packet = n][packet data ... n bytes]
+// [length of packet = n][packet data ... n bytes] 2016-12-13 included in new definition of packets
 void CServerSocket::OnReceive(int nErrorCode)
 	{
 	// TODO: Add your specialized code here and/or call the base class
@@ -523,23 +523,31 @@ void CServerSocket::OnReceive(int nErrorCode)
 			m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, n);
 			TRACE(s);
 			}
-		nPacketSize = m_pFifo->GetPacketSize();	//1454;	whatever Instrument package size is. 2016-06-28 JEH
+		//nPacketSize = m_pFifo->GetPacketSize();	//1454;	whatever Instrument package size is. 2016-06-28 JEH
 
-		while ( m_pFifo->GetSizeBytes() >= nPacketSize)
+		//while ( m_pFifo->GetSizeBytes() >= nPacketSize)
+		while (m_pFifo->GetFIFOBytes())
 			{	// get packets
-			
-			pPacket = m_pFifo->GetNextPacket();
 
-			stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[nPacketSize+sizeof(int)];	// resize the buffer that will actually be used
-			memcpy( (void *) &pBuf->Msg, pPacket, nPacketSize);	// move all data to the new buffer
-			pBuf->nLength = nPacketSize;
-			pB = (BYTE *) pBuf;	// debug helper			
+			nPacketSize = m_pFifo->GetPacketSize();
+			if (nPacketSize <= 0)
+				break;
+
+			pPacket = m_pFifo->GetNextPacket();
+			if (pPacket == NULL)	
+				return;
+
+
+			//stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
+			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
+			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
+			//pB = (BYTE *) pBuf;	// debug helper			
 			LockRcvPktList();
 			if (m_pSCC)
 				{
 				if (m_pSCC->pServerRcvListThread)
 					{
-					AddTailRcvPkt(pBuf);	// put the buffer into the recd data linked list
+					AddTailRcvPkt(pB);	// put the buffer into the recd data linked list
 					nWholePacketQty++;
 					// WM_USER_SERVERSOCKET_PKT_RECEIVED
 					// the posted message will be processed by: CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
@@ -550,7 +558,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 				}
 			else
 				{
-				delete pBuf;
+				delete pB;
 				TRACE(_T("CServerSocket::OnReceive - deleting data because no ServerRcvListThread\n"));
 				}
 

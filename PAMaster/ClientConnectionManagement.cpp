@@ -532,7 +532,7 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 	CString s,t;
 
 #ifdef THIS_IS_SERVICE_APP
-	void *pPacket = 0;
+	GenericPacketHeader *pPacket = 0;
 	int nPacketSize = stSocketNames[m_nMyConnection].nPacketSize;
 	int nWholePacketQty = 0;
 	if ( nPacketSize < 1)
@@ -554,11 +554,11 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 			s.Format(_T("CCM OnReceive got %d bytes"), n);
 			DebugOut(s);
 			}
-		nPacketSize = m_pFifo->GetPacketSize();	//1454;	//n;	// assuming we only have one msg from PAG 2016-06-28 JEH
+		nPacketSize = m_pFifo->GetPacketSize();	
 
-		while ( m_pFifo->GetSizeBytes() >= nPacketSize)
+		while (nPacketSize = m_pFifo->GetPacketSize())
 			{	// get packets
-			pPacket = m_pFifo->GetNextPacket();
+			pPacket = (GenericPacketHeader*) m_pFifo->GetNextPacket();
 			BYTE *pB2 = new BYTE[nPacketSize];	// resize the buffer that will actually be used
 			memcpy( (void *) pB2, (void *) pPacket, nPacketSize);	// move all data to the new buffer
 			// put it in the linked list and let someone else decipher it

@@ -130,8 +130,13 @@ typedef struct
 //
 typedef struct 
 	{
-	BYTE bMsgID;		// = eIdataTypes
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD
+
+	//BYTE bMsgID;		// = eIdataTypes
     BYTE bDin;			//digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+	BYTE bCmdQDepth;	// How deep is the command queue in the instrument NIOS processor
     WORD wMsgSeqCnt;
     WORD wLocation;		//x location in motion pulses
     WORD wClock;		//unit in .2048ms - ticks from TOP OF PIPE
@@ -139,13 +144,10 @@ typedef struct
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
 
 						// NIOS has limited memory. Q likely to be [8][1460] = 11,680 bytes
-	BYTE bCmdQDepth;	// How deep is the command queue in the instrument NIOS processor
-	BYTE bSpare[89];
+	BYTE bSpare[82];
 	stRawPacket stSeqPkt[7];	// Raw data for 7 sequence points
 	} InputRawDataPacket;		//sizeof = 194*7 + 102 = 1460 bytes
 
-// More than just a structure, this may wind up being a fifo in the CvChannel class -- NOT
-// peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure
 #define SET_DROPOUT		 ( 1 << 5)
 #define CLR_DROPOUT		~( 1 << 5)
 #define SET_OVERRUN		 ( 1 << 6)
@@ -157,7 +159,8 @@ typedef struct
 #define DEFAULT_CFG		 ( 1 << 8)		// Nc Nx have default constructor values
 #define STATUS_CLEAR_MASK	~SET_OVERRUN
 
-// Processed data sent from the PAP
+// peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure
+// Processed data sent from the PAP. One stPeakData structure for every virtual channel
 typedef struct
 	{
 	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
@@ -172,31 +175,46 @@ typedef struct
 2016-09-08 New definition of Idata Packet
 */
 #if 1
+// Based on processing rate of PAP,	 may have to have one PAP for each instrument.
 typedef struct
 	{
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	UINT uMsgSeqCount;	// counter to uniquely identify each packet
-	WORD wMsgID;		// In case there are more messages later
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
 	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 	BYTE bStartSeqNumber;	// sequence number at beginning of stPeakData Results[]
 	BYTE bSequenceLength;	// how many main bangs before repeating the virtual channels
-	BYTE bStartChannel;	// First channel in peak data Results
+	BYTE bStartChannel;		// First virtual channel in peak data Results
 	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.
 								// Some sequence points may have channel type NOTHING
-	WORD wStatus;		// tbd
+	WORD wStatus;		// see below
 	WORD wLoc;			// x location in motion pulses relative to 1st packet from instrument
 	WORD wAngle;		// 0.2048 ms clock counts from TOP relative to 1st packet from instrument
 	WORD wPeriod;		// period of rotation in 0.2048 ms
-	BYTE bSpare[4];		// makes maximum tcpip packet .... 28 bytes to here
+	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
+	BYTE bSpare[2];		// makes maximum tcpip packet .... 28 bytes to here
 	stPeakData Results[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 179*8=1432
 	} IDATA_PACKET;	// sizeof = 1460 - the maximum TCPIP packet size for data
 
 // https://blog.apnic.net/2014/12/15/ip-mtu-and-tcp-mss-missmatch-an-evil-for-network-performance/
-// 1460 is max but each result is 8 bytes so if we used Max_Results= 180 the packet would be 1454+8=1462
+// 1460 is max 
+
+/***** Preliminary assignments - taken from Truscope4 definitions
+IDATA_PACKET.wStatus
+Bit		Meaning when bit is set
+0		PAP cmd buffer full
+1
+2		Forward pipe motion
+3		Pipe Present
+4		Inspection Enabled
+5		Array is down (on the pipe)
+
+*/
 
 #else
 typedef struct
@@ -207,7 +225,7 @@ typedef struct
 	WORD wLoc;			// x location in motion pulses relative to 1 packet from instrument
 	WORD wAngle;		// angle in degrees from TOP relative to 1 packet from instrument
 	WORD wPeriod;		// period of rotation in 0.2048 ms
-	UINT uMsgSeqCount;	// counter to uniquely identify each packet
+	UINT uMsgSeqCnt;	// counter to uniquely identify each packet
 	UINT uSync;			// 0x5CEBDAAD ... 18 bytes to here
 	RESULTS Results[32];	// Some "channels" at the end may be channel type NONE
 	} IDATA_PACKET;	// sizeof = 210
@@ -220,16 +238,40 @@ typedef struct
 
 
 // Command format from User interface systems to the PAP
+// Command packet can be cut short by specifying a byte count less than 1460
 typedef struct 
 	{
-    WORD wMsgId;		// commands are identified by their ID
-	WORD wMsgSeqCnt;	// counter to sequence command stream
+	// The generic header
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
 	BYTE bPapNumber;	// which PAP is the command for
 	BYTE bInstNumber;	// which PAP network device (pulser, phase array board) is the intended target
+
+	// Commands can have any format past this point based on MsgId
+
 	BYTE bSeqNUmber;	// when relevant, which sequence of virtual probes the command affects
-	BYTE bSpare[5];		// 12 bytes
-    WORD wCmd[730];		// 730 words or 1460 bytes
-	} SCmdPacket;		// 1472 bytes -- the maximum data delivery size for tcp/ip
+	BYTE bSpare[3];		// 16 bytes
+    WORD wCmd[722];		// 722 words or 1444 bytes
+	} SCmdPacket;		// 1460 bytes -- the maximum data delivery size for tcp/ip
+
+// 2016-12-12 ALLOW for variable size data and command packets. Data packet will always be the max
+// allowed by TCPIP. Command packets may vary in size.
+
+typedef struct
+	{
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
+	BYTE bPapNumber;	// which PAP is the command for
+	BYTE bInstNumber;	// which PAP network device (pulser, phase array board) is the intended target
+	}	GenericPacketHeader;
+
+
+
+
 
 // If we want 2 out of 3 above threshold for Nc qualified, then bMod = 3. The Fifo is 3 elements deep.
 // Each flaw reading goes into the fifo at location bInPt and overwrites the oldest element in the fifo.

@@ -83,7 +83,7 @@ CServerRcvListThread::CServerRcvListThread()
 	m_pOutputRawDataPacket = new InputRawDataPacket;
 	memset(m_pOutputRawDataPacket, 0, sizeof (InputRawDataPacket));
 	m_pIdataPacket = NULL;
-	//m_uMsgSeqCount = 0;
+	//m_uMsgSeqCnt = 0;
 	}
 
 CServerRcvListThread::~CServerRcvListThread()
@@ -241,7 +241,8 @@ void CServerRcvListThread::FlushRcvList(WPARAM w, LPARAM lParam)
 //void CServerRcvListThread::MakeFakeDataHead(SRawDataPacketOld *pData)
 void CServerRcvListThread::MakeFakeDataHead(InputRawDataPacket *pData)
 	{
-	pData->bMsgID	= eRawInsp;	// raw data=10
+	pData->wMsgID	= eRawInsp;	// raw data=10
+	pData->wByteCount = 1460;
 	pData->bDin		= FORWARD | PIPE_PRESENT;
 	pData->wMsgSeqCnt++;
 	pData->wLocation = nLoc++;
@@ -384,7 +385,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int n
 		m_pIdataPacket->bInstNumber	= m_pSCC->m_nMyThreadIndex;
 
 		m_pIdataPacket->uSync		= SYNC;
-		m_pIdataPacket->uMsgSeqCount = 0;	// m_uMsgSeqCount++;
+		m_pIdataPacket->wMsgSeqCnt = 0;	// m_uMsgSeqCnt++;
 		m_pIdataPacket->wMsgID		= 1;
 		m_pIdataPacket->bStartSeqNumber = nSeq;	// Come from gate board in header with gates and wall
 		m_pIdataPacket->bStartChannel	= nCh;
@@ -451,7 +452,7 @@ void CServerRcvListThread::BuildOutputPacket(InputRawDataPacket *pInput)
 		m_pIdataPacket->wAngle		= m_pSCC->InstrumentStatus.wAngle;
 		m_pIdataPacket->wPeriod		= m_pSCC->InstrumentStatus.wPeriod;
 		m_pIdataPacket->wStatus		= m_pSCC->InstrumentStatus.wStatus;
-		m_pIdataPacket->uMsgSeqCount = 50;
+		m_pIdataPacket->wMsgSeqCnt = 50;
 		m_pIdataPacket->uSync		= 0x5CEBDAAD;
 		}
 

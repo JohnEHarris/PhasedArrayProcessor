@@ -63,6 +63,7 @@ enum IdOdTypes {eId, eOd, eIf};
 #define INSTRUMENT_PACKET_SIZE			1460		//old 1040.. 1460 is max TCPIP size
 #define MASTER_PACKET_SIZE				1260
 #define SYNC							0x5CEBDAAD
+#define CMD_FIFO_MEM_SIZE				0x4000		// must be greater than 0x1800
 
 /*****************	STRUCTURES	*********************/
 // A channel is a UT echo or reflection assigned a physical position in the transducer.

@@ -479,6 +479,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 	BYTE *pB;	// debug
 	void *pPacket = 0;
 	int nPacketSize;
+	WORD wByteCnt;
 //	nPacketSize = gServerArray[m_nMyServer].nPacketSize;	// 1040 as of 9-13-16 but likely bigger in the future
 // Yiqing simulator sends 1460
 
@@ -512,6 +513,11 @@ void CServerSocket::OnReceive(int nErrorCode)
 	BYTE *pCmd = m_pFifo->GetInLoc();
 	// Receive() receives data into fifo memory pointed to by pCmd
 	n = Receive( (void *) pCmd, 0x2000, 0 );	// ask for 8k byte into 16k buffer
+	if (n > 1460)
+		{
+		//debuggint
+		s = _T("Big packet\n");
+		}
 	//PAM assumes we will get partial packets and have to extract whole packets
 	if ( n > 0)
 		{
@@ -519,14 +525,14 @@ void CServerSocket::OnReceive(int nErrorCode)
 		// reduce output to trace. When whole multiples of msg arrive, don't show
 		//if ( n % nPacketSize)
 			{
-			s.Format(_T("[%4d]Server[%d]Socket[%d] got %d bytes\n"), 
-			m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, n);
+			s.Format(_T("[%4d]Server[%d]Socket[%d] got %d bytes, SeqCnt = %d\n"), 
+				m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, 
+				n, m_pFifo->m_wMsgSeqCnt);
 			TRACE(s);
 			}
 		//nPacketSize = m_pFifo->GetPacketSize();	//1454;	whatever Instrument package size is. 2016-06-28 JEH
 
-		//while ( m_pFifo->GetSizeBytes() >= nPacketSize)
-		while (m_pFifo->GetFIFOBytes())
+		while (wByteCnt = m_pFifo->GetFIFOBytes())	// total byte in FIFO. May be multiple packets.
 			{	// get packets
 
 			nPacketSize = m_pFifo->GetPacketSize();

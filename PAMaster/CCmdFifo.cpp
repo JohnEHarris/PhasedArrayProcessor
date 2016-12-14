@@ -32,23 +32,45 @@ CCmdFifo::~CCmdFifo()
 void CCmdFifo::Reset(void)
 	{
 	//if ( m_Size >= m_PacketSize)	return;		// cant reset now, still have at least 1 packet in FIFO
-	if (m_In == m_Out)
+	if (m_In == m_Out)	// input pt = output pt, size is 0 ... reset to front of buffer
 		{
 		m_In = m_Out = m_Size = 0;
 		return;
 		}
-	if ( m_Size >= 1460)	return;		// cant reset now, still have at least 1 packet in FIFO
+
 	//if here the size is < m_PacketSize
 	// move fragment from current location to front of FIFO
-	if (m_Size > 0)		// fragment
+	if ( /*(m_Size > 0) || */ 
+		(m_In > (CMD_FIFO_MEM_SIZE - 0x1000)))		// fragment or near the end of buffer
 		{
 		memcpy(&m_Mem[0], &m_Mem[m_Out], m_Size);
 		m_In	= m_Size;
 		m_Out	= 0;
 		return;
 		}
+	if (m_Size >= 1460)
+		{
+		return;		// cant reset now, still have at least 1 packet in FIFO
+		}
 	// ELSE Fifo is empty
 	m_In = m_Out = m_Size = 0;
+	}
+
+
+BYTE * CCmdFifo::GetInLoc(void)
+	{ 
+	BYTE *pMem;
+	if (m_In < 0)
+		{
+		m_In = m_Out = m_Size = 0;
+		// SET buffer overflow bit
+		}
+	if (m_In >= CMD_FIFO_MEM_SIZE - 0x1800)
+		{
+		m_In = m_Out = m_Size = 0;
+		}
+	pMem = (BYTE *)&m_Mem[m_In];
+	return pMem;
 	}
 
 // Normally we would store individual byte into the FIFO one byte at a time
@@ -64,14 +86,22 @@ void CCmdFifo::AddBytesToFifo(int n)
 // after 2016-12-13 packet size is not fixed.
 int CCmdFifo::GetPacketSize(void)
 	{
+	int i;
 	GenericPacketHeader *pHeader = (GenericPacketHeader *)&m_Mem[m_Out];
+	InputRawDataPacket *pIdata = (InputRawDataPacket *)pHeader;
 	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > 1460) )
 		{	// we are lost in the data, reset the FIFO and set an error bit
 		m_In = 0;
 		m_Out = 0;
 		m_Size = 0;
+		// See if we are losing a real packet
+		if ((pIdata->wMsgSeqCnt) != (m_wMsgSeqCnt + 1))
+			{
+			i = pIdata->wMsgSeqCnt - m_wMsgSeqCnt;	// debugging
+			}
 		return 0;
 		}
+	m_wMsgSeqCnt = pIdata->wMsgSeqCnt;
 	return pHeader->wByteCount;
 	}
 // Remove a PacketSize chunk from the FIFO. May leave a partion packet in the FIFO
@@ -92,11 +122,13 @@ BYTE *CCmdFifo::GetNextPacket(void)
 		m_Size = 0;
 		return NULL;
 		}
-	m_Out += pHeader->wByteCount;	// m_PacketSize move to next packet
 	m_Size -= pHeader->wByteCount;	// m_PacketSize;
-	// can't reset the FIFO here because the caller has not yet used the data
-	// caller will have to check size after extracting the packet and call reset
-	// when the size is 0
-	// If caller fails to check for size then we will overflow the buffer. No wrap around provided here
+	if (m_Size <= 0)
+		{
+		m_In = m_Out = m_Size = 0;
+		}
+	else
+		m_Out += pHeader->wByteCount;	// m_PacketSize move to next packet
+
 	return pEnd;
 	}

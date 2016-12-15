@@ -30,7 +30,7 @@ class CCmdFifo
 		int  GetFIFOBytes(void) { return m_Size; }
 		void AddBytesToFifo(int n);	// moves In back by n, increases size by n
 		int GetPacketSize(void);	// { return m_PacketSize; }
-		void SetPacketSize(int n) { m_PacketSize = n; }
+		//void SetPacketSize(int n) { m_PacketSize = n; }
 		WORD m_wMsgSeqCnt;
 
 	};

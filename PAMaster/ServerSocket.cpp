@@ -515,8 +515,9 @@ void CServerSocket::OnReceive(int nErrorCode)
 	n = Receive( (void *) pCmd, 0x2000, 0 );	// ask for 8k byte into 16k buffer
 	if (n > 1460)
 		{
-		//debuggint
-		s = _T("Big packet\n");
+		//debugging
+		s.Format(_T("Big packet = 0x%04x, = %05d\n"), n,n);
+		TRACE(s);
 		}
 	//PAM assumes we will get partial packets and have to extract whole packets
 	if ( n > 0)
@@ -547,7 +548,9 @@ void CServerSocket::OnReceive(int nErrorCode)
 			//stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
 			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
 			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
-			//pB = (BYTE *) pBuf;	// debug helper			
+			//pB = (BYTE *) pBuf;	// debug helper	
+			//m_pFifo->Reset();	not until the fifo is first emptied
+
 			LockRcvPktList();
 			if (m_pSCC)
 				{

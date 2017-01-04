@@ -134,11 +134,10 @@ typedef struct
 	WORD wMsgID;		// commands are identified by their ID
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD
+    WORD wMsgSeqCnt;
 
-	//BYTE bMsgID;		// = eIdataTypes
     BYTE bDin;			//digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
 	BYTE bCmdQDepth;	// How deep is the command queue in the instrument NIOS processor
-    WORD wMsgSeqCnt;
     WORD wLocation;		//x location in motion pulses
     WORD wClock;		//unit in .2048ms - ticks from TOP OF PIPE
     WORD wPeriod;		//unit in .2048ms

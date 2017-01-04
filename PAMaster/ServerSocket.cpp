@@ -510,6 +510,8 @@ void CServerSocket::OnReceive(int nErrorCode)
 			m_pSCC->bConnected = (BYTE) eNotConnected;
 			}
 
+	// A real hardware FIFO would shift data to the output side instantly
+	m_pFifo->Shift();
 	BYTE *pCmd = m_pFifo->GetInLoc();
 	// Receive() receives data into fifo memory pointed to by pCmd
 	n = Receive( (void *) pCmd, 0x2000, 0 );	// ask for 8k byte into 16k buffer
@@ -533,16 +535,28 @@ void CServerSocket::OnReceive(int nErrorCode)
 			}
 		//nPacketSize = m_pFifo->GetPacketSize();	//1454;	whatever Instrument package size is. 2016-06-28 JEH
 
-		while (wByteCnt = m_pFifo->GetFIFOBytes())	// total byte in FIFO. May be multiple packets.
+		while (1)	// total byte in FIFO. May be multiple packets.
 			{	// get packets
-
+			wByteCnt = m_pFifo->GetFIFOBytes();
+			if (wByteCnt < sizeof(GenericPacketHeader))
+				{
+				// m_pFifo->Shift();
+				CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
+				return;
+				}
 			nPacketSize = m_pFifo->GetPacketSize();
-			if (nPacketSize <= 0)
-				break;
+			if ((nPacketSize <= 0) || (wByteCnt < nPacketSize))
+				{
+				CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
+				return;
+				}
 
 			pPacket = m_pFifo->GetNextPacket();
-			if (pPacket == NULL)	
+			if (pPacket == NULL)
+				{
+				CAsyncSocket::OnReceive(nErrorCode);
 				return;
+				}
 
 
 			//stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
@@ -592,9 +606,6 @@ void CServerSocket::OnReceive(int nErrorCode)
 				}	// if (m_pSCC)
 			} 	// get packets
 				
-		m_pFifo->Reset();	// if FIFO is empty will reset pointer to start of memory
-
-
 		//theApp.ReleaseInstrumentListAccess(m_pSCC->m_nMyThreadIndex);
 
 		// Post a message to someone who cares and let that routine/class/function deal with the packet

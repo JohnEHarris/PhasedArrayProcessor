@@ -55,6 +55,19 @@ void CCmdFifo::Reset(void)
 	///m_In = m_Out = m_Size = 0;
 	}
 
+// A real hardware FIFO would shift data to the output side automatically
+void  CCmdFifo::Shift(void)
+	{
+	if (m_Size == 0)	// nothing in the FIFO
+		{
+		m_In = m_Out = 0;
+		return;
+		}
+	// since there is something in the fifo, shift it to the very front.
+	memcpy(&m_Mem[0], &m_Mem[m_Out], m_Size);
+	m_In = m_Size;
+	m_Out = 0;	// point to the beginning of the fifo
+	}
 
 BYTE * CCmdFifo::GetInLoc(void)
 	{ 
@@ -141,9 +154,10 @@ BYTE *CCmdFifo::GetNextPacket(void)
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD
 	*/
+	CString s;
 	int i = 10;	//debug
-	BYTE *pEnd = &m_Mem[m_Out];		// beginning of NEXT whole packet(s) memory
-	GenericPacketHeader *pHeader = (GenericPacketHeader *)pEnd;
+	BYTE *pStart = &m_Mem[m_Out];		// beginning of NEXT whole packet(s) memory
+	GenericPacketHeader *pHeader = (GenericPacketHeader *)pStart;
 	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > 1460) )
 		{	// we are lost in the data, reset the FIFO and set an error bit
 		m_In = 0;
@@ -151,9 +165,16 @@ BYTE *CCmdFifo::GetNextPacket(void)
 		m_Size = 0;
 		return NULL;
 		}
-
+	m_PacketSize = pHeader->wByteCount;
 	m_Out  += m_PacketSize;	// move to next packet
 	m_Size -= m_PacketSize;	// reduce size of unread data in FIFO.;
+	if (m_Size < 0)
+		{
+		m_In = 0;
+		m_Out = 0;
+		m_Size = 0;
+		return NULL;
+		}
 	if ((m_Size > 0) && (m_Size < 16))
 		i = 2;
 	else i = 0;
@@ -162,5 +183,8 @@ BYTE *CCmdFifo::GetNextPacket(void)
 	// caller will have to check size after extracting the packet and call reset
 	// when the size is 0
 	// If caller fails to check for size then we will overflow the buffer. No wrap around provided here
-	return pEnd;
+	s.Format(_T("FIFO in, out, size Sync = %5d %5d %5d 0x%08x\n"), 
+		m_In, m_Out, m_Size, pHeader->uSync);
+	TRACE(s);
+	return pStart;
 	}

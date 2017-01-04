@@ -32,6 +32,7 @@ class CCmdFifo
 		int GetPacketSize(void);	// { return m_PacketSize; }
 		//void SetPacketSize(int n) { m_PacketSize = n; }
 		WORD m_wMsgSeqCnt;
+		void Shift(void);
 
 	};
 

@@ -574,7 +574,7 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 	// Message activates CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, (WORD) nClientIndex, 0L);
 //	return nBytes+sizeof(int);
-	return sizeof(PAM_INST_CHNL_INFO); // only one message now
+	return nBytes;	//sizeof(PAM_INST_CHNL_INFO); // only one message now
 	}
 #endif
 

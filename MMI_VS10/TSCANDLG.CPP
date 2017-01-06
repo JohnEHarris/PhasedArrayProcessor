@@ -741,8 +741,8 @@ CTscanDlg::CTscanDlg(CWnd* pParent /*=NULL*/)
 
 	// 2016-06-23 ZERO NcNx record on program start sizeof(NcNxPA2REC) = 8450
 
-	i = sizeof(NcNxPA2REC);
-	memset(&ConfigRec.NcNx, 0, sizeof(NcNxPA2REC));
+	//i = sizeof(NcNxPA2REC);
+	//memset(&ConfigRec.NcNx, 0, sizeof(NcNxPA2REC));
 
 	QualifyConfigRec();	// should come after loading config record
 	m_bConfigLoaded = FALSE;
@@ -2322,6 +2322,10 @@ BOOL CTscanDlg::SendMsgToPAM(int nClientNumber, int nMsgID, void *pMsg)
 	CString s;
 	int nLen;		// how long will the returned message be?
 	int rc;
+	GenericPacketHeader *pHeader;
+
+	pHeader = (GenericPacketHeader*)pMsg;
+	nLen = pHeader->wByteCount;
 
 	if ( (nClientNumber < 0) || (nClientNumber >= MAX_CLIENTS))
 		{
@@ -2362,7 +2366,7 @@ BOOL CTscanDlg::SendMsgToPAM(int nClientNumber, int nMsgID, void *pMsg)
 		{
 
 	case NC_NX_CMD_ID:
-		nLen = sizeof(PAM_INST_CHNL_INFO);
+		
 		// int CServerConnectionManagement::SendPacketToPAM
 		// postS a thread message to a ServerSocketOwnerThread to empty the linked list and send all packets
 		// Message activates CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
@@ -5058,117 +5062,117 @@ void CTscanDlg::GetRegistrySiteDefaults()
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default X-loc Offset"),_T("0"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nDefaultXOffset);
+	sscanf(t, "%d", (int *)&SiteDefault.nDefaultXOffset);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Shoe Angle Offset"),_T("45"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nDefaultWOffset);
+	sscanf(t, "%d", (int *)&SiteDefault.nDefaultWOffset);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Clock Offset"),_T("0"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nDefaultClockOffset);
+	sscanf(t, "%d", (int *)&SiteDefault.nDefaultClockOffset);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default X-loc Offset 2"),_T("0"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nDefaultXOffset2);
+	sscanf(t, "%d", (int *)&SiteDefault.nDefaultXOffset2);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Wall Drop Time"),_T("75"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nWallDropTime);
+	sscanf(t, "%d", (int *)&SiteDefault.nWallDropTime);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Record Wall Data"),_T("0"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nRecordWallData);
+	sscanf(t, "%d", (int *)&SiteDefault.nRecordWallData);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Line Speed"),_T("1200"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nDefaultLineSpeed);
+	sscanf(t, "%d", (int *)&SiteDefault.nDefaultLineSpeed);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Rotate Speed"),_T("12000"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nDefaultRotateSpeed);
+	sscanf(t, "%d", (int *)&SiteDefault.nDefaultRotateSpeed);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("20 Channel Per Head"),_T("0"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.n20ChnlPerHead);
+	sscanf(t, "%d", (int *)&SiteDefault.n20ChnlPerHead);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Wall Window Size"),_T("10"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nMaxWallWindowSize);
+	sscanf(t, "%d", (int *)&SiteDefault.nMaxWallWindowSize);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Phased Array 1 Scan Type"),_T("2"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nPhasedArrayScanType[0]);
+	sscanf(t, "%d", (int *)&SiteDefault.nPhasedArrayScanType[0]);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Phased Array 2 Scan Type"),_T("2"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nPhasedArrayScanType[1]);
+	sscanf(t, "%d", (int *)&SiteDefault.nPhasedArrayScanType[1]);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Phased Array 3 Scan Type"),_T("2"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nPhasedArrayScanType[2]);
+	sscanf(t, "%d", (int *)&SiteDefault.nPhasedArrayScanType[2]);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Phased Array 4 Scan Type"),_T("2"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nPhasedArrayScanType[3]);
+	sscanf(t, "%d", (int *)&SiteDefault.nPhasedArrayScanType[3]);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Phased Array 5 Scan Type"),_T("2"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nPhasedArrayScanType[4]);
+	sscanf(t, "%d", (int *)&SiteDefault.nPhasedArrayScanType[4]);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Phased Array 6 Scan Type"),_T("2"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nPhasedArrayScanType[5]);
+	sscanf(t, "%d", (int *)&SiteDefault.nPhasedArrayScanType[5]);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Phased Array 7 Scan Type"),_T("2"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nPhasedArrayScanType[6]);
+	sscanf(t, "%d", (int *) &SiteDefault.nPhasedArrayScanType[6]);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Phased Array 8 Scan Type"),_T("2"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nPhasedArrayScanType[7]);
+	sscanf(t, "%d", (int *)&SiteDefault.nPhasedArrayScanType[7]);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Phased Array 9 Scan Type"),_T("2"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nPhasedArrayScanType[8]);
+	sscanf(t, "%d", (int *)&SiteDefault.nPhasedArrayScanType[8]);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Phased Array 10 Scan Type"),_T("2"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nPhasedArrayScanType[9]);
+	sscanf(t, "%d", (int *) &SiteDefault.nPhasedArrayScanType[9]);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Phased Array 11 Scan Type"),_T("2"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nPhasedArrayScanType[10]);
+	sscanf(t, "%d", (int *) &SiteDefault.nPhasedArrayScanType[10]);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Phased Array 12 Scan Type"),_T("2"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nPhasedArrayScanType[11]);
+	sscanf(t, "%d", (int *)&SiteDefault.nPhasedArrayScanType[11]);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Transverse Angle"),_T("160"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nTranAngle);
+	sscanf(t, "%d", (int *)&SiteDefault.nTranAngle);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Water Path"),_T("1.0"));
@@ -5183,12 +5187,12 @@ void CTscanDlg::GetRegistrySiteDefaults()
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Encoder Divider"),_T("100"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nEncoderDivider);
+	sscanf(t, "%d", (int *) &SiteDefault.nEncoderDivider);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Ad9272 PGA Gain"),_T("0"));
 	CstringToChar(s,t);
-	sscanf(t, "%d", &SiteDefault.nAd9272PgaGain);
+	sscanf(t, "%d", (int *)&SiteDefault.nAd9272PgaGain);
 
 	s = m_ptheApp->GetProfileString((CURRENT_VERSION),
 							_T("Default Motion Pulse Length"),_T("0.5"));

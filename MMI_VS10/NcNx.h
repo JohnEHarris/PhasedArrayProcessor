@@ -31,8 +31,8 @@ public:
 	int m_nNcOd, m_nThldOd, m_nMOd;
 	int m_nNx, m_nMaxWall, m_nMinWall, m_nDropCnt;
 
-	NcNxPA2REC *m_pNcNxCfg;		// config struct for [i-PAMs][j-Inst]
-	PAM_INST_CHNL_INFO *m_pPamInstChnlInfo;	// config struct for specific PAM and connected Instrument
+	//NcNxPA2REC *m_pNcNxCfg;		// config struct for [i-PAMs][j-Inst]
+	//PAM_INST_CHNL_INFO *m_pPamInstChnlInfo;	// config struct for specific PAM and connected Instrument
 	PAP_INST_CHNL_NCNX m_NcNxCmd;
 	int m_nListBoxUnsentQty;	// line in list box not sent to instruments
 

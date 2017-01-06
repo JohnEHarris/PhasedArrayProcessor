@@ -162,8 +162,8 @@ BOOL CNcNx::OnInitDialog()
 		SetWindowPlacement(&wp);
 		}
 
-	m_pNcNxCfg	= (NcNxPA2REC *) &ConfigRec.NcNx;
-	m_pPamInstChnlInfo		= (PAM_INST_CHNL_INFO *) &m_pNcNxCfg->PaInstChnlInfo[0][0];	// PAM 0, INST 0
+	//m_pNcNxCfg	= (NcNxPA2REC *) &ConfigRec.NcNx;
+	//m_pPamInstChnlInfo		= (PAM_INST_CHNL_INFO *) &m_pNcNxCfg->PaInstChnlInfo[0][0];	// PAM 0, INST 0
 	m_nLastPam = m_nPam	= 0;
 	m_nLastInst= m_nInst = 0;
 
@@ -210,7 +210,7 @@ BOOL CNcNx::OnInitDialog()
 
 	m_lbOutput.ResetContent();
 	m_nListBoxUnsentQty = 0;
-	i = sizeof(PAM_INST_CHNL_INFO);
+	//i = sizeof(PAM_INST_CHNL_INFO);
 
 	UpdateTitle();
 	//MessageBox(_T("Changes are not registered until the Update button is pressed \n \
@@ -320,11 +320,13 @@ void CNcNx::SendMsg(PAP_INST_CHNL_NCNX *pMsg)//, int nChTypes)
 	pSend->wMsgID			= NC_NX_CMD_ID;
 	pSend->bPAPNumber		= m_nLastPam;
 	pSend->bInstNumber		= m_nLastInst;
+	pSend->uSync			= pMsg->uSync;
+	pSend->wByteCount		= pMsg->wByteCount;
 //	pSend->bChnlTypes		= m_nChnlType;
 //	pSend->bSeqQty			= m_nChnlRepeat;
 //	pSend->bMaxVChnlPerInst	= 32;
 
-	memcpy((void *)&pSend->stNcNx, (void *)pMsg->stNcNx, sizeof(ST_NC_NX)*90);
+	memcpy((void *)pSend, (void *)pMsg, pMsg->wByteCount);	// sizeof(ST_NC_NX) * 72);
 	pCTscanDlg->SendMsgToPAM(m_nLastPam, NC_NX_CMD_ID, (void *)pSend);
 
 	}
@@ -411,9 +413,11 @@ void CNcNx::OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 	case IDC_SP_CHNL_REPEATS:	m_nChnlRepeat = nPos;	break;
 	case IDC_SP_CHNL:			m_nChnl = nPos;			break;
 
-	case IDC_SP_NCID:		m_nNcId = nPos;		break;
+	case IDC_SP_NCID:		
+		m_nNcId = nPos;		break;
 	case IDC_SP_THLDID:		m_nThldId = nPos;	break;
-	case IDC_SP_MID:		m_nMId = nPos;		break;
+	case IDC_SP_MID:		
+		m_nMId = nPos;		break;
 	case IDC_SP_NCOD:		m_nNcOd = nPos;		break;
 	case IDC_SP_THLDOD:		m_nThldOd = nPos;	break;
 	case IDC_SP_MOD:		m_nMOd = nPos;		break;
@@ -566,42 +570,47 @@ void CNcNx::OnBnClickedBnGenerate()
 	{
 	// TODO: Add your control notification handler code here
 	//Generate canned values for Nc and Nx  Id thold = seq, Od thold=chnl number
-	// 5 sequence points, 64 channels per sequence
+	// 10 sequence points, 32 channels per sequence
 	int nc, m, id, od;
 	int seq,ch, msgcnt;
 	CString s;
+	int i;
 
 	nc = 2;
 	m = 3;
-	msgcnt = 0;
+	msgcnt = i = 0;
 	memset(&m_NcNxCmd,0,sizeof(m_NcNxCmd));
 	m_NcNxCmd.bPAPNumber = m_nLastPam;
 	m_NcNxCmd.bInstNumber = m_nLastInst; 
-	for ( seq = 0; seq < 5; seq++)
+	for ( seq = 0; seq < 10; seq++)
 		{
-		for ( ch = 0; ch < 64; ch++)
+		for ( ch = 0; ch < 32; ch++)
 			{
 			m_NcNxCmd.stNcNx[msgcnt].bSeqNumber		= seq;
 			m_NcNxCmd.stNcNx[msgcnt].bChnlNumber	= ch;
-			m_NcNxCmd.stNcNx[msgcnt].bNcID			= 1;
+			m_NcNxCmd.stNcNx[msgcnt].bNcID			= m_nNcId;	//enable changes from window
 			m_NcNxCmd.stNcNx[msgcnt].bTholdID		= 29;
-			m_NcNxCmd.stNcNx[msgcnt].bModID			= 3;
+			m_NcNxCmd.stNcNx[msgcnt].bModID			= m_nMId;
 
-			m_NcNxCmd.stNcNx[msgcnt].bNcOD			= 1;
+			m_NcNxCmd.stNcNx[msgcnt].bNcOD			= m_nNcId;
 			m_NcNxCmd.stNcNx[msgcnt].bTholdOD		= 33;
-			m_NcNxCmd.stNcNx[msgcnt].bModOD			= 2;
+			m_NcNxCmd.stNcNx[msgcnt].bModOD			= m_nMId;
 
 			m_NcNxCmd.stNcNx[msgcnt].wNx			= 2;
 			m_NcNxCmd.stNcNx[msgcnt].wWallMax		= 1377;
 			m_NcNxCmd.stNcNx[msgcnt].wWallMin		= 27;
 			m_NcNxCmd.stNcNx[msgcnt++].wDropOut		= 20;
-			if (msgcnt == 90)
+			i++;
+			if (msgcnt == 72)
 				{
 				s.Format(_T("1st Seq=%d/Chnl=%d ..Last Seq=%d/Chnl=%d\n"),
 					m_NcNxCmd.stNcNx[0].bSeqNumber, m_NcNxCmd.stNcNx[0].bChnlNumber,
-					m_NcNxCmd.stNcNx[89].bSeqNumber, m_NcNxCmd.stNcNx[89].bChnlNumber);
+					m_NcNxCmd.stNcNx[71].bSeqNumber, m_NcNxCmd.stNcNx[71].bChnlNumber);
 				TRACE(s);
 				//Send what we have now and start a new message until all sent
+				m_NcNxCmd.uSync = SYNC;
+				m_NcNxCmd.wByteCount = 1460;
+				m_NcNxCmd.wMsgID = 1;
 				SendMsg(&m_NcNxCmd);
 				memset(&m_NcNxCmd,0,sizeof(m_NcNxCmd));
 				m_NcNxCmd.bPAPNumber = m_nLastPam;
@@ -614,10 +623,13 @@ void CNcNx::OnBnClickedBnGenerate()
 	//if msgcnt > 0 have a fragment. Send it and mark 1st nonvalid element with seqNumber = -1
 	if (msgcnt)
 		{
-		s.Format(_T("1st Seq=%d, Chnl=%d ..Last Seq=%d, Chnl=%d\n"),
+		s.Format(_T("**1st Seq=%d, Chnl=%d ..Last Seq=%d, Chnl=%d i = %d\n"),
 			m_NcNxCmd.stNcNx[0].bSeqNumber, m_NcNxCmd.stNcNx[0].bChnlNumber,
-			m_NcNxCmd.stNcNx[msgcnt-1].bSeqNumber, m_NcNxCmd.stNcNx[msgcnt-1].bChnlNumber);
+			m_NcNxCmd.stNcNx[msgcnt-1].bSeqNumber, m_NcNxCmd.stNcNx[msgcnt-1].bChnlNumber, i);
 		TRACE(s);
+		m_NcNxCmd.wMsgID = 1;
+		m_NcNxCmd.uSync = SYNC;
+		m_NcNxCmd.wByteCount = (msgcnt) * 20 + 20;
 		m_NcNxCmd.stNcNx[msgcnt].bSeqNumber		= -1; //terminator for message
 		SendMsg(&m_NcNxCmd);
 		}

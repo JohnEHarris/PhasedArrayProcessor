@@ -389,7 +389,7 @@ typedef struct
 	WORD wMsgID;		// commands are identified by their ID
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
 	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
@@ -397,7 +397,7 @@ typedef struct
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 
 	BYTE bSpare[8];
-	ST_NC_NX stNcNx[72];		// 1464	
+	ST_NC_NX stNcNx[72];		// 1440	
 	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1460 replaces CHANNEL_CMD_1
 	
 

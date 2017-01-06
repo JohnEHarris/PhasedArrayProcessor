@@ -796,7 +796,7 @@ typedef struct
 	short spare[24];
 	} calREC;
 
-
+#if 0
 // Clive decrees no virtual channel repeats until all sequences have run
 // thus if there are 40 virtual channels per sequence and 10 sequence steps
 // there are 400 separate channels. No vChannel repeats until the sequence 
@@ -811,7 +811,7 @@ typedef struct
 	BYTE bSpare[3];
 	ST_NC_NX stNcNx[MAX_CHNLS_PER_MAIN_BANG];
 	} PAM_INST_CHNL_INFO; // SIZEOF() = 650
-	
+
 // a record for setting the phased array 2 Nc Nx dialog parameters
 // If there are 4 chnls types in an instrument and each type repeats 8 times, then there are 32 virtual channels
 // in that instrument.
@@ -823,6 +823,7 @@ typedef struct
 	BYTE bInst;			// Max instruments per PAM. Assume up to 16 instruments
 	PAM_INST_CHNL_INFO PaInstChnlInfo[4][16]; // [PAMS][INST]    size =64*128 + 2 = 8194
 	}	NcNxPA2REC;
+#endif
 
 
 typedef struct
@@ -830,15 +831,16 @@ typedef struct
 	WORD wMsgID;		// commands are identified by their ID
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
 	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
-	BYTE bSpare[8];	// sequence number at beginning of stPeakData Results[]
+
+	BYTE bSpare[4];	// sequence number at beginning of stPeakData Results[]
 	BYTE bMsg[1444];	// Max unique sets of Nc Nx data per instrument.
-	} PAM_GENERIC_MSG; // SIZEOF() = 1464
+	} PAM_GENERIC_MSG; // SIZEOF() = 1460
 
 
 
@@ -858,7 +860,7 @@ typedef struct
 	BYTE bMotionTime;		/* 0 = motion mode, 1 = time for inspect */
 	BYTE bEnglishMetric;	/* 0 = English, 1 = Metric */
 	WORD wOpMode;			/* 0x200=NOP 0x201=RUN, 2=CAL, 3=PKT */
-	NcNxPA2REC	NcNx;		// Phase Array2
+	//NcNxPA2REC	NcNx;		// Phase Array2
 	BYTE spare[126];
 	} CONFIG_REC;		/* the configuration file structure */
 

@@ -358,7 +358,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		case NC_NX_CMD_ID:
 			s.Format(_T("NC_NX_CMD_ID Msg seq cnt =%d\n"), pCmd->wMsgSeqCnt);
 			pCmd->wMsgSeqCnt = pSocket->m_pSCC->wMsgSeqCnt++;
-			nMsgSize = sizeof(PAP_INST_CHNL_NCNX);
+			nMsgSize = pCmd->wByteCount;	//sizeof(PAP_INST_CHNL_NCNX);
 
 		default:
 			break;

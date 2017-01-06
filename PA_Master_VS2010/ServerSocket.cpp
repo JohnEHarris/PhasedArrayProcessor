@@ -468,7 +468,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// reconstruct packet from received data.  Its a feature of TCPIP.
 
 // Packets received are "repackaged" to include the length of the packet as the first item in the new packet
-// [length of packet = n][packet data ... n bytes]
+// [length of packet = n][packet data ... n bytes] 2016-12-13 included in new definition of packets
 void CServerSocket::OnReceive(int nErrorCode)
 	{
 	// TODO: Add your specialized code here and/or call the base class
@@ -479,28 +479,15 @@ void CServerSocket::OnReceive(int nErrorCode)
 	BYTE *pB;	// debug
 	void *pPacket = 0;
 	int nPacketSize;
-//	nPacketSize = gServerArray[m_nMyServer].nPacketSize;	// 1040 as of 9-13-16 but likely bigger in the future
-// Yiqing simulator sends 1460
+	WORD wByteCnt;
 
-
-
-	//TCPDUMMY * Data = new TCPDUMMY;
-	int n, m = 0;
+	int n;
 	CString s, t;
 
 	// If shutting down and stop send/receive set, throw away the data
 	if (m_pSCM->m_pstSCM == NULL)				return;	
 	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)	return;
 	if (m_pSCC == NULL)							return;
-
-	// A Kludge for now --- how to correctly set packet size??
-	//if (m_pSCC->uPacketsReceived == 0)
-	//	{
-	//	nPacketSize = 1456;		// real data INSTRUMENT_PACKET_SIZE = 1454
-	//	m_pFifo->SetPacketSize(nPacketSize);
-	//	}
-
-
 
 
 	if (m_pSCC->bStopSendRcv)
@@ -509,37 +496,59 @@ void CServerSocket::OnReceive(int nErrorCode)
 			m_pSCC->bConnected = (BYTE) eNotConnected;
 			}
 
+	// A real hardware FIFO would shift data to the output side instantly
+	m_pFifo->Shift();
 	BYTE *pCmd = m_pFifo->GetInLoc();
 	// Receive() receives data into fifo memory pointed to by pCmd
 	n = Receive( (void *) pCmd, 0x2000, 0 );	// ask for 8k byte into 16k buffer
+	if (n > 1460)
+		{
+		//debugging
+		s.Format(_T("Big packet = 0x%04x, = %05d\n"), n,n);
+		TRACE(s);
+		}
 	//PAM assumes we will get partial packets and have to extract whole packets
 	if ( n > 0)
 		{
 		m_pFifo->AddBytesToFifo(n);
-		// reduce output to trace. When whole multiples of msg arrive, don't show
-		//if ( n % nPacketSize)
 			{
-			s.Format(_T("[%4d]Server[%d]Socket[%d] got %d bytes\n"), 
-			m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, n);
+			s.Format(_T("[%4d]Server[%d]Socket[%d] got %d bytes, SeqCnt = %d\n"), 
+				m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, 
+				n, m_pFifo->m_wMsgSeqCnt);
 			TRACE(s);
 			}
-		nPacketSize = m_pFifo->GetPacketSize();	//1454;	whatever Instrument package size is. 2016-06-28 JEH
 
-		while ( m_pFifo->GetSizeBytes() >= nPacketSize)
+		while (1)	// total byte in FIFO. May be multiple packets.
 			{	// get packets
-			
-			pPacket = m_pFifo->GetNextPacket();
+			wByteCnt = m_pFifo->GetFIFOBytes();
+			if (wByteCnt < sizeof(GenericPacketHeader))
+				{
+				CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
+				return;
+				}
+			nPacketSize = m_pFifo->GetPacketSize();
+			if ((nPacketSize <= 0) || (wByteCnt < nPacketSize))
+				{
+				CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
+				return;
+				}
 
-			stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[nPacketSize+sizeof(int)];	// resize the buffer that will actually be used
-			memcpy( (void *) &pBuf->Msg, pPacket, nPacketSize);	// move all data to the new buffer
-			pBuf->nLength = nPacketSize;
-			pB = (BYTE *) pBuf;	// debug helper			
+			pPacket = m_pFifo->GetNextPacket();
+			if (pPacket == NULL)
+				{
+				CAsyncSocket::OnReceive(nErrorCode);
+				return;
+				}
+
+			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
+			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
+
 			LockRcvPktList();
 			if (m_pSCC)
 				{
 				if (m_pSCC->pServerRcvListThread)
 					{
-					AddTailRcvPkt(pBuf);	// put the buffer into the recd data linked list
+					AddTailRcvPkt(pB);	// put the buffer into the recd data linked list
 					nWholePacketQty++;
 					// WM_USER_SERVERSOCKET_PKT_RECEIVED
 					// the posted message will be processed by: CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
@@ -550,7 +559,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 				}
 			else
 				{
-				delete pBuf;
+				delete pB;
 				TRACE(_T("CServerSocket::OnReceive - deleting data because no ServerRcvListThread\n"));
 				}
 
@@ -575,9 +584,6 @@ void CServerSocket::OnReceive(int nErrorCode)
 				}	// if (m_pSCC)
 			} 	// get packets
 				
-		m_pFifo->Reset();	// if FIFO is empty will reset pointer to start of memory
-
-
 		//theApp.ReleaseInstrumentListAccess(m_pSCC->m_nMyThreadIndex);
 
 		// Post a message to someone who cares and let that routine/class/function deal with the packet

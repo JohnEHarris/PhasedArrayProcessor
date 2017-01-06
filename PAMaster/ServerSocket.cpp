@@ -480,28 +480,14 @@ void CServerSocket::OnReceive(int nErrorCode)
 	void *pPacket = 0;
 	int nPacketSize;
 	WORD wByteCnt;
-//	nPacketSize = gServerArray[m_nMyServer].nPacketSize;	// 1040 as of 9-13-16 but likely bigger in the future
-// Yiqing simulator sends 1460
 
-
-
-	//TCPDUMMY * Data = new TCPDUMMY;
-	int n, m = 0;
+	int n;
 	CString s, t;
 
 	// If shutting down and stop send/receive set, throw away the data
 	if (m_pSCM->m_pstSCM == NULL)				return;	
 	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)	return;
 	if (m_pSCC == NULL)							return;
-
-	// A Kludge for now --- how to correctly set packet size??
-	//if (m_pSCC->uPacketsReceived == 0)
-	//	{
-	//	nPacketSize = 1456;		// real data INSTRUMENT_PACKET_SIZE = 1454
-	//	m_pFifo->SetPacketSize(nPacketSize);
-	//	}
-
-
 
 
 	if (m_pSCC->bStopSendRcv)
@@ -525,22 +511,18 @@ void CServerSocket::OnReceive(int nErrorCode)
 	if ( n > 0)
 		{
 		m_pFifo->AddBytesToFifo(n);
-		// reduce output to trace. When whole multiples of msg arrive, don't show
-		//if ( n % nPacketSize)
 			{
 			s.Format(_T("[%4d]Server[%d]Socket[%d] got %d bytes, SeqCnt = %d\n"), 
 				m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, 
 				n, m_pFifo->m_wMsgSeqCnt);
 			TRACE(s);
 			}
-		//nPacketSize = m_pFifo->GetPacketSize();	//1454;	whatever Instrument package size is. 2016-06-28 JEH
 
 		while (1)	// total byte in FIFO. May be multiple packets.
 			{	// get packets
 			wByteCnt = m_pFifo->GetFIFOBytes();
 			if (wByteCnt < sizeof(GenericPacketHeader))
 				{
-				// m_pFifo->Shift();
 				CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
 				return;
 				}
@@ -558,12 +540,8 @@ void CServerSocket::OnReceive(int nErrorCode)
 				return;
 				}
 
-
-			//stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
 			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
 			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
-			//pB = (BYTE *) pBuf;	// debug helper	
-			//m_pFifo->Reset();	not until the fifo is first emptied
 
 			LockRcvPktList();
 			if (m_pSCC)

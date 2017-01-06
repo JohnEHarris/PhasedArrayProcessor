@@ -810,7 +810,7 @@ typedef struct
 	BYTE bSeqNumber;	// think of it as a multiplexer.
 	BYTE bSpare[3];
 	ST_NC_NX stNcNx[MAX_CHNLS_PER_MAIN_BANG];
-	} PAM_INST_CHNL_INFO; // SIZEOF() = 1034
+	} PAM_INST_CHNL_INFO; // SIZEOF() = 650
 	
 // a record for setting the phased array 2 Nc Nx dialog parameters
 // If there are 4 chnls types in an instrument and each type repeats 8 times, then there are 32 virtual channels
@@ -827,16 +827,18 @@ typedef struct
 
 typedef struct
 	{
-	WORD wMsgID;		// 1
-	WORD wMsgSeqCnt;
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
 	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
-	BYTE bSpare[4];	// sequence number at beginning of stPeakData Results[]
+	BYTE bSpare[8];	// sequence number at beginning of stPeakData Results[]
 	BYTE bMsg[1444];	// Max unique sets of Nc Nx data per instrument.
-	} PAM_GENERIC_MSG; // SIZEOF() = 1454
+	} PAM_GENERIC_MSG; // SIZEOF() = 1464
 
 
 

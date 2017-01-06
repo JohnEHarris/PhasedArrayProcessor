@@ -215,6 +215,7 @@ void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	int nPam, nInst, nSeq, nCh, msgcnt;
 	//int i,j,k;
 	int i;
+	int nChnlQty = 0;
 	CString s;
 	CvChannel *pChannel;
 
@@ -243,26 +244,32 @@ void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	// packet has 90 max valid readings.
 	s.Format(_T("Start seq=%d, ch=%d ....."),pNcNx->bSeqNumber, pNcNx->bChnlNumber);
 	TRACE(s);
-	while ( (pNcNx->bSeqNumber != 255) && (msgcnt < 90) )
+	nCh = nSeq = 0;
+	while ( (pNcNx->bSeqNumber < MAX_SEQ_COUNT) && (pNcNx->bChnlNumber < MAX_CHNLS_PER_MAIN_BANG) )
 		{
-		// debug helper
-		if ( (pNcNx->bSeqNumber == 4) && (pNcNx->bChnlNumber > 12) )
-			i = pNcNx->bChnlNumber;
-
 		nCh = pNcNx->bChnlNumber;
 		nSeq = pNcNx->bSeqNumber;
+
 		// [seq][chnl]
 		pChannel = pSCC->pvChannel[nSeq][nCh];
+		if (pChannel == NULL)
+			{
+			TRACE(_T("pChannel == NULL"));
+			break;
+			}
+		s.Format(_T("Seq=%2d Ch=%2d, NcId=%3d\n"), nSeq, nCh, pNcNx->bNcID);
+		TRACE(s);
 		pChannel->FifoInit(0, pNcNx->bNcID,pNcNx->bTholdID, pNcNx->bModID); 
 		pChannel->FifoInit(1, pNcNx->bNcOD,pNcNx->bTholdOD, pNcNx->bModOD); 
+		pChannel->FifoInit(2, pNcNx->bNcIf,pNcNx->bTholdIf, pNcNx->bModIf); 
 		//FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
 		pChannel->WFifoInit((BYTE)pNcNx->wNx, pNcNx->wWallMax, pNcNx->wWallMin, pNcNx->wDropOut);
 		//WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut)
+		nChnlQty++;
 		pNcNx++;
-		msgcnt++;
 		}
 
-	s.Format(_T("End seq=%d, ch=%d, msgcnt=%d\n"),nSeq, nCh, msgcnt-1);
+	s.Format(_T("End seq=%d, ch=%d, Chnls Set=%d\n"),nSeq, nCh, nChnlQty);
 	TRACE(s);
 
 	}

@@ -141,7 +141,7 @@ public:
 		// the same subnet as the servers.
 	int m_nPamNumber;		// the PAM number of this machine, the one running the ServiceApp
 	UINT m_uPamPort;		// the port number for the PAM being serviced by this machine (PC)
-	UINT m_uMsgSeqCount;	// counter to uniquely identify each packet. Used by PamSendToPag()
+	UINT m_wMsgSeqCnt;	// counter to uniquely identify each packet. Used by PamSendToPag()
 	void InitializeServerConnectionManagement(void);	// jeh taken from PAG/TScanDlg.cpp and modified
 	int KillServerConnectionManagement(int nServer);	// undo what Initialize created
 	void InitializeClientConnectionManagement(void);

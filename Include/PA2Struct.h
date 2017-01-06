@@ -360,12 +360,17 @@ typedef struct
 	BYTE bNcOD;		// how many flaw values required at or above threshold
 	BYTE bTholdOD;	// Threshold value 0-127
 	BYTE bModOD;	// active depth of FIFO. This is the 'm' in Nc out of m. eg., 2 out of 3 above thold
+	// Interface gate
+	BYTE bNcIf;		// how many flaw values required at or above threshold
+	BYTE bTholdIf;	// Threshold value 0-127
+	BYTE bModIf;	// active depth of FIFO. This is the 'm' in Nc out of m. eg., 2 out of 3 above thold
+	BYTE bSpare;
 	// Wall Nx portion
 	WORD wNx;		// Number of wall readings to average. Typically not more than 8
 	WORD wWallMax;	// maximum allowed hardware wall reading. 2.000" -> 1377 typically
 	WORD wWallMin;	// minimum allowed hardware wall reading. 0.040" -> 27
 	WORD wDropOut;	// number of bad readings before drop out occurs
-	} ST_NC_NX;		// sizeof(ST_NC_NX) = 16
+	} ST_NC_NX;		// sizeof(ST_NC_NX) = 20
 
 // Since the Receiver/PAM used for this initial systems knows nothing about the type signals it processes,
 // this command sets the Nc and Nx variables for all virtual channels.
@@ -381,31 +386,20 @@ typedef struct
 // of a sequence in which case the start channel number is always 0
 typedef struct
 	{
-	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	WORD wMsgSeqCnt;
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
 	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 
-	BYTE bSpare[14];
-	ST_NC_NX stNcNx[90];		// 1440	
+	BYTE bSpare[8];
+	ST_NC_NX stNcNx[72];		// 1464	
 	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1460 replaces CHANNEL_CMD_1
 	
-#if 0
-typedef struct
-	{
-	WORD wMsgID;		// 1		
-	WORD wMsgSeqCnt;
-	BYTE bPAM_Number;	// PAM=Receiver number. 0 is the first PAM, 1 the second PAM, 0-255 but usually just 0
-	BYTE bInstNumber;	// for the PAM above, which connected instrument gets the command 0-255
-	BYTE bChannelTypes;	// the number of different channel types such as Long, Tran, Obliq, Wall
-	BYTE bChannelTypeRepetition;	// number of sets of ChannelTypes in this message
-	ST_NC_NX stNcNx[32];
-	} CHANNEL_CMD_1;	// sizeof(CHANNEL_CMD_1) = 520
-#endif
-
 
 
 /*****************	STRUCTURES	END *********************/

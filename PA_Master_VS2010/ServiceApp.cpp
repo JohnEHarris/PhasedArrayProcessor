@@ -613,7 +613,7 @@ BOOL CServiceApp :: InitInstance()
 		DeBug, fileException.m_cause );
 		}
 	else m_nDebugLogExists = 1;
-	m_uMsgSeqCount = 0;
+	m_wMsgSeqCnt = 0;
 
 	RegisterService(__argc, __argv);
 	//printf("Starting the Service/n"); // causes an exception 
@@ -1741,7 +1741,7 @@ void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 		}
 	i = pSocket->Send(&pNew->Msg, pNew->nLength, 0);
 #endif
-	pIdata->uMsgSeqCount = m_uMsgSeqCount++;
+	pIdata->wMsgSeqCnt = m_wMsgSeqCnt++;
 	
 	i = pSocket->Send(pBuf, nLen, 0);	// <-------------
 	
@@ -1758,7 +1758,7 @@ void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 			{
 			s.Format(_T("[%d]PAM sent PAG %d bytes-Start seq=%d, Start chnl=%d MsgSeq=%d\n"), 
 				pSocket->m_pCCM->m_pstCCM->uPacketsSent, i,
-				pIdata->bStartSeqNumber, pIdata->bStartChannel,pIdata->uMsgSeqCount);
+				pIdata->bStartSeqNumber, pIdata->bStartChannel,pIdata->wMsgSeqCnt);
 			TRACE(s);
 			}
 		}

@@ -528,19 +528,19 @@ void CClientConnectionManagement::UnknownRcvdPacket(void *pV)
 void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 	{
 
+	int nWholePacketQty = 0;
+
+	BYTE *pB;	// debug
+	void *pPacket = 0;
+	int nPacketSize;
+	WORD wByteCnt;
 	int n;
 	CString s,t;
 
 #ifdef THIS_IS_SERVICE_APP
-	GenericPacketHeader *pPacket = 0;
-	int nPacketSize = stSocketNames[m_nMyConnection].nPacketSize;
-	int nWholePacketQty = 0;
-	if ( nPacketSize < 1)
-		{
-		TRACE(_T(" CClientConnectionManagement::OnReceive nPacketSize is less than 1\n"));
-		return;
-		}
 
+	// A real hardware FIFO would shift data to the output side instantly
+	m_pFifo->Shift();
 	BYTE *pCmd = m_pFifo->GetInLoc();
 	// Receive() receives data into fifo memory pointed to by pCmd
 	n = pSocket->Receive( (void *) pCmd, 0x2000, 0 );	// ask for 8k byte into 16k buffer
@@ -548,22 +548,41 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 	if ( n > 0)
 		{
 		m_pFifo->AddBytesToFifo(n);
-		// reduce output to trace. When whole multiples of msg arrive, don't show
-		//if ( n % nPacketSize)
 			{
 			s.Format(_T("CCM OnReceive got %d bytes"), n);
 			DebugOut(s);
 			}
 		nPacketSize = m_pFifo->GetPacketSize();	
 
-		while (nPacketSize = m_pFifo->GetPacketSize())
+
+		
+		while (1)
 			{	// get packets
+
+			wByteCnt = m_pFifo->GetFIFOBytes();
+			if (wByteCnt < sizeof(GenericPacketHeader))
+				{
+				break;
+				}
+			nPacketSize = m_pFifo->GetPacketSize();
+			if ((nPacketSize <= 0) || (wByteCnt < nPacketSize))
+				{
+				break;
+				}
+
 			pPacket = (GenericPacketHeader*) m_pFifo->GetNextPacket();
-			BYTE *pB2 = new BYTE[nPacketSize];	// resize the buffer that will actually be used
-			memcpy( (void *) pB2, (void *) pPacket, nPacketSize);	// move all data to the new buffer
+			if (pPacket == NULL)
+				{
+				//CAsyncSocket::OnReceive(nErrorCode);
+				return;
+				}
+
+			pB =  new BYTE[nPacketSize];
+
+			memcpy( (void *) pB, (void *) pPacket, nPacketSize);	// move all data to the new buffer
 			// put it in the linked list and let someone else decipher it
 			LockRcvPktList();
-			AddTailRcvPkt(pB2);	// put the buffer into the recd data linked list
+			AddTailRcvPkt(pB);	// put the buffer into the recd data linked list
 			nWholePacketQty++;
 			UnLockRcvPktList();
 			if (m_pstCCM)
@@ -575,24 +594,9 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 				// This messages causes void CCmdProcessThread::ProcessReceivedMessage() to execute
 				// m_pstCCM->pCmdProcessThread->PostThreadMessageA(WM_USER_CLIENT_PKT_RECEIVED, 0,0L);
 				}
-#if 0
-			if (m_pSCC)
-				{
-				m_pSCC->uBytesReceived += nPacketSize;
-				m_pSCC->uPacketsReceived++;
-				if ((m_pSCC->uPacketsReceived & 0xfff) == 0)	m_pElapseTimer->Start();
-				if ((m_pSCC->uPacketsReceived & 0xfff) == 0xfff)
-					{
-					m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 4k packets
-					float fPksPerSec = 4096000000.0f/( (float) m_nElapseTime);
-					m_pSCC->uPacketsPerSecond = (UINT)fPksPerSec;
-					s.Format(_T("[%5d]Server[%d]Socket[%d]::Packets/sec = %6.1f\n"), 
-						m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, fPksPerSec);
-					TRACE(s);
-					}
-#endif
+
 			} 	// get packets
-		m_pFifo->Reset();	// if FIFO is empty will reset pointer to start of memory
+		//m_pFifo->Reset();	// if FIFO is empty will reset pointer to start of memory
 
 		if (( nWholePacketQty) && (m_pstCCM))
 			// This messages causes void CCmdProcessThread::ProcessReceivedMessage() to execute

@@ -502,21 +502,25 @@ void CServerSocket::OnReceive(int nErrorCode)
 	// Receive() receives data into fifo memory pointed to by pCmd
 	n = Receive( (void *) pCmd, 0x2000, 0 );	// ask for 8k byte into 16k buffer
 	if (n > 1460)
+#if		DEBUG_TCPIP_FROM_INSTRUMENT
 		{
 		//debugging
 		s.Format(_T("Big packet = 0x%04x, = %05d\n"), n,n);
 		TRACE(s);
 		}
+#endif
 	//PAM assumes we will get partial packets and have to extract whole packets
 	if ( n > 0)
 		{
 		m_pFifo->AddBytesToFifo(n);
+#if DEBUG_TCPIP_FROM_INSTRUMENT
 			{
 			s.Format(_T("[%4d]Server[%d]Socket[%d] got %d bytes, SeqCnt = %d\n"), 
 				m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, 
 				n, m_pFifo->m_wMsgSeqCnt);
 			TRACE(s);
 			}
+#endif
 
 		while (1)	// total byte in FIFO. May be multiple packets.
 			{	// get packets
@@ -570,11 +574,11 @@ void CServerSocket::OnReceive(int nErrorCode)
 				m_pSCC->uPacketsReceived++;
 				if (m_pElapseTimer)
 					{
-					if ((m_pSCC->uPacketsReceived & 0xfff) == 0)	m_pElapseTimer->Start();
-					if ((m_pSCC->uPacketsReceived & 0xfff) == 0xfff)
+					if ((m_pSCC->uPacketsReceived & 0xff) == 0)	m_pElapseTimer->Start();
+					if ((m_pSCC->uPacketsReceived & 0xff) == 0xff)
 						{
-						m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 4k packets
-						float fPksPerSec = 4096000000.0f/( (float) m_nElapseTime);
+						m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
+						float fPksPerSec = 256000000.0f/( (float) m_nElapseTime);
 						m_pSCC->uPacketsPerSecond = (UINT)fPksPerSec;
 						s.Format(_T("[%5d]Server[%d]Socket[%d]::OnReceive - Packets/sec = %6.1f\n"), 
 							m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, fPksPerSec);

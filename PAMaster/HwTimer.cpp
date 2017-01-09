@@ -29,6 +29,7 @@ CHwTimer :: CHwTimer()	// constructor
 	else
 		m_fScaleToMicroseconds = 1.0f;
 	// clock = 3,579,545 on Dell Inspiron 7500.... 8/05/2002
+	// 2,728,203 2017/01/09
 	HiResClksPerMilliSecond = HiResClksPerMilliSecond/1000;	// clks per 1.0 millisecond
 	if (HiResClksPerMilliSecond == 0) HiResClksPerMilliSecond = 1;
 	m_indx = m_nCalled = m_nMax128 = m_uMaxDeltaT = 0;

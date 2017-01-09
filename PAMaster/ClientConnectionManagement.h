@@ -356,7 +356,7 @@ public:
 	//BYTE m_RcvBuf[0x10000];						// 16 k receiver buffer.. now 64k
 	// replace above with CmdFifo
 	CCmdFifo *m_pFifo;
-	void *pWholePacket;
+	//void *pWholePacket;
 	// debug info
 	CString szName;
 	};	

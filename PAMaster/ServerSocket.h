@@ -90,6 +90,14 @@ public:
 	CHwTimer *m_pElapseTimer;
 	int m_nElapseTime;
 	int m_nOnAcceptClientIndex;		// cheating to let OnAccept pass info to OnClose
+	int m_nSeqCntDbg[1024];
+	int m_nSeqIndx;
+	USHORT m_nLastSeqCnt;
+
+	// debugging 
+	GenericPacketHeader m_HeaderDbg[8];
+	int m_dbg_cnt;		// counter to select pHeaderDbg variable
+
 	};
 
 #endif

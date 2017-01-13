@@ -33,13 +33,17 @@ CServerSocket::CServerSocket(CServerConnectionManagement *pSCM)
 	{
 	Init();
 	m_pSCM = pSCM;
-	m_pFifo = new CCmdFifo(INSTRUMENT_PACKET_SIZE);		// FIFO control for receiving instrument packets	
+	m_pFifo = new CCmdFifo(INSTRUMENT_PACKET_SIZE);		// FIFO control for receiving instrument packets
+	m_nSeqIndx = m_nLastSeqCnt = 0;
+	memset(&m_nSeqCntDbg[0], 0, sizeof(m_nSeqCntDbg));
 	}
 
 CServerSocket::CServerSocket()
 	{
 	Init();
 	m_pFifo = new CCmdFifo(INSTRUMENT_PACKET_SIZE);		// FIFO control for receiving instrument packets	
+	m_nSeqIndx = m_nLastSeqCnt = 0;
+	memset(&m_nSeqCntDbg[0], 0, sizeof(m_nSeqCntDbg));
 	}
 
 CServerSocket::~CServerSocket()
@@ -87,6 +91,7 @@ void CServerSocket::Init(void)
 	s.Format(_T("CServerSocket::Init() invoked by thread ID = 0x%04x\n"), nId);
 	m_nOnAcceptClientIndex = -1;
 	TRACE(s);
+	m_dbg_cnt = 0;
 	}
 
 // CServerSocket member functions
@@ -480,6 +485,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 	void *pPacket = 0;
 	int nPacketSize;
 	WORD wByteCnt;
+	GenericPacketHeader *pHeader;
 
 	int n;
 	CString s, t;
@@ -501,30 +507,37 @@ void CServerSocket::OnReceive(int nErrorCode)
 	BYTE *pCmd = m_pFifo->GetInLoc();
 	// Receive() receives data into fifo memory pointed to by pCmd
 	n = Receive( (void *) pCmd, 0x2000, 0 );	// ask for 8k byte into 16k buffer
+#if		DEBUG_TCPIP_FROM_INSTRUMENT
 	if (n > 1460)
 		{
 		//debugging
 		s.Format(_T("Big packet = 0x%04x, = %05d\n"), n,n);
 		TRACE(s);
 		}
+#endif
+
 	//PAM assumes we will get partial packets and have to extract whole packets
 	if ( n > 0)
 		{
 		m_pFifo->AddBytesToFifo(n);
+
+#if DEBUG_TCPIP_FROM_INSTRUMENT
 			{
 			s.Format(_T("[%4d]Server[%d]Socket[%d] got %d bytes, SeqCnt = %d\n"), 
 				m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, 
 				n, m_pFifo->m_wMsgSeqCnt);
 			TRACE(s);
 			}
+#endif
 
 		while (1)	// total byte in FIFO. May be multiple packets.
 			{	// get packets
 			wByteCnt = m_pFifo->GetFIFOBytes();
 			if (wByteCnt < sizeof(GenericPacketHeader))
 				{
-				CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
-				return;
+				//CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
+				//return;
+				break;	// check at bottom to see if need to signal RcvListThread
 				}
 			nPacketSize = m_pFifo->GetPacketSize();
 			if ((nPacketSize <= 0) || (wByteCnt < nPacketSize))
@@ -539,9 +552,23 @@ void CServerSocket::OnReceive(int nErrorCode)
 				CAsyncSocket::OnReceive(nErrorCode);
 				return;
 				}
+			pHeader = (GenericPacketHeader *)pPacket;
 
+			// See if received messages are skipping MsgSeqCnt, ie. some packets not actually sent
+			memcpy((void*)&m_HeaderDbg[m_dbg_cnt++], (void *) pHeader, sizeof(GenericPacketHeader));
+			m_dbg_cnt &= 7;
+
+
+			if ((pHeader->wMsgSeqCnt - (m_nLastSeqCnt+1)) != 0) 
+				{
+				n = m_nSeqIndx;
+				}
+			m_nLastSeqCnt = pHeader->wMsgSeqCnt;
 			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
 			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
+			InputRawDataPacket *pIdataPacket = (InputRawDataPacket *) pB;
+			m_nSeqCntDbg[m_nSeqIndx++] = pIdataPacket->wMsgSeqCnt;
+			m_nSeqIndx &= 0x3ff;
 
 			LockRcvPktList();
 			if (m_pSCC)
@@ -570,14 +597,15 @@ void CServerSocket::OnReceive(int nErrorCode)
 				m_pSCC->uPacketsReceived++;
 				if (m_pElapseTimer)
 					{
-					if ((m_pSCC->uPacketsReceived & 0xfff) == 0)	m_pElapseTimer->Start();
-					if ((m_pSCC->uPacketsReceived & 0xfff) == 0xfff)
+					if ((m_pSCC->uPacketsReceived & 0xff) == 0)	m_pElapseTimer->Start();
+					if ((m_pSCC->uPacketsReceived & 0xff) == 0xff)
 						{
-						m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 4k packets
-						float fPksPerSec = 4096000000.0f/( (float) m_nElapseTime);
+						m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
+						float fPksPerSec = 256000000.0f/( (float) m_nElapseTime);
 						m_pSCC->uPacketsPerSecond = (UINT)fPksPerSec;
-						s.Format(_T("[%5d]Server[%d]Socket[%d]::OnReceive - Packets/sec = %6.1f\n"), 
-							m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, fPksPerSec);
+						s.Format(_T("[%5d]Server[%d]Socket[%d]::OnReceive - [SeqCnt=%5d] Packets/sec = %6.1f\n"), 
+							m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, 
+							pIdataPacket->wMsgSeqCnt, fPksPerSec);
 						TRACE(s);
 						}
 					}

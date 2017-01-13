@@ -183,8 +183,10 @@ BYTE *CCmdFifo::GetNextPacket(void)
 	// caller will have to check size after extracting the packet and call reset
 	// when the size is 0
 	// If caller fails to check for size then we will overflow the buffer. No wrap around provided here
+#if DEBUG_TCPIP_FROM_INSTRUMENT
 	s.Format(_T("FIFO in, out, size Sync = %5d %5d %5d 0x%08x\n"), 
 		m_In, m_Out, m_Size, pHeader->uSync);
 	TRACE(s);
+#endif
 	return pStart;
 	}

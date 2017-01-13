@@ -548,10 +548,12 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 	if ( n > 0)
 		{
 		m_pFifo->AddBytesToFifo(n);
+#if	DEBUG_TCPIP_FROM_PAG
 			{
 			s.Format(_T("CCM OnReceive got %d bytes"), n);
 			DebugOut(s);
 			}
+#endif
 		nPacketSize = m_pFifo->GetPacketSize();	
 
 

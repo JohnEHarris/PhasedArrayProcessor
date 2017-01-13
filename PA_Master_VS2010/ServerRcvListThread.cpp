@@ -185,7 +185,7 @@ END_MESSAGE_MAP()
 // comes from CServerSocket::OnReceive()
 afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 	{
-	void *pV;
+	InputRawDataPacket *pIdataPacket;
 	int j = (int) w;
 	if ( m_pstSCM)
 		{
@@ -200,10 +200,10 @@ afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 
 	while (m_pSCC->cpRcvPktList->GetCount() )
 		{
-		pV = m_pstSCM->pRcvPktList[j]->RemoveHead();				//m_pSCC->cpRcvPktList->RemoveHead();
+		pIdataPacket = (InputRawDataPacket *) m_pstSCM->pRcvPktList[j]->RemoveHead();				//m_pSCC->cpRcvPktList->RemoveHead();
 		//m_pSCC->pSocket->UnLockRcvPktList();
 #ifdef THIS_IS_SERVICE_APP
-		ProcessInstrumentData(pV);	// local call to this class memeber
+		ProcessInstrumentData(pIdataPacket);	// local call to this class memeber
 #else
 		ProcessPAM_Data(pV);
 #endif
@@ -241,10 +241,10 @@ void CServerRcvListThread::FlushRcvList(WPARAM w, LPARAM lParam)
 //void CServerRcvListThread::MakeFakeDataHead(SRawDataPacketOld *pData)
 void CServerRcvListThread::MakeFakeDataHead(InputRawDataPacket *pData)
 	{
-	pData->wMsgID	= eRawInsp;	// raw data=10
-	pData->wByteCount = 1460;
+	//pData->wMsgID	= eRawInsp;	// raw data=10
+	//pData->wByteCount = 1460;
 	pData->bDin		= FORWARD | PIPE_PRESENT;
-	pData->wMsgSeqCnt++;
+	//pData->wMsgSeqCnt++;
 	pData->wLocation = nLoc++;
 	if (nLoc > 500) 
 		nLoc = 20;
@@ -301,7 +301,7 @@ void CServerRcvListThread::MakeFakeData(InputRawDataPacket *pData)
 
 	MakeFakeDataHead(pData);
 
-	// Assuming only 5 sequences to fit the data size. Need to do something different if not 5 sequences in packet
+	// Assuming only 7 sequences to fit the data size. Need to do something different if not 7 sequences in packet
 	// Doing something different
 	for (iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
 		{
@@ -545,7 +545,7 @@ void CServerRcvListThread::BuildOutputPacket(InputRawDataPacket *pInput)
 // the linked list.
 // Packets stored in pData have the length of the packet prepended.
 // Remove the integer length before processing
-#define MAKE_FAKE_DATA
+#undef MAKE_FAKE_DATA
 
 #ifdef THIS_IS_SERVICE_APP
 
@@ -569,15 +569,15 @@ void CServerRcvListThread::IncStartSeq(void)
 		}
 	}
 
-void CServerRcvListThread::ProcessInstrumentData(void *pData)
+void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 	{
 	// see ServicApp.cpp the procedure tInstMsgProcess() for legacy operation
 	//
-	stSEND_PACKET *pBuf = (stSEND_PACKET *) pData;
+	//stSEND_PACKET *pBuf = (stSEND_PACKET *) pData;
 	//int nStartSeqCount, nSeqQty;
 	//SRawDataPacketOld *pOutput; before 2016-10-20
-	InputRawDataPacket *pFakeData;
-	InputRawDataPacket *pIData;
+	//InputRawDataPacket *pFakeData;
+	//InputRawDataPacket *pIData;
 	int i, j;
 	int iSeqPkt;
 	BYTE bGateTmp;
@@ -587,13 +587,13 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 
 
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
-	i = sizeof(SRawDataPacketOld);
-	if (pBuf->nLength == INSTRUMENT_PACKET_SIZE)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
+	i = sizeof(InputRawDataPacket);
+	if (pIData->wByteCount >= INSTRUMENT_PACKET_SIZE -16)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
 		{
 		/******************************************************************/
 		//  2016-10-20 start to migrate to new input data structures
 		// throw away simulator data or current Sam data and make a new InputRawDataPacket
-		delete pData;
+		//delete pIData;
 
 		if (m_pOutputRawDataPacket == NULL)
 			{
@@ -604,9 +604,9 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 #ifdef MAKE_FAKE_DATA
 	// Basically Yqing's simulator gave us some bytes. Generate test data in place of those bytes.
 	// Run the fake data through the Nc Nx operations and keep the Max, Min values
-		pIData = pFakeData = new InputRawDataPacket;
+		//pIData = pFakeData = new InputRawDataPacket;
 		// 1 Ascan reading for every virtual channel. For now assuming this is 5 sequence points.
-		MakeFakeData(pFakeData);
+		MakeFakeData(pIData);
 		// Now that we have fake data, process it
 		// How many vChannels?
 #endif
@@ -661,17 +661,19 @@ void CServerRcvListThread::ProcessInstrumentData(void *pData)
 
 
 		m_nElapseTime = m_pElapseTimer->Stop();		// elapse time in uSec for 128 AScans
+#if 0
 		s.Format(_T("Nc Nx processing for %d VChnls in %d uSec\n"), 
 			7*gMaxChnlsPerMainBang, m_nElapseTime);
 		TRACE(s);
 		theApp.SaveDebugLog(s);
+#endif
 		}	// if (pBuf->nLength == 1040)
 
 	else
 		{
 		// This is for data coming from Yiqing simulator... change once final design done.
-		s.Format(_T("ProcessInstrumentData got a data packet of the wrong size, %d\n"),pBuf->nLength);
-		delete pData;	// info in pOutput was put into a new structure and sent to the PAG
+		s.Format(_T("ProcessInstrumentData got a data packet of the wrong size, %d\n"),pIData->wByteCount);
+		delete pIData;	// info in pOutput was put into a new structure and sent to the PAG
 		}
 
 	}	// CServerRcvListThread::ProcessInstrumentData(void *pData)

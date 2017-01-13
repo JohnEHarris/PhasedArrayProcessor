@@ -58,7 +58,7 @@ public:
 
 #ifdef THIS_IS_SERVICE_APP
 //	afx_msg void InitRunningAverage(WPARAM w, LPARAM lParam);
-	void ProcessInstrumentData(void *pData);
+	void ProcessInstrumentData(InputRawDataPacket *pIData);
 	
 	//void MakeFakeDataHead(SRawDataPacketOld *pData); worked with Yiqing simulator
 	//void MakeFakeData(SRawDataPacketOld *pData);

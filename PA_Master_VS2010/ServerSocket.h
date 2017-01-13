@@ -86,10 +86,18 @@ public:
 	//BYTE m_RcvBuf[0x10000];						// 16 k receiver buffer .. now 64k
 	// debug info
 	CString szName;
-	void *pWholePacket;				// -- not created with 'new'
+	//void *pWholePacket;				// -- not created with 'new'
 	CHwTimer *m_pElapseTimer;
 	int m_nElapseTime;
 	int m_nOnAcceptClientIndex;		// cheating to let OnAccept pass info to OnClose
+	int m_nSeqCntDbg[1024];
+	int m_nSeqIndx;
+	USHORT m_nLastSeqCnt;
+
+	// debugging 
+	GenericPacketHeader m_HeaderDbg[8];
+	int m_dbg_cnt;		// counter to select pHeaderDbg variable
+
 	};
 
 #endif

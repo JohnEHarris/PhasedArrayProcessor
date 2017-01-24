@@ -55,6 +55,7 @@ public:
 
 	void LockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->cpCSRcvPkt) EnterCriticalSection(m_pSCC->cpCSRcvPkt);	}	}
 	void AddTailRcvPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->cpRcvPktList) m_pSCC->cpRcvPktList->AddTail(pV);	}	}
+	int GetRcvListCount(void)		{ if (m_pSCC) { if (m_pSCC->cpRcvPktList) return m_pSCC->cpRcvPktList->GetCount(); } return 0; }
 	void UnLockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->cpCSRcvPkt) LeaveCriticalSection(m_pSCC->cpCSRcvPkt);	}	}
 
 	void LockSendPktList(void)		{ if (m_pSCC) { if (m_pSCC->cpCSSendPkt) EnterCriticalSection(m_pSCC->cpCSSendPkt);}	}
@@ -97,6 +98,8 @@ public:
 	// debugging 
 	GenericPacketHeader m_HeaderDbg[8];
 	int m_dbg_cnt;		// counter to select pHeaderDbg variable
+	int m_nListCount;	// how deep is the linked list?
+	int m_nListCountChanged;
 
 	};
 

@@ -1104,7 +1104,7 @@ WHILE_TARGET:
 						// no client connection
 						continue;
 						}
-
+#if 0
 					if(pcc)	
 						{	// empty the linked lists
 						// remove dependencies on pSocket being non-NULL
@@ -1128,6 +1128,7 @@ WHILE_TARGET:
 							}
 						LeaveCriticalSection(pcc->cpCSSendPkt);	
 						}	// empty the linked lists
+#endif
 
 					//ReleaseInstrumentListAccess(j);
 					Sleep(50);
@@ -1711,50 +1712,74 @@ CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNum
 // In the FakeData generation which calls PamSendToPag, pBuf is deleted after the return to the fake data generator
 // The inspection message sent thru this mechanism is an IDATA_PACKET.
 // Keep the message sequence number in a CServiceApp member variable and increment here.
-void CServiceApp::PamSendToPag(void *pBuf, int nLen)
+//
+// called from CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
+//
+#if 0
+int CServiceApp::PamSendToPag(void *pBuf, int nLen)
 	{
 	CString s;
-	IDATA_PACKET *pIdata = (IDATA_PACKET *)pBuf;
-	int i = ePAM_Client_Of_PAG_Server;	// normally 0
-	if (nLen < 1) 
-		{
-		TRACE(_T("ERROR - CServiceApp::PamSendToPag(nLen < 1)\n"));
-		return;
-		}
-	ASSERT(i<=MAX_CLIENTS);
-//	CClientConnectionManagement *pccm = pCCM[i];
-	CClientConnectionManagement *pccm = pCCM_PAG;
+	int i;
+	GenericPacketHeader *pHeader = (GenericPacketHeader *)pBuf;
+	// preserve the option to have different message types sent to PAG
+
+	//Is this packet going to go anywhere??
+	CClientConnectionManagement *pccm = pCCM_PAG;	
 	if ( NULL == pccm)
 		{
 		TRACE(_T("CServiceApp::PamSendToPag pccm is NULL\n"));
+		//delete pBuf; caller deletes the packet
 		return;
 		}
+
 	CClientSocket *pSocket = pccm->GetSocketPtr();
 	ASSERT(pSocket);
-	ASSERT(pBuf);
-#if 0
-	stSEND_PACKET *pNew = (stSEND_PACKET *) pBuf;
-	if (pNew->nLength != nLen)
+
+	nLen = pHeader->wByteCount;
+	if (nLen < 1) 
 		{
-		s.Format(_T("CServiceApp::PamSendToPag nLen != nLength\n"), nLen, pNew->nLength);
-		TRACE(s);
+		TRACE(_T("ERROR - CServiceApp::PamSendToPag(nLen < 1)\n"));
+		//delete pBuf; caller deletes the packet
+		return;
 		}
-	i = pSocket->Send(&pNew->Msg, pNew->nLength, 0);
-#endif
-	pIdata->wMsgSeqCnt = m_wMsgSeqCnt++;
+
+	IDATA_PACKET *pIdata = (IDATA_PACKET *)pBuf;
+
+	switch (pHeader->wMsgID)
+		{
+	case NC_NX_IDATA_ID:
+		pIdata->wMsgSeqCnt = m_wMsgSeqCnt++;
+		break;
+
+	default:
+		s.Format(_T("PamSend2Pag Unknown Msg Id=%3d, ByteCnt=%4d, MsgSeqCnt=%5d, Sync=0x%08x\n"),
+			pHeader->wMsgID, pHeader->wByteCount, pHeader->wMsgSeqCnt, pHeader->uSync);
+		return;
+		}
+
 	
 	i = pSocket->Send(pBuf, nLen, 0);	// <-------------
 	
 	if ( i != nLen)
 		{
-		s.Format(_T("CServiceApp::PamSendToPag requested to send %d bytes, but sent %d\n"), nLen, i);
+		int nError = 
+		pSocket->GetLastError();	// client socket to PAG
+		s.Format(_T("PamSendToPag requested to send %d bytes, but sent %d, Error = %d\n"), 
+			nLen, i, nError);
+		TRACE(s);	// 10035 WSAEWOULDBLOCK
+		s.Format(_T("PamSendToPag Header: ByteCount=%5d, MsgSeq=%5d, MsgId=%3d, xLoc=%5d\n"),
+			pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->wMsgID, pIdata->wLoc );
+		TRACE(s);
+		s.Format(_T("Last Good Header: ByteCount=%5d, MsgSeq=%5d, MsgId=%3d, xLoc=%5d\n"),
+			m_LastGoodSend.wByteCount, m_LastGoodSend.wMsgSeqCnt, m_LastGoodSend.wMsgID, m_LastGoodSend.wLoc );
 		TRACE(s);
 		}
 	else
 		{
+		memcpy((void *)&m_LastGoodSend, (void *)pBuf, i);
 		pSocket->m_pCCM->m_pstCCM->uBytesSent += i;
 		pSocket->m_pCCM->m_pstCCM->uPacketsSent++;
-		if (pSocket->m_pCCM->m_pstCCM->uPacketsSent < 20)
+		if ((pSocket->m_pCCM->m_pstCCM->uPacketsSent < 20) || ((pSocket->m_pCCM->m_pstCCM->uPacketsSent % 100) == 0) )
 			{
 			s.Format(_T("[%d]PAM sent PAG %d bytes-Start seq=%d, Start chnl=%d MsgSeq=%d\n"), 
 				pSocket->m_pCCM->m_pstCCM->uPacketsSent, i,
@@ -1762,8 +1787,10 @@ void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 			TRACE(s);
 			}
 		}
+	return i;
 
 	}
+#endif
 
 // Input the client number for the instrument making the request
 // Client numbers are derived from the base IP address of the client range

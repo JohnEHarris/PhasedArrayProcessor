@@ -91,8 +91,8 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 			switch (i)
 				{
 			case 0:		// the client connection to PAG
-				//if (pCCM_PAG)
-					//pCCM_PAG->TimerTick(eRestartPAMtoPAG);
+				if (pCCM_PAG)
+					pCCM_PAG->TimerTick(eRestartPAMtoPAG);
 				break;
 
 			default:

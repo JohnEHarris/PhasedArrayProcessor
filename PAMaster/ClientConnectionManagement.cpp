@@ -161,7 +161,7 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 
 	// if (NULL == m_pstCCM)	return;		//fatal flaw
 
-	m_pFifo = new CCmdFifo(1454);		// FIFO control for receiving cmd packets from PAG	
+	m_pFifo = new CCmdFifo(1460);		// FIFO control for receiving cmd packets from PAG	 was 1454
 	}
 
 

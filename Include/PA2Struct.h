@@ -34,6 +34,14 @@ enum IdOdTypes {eId, eOd, eIf};
 #define ASCANS_TO_AVG		8
 
 
+// Idata message types. This is the data that comes from the PAP and is sent 
+// To the Receiver system
+#define NC_NX_IDATA_ID				1		// PAP processed inspection data sent to PAG/Receiver system
+
+
+
+
+
 // edit this value if more client connections to servers are needed
 #define	MAX_SERVERS							1
 // Likely will have at least 2 server types. 1 for inspetion data and 1 for pulsers
@@ -197,7 +205,7 @@ typedef struct
 	WORD wAngle;		// 0.2048 ms clock counts from TOP relative to 1st packet from instrument
 	WORD wPeriod;		// period of rotation in 0.2048 ms
 	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
-	BYTE bSpare[2];		// makes maximum tcpip packet .... 28 bytes to here
+	WORD wSendQDepth;	// Are packets accumulation in send queue.... 28 bytes to here
 	stPeakData Results[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 179*8=1432
 	} IDATA_PACKET;	// sizeof = 1460 - the maximum TCPIP packet size for data
 
@@ -251,7 +259,7 @@ typedef struct
 
 	// Commands can have any format past this point based on MsgId
 
-	BYTE bSeqNUmber;	// when relevant, which sequence of virtual probes the command affects
+	BYTE bSeqNumber;	// when relevant, which sequence of virtual probes the command affects
 	BYTE bSpare[3];		// 16 bytes
     WORD wCmd[722];		// 722 words or 1444 bytes
 	} SCmdPacket;		// 1460 bytes -- the maximum data delivery size for tcp/ip

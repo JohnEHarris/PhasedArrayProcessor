@@ -162,7 +162,8 @@ public:
 	void SetServerPort(int nClient, short n){ stSocketNames[nClient].nPort = n;			}
 
 	CServerRcvListThreadBase* CreateServerReceiverThread(int nServerNumber, int nPriority);
-	void PamSendToPag(void *pBuf, int nLen);
+	//int PamSendToPag(void *pBuf, int nLen);
+	IDATA_PACKET m_LastGoodSend;
 
 	};
 

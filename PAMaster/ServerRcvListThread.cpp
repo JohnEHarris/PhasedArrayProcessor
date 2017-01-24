@@ -186,21 +186,23 @@ END_MESSAGE_MAP()
 afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 	{
 	InputRawDataPacket *pIdataPacket;
-	int j = (int) w;
+	int nCS = (int) w;	// which critical section's linked list will feed the data
+	int i;
 	if ( m_pstSCM)
 		{
-		if (m_pstSCM->pCS_ClientConnectionRcvList[j]) 
+		if (m_pstSCM->pCS_ClientConnectionRcvList[nCS]) 
 			{
-			if (0 == TryEnterCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]))	return;	 // try again later
+			if (0 == TryEnterCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[nCS]))	
+				return;	 // try again later
 			}
 		}
 	else return;
 
 	// if here we are in a critical section
 
-	while (m_pSCC->cpRcvPktList->GetCount() )
+	while (i = m_pSCC->cpRcvPktList->GetCount() )
 		{
-		pIdataPacket = (InputRawDataPacket *) m_pstSCM->pRcvPktList[j]->RemoveHead();				//m_pSCC->cpRcvPktList->RemoveHead();
+		pIdataPacket = (InputRawDataPacket *) m_pstSCM->pRcvPktList[nCS]->RemoveHead();				//m_pSCC->cpRcvPktList->RemoveHead();
 		//m_pSCC->pSocket->UnLockRcvPktList();
 #ifdef THIS_IS_SERVICE_APP
 		ProcessInstrumentData(pIdataPacket);	// local call to this class memeber
@@ -209,7 +211,7 @@ afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 #endif
 		}
 
-	LeaveCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]);
+	LeaveCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[nCS]);
 	}
 
 // this procedure activated by WM_USER_FLUSH_LINKED_LISTS
@@ -420,7 +422,8 @@ int CServerRcvListThread::GetIdataPacketIndex(void)
 
 //void CServerRcvListThread::BuildOutputPacket(SRawDataPacketOld *pRaw)
 // BuildOutputPacket was called because we have gone thru 16 Ascan samples in the whole machine.
-// May not work this way for a real machine
+// May not work this way for a real machine -- not used after simulating data.. discontinued in Jan 2017
+#if 0
 void CServerRcvListThread::BuildOutputPacket(InputRawDataPacket *pInput)
 	{
 	int i, k, jSeq;
@@ -535,7 +538,7 @@ void CServerRcvListThread::BuildOutputPacket(InputRawDataPacket *pInput)
 
 	}
 
-
+#endif
 
 
 // Take the code from ServiceApp, tInstMsgProcess() and incorporate into this class
@@ -567,6 +570,40 @@ void CServerRcvListThread::IncStartSeq(void)
 		{
 		m_Seq = 0;
 		}
+	}
+
+// The only way to get Idata from the PAP is to use the ClientConnectionManangement TCPIP
+// link. This routine puts the Idata packet ptr into a linked list
+// and then commands the CCM_PAG component to empty the linked list thru
+// the client socket to the PHASED ARRAY GUI - PAG
+void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata)
+	{
+	if (pCCM_PAG == NULL)
+		{
+		ASSERT(0);
+		return;
+		}
+	if (pCCM_PAG->m_pstCCM == NULL)
+		{
+		ASSERT(0);
+		return;
+		}
+	if (pCCM_PAG->m_pstCCM->pSocket == NULL)
+		{
+		ASSERT(0);
+		return;
+		}
+	if ( pCCM_PAG->m_pstCCM->pSendThread == NULL)
+		{
+		ASSERT(0);
+		return;
+		}
+	CClientCommunicationThread *pThread = pCCM_PAG->m_pstCCM->pSendThread;
+	pCCM_PAG->LockSendPktList();
+	pCCM_PAG->AddTailSendPkt((void*)pIdata);
+	pCCM_PAG->UnLockSendPktList();
+	//ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, TransmitPackets)
+	PostThreadMessage(WM_USER_SEND_TCPIP_PACKET,(WORD) 0,(LPARAM) this);
 	}
 
 void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
@@ -644,7 +681,18 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 					pChannel->ResetGatesAndWalls();
 					if (MAX_RESULTS == GetIdataPacketIndex())
 						{
-						theApp.PamSendToPag(m_pIdataPacket, sizeof(IDATA_PACKET));
+						// create an Idata packet with New. copy m_pIdataPacket to IdataPacketOut linked list
+						// send a thread message to theApp or a new sender thread to empty the linked list.
+						// or better yet signal the ccm_pag thread to empty alist  directed to PAG
+						m_pIdataPacket->wByteCount = pIData->wByteCount;
+						//theApp.PamSendToPag(m_pIdataPacket, pIData->wByteCount); // get len from data packet
+						//delete m_pIdataPacket;
+						//m_pIdataPacket = NULL;
+						// SendIdataToPag crashes when attempting to delete the input packet. Make a copy here
+						// that is not a class member
+						IDATA_PACKET *pIdataPacket = new (IDATA_PACKET);
+						memcpy((void*)pIdataPacket, (void *)m_pIdataPacket, sizeof(IDATA_PACKET));
+						SendIdataToPag( (GenericPacketHeader *) pIdataPacket);
 						delete m_pIdataPacket;
 						m_pIdataPacket = NULL;
 						}

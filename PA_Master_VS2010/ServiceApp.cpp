@@ -1714,34 +1714,42 @@ CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNum
 void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 	{
 	CString s;
-	IDATA_PACKET *pIdata = (IDATA_PACKET *)pBuf;
-	int i = ePAM_Client_Of_PAG_Server;	// normally 0
-	if (nLen < 1) 
-		{
-		TRACE(_T("ERROR - CServiceApp::PamSendToPag(nLen < 1)\n"));
-		return;
-		}
-	ASSERT(i<=MAX_CLIENTS);
-//	CClientConnectionManagement *pccm = pCCM[i];
-	CClientConnectionManagement *pccm = pCCM_PAG;
+	int i;
+	GenericPacketHeader *pHeader = (GenericPacketHeader *)pBuf;
+	// preserve the option to have different message types sent to PAG
+
+	//Is this packet going to go anywhere??
+	CClientConnectionManagement *pccm = pCCM_PAG;	
 	if ( NULL == pccm)
 		{
 		TRACE(_T("CServiceApp::PamSendToPag pccm is NULL\n"));
+		//delete pBuf; caller deletes the packet
 		return;
 		}
+
 	CClientSocket *pSocket = pccm->GetSocketPtr();
 	ASSERT(pSocket);
-	ASSERT(pBuf);
-#if 0
-	stSEND_PACKET *pNew = (stSEND_PACKET *) pBuf;
-	if (pNew->nLength != nLen)
+
+	nLen = pHeader->wByteCount;
+	if (nLen < 1) 
 		{
-		s.Format(_T("CServiceApp::PamSendToPag nLen != nLength\n"), nLen, pNew->nLength);
-		TRACE(s);
+		TRACE(_T("ERROR - CServiceApp::PamSendToPag(nLen < 1)\n"));
+		//delete pBuf; caller deletes the packet
+		return;
 		}
-	i = pSocket->Send(&pNew->Msg, pNew->nLength, 0);
-#endif
-	pIdata->wMsgSeqCnt = m_wMsgSeqCnt++;
+
+	IDATA_PACKET *pIdata = (IDATA_PACKET *)pBuf;
+
+	switch (pHeader->wMsgID)
+		{
+	case NC_NX_IDATA_ID:
+		pIdata->wMsgSeqCnt = m_wMsgSeqCnt++;
+		break;
+
+	default:
+		break;
+		}
+
 	
 	i = pSocket->Send(pBuf, nLen, 0);	// <-------------
 	

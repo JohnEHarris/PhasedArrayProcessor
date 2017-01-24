@@ -118,6 +118,7 @@ public:
 	IDATA_PACKET *m_pIdataPacket;
 	int m_IdataInPt;			// insertion point in stPeakData Results
 	int GetIdataPacketIndex(void);
+	void SendIdataToPag(GenericPacketHeader *pIdata);
 
 #endif
 

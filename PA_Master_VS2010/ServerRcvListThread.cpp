@@ -186,21 +186,23 @@ END_MESSAGE_MAP()
 afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 	{
 	InputRawDataPacket *pIdataPacket;
-	int j = (int) w;
+	int nCS = (int) w;	// which critical section's linked list will feed the data
+	int i;
 	if ( m_pstSCM)
 		{
-		if (m_pstSCM->pCS_ClientConnectionRcvList[j]) 
+		if (m_pstSCM->pCS_ClientConnectionRcvList[nCS]) 
 			{
-			if (0 == TryEnterCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]))	return;	 // try again later
+			if (0 == TryEnterCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[nCS]))	
+				return;	 // try again later
 			}
 		}
 	else return;
 
 	// if here we are in a critical section
 
-	while (m_pSCC->cpRcvPktList->GetCount() )
+	while (i = m_pSCC->cpRcvPktList->GetCount() )
 		{
-		pIdataPacket = (InputRawDataPacket *) m_pstSCM->pRcvPktList[j]->RemoveHead();				//m_pSCC->cpRcvPktList->RemoveHead();
+		pIdataPacket = (InputRawDataPacket *) m_pstSCM->pRcvPktList[nCS]->RemoveHead();				//m_pSCC->cpRcvPktList->RemoveHead();
 		//m_pSCC->pSocket->UnLockRcvPktList();
 #ifdef THIS_IS_SERVICE_APP
 		ProcessInstrumentData(pIdataPacket);	// local call to this class memeber
@@ -209,7 +211,7 @@ afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 #endif
 		}
 
-	LeaveCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]);
+	LeaveCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[nCS]);
 	}
 
 // this procedure activated by WM_USER_FLUSH_LINKED_LISTS
@@ -420,7 +422,7 @@ int CServerRcvListThread::GetIdataPacketIndex(void)
 
 //void CServerRcvListThread::BuildOutputPacket(SRawDataPacketOld *pRaw)
 // BuildOutputPacket was called because we have gone thru 16 Ascan samples in the whole machine.
-// May not work this way for a real machine
+// May not work this way for a real machine -- not used after simulating data.. discontinued in Jan 2017
 void CServerRcvListThread::BuildOutputPacket(InputRawDataPacket *pInput)
 	{
 	int i, k, jSeq;
@@ -644,7 +646,8 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 					pChannel->ResetGatesAndWalls();
 					if (MAX_RESULTS == GetIdataPacketIndex())
 						{
-						theApp.PamSendToPag(m_pIdataPacket, sizeof(IDATA_PACKET));
+						m_pIdataPacket->wByteCount = pIData->wByteCount;
+						theApp.PamSendToPag(m_pIdataPacket, pIData->wByteCount); // get len from data packet
 						delete m_pIdataPacket;
 						m_pIdataPacket = NULL;
 						}

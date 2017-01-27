@@ -31,7 +31,7 @@ enum IdOdTypes {eId, eOd, eIf};
 #define MAX_PAM_QTY			1
 #define MAX_PAM_INSTS_QTY	8
 #define NC_NX_CMD_ID		1
-#define ASCANS_TO_AVG		8
+#define ASCANS_TO_AVG		10
 
 
 // Idata message types. This is the data that comes from the PAP and is sent 

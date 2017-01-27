@@ -36,6 +36,7 @@ CServerSocket::CServerSocket(CServerConnectionManagement *pSCM)
 	m_pFifo = new CCmdFifo(INSTRUMENT_PACKET_SIZE);		// FIFO control for receiving instrument packets
 	m_nSeqIndx = m_nLastSeqCnt = 0;
 	memset(&m_nSeqCntDbg[0], 0, sizeof(m_nSeqCntDbg));
+	m_nListCount = m_nListCountChanged = 0;
 	}
 
 CServerSocket::CServerSocket()
@@ -44,6 +45,7 @@ CServerSocket::CServerSocket()
 	m_pFifo = new CCmdFifo(INSTRUMENT_PACKET_SIZE);		// FIFO control for receiving instrument packets	
 	m_nSeqIndx = m_nLastSeqCnt = 0;
 	memset(&m_nSeqCntDbg[0], 0, sizeof(m_nSeqCntDbg));
+	m_nListCount = m_nListCountChanged = 0;
 	}
 
 CServerSocket::~CServerSocket()
@@ -301,6 +303,17 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 	sockerr = Asocket.SetSockOpt(TCP_NODELAY, &bufBOOL, sizeof(int), IPPROTO_TCP);
 	ASSERT(sockerr != SOCKET_ERROR);
+
+		int nSize;
+		int nSizeOf = sizeof(int);
+		GetSockOpt(SO_SNDBUF, &nSize, &nSizeOf, SOL_SOCKET);
+		s.Format(_T("ServerSocket NIC Transmit Buffer Size = %d"), nSize);
+		TRACE(s);
+
+		GetSockOpt(SO_RCVBUF, &nSize, &nSizeOf, SOL_SOCKET);
+		s.Format(_T("ServerSocket NIC Receiver Buffer Size = %d"), nSize);
+		TRACE(s);
+
 	// create a connection thread to own/contain this socket... if one already exists, kill it first
 	// assume there is only one connection from the client to the server. If there is more than
 	// one connection we can determine from the clients IP address captured above in the GetPeerName
@@ -562,6 +575,9 @@ void CServerSocket::OnReceive(int nErrorCode)
 			if ((pHeader->wMsgSeqCnt - (m_nLastSeqCnt+1)) != 0) 
 				{
 				n = m_nSeqIndx;
+				s.Format(_T("Lost Packet, OnReceive got MsgSeqCnt %d, expected %d\n"),
+					pHeader->wMsgSeqCnt, (m_nLastSeqCnt + 1));
+				TRACE(s);
 				}
 			m_nLastSeqCnt = pHeader->wMsgSeqCnt;
 			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
@@ -619,6 +635,21 @@ void CServerSocket::OnReceive(int nErrorCode)
 		// which calls CServerRcvListThread::ProcessInstrumentData()
 		if (nWholePacketQty)
 			{
+			int i;
+			i = GetRcvListCount();
+			if (m_nListCount < i)
+				{
+				m_nListCountChanged = 1;
+				m_nListCount = i;
+				s.Format(_T("Idata RcvPktList Count = %d\n"), m_nListCount);
+				TRACE(s);
+				}
+			else if ((m_nListCountChanged) && (i < m_nListCount) )
+				{
+				s.Format(_T("Idata RcvPktList Count decreased from = %d to = %d\n"), m_nListCount, i);
+				TRACE(s);
+				m_nListCountChanged = 0;
+				}
 			m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED,(WORD)m_pSCC->m_nMyThreadIndex,0L);
 			}
 

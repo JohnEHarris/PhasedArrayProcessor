@@ -129,8 +129,8 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 
 	// create critical sections, linked lists and events
 	m_pstCCM->cpCSRcvPkt		= new CRITICAL_SECTION();
-	m_pstCCM->cpCSSendPkt	= new CRITICAL_SECTION();
-	m_pstCCM->pCSDebugIn	= new CRITICAL_SECTION();
+	m_pstCCM->cpCSSendPkt		= new CRITICAL_SECTION();
+	m_pstCCM->pCSDebugIn		= new CRITICAL_SECTION();
 	m_pstCCM->pCSDebugOut	= new CRITICAL_SECTION();
 	i = sizeof(CRITICAL_SECTION);		// 24
 
@@ -439,6 +439,7 @@ void CClientConnectionManagement::SendPacket(BYTE *pB, int nBytes, int nDeleteFl
 		return;		
 		}
 
+	int i;
 	stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[nBytes+sizeof(int)];	// space for packet + pkt length variable
 	// debug pBuf = 0x39b7910
 	memcpy((void *) &pBuf->Msg[0], (void *) pB, nBytes);
@@ -446,14 +447,15 @@ void CClientConnectionManagement::SendPacket(BYTE *pB, int nBytes, int nDeleteFl
 	pBuf->nLength = nBytes;			// 1st 4 bytes are packet length
 	LockSendPktList();
 	AddTailSendPkt(pBuf);
+	i = m_pstCCM->pSendPktList->GetCount();
 	UnLockSendPktList();
 	if (nDeleteFlag) delete pB;
 	// By posting a windows message, the transmit routine will run at its created thread priority
 	// If we called the routine directly from here, it would run at whatever priority this function's thread has.
 	//::PostMessage(m_pstCCM->hSendDlg, WM_USER_SEND_TCPIP_PACKET,0,0);
 	// The routine which responds to the message is CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
-	// This thread actually uses the clients socket to send the queued data to the server.
-	m_pstCCM->pSendThread->PostThreadMessage(WM_USER_SEND_TCPIP_PACKET,0,0L);
+	// This thread actually uses the clients socket to send the queued data to the server. w = 2
+	m_pstCCM->pSendThread->PostThreadMessage(WM_USER_SEND_TCPIP_PACKET,2,i);
 
 	}
 

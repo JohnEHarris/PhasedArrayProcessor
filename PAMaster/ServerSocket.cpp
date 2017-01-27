@@ -650,6 +650,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 				TRACE(s);
 				m_nListCountChanged = 0;
 				}
+			// causes CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam) to run
 			m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED,(WORD)m_pSCC->m_nMyThreadIndex,0L);
 			}
 

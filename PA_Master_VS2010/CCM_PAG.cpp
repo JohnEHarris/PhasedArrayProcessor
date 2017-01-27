@@ -116,29 +116,35 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			pPamChnlInfo = (PAP_INST_CHNL_NCNX *)pMmiCmd;
 			TRACE(_T("Received NC_NX_CMD_ID for Instrument %d from Phased Array GUI - now deleting\n"),pMmiCmd->bInstNumber);
 			SetChannelInfo(pPamChnlInfo);
+			// For debugging instrument commands, send Hello message to the connected instrument
 			// Echo this message to the simulator to test commands which must go to the instrument
 			// In this case, we will let the thread which forwards the message to the instrument delete this 
 			// memory segment.
 			// delete pMmiCmd;
-			if (stSCM[0].pClientConnection[pCmd->Slot])
+			if (stSCM[0].pClientConnection[pMmiCmd->bInstNumber])
 				{
-				CServerSocket *pSocket				= stSCM[0].pClientConnection[pCmd->Slot]->pSocket;
-				CServerSocketOwnerThread *pThread	= stSCM[0].pClientConnection[pCmd->Slot]->pServerSocketOwnerThread;
+				CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bInstNumber]->pSocket;
+				CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bInstNumber]->pServerSocketOwnerThread;
 				if (pSocket && pThread)
 					{
 					pSocket->LockSendPktList();
-					pSocket->AddTailSendPkt(pBuf);
+					pSocket->AddTailSendPkt(pMmiCmd);
 					pSocket->UnLockSendPktList();
 					// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
-					pThread->PostThreadMessageA(WM_USER_SERVER_SEND_PACKET,0,0L);
+					pThread->PostThreadMessageA(WM_USER_SERVER_SEND_PACKET, 0, 0L);
 					}
+				else
+					delete pMmiCmd;
+				}
+			else
+				delete pMmiCmd;
 
 			break;
 
 		default:
 			TRACE(_T("No command recognized\nDeleting command from Phased Array GUI\n"));
 			delete pMmiCmd;
-			}	// end switch(MsgId)
+			}	// end switch(MsgId)			delete pMmiCmd;
 
 
 		m_nMsgQty++;

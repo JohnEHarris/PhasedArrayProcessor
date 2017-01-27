@@ -93,6 +93,9 @@ CClientCommunicationThread::CClientCommunicationThread()
 	m_uLastPacketsReceived = 0;
 	m_pMyCCM			= NULL;
 	m_nDebugCount		= 0;
+	m_wMsgSeqCount		= 0;
+	m_DebugLimit		= 0;
+	m_pElapseTimer		= new CHwTimer();
 	}
 
 CClientCommunicationThread::~CClientCommunicationThread()
@@ -100,6 +103,13 @@ CClientCommunicationThread::~CClientCommunicationThread()
 	int i = -1;
 	CString s = _T("");
 	CString t = _T("");
+
+	if (m_pElapseTimer)
+		{
+		delete m_pElapseTimer;
+		m_pElapseTimer = 0;
+		}
+
 	if (m_pMyCCM)
 		{
 		i = m_pMyCCM->m_pstCCM->pCCM->m_nMyConnection;
@@ -356,7 +366,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 		TRACE1("[%03d] Client socket already exists.... close and destroy before recreating\n", m_nConnectionRestartCounter++);
 		//m_pSocket->Close();
 		m_pstCCM->pSocket->Close();
-		Sleep(10);
+		Sleep(20);
 		//delete m_pSocket;
 		delete m_pstCCM->pSocket;
 		m_pSocket = NULL;
@@ -394,7 +404,8 @@ void CClientCommunicationThread::StartTCPCommunication()
 	nPort = 0;
 	// we will override an ASyncSocket class virtual function when (1) packet received, (2) connect to server completes, 
 	// (3) the socket closes
-	if (m_pSocket->Create(nPort, SOCK_STREAM, FD_READ | FD_CONNECT | FD_CLOSE,  NULL )	!= 0 )
+//	if (m_pSocket->Create(nPort, SOCK_STREAM, FD_READ | FD_CONNECT | FD_CLOSE,  NULL )	!= 0 )
+	if (m_pSocket->Create(nPort, SOCK_STREAM, FD_READ | FD_WRITE | FD_CONNECT | FD_CLOSE,  NULL )	!= 0 )
 		{	// Socket created
 
 		nSockOpt = 1;
@@ -498,7 +509,12 @@ void CClientCommunicationThread::StartTCPCommunication()
 
 void CClientCommunicationThread::DebugMsg(CString s)
 	{
+#ifdef	_I_AM_PAG
+	if (CNcNx::m_pDlg)
+		CNcNx::m_pDlg->DebugOut(s);
+#else
 	TRACE(s);
+#endif	
 	}
 
 // Assuming we have killed the com dlg (CTCPCommunicationDlg) somewhere else by
@@ -520,102 +536,105 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
 	int nRole;
 	CString s;
 	int nSent;
+	int i, j;
 	int nId = AfxGetThread()->m_nThreadID;
 	if (nId != m_nThreadIdOld)
 		{
 		s.Format(_T("Transmit Packet old thread id=%d New thread id=%d\n"), m_nThreadIdOld, nId);
-		TRACE(s);
 		m_nThreadIdOld = nId;
 		nRole = m_nMyRole;
-#ifdef	_I_AM_PAG
-		if (CNcNx::m_pDlg)
-			CNcNx::m_pDlg->DebugOut(s);
-#else
-		TRACE(s);
-#endif
-
+		DebugMsg(s);
 		}
 
 	s = _T("CClientCommunicationThread::TransmitPackets ");
-	//if (m_nInXmitLoop)							return (LRESULT) 0;	// already in Transmit loop operation
 	if (!m_pMyCCM)
 		{
 		s += _T("!m_pMyCCM\n");
-#ifdef	_I_AM_PAG
-		if (CNcNx::m_pDlg)
-			CNcNx::m_pDlg->DebugOut(s);
-#else
-		TRACE(s);
-#endif
+		DebugMsg(s);
 		return;	// (LRESULT) 0;
 		}
 	if (!m_pstCCM)
 		{
 		s += _T("!m_pstCCM\n");
-#ifdef	_I_AM_PAG
-		if (CNcNx::m_pDlg)
-			CNcNx::m_pDlg->DebugOut(s);
-#else
-		TRACE(s);
-#endif
+		DebugMsg(s);
 		return;	// (LRESULT) 0;
 		}
 	if (m_pstCCM->pSendPktList->IsEmpty())
 		{
 		s += _T("m_pstCCM->pSendPktList->IsEmpty()\n");
-#ifdef	_I_AM_PAG
-		if (CNcNx::m_pDlg)
-			CNcNx::m_pDlg->DebugOut(s);
-#else
-		TRACE(s);
-#endif		
+		DebugMsg(s);
 		return;	// (LRESULT) 0;	// nothing to send
 		}
 	if (!m_pstCCM->pSocket)
 		{
 		s += _T("!m_pstCCM->pSocket\n");
-#ifdef	_I_AM_PAG
-		if (CNcNx::m_pDlg)
-			CNcNx::m_pDlg->DebugOut(s);
-#else
-		TRACE(s);
-#endif		
+		DebugMsg(s);
 		return;	// (LRESULT) 0;	// no socket to send with
 		}
 
 	m_nInXmitLoop = 1;				// now entered into TransmitPacket loop
 
-	stSEND_PACKET *pSendPkt;	// ptr to the packet info in the linked list of send packets
+	IDATA_PACKET *pSendPkt;	// ptr to the packet info in the linked list of send packets
 
 	s += _T("Send queued messages if any\n");
-	TRACE(s);
-#ifdef	_I_AM_PAG
-		if (CNcNx::m_pDlg)
-			CNcNx::m_pDlg->DebugOut(s);
-#else
-		TRACE(s);
-#endif
 
 	// if we get to here, there is at least one packet to send
 	while (m_pstCCM->pSendPktList->GetCount() > 0)
 		{
 		m_pMyCCM->LockSendPktList();
-		pSendPkt = (stSEND_PACKET *) m_pstCCM->pSendPktList->RemoveHead();
+		pSendPkt = (IDATA_PACKET *) m_pstCCM->pSendPktList->RemoveHead();
 		m_pMyCCM->UnLockSendPktList();	// give a higher priority thread a chance to add packets
+		// examine the MsgId of the extracted packet to see what type message it really is
+		// As of 2017-01-24 the only message back to PAG is Idata
 		// do the socket send
-		nSent = m_pstCCM->pSocket->Send(&pSendPkt->Msg[0], (int) pSendPkt->nLength);
-		if (nSent > 0)
+		pSendPkt->wMsgSeqCnt = m_wMsgSeqCount++;
+
+		if ((m_pstCCM->uPacketsSent & 0xff) == 0)		m_pElapseTimer->Start();
+		if ((m_pstCCM->uPacketsSent & 0xff) == 0xff)
 			{
-			m_pstCCM->uBytesSent += nSent;
-			m_pstCCM->uPacketsSent++;
-			if (m_pstCCM->uPacketsSent < 10)
-				{
-				s.Format(_T("[%d]CCT::PAM sent PAG %d bytes\n"),m_pstCCM->uPacketsSent, nSent);
-				TRACE(s);
-				}
+			m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
+			float fPksPerSec = 256000000.0f/( (float) m_nElapseTime);
+			s.Format(_T("Idata Transmit Packets/sec = %6.1f\n"), fPksPerSec);
+			TRACE(s);
 			}
-		delete pSendPkt;
+		// take up to 20 attempts to deliver the packet
+		for (i = 0; i < 20; i++)
+			{	// loop till good xmit
+			nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
+			if (nSent == pSendPkt->wByteCount )
+				{
+				m_pstCCM->uBytesSent += nSent;
+				m_pstCCM->uPacketsSent++;
+				if (m_pstCCM->uPacketsSent < 10)
+					{
+					s.Format(_T("[%d]CCT::PAM sent PAG %d bytes\n"), m_pstCCM->uPacketsSent, nSent);
+					TRACE(s);
+					}
+				delete pSendPkt;
+				pSendPkt = 0;
+				break;
+				}
+
+			Sleep(1);
+			j = m_pstCCM->pSendPktList->GetCount();
+			if (( j > 5) && (m_DebugLimit < 10))
+				{
+				Sleep(0);
+				s.Format(_T("Send List count = %5d, Bytes sent = %d\n"), j, nSent);
+				TRACE(s);
+				m_DebugLimit++;
+				}
+			}	// loop till good xmit
+
+		if (i == 20)
+			{
+			s.Format(_T("Failed to send packet # = %d\n"), m_wMsgSeqCount-1);
+			TRACE(s);
+			}
+
 		m_uXmitLoopCount++;
+		if (pSendPkt != NULL)
+			delete pSendPkt;
 		}
 
 	m_nInXmitLoop = 0;	// now out of loop

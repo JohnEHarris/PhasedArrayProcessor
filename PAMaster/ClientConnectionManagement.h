@@ -103,9 +103,9 @@ typedef struct
 	// Send-to-server items
 	CClientCommunicationThread *pSendThread;	// thread to control sending messages to server
 	//CTCPCommunicationDlg *pSendDlg;			// a dialog created byte the SendThread
-	//HWND hSendDlg;					// windows handle to the Send Dialog
+	//HWND hSendDlg;				// windows handle to the Send Dialog
 	CRITICAL_SECTION *cpCSSendPkt;	// control access to output (send) list
-	CPtrList* pSendPktList;	// list containing packets to send
+	CPtrList* pSendPktList;			// list containing packets to send
 	int nSendPriority;				// should normally be THREAD_PRIORITY_BELOW_NORMAL
 
 	// Receive-from-server items

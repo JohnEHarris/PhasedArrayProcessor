@@ -598,12 +598,14 @@ void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata)
 		ASSERT(0);
 		return;
 		}
+	int i;
 	CClientCommunicationThread *pThread = pCCM_PAG->m_pstCCM->pSendThread;
 	pCCM_PAG->LockSendPktList();
 	pCCM_PAG->AddTailSendPkt((void*)pIdata);
+	i = pCCM_PAG->m_pstCCM->pSendPktList->GetCount();
 	pCCM_PAG->UnLockSendPktList();
 	//ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, TransmitPackets)
-	PostThreadMessage(WM_USER_SEND_TCPIP_PACKET,(WORD) 0,(LPARAM) this);
+	PostThreadMessage(WM_USER_SEND_TCPIP_PACKET,(WORD) 3,(LPARAM) i);
 	}
 
 void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
@@ -715,6 +717,7 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 		TRACE(s);
 		theApp.SaveDebugLog(s);
 #endif
+		delete pIData;	// info in pOutput was put into a new structure and sent to the PAG
 		}	// if (pBuf->nLength == 1040)
 
 	else

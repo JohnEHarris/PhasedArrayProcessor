@@ -496,13 +496,12 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		TRACE(_T("TransmitPackets m_pConnectionSocket->m_pSCC == NULL\n"));
 		return;
 		}
-	while (m_pConnectionSocket->m_pSCC->cpSendPktList->GetCount() > 0 )
+	while (i = m_pConnectionSocket->m_pSCC->cpSendPktList->GetCount() > 0 )
 		{
 		m_pConnectionSocket->LockSendPktList();
 		pCmd = (PAP_INST_CHNL_NCNX *) m_pConnectionSocket->m_pSCC->cpSendPktList->RemoveHead();
 		m_pConnectionSocket->UnLockSendPktList();
 			
-		//MMI_CMD *pCmd = (MMI_CMD *) &pBuf->Msg;
 		int nElapse = 0;
 		switch (pCmd->wMsgID)
 			{
@@ -523,13 +522,24 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 
 			break;
 #endif
+			// Normally would not send Nc Nx info to instrument. Used here to debug command interaction
+			// with the instrument and check
+			// for lost packets.
 		case NC_NX_CMD_ID:
-			s.Format(_T("NC_NX_CMD_ID Msg seq cnt =%d\n"), pCmd->wMsgSeqCnt);
+			PAP_INST_CHNL_NCNX *pNc;
+			pNc = (PAP_INST_CHNL_NCNX *)pCmd;
+			s.Format(_T("NC_NX_CMD_ID Msg seq cnt =%d, seq=%2d, chnl=%3d, PktListSize= %3d\n"), 
+				pCmd->wMsgSeqCnt, pNc->stNcNx->bSeqNumber, pNc->stNcNx->bChnlNumber, i);
 			pCmd->wMsgSeqCnt = m_pConnectionSocket->m_pSCC->wMsgSeqCnt++;
-			nMsgSize = sizeof(PAP_INST_CHNL_NCNX);
+			nMsgSize = pNc->wByteCount;
+			theApp.SaveDebugLog(s);
+			break;
 
 		default:
-			break;
+			s.Format(_T("Unrecognized CMD, ID= %d, seq=%2d, PktListSize= %3d\n"),
+				pCmd->wMsgID, pCmd->wMsgSeqCnt, i);
+			theApp.SaveDebugLog(s);
+			goto DELETE_CMD;
 			}
 
 		// up to 50 attempts to send
@@ -551,6 +561,11 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 
 				break;	// takes us to the end of the for () loop
 				}
+			else
+				{
+				s.Format(_T("ServerSocketOwnerThread %d bytes to instrument = %d, expected to send = %d\n"),
+					nSent, nMsgSize);
+				}
 				
 			nError = GetLastError();
 			if (nError == WSAEWOULDBLOCK)
@@ -565,13 +580,14 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			if ( i == 49)	// last time thru loop.. loose packet after this
 				{
 				m_pConnectionSocket->m_pSCC->uUnsentPackets++;
-				s.Format(_T("ServerSocketOwnerThread Sent=%d, expected=%d, list cnt=%d, Pkts sent=%d, Pkts lost=%d, msgSeq=%d, Error=%d\n"),
-					nSent, nSent, m_pConnectionSocket->m_pSCC->cpSendPktList->GetCount(), m_pConnectionSocket->m_pSCC->uPacketsSent,
+				s.Format(_T("ServerSocketOwnerThread Sent=%d, list cnt=%d, Pkts sent=%d, Pkts lost=%d, msgSeq=%d, Error=%d\n"),
+					nSent, m_pConnectionSocket->m_pSCC->cpSendPktList->GetCount(), m_pConnectionSocket->m_pSCC->uPacketsSent,
 					m_pConnectionSocket->m_pSCC->uUnsentPackets, pCmd->wMsgSeqCnt, nError);
 				TRACE(s);
 				}
 			// 10054L is forcibly closed by remote host
 			}	// for ( i = 0; i < 5; i++)
+DELETE_CMD:
 		delete pCmd;		
-		}
+		}	// while (i = m_pConnectionSocket->m_pSCC->cpSendPktList->GetCount() > 0 )
 	}

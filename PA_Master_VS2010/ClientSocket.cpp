@@ -286,12 +286,9 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		
 		//GetPeerName(m_pCCM->m_pstCCM->sServerIP4, m_pCCM->m_pstCCM->uServerPort);
 		GetPeerName(s0, uSPort);
-		s.Format(_T("CClientSocket::OnConnect connected to the PAG server %s:%d "), s0, uSPort);
-		DebugOutMessage(s);
-		//GetSockName(m_pCCM->m_pstCCM->sClientIP4, m_pCCM->m_pstCCM->uClientPort);
 		GetSockName(s1, uCPort);
-		s.Format(_T("CClientSocket::OnConnect PAM client IP = %s:%d"), s1, uCPort);
-		// This is when the PAM discovers its IP address - when it connects to the PAG
+		s.Format(_T("PAM client IP = %s:%d connected to the PAG server = %s:%d "), s1, uCPort, s0, uSPort);
+		DebugOutMessage(s);
 		theApp.SetMy_PAM_Number(s1, uCPort);
 		DebugOutMessage(s);
 		// may need to replace this with some sort of call to MakeConnectionDetail

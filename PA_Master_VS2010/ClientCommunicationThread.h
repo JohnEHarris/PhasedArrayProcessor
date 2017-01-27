@@ -13,6 +13,7 @@
 
 #include "ClientSocket.h"
 #include "ClientConnectionManagement.h"
+#include "HwTimer.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // CClientCommunicationThread thread
@@ -38,6 +39,11 @@ public:
 	int m_uXmitLoopCount;
 	int m_uLastPacketsReceived;	// how many packets received in the past
 	int m_nConnectionRestartCounter;
+	WORD m_wMsgSeqCount;
+	int m_DebugLimit;
+
+	CHwTimer *m_pElapseTimer;
+	int m_nElapseTime;
 
 	CString GetRole(void)	{ return m_sMyRole;	}
 

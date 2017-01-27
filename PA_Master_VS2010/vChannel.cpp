@@ -30,14 +30,14 @@ extern UINT uVchannelConstructor[MAX_CLIENTS_PER_SERVER][MAX_SEQ_COUNT][MAX_CHNL
 CvChannel::CvChannel(int nInst, int nSeq, int nChnl)
 	{
 	// id/od, Nc, Thold, bMod
-	FifoInit(0,1,20,1);	// id
-	FifoInit(1,1,20,1);	// od
+	FifoInit(0,3,20,5);	// id default 0,1,20,1
+	FifoInit(1,3,25,4);	// od default 0,1,20,1
 	FifoInit(2,1,20,1);	// interface gate1
 	
 	m_bInputCnt = 0; 
 	// Wall processing routines
 	// Nx, Max allowed, Min, DropOut cnt
-	WFifoInit(1,1377,27,4);	// nominal 1,1377,27,4
+	WFifoInit(4,1377,27,14);	// nominal 1,1377,27,4
 	//if ( nInst > 3) return;
 	//if (nChnl > 39) return;
 	// counter of how many time constructor runs for each chnl/instrument

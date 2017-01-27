@@ -95,7 +95,9 @@ CClientCommunicationThread::CClientCommunicationThread()
 	m_nDebugCount		= 0;
 	m_wMsgSeqCount		= 0;
 	m_DebugLimit		= 0;
+	m_nDebugEmptyList	= 0;
 	m_pElapseTimer		= new CHwTimer();
+	m_nTimerPacketsWaiting = 0;
 	}
 
 CClientCommunicationThread::~CClientCommunicationThread()
@@ -405,7 +407,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 	// we will override an ASyncSocket class virtual function when (1) packet received, (2) connect to server completes, 
 	// (3) the socket closes
 //	if (m_pSocket->Create(nPort, SOCK_STREAM, FD_READ | FD_CONNECT | FD_CLOSE,  NULL )	!= 0 )
-	if (m_pSocket->Create(nPort, SOCK_STREAM, FD_READ | FD_WRITE | FD_CONNECT | FD_CLOSE,  NULL )	!= 0 )
+	if (m_pSocket->Create(nPort, SOCK_STREAM, FD_READ |  FD_CONNECT | FD_CLOSE,  NULL )	!= 0 )
 		{	// Socket created
 
 		nSockOpt = 1;
@@ -531,10 +533,13 @@ afx_msg void CClientCommunicationThread::RestartTcpComDlg(WPARAM w, LPARAM lPara
 // into a linked list. Then it sends or posts a thread message to the Send Thread
 // instructing the thread to check the linked list and send all queued messages.
 // WPARAM and  LPARAM are unused at this time
-afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
+
+#define RETRY_COUNT			30
+
+afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 	{
 	int nRole;
-	CString s;
+	CString s,t;
 	int nSent;
 	int i, j;
 	int nId = AfxGetThread()->m_nThreadID;
@@ -559,12 +564,29 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
 		DebugMsg(s);
 		return;	// (LRESULT) 0;
 		}
+
 	if (m_pstCCM->pSendPktList->IsEmpty())
 		{
-		s += _T("m_pstCCM->pSendPktList->IsEmpty()\n");
+		i = m_pMyCCM->m_pstCCM->pSendPktList->GetCount();
+		s += _T("m_pstCCM->pSendPktList->IsEmpty()");
+#if 0
+		t.Format(_T(", triggered by %d\n"), w);
+		s += t;
 		DebugMsg(s);
+		if (w == 1)	// came from timer
+			{
+			s.Format(_T("Address of m_pMyCCM->m_pstCCM->pSendPktList = 0x%08x\n"), &m_pMyCCM->m_pstCCM->pSendPktList);
+			TRACE(s);
+			}
+#endif
+		m_nDebugEmptyList++;
+		if (m_nDebugEmptyList > 5)
+			s = _T("Break Here");
 		return;	// (LRESULT) 0;	// nothing to send
 		}
+		
+	m_nDebugEmptyList = 0;
+
 	if (!m_pstCCM->pSocket)
 		{
 		s += _T("!m_pstCCM->pSocket\n");
@@ -589,16 +611,16 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
 		// do the socket send
 		pSendPkt->wMsgSeqCnt = m_wMsgSeqCount++;
 
-		if ((m_pstCCM->uPacketsSent & 0xff) == 0)		m_pElapseTimer->Start();
-		if ((m_pstCCM->uPacketsSent & 0xff) == 0xff)
+		if ((m_pstCCM->uPacketsSent & 0x3ff) == 0)		m_pElapseTimer->Start();
+		if ((m_pstCCM->uPacketsSent & 0x3ff) == 0x3ff)	// originally 0xff
 			{
 			m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
-			float fPksPerSec = 256000000.0f/( (float) m_nElapseTime);
+			float fPksPerSec = 1024000000.0f/( (float) m_nElapseTime);	// originally 256
 			s.Format(_T("Idata Transmit Packets/sec = %6.1f\n"), fPksPerSec);
 			TRACE(s);
 			}
 		// take up to 20 attempts to deliver the packet
-		for (i = 0; i < 20; i++)
+		for (i = 0; i < RETRY_COUNT; i++)
 			{	// loop till good xmit
 			nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
 			if (nSent == pSendPkt->wByteCount )
@@ -626,9 +648,9 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM, LPARAM)
 				}
 			}	// loop till good xmit
 
-		if (i == 20)
+		if (i == RETRY_COUNT)
 			{
-			s.Format(_T("Failed to send packet # = %d\n"), m_wMsgSeqCount-1);
+			s.Format(_T("Failed to send packet # = %d after %d attempts\n"), m_wMsgSeqCount-1, i);
 			TRACE(s);
 			}
 
@@ -649,6 +671,8 @@ afx_msg void CClientCommunicationThread::OnTimer(WPARAM w, LPARAM lParam)
 	{
 	WORD wTargetSystem = w;
 	m_nTick++;
+	CString s;
+
 	switch (wTargetSystem)
 		{
 		// we are targeting the PAG client to SysCp Server connection
@@ -709,7 +733,19 @@ afx_msg void CClientCommunicationThread::OnTimer(WPARAM w, LPARAM lParam)
 
 
 
-	// In case we have packets to send and haven't been pinged to send them
-	if (m_pMyCCM->m_pstCCM->pSendPktList->GetCount())
-		m_pMyCCM->m_pstCCM->pSendThread->PostThreadMessage(WM_USER_SEND_TCPIP_PACKET,0,0L);
+	// In case we have packets to send and haven't been pinged to send them  w = 1
+	int i;
+	m_pMyCCM->LockSendPktList();
+	i = m_pMyCCM->m_pstCCM->pSendPktList->GetCount();
+	m_pMyCCM->UnLockSendPktList();
+	if (i > 0)
+		{
+#if 0
+		s.Format(_T("OnTimer-Address of m_pMyCCM->m_pstCCM->pSendPktList = 0x%08x, queued = %5d\n"), 
+			&m_pMyCCM->m_pstCCM->pSendPktList, i);
+		TRACE(s);
+#endif
+		// or maybe just call TransmitPacket directly from here
+		m_pMyCCM->m_pstCCM->pSendThread->PostThreadMessage(WM_USER_SEND_TCPIP_PACKET, 1, i);
+		}
 	}

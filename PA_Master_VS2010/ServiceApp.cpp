@@ -1104,7 +1104,7 @@ WHILE_TARGET:
 						// no client connection
 						continue;
 						}
-
+#if 0
 					if(pcc)	
 						{	// empty the linked lists
 						// remove dependencies on pSocket being non-NULL
@@ -1128,6 +1128,7 @@ WHILE_TARGET:
 							}
 						LeaveCriticalSection(pcc->cpCSSendPkt);	
 						}	// empty the linked lists
+#endif
 
 					//ReleaseInstrumentListAccess(j);
 					Sleep(50);
@@ -1711,7 +1712,11 @@ CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNum
 // In the FakeData generation which calls PamSendToPag, pBuf is deleted after the return to the fake data generator
 // The inspection message sent thru this mechanism is an IDATA_PACKET.
 // Keep the message sequence number in a CServiceApp member variable and increment here.
-void CServiceApp::PamSendToPag(void *pBuf, int nLen)
+//
+// called from CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
+//
+#if 0
+int CServiceApp::PamSendToPag(void *pBuf, int nLen)
 	{
 	CString s;
 	int i;
@@ -1747,7 +1752,9 @@ void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 		break;
 
 	default:
-		break;
+		s.Format(_T("PamSend2Pag Unknown Msg Id=%3d, ByteCnt=%4d, MsgSeqCnt=%5d, Sync=0x%08x\n"),
+			pHeader->wMsgID, pHeader->wByteCount, pHeader->wMsgSeqCnt, pHeader->uSync);
+		return;
 		}
 
 	
@@ -1755,14 +1762,24 @@ void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 	
 	if ( i != nLen)
 		{
-		s.Format(_T("CServiceApp::PamSendToPag requested to send %d bytes, but sent %d\n"), nLen, i);
+		int nError = 
+		pSocket->GetLastError();	// client socket to PAG
+		s.Format(_T("PamSendToPag requested to send %d bytes, but sent %d, Error = %d\n"), 
+			nLen, i, nError);
+		TRACE(s);	// 10035 WSAEWOULDBLOCK
+		s.Format(_T("PamSendToPag Header: ByteCount=%5d, MsgSeq=%5d, MsgId=%3d, xLoc=%5d\n"),
+			pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->wMsgID, pIdata->wLoc );
+		TRACE(s);
+		s.Format(_T("Last Good Header: ByteCount=%5d, MsgSeq=%5d, MsgId=%3d, xLoc=%5d\n"),
+			m_LastGoodSend.wByteCount, m_LastGoodSend.wMsgSeqCnt, m_LastGoodSend.wMsgID, m_LastGoodSend.wLoc );
 		TRACE(s);
 		}
 	else
 		{
+		memcpy((void *)&m_LastGoodSend, (void *)pBuf, i);
 		pSocket->m_pCCM->m_pstCCM->uBytesSent += i;
 		pSocket->m_pCCM->m_pstCCM->uPacketsSent++;
-		if (pSocket->m_pCCM->m_pstCCM->uPacketsSent < 20)
+		if ((pSocket->m_pCCM->m_pstCCM->uPacketsSent < 20) || ((pSocket->m_pCCM->m_pstCCM->uPacketsSent % 100) == 0) )
 			{
 			s.Format(_T("[%d]PAM sent PAG %d bytes-Start seq=%d, Start chnl=%d MsgSeq=%d\n"), 
 				pSocket->m_pCCM->m_pstCCM->uPacketsSent, i,
@@ -1770,8 +1787,10 @@ void CServiceApp::PamSendToPag(void *pBuf, int nLen)
 			TRACE(s);
 			}
 		}
+	return i;
 
 	}
+#endif
 
 // Input the client number for the instrument making the request
 // Client numbers are derived from the base IP address of the client range

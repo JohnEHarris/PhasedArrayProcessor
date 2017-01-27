@@ -55,6 +55,7 @@ public:
 	SOCKET m_hSocket;
 	int m_nTick;
 	int m_nDebugCount;	// miscellaneous debugging
+	int m_nDebugEmptyList;
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -70,9 +71,9 @@ public:
 	afx_msg void KillReceiveThread(WPARAM w, LPARAM lParam);
 	afx_msg void KillSendThread(WPARAM w, LPARAM lParam);
 	afx_msg void RestartTcpComDlg(WPARAM w, LPARAM lParam);
-	afx_msg void TransmitPackets(WPARAM, LPARAM);
+	afx_msg void TransmitPackets(WPARAM w, LPARAM l);
 	afx_msg void OnTimer(WPARAM w, LPARAM lParam);
-
+	int m_nTimerPacketsWaiting;
 	void StartTCPCommunication();
 	void DebugMsg(CString s);
 

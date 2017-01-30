@@ -79,9 +79,12 @@ CServerRcvListThread::CServerRcvListThread()
 	{
 	m_nFakeDataCallCount = 0;
 	srand( (unsigned)time( NULL ) );	// seed random number generator
+#if 0
 	// The output packet has the same structure and the input. It is a compress version of the input
 	m_pOutputRawDataPacket = new InputRawDataPacket;
 	memset(m_pOutputRawDataPacket, 0, sizeof (InputRawDataPacket));
+#endif
+
 	m_pIdataPacket = NULL;
 	//m_uMsgSeqCnt = 0;
 	}
@@ -92,9 +95,11 @@ CServerRcvListThread::~CServerRcvListThread()
 	int nId = AfxGetThread()->m_nThreadID;
 	s.Format(_T("~CServerRcvListThread[%d][%d] = 0x%08x, Id=0x%04x has run\n"), m_nMyServer, m_nThreadIndex, this, nId);
 	TRACE(s);
+#if 0
 	if (m_pOutputRawDataPacket != NULL)
 		delete m_pOutputRawDataPacket;
 	m_pOutputRawDataPacket = 0;
+#endif
 	if (m_pIdataPacket != NULL)
 		delete m_pIdataPacket;
 	m_pIdataPacket = 0;
@@ -423,122 +428,7 @@ int CServerRcvListThread::GetIdataPacketIndex(void)
 //void CServerRcvListThread::BuildOutputPacket(SRawDataPacketOld *pRaw)
 // BuildOutputPacket was called because we have gone thru 16 Ascan samples in the whole machine.
 // May not work this way for a real machine -- not used after simulating data.. discontinued in Jan 2017
-#if 0
-void CServerRcvListThread::BuildOutputPacket(InputRawDataPacket *pInput)
-	{
-	int i, k, jSeq;
-	CString s,t;
-	CvChannel *pChannel;
-	int nNcId, nNcOd, nModId, nModOd, nThdlId, nThldOd, nNx, nMaxLimit, nMinLimit, nDrop; 
 
-	s = _T("\r\nPAM Output Data Packet\r\n");
-	SaveFakeData(s);
-	// IdataPacket is an accumulation of individual vChannel outputs
-	// Starting sequence may vary
-	if (m_pIdataPacket == NULL)
-		{
-		IDATA_PACKET *m_pIdataPacket = new (IDATA_PACKET);	// sizeof = 1454 179 RESULTS
-		memset((void *) m_pIdataPacket,0, sizeof(IDATA_PACKET));
-		m_pIdataPacket->bPAPNumber	= (BYTE) theApp.GetMy_PAM_Number();
-		m_pIdataPacket->bInstNumber	= m_pSCC->m_nMyThreadIndex;
-		}
-
-	//How to tell when an Idata structures begins and what is the first channel inserted?
-	if (m_pIdataPacket->uSync == 0)
-		{
-		m_pIdataPacket->bStartSeqNumber = pInput->stSeqPkt->DataHead.bSeqNumber;	// Come from gate board in header with gates and wall
-		m_pIdataPacket->bSequenceLength	= gMaxChnlsPerMainBang;	// Come from gate board in header with gates and wall reading
-		//m_pIdataPacket->bNumberOfSeqPoints	= 3;
-		m_pIdataPacket->bMaxVChnlsPerSequence	= gMaxChnlsPerMainBang;
-		m_pIdataPacket->wStatus		= 0x1234;
-		m_pIdataPacket->wLoc		= m_pSCC->InstrumentStatus.wLoc;
-		m_pIdataPacket->wAngle		= m_pSCC->InstrumentStatus.wAngle;
-		m_pIdataPacket->wPeriod		= m_pSCC->InstrumentStatus.wPeriod;
-		m_pIdataPacket->wStatus		= m_pSCC->InstrumentStatus.wStatus;
-		m_pIdataPacket->wMsgSeqCnt = 50;
-		m_pIdataPacket->uSync		= 0x5CEBDAAD;
-		}
-
-
-	stPeakData *pR				= &m_pIdataPacket->Results[0];
-
-	s.Format(_T("Loc=%3d Angle=%3d Inst=%2d Stat=%04x Sync=0x5CEBDAAD\r\n"),
-		m_pIdataPacket->wLoc, m_pIdataPacket->wAngle, m_pIdataPacket->bInstNumber, m_pIdataPacket->wStatus);
-	SaveFakeData(s);
-	// Get Nc Nx info for 1st channel  -- for debug from output file
-	/********  DEBUG INFO ONLY ***************/
-	pChannel	= m_pSCC->pvChannel[0][0];
-	nNcId		= pChannel->bGetNcId();
-	nNcOd		= pChannel->bGetNcOd();
-	nModId		= pChannel->bGetMId();
-	nModOd		= pChannel->bGetMOd();
-	nThdlId		= pChannel->bGetThldId();
-	nThldOd		= pChannel->bGetThldOd();
-	nNx			= pChannel->bGetNx();
-	nMaxLimit	= pChannel->wGetMaxWallLimit();
-	nMinLimit	= pChannel->wGetMinWallLimit();
-	nDrop		= pChannel->GetDropCount();
-
-
-	s = _T("\r\n ID: Nc   M  Thld  Nx  MaxWall  MinWall Drop\r\n");
-	SaveFakeData(s);
-	s.Format(_T("     %2d  %2d  %3d   %d  %4d    %4d     %2d\r\n OD:"), nNcId, nModId, nThdlId, nNx, nMaxLimit, nMinLimit, nDrop );
-	SaveFakeData(s);
-	//od parameters
-	s.Format(_T(" %2d  %2d  %3d"), nNcOd, nModOd, nThldOd );
-	SaveFakeData(s);
-
-	s.Format(_T("\r\n      ID   OD   MinW    MaxW"));
-	SaveFakeData(s);
-	/********  DEBUG INFO ONLY ***************/
-
-	// Since we are building the output, we must think we have 16 ascans peak held
-	for ( jSeq = 0; jSeq < 5; jSeq++)	
-		{
-		for ( i = 0; i < gMaxChnlsPerMainBang; i++)
-			{
-			pChannel = m_pSCC->pvChannel[jSeq][i];
-			//pChannel->m_PeakData.bSeqNum = jSeq;
-			//pChannel->m_PeakData.bChNum = i;
-			pChannel->GetPeakData();
-			pChannel->CopyPeakData(&pR[i]);
-			if ( i == 0)
-				{
-				s.Format(_T("\r\n[%3d] "), i);
-				k = pR[i].bId2;
-				t.Format(_T("%3d  "),k); s += t;
-				k =pR[i].bOd3;
-				t.Format(_T("%3d  "),k); s += t;
-				k =pR[i].wTofMin;
-				t.Format(_T("%4d    "),k); s += t;
-				k =pR[i].wTofMax;
-				t.Format(_T("%4d    "),k); s += t;
-				}
-			else
-				{
-				pChannel->CopyPeakData(&pR[i]);
-#if 0
-				pR[i].bId2 = pChannel->bGetIdGateMax();
-				pR[i].bOd3 = pChannel->bGetOdGateMax();
-				pR[i].wTofMin = pChannel->wGetMinWall();
-				pR[i].wTofMax = pChannel->wGetMaxWall();
-#endif
-				}
-			// put data into output FIFO  and reset peak holds
-			// get and set status info for upsteam processes here before resetting peak hold
-			pChannel->ResetGatesAndWalls();
-			pChannel->SetRead();
-			}	// for ( i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
-		}	// j
-	// Put the newly created packet into the linked list for output
-	// For now send this message directly. In future, put into linked list
-	// and signal the sender thread to empty list.
-	theApp.PamSendToPag(m_pIdataPacket, sizeof(IDATA_PACKET));
-	delete m_pIdataPacket;
-
-	}
-
-#endif
 
 
 // Take the code from ServiceApp, tInstMsgProcess() and incorporate into this class
@@ -581,29 +471,35 @@ void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata)
 	if (pCCM_PAG == NULL)
 		{
 		ASSERT(0);
+		delete pIdata;
 		return;
 		}
 	if (pCCM_PAG->m_pstCCM == NULL)
 		{
 		ASSERT(0);
+		delete pIdata;
 		return;
 		}
 	if (pCCM_PAG->m_pstCCM->pSocket == NULL)
 		{
 		ASSERT(0);
+		delete pIdata;
 		return;
 		}
 	if ( pCCM_PAG->m_pstCCM->pSendThread == NULL)
 		{
 		ASSERT(0);
+		delete pIdata;
 		return;
 		}
+	int i;
 	CClientCommunicationThread *pThread = pCCM_PAG->m_pstCCM->pSendThread;
 	pCCM_PAG->LockSendPktList();
 	pCCM_PAG->AddTailSendPkt((void*)pIdata);
+	i = pCCM_PAG->m_pstCCM->pSendPktList->GetCount();
 	pCCM_PAG->UnLockSendPktList();
-	//ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, TransmitPackets)
-	PostThreadMessage(WM_USER_SEND_TCPIP_PACKET,(WORD) 0,(LPARAM) this);
+	//ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, CClientCommunicationThread::TransmitPackets)
+	PostThreadMessage(WM_USER_SEND_TCPIP_PACKET,(WORD) 3,(LPARAM) i);
 	}
 
 void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
@@ -628,6 +524,7 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 	if (pIData->wByteCount >= INSTRUMENT_PACKET_SIZE -16)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
 		{
 		/******************************************************************/
+#if 0
 		//  2016-10-20 start to migrate to new input data structures
 		// throw away simulator data or current Sam data and make a new InputRawDataPacket
 		//delete pIData;
@@ -637,6 +534,8 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 			m_pOutputRawDataPacket = new InputRawDataPacket;
 			memset(m_pOutputRawDataPacket, 0, sizeof (InputRawDataPacket));
 			}
+#endif
+
 
 #ifdef MAKE_FAKE_DATA
 	// Basically Yqing's simulator gave us some bytes. Generate test data in place of those bytes.
@@ -715,6 +614,7 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 		TRACE(s);
 		theApp.SaveDebugLog(s);
 #endif
+		delete pIData;	// info in pOutput was put into a new structure and sent to the PAG
 		}	// if (pBuf->nLength == 1040)
 
 	else

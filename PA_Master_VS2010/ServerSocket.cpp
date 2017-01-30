@@ -571,12 +571,16 @@ void CServerSocket::OnReceive(int nErrorCode)
 			memcpy((void*)&m_HeaderDbg[m_dbg_cnt++], (void *) pHeader, sizeof(GenericPacketHeader));
 			m_dbg_cnt &= 7;
 
+			// debugging to see if all packets are caught at some time, maybe out of order
+			s.Format(_T("OnReceive MsgSeqCnt = %5d\n"), pHeader->wMsgSeqCnt);
+			theApp.SaveDebugLog(s);
 
 			if ((pHeader->wMsgSeqCnt - (m_nLastSeqCnt+1)) != 0) 
 				{
 				n = m_nSeqIndx;
-				s.Format(_T("Lost Packet, OnReceive got MsgSeqCnt %d, expected %d\n"),
-					pHeader->wMsgSeqCnt, (m_nLastSeqCnt + 1));
+				int j = GetRcvListCount();
+				s.Format(_T("Lost Packet, OnReceive got MsgSeqCnt %d, expected %d..RcvList Count = %5d\n"),
+					pHeader->wMsgSeqCnt, (m_nLastSeqCnt + 1), j);
 				TRACE(s);
 				}
 			m_nLastSeqCnt = pHeader->wMsgSeqCnt;
@@ -613,11 +617,11 @@ void CServerSocket::OnReceive(int nErrorCode)
 				m_pSCC->uPacketsReceived++;
 				if (m_pElapseTimer)
 					{
-					if ((m_pSCC->uPacketsReceived & 0xff) == 0)	m_pElapseTimer->Start();
-					if ((m_pSCC->uPacketsReceived & 0xff) == 0xff)
+					if ((m_pSCC->uPacketsReceived & 0x7ff) == 0)	m_pElapseTimer->Start();
+					if ((m_pSCC->uPacketsReceived & 0x7ff) == 0x7ff)
 						{
 						m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
-						float fPksPerSec = 256000000.0f/( (float) m_nElapseTime);
+						float fPksPerSec = 2048000000.0f/( (float) m_nElapseTime);
 						m_pSCC->uPacketsPerSecond = (UINT)fPksPerSec;
 						s.Format(_T("[%5d]Server[%d]Socket[%d]::OnReceive - [SeqCnt=%5d] Packets/sec = %6.1f\n"), 
 							m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nMyThreadIndex, 
@@ -650,6 +654,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 				TRACE(s);
 				m_nListCountChanged = 0;
 				}
+			// causes CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam) to run
 			m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED,(WORD)m_pSCC->m_nMyThreadIndex,0L);
 			}
 

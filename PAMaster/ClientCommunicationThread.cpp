@@ -542,6 +542,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 	CString s,t;
 	int nSent;
 	int i, j;
+
 	int nId = AfxGetThread()->m_nThreadID;
 	if (nId != m_nThreadIdOld)
 		{
@@ -556,12 +557,14 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		{
 		s += _T("!m_pMyCCM\n");
 		DebugMsg(s);
+		ASSERT(0);	// about to return and leave an orphaned memory segment in SendPktList
 		return;	// (LRESULT) 0;
 		}
 	if (!m_pstCCM)
 		{
 		s += _T("!m_pstCCM\n");
 		DebugMsg(s);
+		ASSERT(0);	// about to return and leave an orphaned memory segment in SendPktList
 		return;	// (LRESULT) 0;
 		}
 
@@ -587,16 +590,32 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		
 	m_nDebugEmptyList = 0;
 
+	// Since we got here we know the list is not empty
+	IDATA_PACKET *pSendPkt;	// ptr to the packet info in the linked list of send packets
+
 	if (!m_pstCCM->pSocket)
 		{
-		s += _T("!m_pstCCM->pSocket\n");
+		// kill the recently added members of the linked list
+
+		m_pMyCCM->LockSendPktList();
+		while (m_pstCCM->pSendPktList->GetCount() > 0)
+			{
+			pSendPkt = (IDATA_PACKET *)m_pstCCM->pSendPktList->RemoveHead();
+			delete pSendPkt;
+			}
+		m_pMyCCM->UnLockSendPktList();	// give a higher priority thread a chance to add packets
+		
+		if (pSendPkt != NULL)
+			delete pSendPkt;
+		pSendPkt = NULL;
+
+		s += _T("!m_pstCCM->pSocket.. killed SendPktList member\n");
 		DebugMsg(s);
 		return;	// (LRESULT) 0;	// no socket to send with
 		}
 
 	m_nInXmitLoop = 1;				// now entered into TransmitPacket loop
 
-	IDATA_PACKET *pSendPkt;	// ptr to the packet info in the linked list of send packets
 
 	s += _T("Send queued messages if any\n");
 
@@ -611,11 +630,11 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		// do the socket send
 		pSendPkt->wMsgSeqCnt = m_wMsgSeqCount++;
 
-		if ((m_pstCCM->uPacketsSent & 0x3ff) == 0)		m_pElapseTimer->Start();
-		if ((m_pstCCM->uPacketsSent & 0x3ff) == 0x3ff)	// originally 0xff
+		if ((m_pstCCM->uPacketsSent & 0x7ff) == 0)		m_pElapseTimer->Start();
+		if ((m_pstCCM->uPacketsSent & 0x7ff) == 0x7ff)	// originally 0xff
 			{
 			m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
-			float fPksPerSec = 1024000000.0f/( (float) m_nElapseTime);	// originally 256
+			float fPksPerSec = 2048000000.0f/( (float) m_nElapseTime);	// originally 256
 			s.Format(_T("Idata Transmit Packets/sec = %6.1f\n"), fPksPerSec);
 			TRACE(s);
 			}

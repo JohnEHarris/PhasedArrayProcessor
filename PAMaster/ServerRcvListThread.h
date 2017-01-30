@@ -114,7 +114,7 @@ public:
 	// the input packet is received 16 times. The output packet has the same structure but is only generated
 	// after 16 input packets have been received. Effectively compressing the input by a factor of 16
 	// InputRawDataPacket comes from the instrument
-	InputRawDataPacket *m_pOutputRawDataPacket;		// our class ptr to the packet to send
+	// InputRawDataPacket *m_pOutputRawDataPacket;		// our class ptr to the packet to send
 	IDATA_PACKET *m_pIdataPacket;
 	int m_IdataInPt;			// insertion point in stPeakData Results
 	int GetIdataPacketIndex(void);

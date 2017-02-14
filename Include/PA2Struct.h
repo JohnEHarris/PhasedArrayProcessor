@@ -84,7 +84,7 @@ enum IdOdTypes {eId, eOd, eIf};
 
 // REVISED 2016-10-20
 
-
+#if 0
 // keep old versions for a while to use with Yiqing's simulator.
 typedef struct 
 	{
@@ -100,6 +100,15 @@ typedef struct
     WORD wPeriod;		//unit in .2048ms
 	} SDataHeadOld;		//16 bytes
 
+
+typedef struct 
+	{
+    SDataHeadOld DataHead;		// 16 bytes
+    stRawData RawData[128];	// raw data of 128 consecutive pulses 128*8=1024
+	} SRawDataPacketOld;		//1040 bytes
+
+#endif
+
 // Data coming from the Tuboscope electronics, that is the phased array boards.
 typedef struct 
 	{
@@ -109,13 +118,6 @@ typedef struct
     BYTE bAmp3;		//Gate 3 amplitude (0-255)
     WORD wTof;     //time of flight of Gate 4
 	} stRawData;		//6 bytes
-
-typedef struct 
-	{
-    SDataHeadOld DataHead;		// 16 bytes
-    stRawData RawData[128];	// raw data of 128 consecutive pulses 128*8=1024
-	} SRawDataPacketOld;		//1040 bytes
-
 
 // NEW stDataHead  .. compare to old
 typedef struct 

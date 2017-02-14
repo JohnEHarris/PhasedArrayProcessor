@@ -64,7 +64,7 @@ public:
 	//void MakeFakeData(SRawDataPacketOld *pData);
 	void MakeFakeDataHead(InputRawDataPacket *pData);
 	void MakeFakeData(InputRawDataPacket *pData);
-	int GetSequenceModulo(SRawDataPacketOld *pData);
+	//int GetSequenceModulo(SRawDataPacketOld *pData);
 	//void BuildOutputPacket(SRawDataPacketOld *pRaw);
 	void BuildOutputPacket(InputRawDataPacket *pInput);
 	void SaveFakeData(CString& s);

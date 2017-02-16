@@ -641,29 +641,45 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		// take up to 20 attempts to deliver the packet
 		for (i = 0; i < RETRY_COUNT; i++)
 			{	// loop till good xmit
-			nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
-			if (nSent == pSendPkt->wByteCount )
+			if (m_pstCCM->pSocket != NULL)
 				{
-				m_pstCCM->uBytesSent += nSent;
-				m_pstCCM->uPacketsSent++;
-				if (m_pstCCM->uPacketsSent < 10)
+				nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
+				if (nSent == pSendPkt->wByteCount)
 					{
-					s.Format(_T("[%d]CCT::PAM sent PAG %d bytes\n"), m_pstCCM->uPacketsSent, nSent);
-					TRACE(s);
+					m_pstCCM->uBytesSent += nSent;
+					m_pstCCM->uPacketsSent++;
+					if (m_pstCCM->uPacketsSent < 10)
+						{
+						s.Format(_T("[%d]CCT::PAM sent PAG %d bytes\n"), m_pstCCM->uPacketsSent, nSent);
+						TRACE(s);
+						}
+					delete pSendPkt;
+					pSendPkt = 0;
+					break;
 					}
-				delete pSendPkt;
-				pSendPkt = 0;
-				break;
-				}
 
-			Sleep(1);
-			j = m_pstCCM->pSendPktList->GetCount();
-			if (( j > 5) && (m_DebugLimit < 10))
+				Sleep(1);
+				j = m_pstCCM->pSendPktList->GetCount();
+				if ((j > 5) && (m_DebugLimit < 10))
+					{
+					Sleep(0);
+					s.Format(_T("Send List count = %5d, Bytes sent = %d\n"), j, nSent);
+					TRACE(s);
+					m_DebugLimit++;
+					}
+				}
+			else
 				{
-				Sleep(0);
-				s.Format(_T("Send List count = %5d, Bytes sent = %d\n"), j, nSent);
-				TRACE(s);
-				m_DebugLimit++;
+				// ClientConnection Socket is null
+				m_pMyCCM->LockSendPktList();
+				while (m_pstCCM->pSendPktList->GetCount() > 0)
+					{
+					pSendPkt = (IDATA_PACKET *)m_pstCCM->pSendPktList->RemoveHead();
+					delete pSendPkt;
+					}
+				m_pMyCCM->UnLockSendPktList();
+				m_nInXmitLoop = 0;	// now out of loop
+				return;
 				}
 			}	// loop till good xmit
 

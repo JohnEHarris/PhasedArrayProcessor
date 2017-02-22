@@ -365,6 +365,7 @@ void CServerRcvListThread::SaveFakeData(CString& s)
 	theApp.SaveFakeData(s);
 	}
 
+#if 0
 // Not enought info in data structures I am seeing on 6/7/16. Assume 32 chnls 
 int CServerRcvListThread::GetSequenceModulo(SRawDataPacketOld *pData)
 	{
@@ -377,6 +378,7 @@ int CServerRcvListThread::GetSequenceModulo(SRawDataPacketOld *pData)
 	return 32;
 
 	}
+#endif
 
 
 // Build Output packet as individual channel peak held data becomes available

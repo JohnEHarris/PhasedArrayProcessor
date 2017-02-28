@@ -476,7 +476,7 @@ typedef struct
 	ST_NC_NX stNcNx[52];		// 1040	
 	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1056 replaces CHANNEL_CMD_1
 	
-
+//LOSING GATE CMD somewhrer in Pap
 
 #if 0
 

@@ -54,7 +54,7 @@ class CServiceApp;
 #define MAIN_DLG_NAME	NULL
 
 
-#define INSTRUMENT_PACKET_SIZE				1460		//old 1040
+#define INSTRUMENT_PACKET_SIZE				1056		//old 1040
 #define MASTER_PACKET_SIZE					1260
 
 

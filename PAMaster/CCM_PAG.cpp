@@ -141,6 +141,29 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 			break;
 
+		case 2:
+			if (stSCM[0].pClientConnection[pMmiCmd->bInstNumber])
+				{
+				CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bInstNumber]->pSocket;
+				CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bInstNumber]->pServerSocketOwnerThread;
+				if (pSocket && pThread)
+					{
+					pSocket->LockSendPktList();
+					pSocket->AddTailSendPkt(pMmiCmd);
+					pSocket->UnLockSendPktList();
+					// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
+					pThread->PostThreadMessageA(WM_USER_SERVER_SEND_PACKET, 0, 0L);
+					}
+				else
+					delete pMmiCmd;
+				}
+			else
+				delete pMmiCmd;
+
+			break;
+
+
+
 		default:
 			TRACE(_T("No command recognized\nDeleting command from Phased Array GUI\n"));
 			delete pMmiCmd;
@@ -244,7 +267,7 @@ void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	ST_SERVER_CONNECTION_MANAGEMENT *pPAM_SCM = GetPAM_SCM();
 
 	nPam		= pPamInstChnlInfo->bPAPNumber;
-	nInst		= pPamInstChnlInfo->bInstNumber;
+	nInst		= pPamInstChnlInfo->bBoardNumber;
 	msgcnt		= 0;
 
 	ST_NC_NX *pNcNx = pPamInstChnlInfo->stNcNx;

@@ -838,9 +838,9 @@ typedef struct
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 
-	BYTE bSpare[4];	// sequence number at beginning of stPeakData Results[]
-	BYTE bMsg[1444];	// Max unique sets of Nc Nx data per instrument.
-	} PAM_GENERIC_MSG; // SIZEOF() = 1460
+	BYTE bSpare[20];	// sequence number at beginning of stPeakData Results[] // 32 bytes to here
+	BYTE bMsg[1024];	// Max unique sets of Nc Nx data per instrument.
+	} PAM_GENERIC_MSG; // SIZEOF() = 1056
 
 
 

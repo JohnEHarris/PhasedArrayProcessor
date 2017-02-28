@@ -326,8 +326,8 @@ void CServerRcvListThread::MakeFakeData(InputRawDataPacket *pData)
 				{
 				t.Format(_T("\r\n[%3d] "), i); s += t;
 				// Input flaw gates before wall since the 16 Ascan reset is done by the wall code
-				k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp1 = 1 + (GetRand() / 2);	// 1-51 amplitude
-				t.Format(_T("%3d  "), (k)); s += t;
+				//k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp1 = 1 + (GetRand() / 2);	// 1-51 amplitude
+				//t.Format(_T("%3d  "), (k)); s += t;
 				k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp2 = 5 + (GetRand() / 2);	// 5-55 amplitude
 				t.Format(_T("%3d  "), (k)); s += t;
 				k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp3 = 10 + (GetRand() / 2);	// 10-60 amplitude
@@ -338,7 +338,7 @@ void CServerRcvListThread::MakeFakeData(InputRawDataPacket *pData)
 				}
 			else
 				{
-				pData->stSeqPkt[iSeqPkt].RawData[i].bAmp1 = 1 + (GetRand() / 2);
+				//pData->stSeqPkt[iSeqPkt].RawData[i].bAmp1 = 1 + (GetRand() / 2);
 				pData->stSeqPkt[iSeqPkt].RawData[i].bAmp2 = 5 + (GetRand() / 2);	// 5-55 amplitude
 				pData->stSeqPkt[iSeqPkt].RawData[i].bAmp3 = 10 + (GetRand() / 2);	// 10-60 amplitude
 				pData->stSeqPkt[iSeqPkt].RawData[i].wTof = 300 + GetRand();
@@ -391,7 +391,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int n
 		m_pIdataPacket = new (IDATA_PACKET);	// sizeof = 1460 179 RESULTS
 		memset((void *) m_pIdataPacket,0, sizeof(IDATA_PACKET));
 		m_pIdataPacket->bPAPNumber	= (BYTE) theApp.GetMy_PAM_Number();
-		m_pIdataPacket->bInstNumber	= m_pSCC->m_nMyThreadIndex;
+		m_pIdataPacket->bBoardNumber	= m_pSCC->m_nMyThreadIndex;
 
 		m_pIdataPacket->uSync		= SYNC;
 		m_pIdataPacket->wMsgSeqCnt = 0;	// m_uMsgSeqCnt++;
@@ -569,7 +569,7 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 					continue;
 				// Get flaw Nc qualified Max values for this channel
 				// Not defined what to do with status ???????
-				bGateTmp = pChannel->InputFifo(eIf, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp1);
+				//bGateTmp = pChannel->InputFifo(eIf, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp1);
 				bGateTmp = pChannel->InputFifo(eId, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp2);	// output of the Nc peak holder
 				bGateTmp = pChannel->InputFifo(eOd, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp3);
 

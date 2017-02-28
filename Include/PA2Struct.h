@@ -68,10 +68,12 @@ enum IdOdTypes {eId, eOd, eIf};
 // stPeakData Results[179]
 #define MAX_RESULTS						179
 
-#define INSTRUMENT_PACKET_SIZE			1460		//old 1040.. 1460 is max TCPIP size
+#define INSTRUMENT_PACKET_SIZE			1056		//old 1040.. 1460 is max TCPIP size
 #define MASTER_PACKET_SIZE				1260
 #define SYNC							0x5CEBDAAD
 #define CMD_FIFO_MEM_SIZE				0x4000		// must be greater than 0x1800
+#define NC_NX_STRUCT_SIZE				52
+#define MAX_CMD_PACKET_SIZE				1056
 
 /*****************	STRUCTURES	*********************/
 // A channel is a UT echo or reflection assigned a physical position in the transducer.
@@ -110,6 +112,7 @@ typedef struct
 #endif
 
 // Data coming from the Tuboscope electronics, that is the phased array boards.
+#ifdef CLIVE_STYLE
 typedef struct 
 	{
 	BYTE bStatus;	// tbd
@@ -119,6 +122,18 @@ typedef struct
     WORD wTof;     //time of flight of Gate 4
 	} stRawData;		//6 bytes
 
+#else
+// Sam Style
+
+typedef struct 
+	{
+//	BYTE bStatus;	// tbd
+//	BYTE bAmp1;		// interface gate
+    WORD wTof;     //time of flight of Gate 4
+    BYTE bAmp3;		//Gate 3 amplitude (0-255)
+    BYTE bAmp2;		//Gate 2 amplitude (0-255)
+	} stRawData;		//4 bytes
+#endif
 // NEW stDataHead  .. compare to old
 typedef struct 
 	{
@@ -131,14 +146,32 @@ typedef struct
 typedef struct
 	{
 	stDataHead DataHead;	// 2 bytes
-	stRawData RawData[MAX_CHNLS_PER_MAIN_BANG];	// sizeof = 32*6 = 192
-	} stRawPacket;	// sizeof = 194
+	stRawData RawData[MAX_CHNLS_PER_MAIN_BANG];	// sizeof = 32*6 = 192: Clive, 128: Sam
+	} stRawPacket;	// sizeof = 194 Clive, 130 Sam
 
+// Match Sam's data header .. 32 bytes long
+
+typedef struct 
+	{
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD
+    WORD wMsgSeqCnt;
+
+    BYTE bDin;			//digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+	BYTE bCmdQDepth;	// How deep is the command queue in the instrument NIOS processor
+    WORD wLocation;		//x location in motion pulses
+    WORD wClock;		//unit in .2048ms - ticks from TOP OF PIPE
+    WORD wPeriod;		//unit in .2048ms
+	WORD wRotationCnt;	// Number of rotations since pipe present signal
+	BYTE bSpare[12];
+	} InputRawDataPacketHeader;		//sizeof = 194*7 + 102 = 1460 bytes
 
 // Raw data packet is built by the instrument over 7 main bang periods
 // at 7k prf this is 1 packet every millisecond or 1k packets per second.
 // This is the packet which is sent to the PAP
 //
+// Match Sams header for now
 typedef struct 
 	{
 	WORD wMsgID;		// commands are identified by their ID
@@ -154,9 +187,10 @@ typedef struct
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
 
 						// NIOS has limited memory. Q likely to be [8][1460] = 11,680 bytes
-	BYTE bSpare[82];
-	stRawPacket stSeqPkt[7];	// Raw data for 7 sequence points
-	} InputRawDataPacket;		//sizeof = 194*7 + 102 = 1460 bytes
+	BYTE bSpare[12];	// 32 bytes to here
+						// 194 per packet for clive, 130 per packet for sam
+	stRawPacket stSeqPkt[7];	// Raw data for  sequence points = 32 + 7*130 = 942 sam
+	} InputRawDataPacket;		//sizeof = 194*7 + 102 = 1460 bytes clive
 
 #define SET_DROPOUT		 ( 1 << 5)
 #define CLR_DROPOUT		~( 1 << 5)
@@ -186,6 +220,8 @@ typedef struct
 */
 #if 1
 // Based on processing rate of PAP,	 may have to have one PAP for each instrument.
+// Idata is the peak held data from the Instrument boards sent after 16 ascans
+// Idata is the input to the down stream system
 typedef struct
 	{
 	WORD wMsgID;		// commands are identified by their ID
@@ -194,7 +230,7 @@ typedef struct
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 	BYTE bStartSeqNumber;	// sequence number at beginning of stPeakData Results[]
@@ -207,8 +243,9 @@ typedef struct
 	WORD wAngle;		// 0.2048 ms clock counts from TOP relative to 1st packet from instrument
 	WORD wPeriod;		// period of rotation in 0.2048 ms
 	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
-	WORD wSendQDepth;	// Are packets accumulation in send queue.... 28 bytes to here
+	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
 	stPeakData Results[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 179*8=1432
+	// need to add commmand queue depth in adc boards since they can only take 5 commands at a time 2017-02-22
 	} IDATA_PACKET;	// sizeof = 1460 - the maximum TCPIP packet size for data
 
 // https://blog.apnic.net/2014/12/15/ip-mtu-and-tcp-mss-missmatch-an-evil-for-network-performance/
@@ -248,7 +285,7 @@ typedef struct
 
 
 // Command format from User interface systems to the PAP
-// Command packet can be cut short by specifying a byte count less than 1460
+// Command packet can be cut short by specifying a byte count less than 1056
 typedef struct 
 	{
 	// The generic header
@@ -257,14 +294,16 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
 	BYTE bPapNumber;	// which PAP is the command for
-	BYTE bInstNumber;	// which PAP network device (pulser, phase array board) is the intended target
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 
 	// Commands can have any format past this point based on MsgId
 
 	BYTE bSeqNumber;	// when relevant, which sequence of virtual probes the command affects
-	BYTE bSpare[3];		// 16 bytes
-    WORD wCmd[722];		// 722 words or 1444 bytes
-	} SCmdPacket;		// 1460 bytes -- the maximum data delivery size for tcp/ip
+	BYTE bSpare[19];	// 32 bytes to here
+    WORD wCmd[512];		// 512 words or 1024 bytes
+	} ST_LARGE_CMD;		// 1056 bytes 
 
 // 2016-12-12 ALLOW for variable size data and command packets. Data packet will always be the max
 // allowed by TCPIP. Command packets may vary in size.
@@ -276,10 +315,37 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
 	BYTE bPapNumber;	// which PAP is the command for
-	BYTE bInstNumber;	// which PAP network device (pulser, phase array board) is the intended target
-	}	GenericPacketHeader;
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+	}	GenericPacketHeader;	// 12 bytes
 
 
+typedef struct
+	{
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+
+	BYTE bSpare[4];		// 16
+	WORD wCmd[8];		// 16	
+	} ST_SMALL_CMD;		// sizeof() = 32
+
+
+typedef struct
+	{
+	GenericPacketHeader Head;	// cmd 2
+	BYTE bSeq;			// set to 0
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
+	BYTE bSpare;
+	WORD wDelay;	// in 80 Mhz clocks
+	WORD wFill[5];	// all 0
+	} ST_GATE_DELAY_CMD;	// sizeof() = 32
 
 
 
@@ -402,17 +468,43 @@ typedef struct
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bInstNumber;	// 0-255. 0 based ip address of instruments for each PAP
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 
-	BYTE bSpare[8];
-	ST_NC_NX stNcNx[72];		// 1440	
-	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1460 replaces CHANNEL_CMD_1
+	BYTE bSpare[4];		// 16
+	ST_NC_NX stNcNx[52];		// 1040	
+	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1056 replaces CHANNEL_CMD_1
 	
 
 
+#if 0
+
+typedef struct
+	{
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+
+	BYTE bSpare[4];		// 16
+	ST_NC_NX stNcNx[52];		// 1040	
+	} CANNED_GATES; // SIZEOF() = 1056 replaces CHANNEL_CMD_1
+#endif
+
 /*****************	STRUCTURES	END *********************/
+
+
+/*****************	COMMANDS *********************/
+
+#define NC_NX_TEST			1
+
+/*****************	COMMANDS  END *********************/
 
 #if 0
 

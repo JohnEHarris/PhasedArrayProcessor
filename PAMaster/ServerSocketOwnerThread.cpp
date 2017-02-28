@@ -534,6 +534,10 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			nMsgSize = pNc->wByteCount;
 			theApp.SaveDebugLog(s);
 			break;
+		case 2:
+			pCmd->wMsgSeqCnt = m_pConnectionSocket->m_pSCC->wMsgSeqCnt++;
+			nMsgSize = pNc->wByteCount;
+			break;
 
 		default:
 			s.Format(_T("Unrecognized CMD, ID= %d, seq=%2d, PktListSize= %3d\n"),

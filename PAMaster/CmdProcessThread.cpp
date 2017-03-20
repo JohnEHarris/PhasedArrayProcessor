@@ -64,6 +64,7 @@ void CCmdProcessThread::ProcessReceivedMessage(WPARAM, LPARAM)
 		{
 #ifdef THIS_IS_SERVICE_APP
 	case 0:
+	case 2:
 		// case 0 of the client connection to PAG is the link thru which user commands come to PAM
 		// These commands need to be routed to the appropriate instrument by the PAG program itself
 		// The activating agent was CClientConnectionManagement::OnReceive() we assume is running at a

@@ -484,9 +484,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	int nMsgSize;
 	int i = -1;
 	int nError;
-	PAP_INST_CHNL_NCNX *pCmd;
-	//stSEND_PACKET *pBuf; 
-	//CServerSocket *pSocket = &m_ConnectionSocket;
+	SCmdPacket *pCmd;
 	CServerSocket *pSocket = m_pConnectionSocket;
 
 
@@ -499,7 +497,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	while (i = m_pConnectionSocket->m_pSCC->cpSendPktList->GetCount() > 0 )
 		{
 		m_pConnectionSocket->LockSendPktList();
-		pCmd = (PAP_INST_CHNL_NCNX *) m_pConnectionSocket->m_pSCC->cpSendPktList->RemoveHead();
+		pCmd = (SCmdPacket *) m_pConnectionSocket->m_pSCC->cpSendPktList->RemoveHead();
 		m_pConnectionSocket->UnLockSendPktList();
 			
 		int nElapse = 0;
@@ -534,9 +532,19 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			nMsgSize = pNc->wByteCount;
 			theApp.SaveDebugLog(s);
 			break;
-		case 2:
+
+		case 2:	//delay
+		case 3:	//range
+		case 4:	//blank
+		case 5:	//thold
+
+			ST_GATE_DELAY_CMD *pGateDelay;
+			pGateDelay = (ST_GATE_DELAY_CMD *)pCmd;
 			pCmd->wMsgSeqCnt = m_pConnectionSocket->m_pSCC->wMsgSeqCnt++;
-			nMsgSize = pNc->wByteCount;
+			nMsgSize = pCmd->wByteCount;
+			s.Format( _T( "MsgID = %d, Gate Parameter, ByteCount=%d, Gate Value = %d\n" ),
+				pCmd->wMsgID, pGateDelay->Head.wByteCount, pGateDelay->wDelay );
+			TRACE( s );
 			break;
 
 		default:
@@ -556,7 +564,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				m_pConnectionSocket->m_pSCC->uPacketsSent++;
 				m_nConfigMsgQty++;
 				// debug info to trace output.. losing connection when attempting to download config file
-				if ((m_pConnectionSocket->m_pSCC->uPacketsSent));	// &0xff) == 0)
+				if ((m_pConnectionSocket->m_pSCC->uPacketsSent))	// &0xff) == 0)
 					{
 					s.Format(_T("ServerSocketOwnerThread Pkts sent to instrument = %d, Pkts lost = %d\n"),
 					m_pConnectionSocket->m_pSCC->uPacketsSent, m_pConnectionSocket->m_pSCC->uUnsentPackets);
@@ -567,7 +575,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				}
 			else
 				{
-				s.Format(_T("ServerSocketOwnerThread %d bytes to instrument = %d, expected to send = %d\n"),
+				s.Format(_T("ServerSocketOwnerThread bytes sent to instrument = %d, expected to send = %d\n"),
 					nSent, nMsgSize);
 				}
 				

@@ -127,7 +127,7 @@ int CCmdFifo::GetPacketSize(void)
 		}
 	m_PacketSize = pHeader->wByteCount;
 	// debugging
-	if ((m_PacketSize < 60) || (m_PacketSize > 1460))
+	if ((m_PacketSize < 24) || (m_PacketSize > 1460))
 		{
 		return 0;
 		}

@@ -164,7 +164,7 @@ typedef struct
     WORD wClock;		//unit in .2048ms - ticks from TOP OF PIPE
     WORD wPeriod;		//unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	BYTE bSpare[12];
+	BYTE bSpare[12];	// 32 bytes to here
 	} InputRawDataPacketHeader;		//sizeof = 194*7 + 102 = 1460 bytes
 
 // Raw data packet is built by the instrument over 7 main bang periods
@@ -190,7 +190,7 @@ typedef struct
 	BYTE bSpare[12];	// 32 bytes to here
 						// 194 per packet for clive, 130 per packet for sam
 	stRawPacket stSeqPkt[7];	// Raw data for  sequence points = 32 + 7*130 = 942 sam
-	} InputRawDataPacket;		//sizeof = 194*7 + 102 = 1460 bytes clive
+	} InputRawDataPacket;		//sizeof = 194*5 + 32 = 1002 bytes clive
 
 #define SET_DROPOUT		 ( 1 << 5)
 #define CLR_DROPOUT		~( 1 << 5)
@@ -342,9 +342,9 @@ typedef struct
 	BYTE bSeq;			// set to 0
 	BYTE bChnl;		// which virtual probe
 	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
-	BYTE bSpare;
+	BYTE bSpare;	// 16 bytes to here
 	WORD wDelay;	// in 80 Mhz clocks
-	WORD wFill[5];	// all 0
+	WORD wFill[7];	// all 0
 	} ST_GATE_DELAY_CMD;	// sizeof() = 32
 
 
@@ -476,9 +476,90 @@ typedef struct
 	ST_NC_NX stNcNx[52];		// 1040	
 	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1056 replaces CHANNEL_CMD_1
 	
-//LOSING GATE CMD somewhrer in Pap
 
-#if 0
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= SET_GATE_DELAY_CMD_ID, gph is 12 bytes
+	BYTE bSeq;			// 
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
+	BYTE bSpare;	// 16 bytes to here
+	WORD wDelay;	// in 80 Mhz clocks
+	WORD wFill[7];	// all 0
+	} ST_GATE_DELAY_CMD;	// sizeof() = 32
+
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= SET_GATE_RANGE_CMD_ID, gph is 12 bytes
+	BYTE bSeq;		// 
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
+	BYTE bSpare;	// 16 bytes to here
+	WORD wRange;	// in 80 Mhz clocks
+	WORD wFill[7];	// all 0
+	}	ST_GATE_RANGE_CMD;
+
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= SET_GATE_BLANK_CMD_ID, gph is 12 bytes
+	BYTE bSeq;		// 
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
+	BYTE bSpare;	// 16 bytes to here
+	WORD wBlank;	// in 80 Mhz clocks
+	WORD wFill[7];	// all 0
+	}	ST_GATE_BLANK_CMD;
+
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= SET_GATE_THRESHOLD_CMD_ID, gph is 12 bytes
+	BYTE bSeq;		// 
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
+	BYTE bSpare;	// 16 bytes to here
+	WORD wThold;	// in 80 Mhz clocks
+	WORD wFill[7];	// all 0
+	}	ST_GATE_THRESHOLD_CMD;
+
+
+// the trigger word sets the values for all 4 gates, hence bGateNumber has no value
+// this originally was called gate control cmd
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= SET_GATES_TRIGGER_CMD_ID, gph is 12 bytes
+	BYTE bSeq;		// 
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
+	BYTE bSpare;	// 16 bytes to here
+	WORD wTrigger;	//
+	WORD wFill[7];	// all 0
+	}	ST_GATES_TRIGGER_CMD;
+
+// the polarity word sets the values for all 4 gates, hence bGateNumber has no value
+// this originally was called gate data mode cmd
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= SET_GATES_POLARITY_CMD_ID, gph is 12 bytes
+	BYTE bSeq;		// 
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
+	BYTE bSpare;	// 16 bytes to here
+	WORD wPolarity;	//
+	WORD wFill[7];	// all 0
+	}	ST_GATES_POLARITY_CMD;
+
+// the TOF word sets the values for 3 gates, hence bGateNumber has no value
+// this originally was called gate TOF mode cmd
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
+	BYTE bSeq;		// 
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
+	BYTE bSpare;	// 16 bytes to here
+	WORD wTOF;	//
+	WORD wFill[7];	// all 0
+	}	ST_GATES_TOF_CMD;
 
 typedef struct
 	{
@@ -495,18 +576,18 @@ typedef struct
 	BYTE bSpare[4];		// 16
 	ST_NC_NX stNcNx[52];		// 1040	
 	} CANNED_GATES; // SIZEOF() = 1056 replaces CHANNEL_CMD_1
-#endif
 
 /*****************	STRUCTURES	END *********************/
 
+#if 0
 
 /*****************	COMMANDS *********************/
 
-#define NC_NX_TEST			1
-
+#define NC_NX_TEST					1
+#define SET_GATE_DELAY_CMD_ID		2
+#define SET_GATE_RANGE_CMD_ID       3
 /*****************	COMMANDS  END *********************/
 
-#if 0
 
 
 #define TEST_UT                          20
@@ -537,7 +618,7 @@ typedef struct
 #define SET_PULSE_ENABLE_MEM_CMD_ID     41
 
 
-#define SET_GATE_DELAY_CMD_ID           60
+//#define SET_GATE_DELAY_CMD_ID           60
 #define SET_GATE_RANGE_CMD_ID           61
 #define SET_GATE_BLANK_CMD_ID           62
 #define SET_GATE_THRESHOLD_CMD_ID       63

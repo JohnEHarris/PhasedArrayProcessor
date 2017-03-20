@@ -114,17 +114,17 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			// Does not get sent to instruments, sets Nc and Nx parameters for the PAM to use
 			i = sizeof(PAP_INST_CHNL_NCNX);
 			pPamChnlInfo = (PAP_INST_CHNL_NCNX *)pMmiCmd;
-			TRACE(_T("Received NC_NX_CMD_ID for Instrument %d from Phased Array GUI - now deleting\n"),pMmiCmd->bInstNumber);
+			TRACE(_T("Received NC_NX_CMD_ID for Instrument %d from Phased Array GUI - now deleting\n"),pMmiCmd->bBoardNumber);
 			SetChannelInfo(pPamChnlInfo);
 			// For debugging instrument commands, send Hello message to the connected instrument
 			// Echo this message to the simulator to test commands which must go to the instrument
 			// In this case, we will let the thread which forwards the message to the instrument delete this 
 			// memory segment.
 			// delete pMmiCmd;
-			if (stSCM[0].pClientConnection[pMmiCmd->bInstNumber])
+			if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber])
 				{
-				CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bInstNumber]->pSocket;
-				CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bInstNumber]->pServerSocketOwnerThread;
+				CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
+				CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
 				if (pSocket && pThread)
 					{
 					pSocket->LockSendPktList();
@@ -142,10 +142,14 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			break;
 
 		case 2:
-			if (stSCM[0].pClientConnection[pMmiCmd->bInstNumber])
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+			if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber])
 				{
-				CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bInstNumber]->pSocket;
-				CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bInstNumber]->pServerSocketOwnerThread;
+				CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
+				CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
 				if (pSocket && pThread)
 					{
 					pSocket->LockSendPktList();

@@ -1067,7 +1067,7 @@ WHILE_TARGET:
 #ifndef YANMING_CODE
 // JEH code for infinite while loop in Run()
 //	while (1)
-	void *pv;
+//	void *pv;
 	ST_SERVERS_CLIENT_CONNECTION *pcc;
 
 	while( ::WaitForSingleObject(m_hStop, 10) != WAIT_OBJECT_0 )

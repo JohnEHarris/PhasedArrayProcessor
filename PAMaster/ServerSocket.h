@@ -23,7 +23,10 @@
 #define MAX_PAM_BYTES	1260*8			
 // expected msg size is 1260*8 = 10080
 
-enum { eListener, eServerConnection };
+// Listener thread creates and holds the eListener socker
+// Permanent Server connection thread are designated as eServerConnection
+// The temporary socket used by OnAccept to build the server connetion socket is the eOnStack socket
+enum { eListener, eServerConnection,eOnStack };
 
 // CServerSocket command target
 
@@ -34,9 +37,8 @@ class CServerSocketOwnerThread;
 class CServerSocket : public CAsyncSocket
 {
 public:
-	CServerSocket(CServerConnectionManagement *pSCM);
 	CServerSocket();
-
+	CServerSocket(CServerConnectionManagement *pSCM, int nOwningThreadType);
 
 	virtual ~CServerSocket();
 	void Init(void);
@@ -48,19 +50,19 @@ public:
 	void SetSCM(CServerConnectionManagement *pSCM)		{	m_pSCM = pSCM;	}
 	CServerConnectionManagement * GetSCM(void)		{	return m_pSCM;	}
 
-	int BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex);
-	int KillClientConnectionStructure (ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex);
+	void OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex);
+	//void KillpClientConnectionStruct(void);
 
 	//int SendPacket(BYTE *pB, int nBytes, int nDeleteFlag);
 
-	void LockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->cpCSRcvPkt) EnterCriticalSection(m_pSCC->cpCSRcvPkt);	}	}
-	void AddTailRcvPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->cpRcvPktList) m_pSCC->cpRcvPktList->AddTail(pV);	}	}
-	int GetRcvListCount(void)		{ if (m_pSCC) { if (m_pSCC->cpRcvPktList) return m_pSCC->cpRcvPktList->GetCount(); } return 0; }
-	void UnLockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->cpCSRcvPkt) LeaveCriticalSection(m_pSCC->cpCSRcvPkt);	}	}
+	void LockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->pCSRcvPkt) EnterCriticalSection(m_pSCC->pCSRcvPkt);	}	}
+	void AddTailRcvPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->pRcvPktList) m_pSCC->pRcvPktList->AddTail(pV);	}	}
+	int GetRcvListCount(void)		{ if (m_pSCC) { if (m_pSCC->pRcvPktList) return m_pSCC->pRcvPktList->GetCount(); } return 0; }
+	void UnLockRcvPktList(void)		{ if (m_pSCC) { if (m_pSCC->pCSRcvPkt) LeaveCriticalSection(m_pSCC->pCSRcvPkt);	}	}
 
-	void LockSendPktList(void)		{ if (m_pSCC) { if (m_pSCC->cpCSSendPkt) EnterCriticalSection(m_pSCC->cpCSSendPkt);}	}
-	void AddTailSendPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->cpSendPktList) m_pSCC->cpSendPktList->AddTail(pV);}	}
-	void UnLockSendPktList(void)	{ if (m_pSCC) { if (m_pSCC->cpCSSendPkt) LeaveCriticalSection(m_pSCC->cpCSSendPkt);}	}
+	void LockSendPktList(void)		{ if (m_pSCC) { if (m_pSCC->pCSSendPkt) EnterCriticalSection(m_pSCC->pCSSendPkt);}	}
+	void AddTailSendPkt(void *pV)	{ if (m_pSCC) { if (m_pSCC->pSendPktList) m_pSCC->pSendPktList->AddTail(pV);}	}
+	void UnLockSendPktList(void)	{ if (m_pSCC) { if (m_pSCC->pCSSendPkt) LeaveCriticalSection(m_pSCC->pCSSendPkt);}	}
 
 	//void KillMyThread(void)			{ m_pSCC->bExitThread = 1;					}
 
@@ -68,27 +70,38 @@ public:
 	void SetClientIp4(CString s)	{ m_sClientIp4 = s;				}
 	CString GetClientIp4(void)		{ return m_sClientIp4;			}
 
-	void * GetWholePacket(int nPacketSize, int *pReceived);
+	//void * GetWholePacket(int nPacketSize, int *pReceived);
 
 	BYTE GetConnectionStatus(void)		{ return (m_pSCC ?	m_pSCC->bConnected : eInstrumentNotPresent);	}
 	void SetConnectionStatus(BYTE s)	{ if	 (m_pSCC)	m_pSCC->bConnected = s;							}
 
+	void SetClientPortIndex( int indx ) { m_nClientIndex = indx; }
+	// call these get/set function from ServerSocketOwnerThread ExitInstance to update
+	// the values
+	ST_SERVERS_CLIENT_CONNECTION * GetpSCC( void );
+	void SetpSCC( ST_SERVERS_CLIENT_CONNECTION* p ) { m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  p; }
+	void NullpSCC(void)								{m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  0;}
+	
+	
 	// variables
-	CServerConnectionManagement *m_pSCM;		// ptr to the controlling class -- not created with 'new'
-	ST_SERVERS_CLIENT_CONNECTION *m_pSCC;		// ptr to my connection info/statistics/objects -- not created with 'new'
-	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// pointer to my global structure instance  -- not created with 'new'
+	CServerConnectionManagement *m_pSCM;		// ptr to the controlling class
+	ST_SERVERS_CLIENT_CONNECTION *m_pSCC;		// ptr to my connection info/statistics/objects
+	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// pointer to my global structure instance 
 	int m_nMyServer;							// which server are we connected stSCM[MAX_SERVERS]
-	int m_nMyThreadIndex;						// which instance of pClientConnection[MAX_CLIENTS_PER_SERVER];
+	int m_nClientIndex;							// which instance of pClientConnection[MAX_CLIENTS_PER_SERVER];
 	CWinThread * m_pThread;						// ptr to thread which created the socket
 	int m_nOwningThreadType;					// 0=Listener, 1=ServerConnection thread owns this socket class
+	int m_nOwningThreadId;				// debugging
+	int m_nAsyncSocketCnt;				// debugging
+
 	CString m_sClientIp4;						// IP4 address... 192.168.123.123 etc of server connected socket
 
 	CCmdFifo *m_pFifo;		// In ClientConnectionManagement get PAG commands. Here gets instrument data
-	//BYTE m_RcvBuf[0x10000];						// 16 k receiver buffer .. now 64k
-	// debug info
+							// created in CServerSocket::CServerSocket(CServerConnectionManagement *pSCM)
+							// deleted in CServerSocket::~CServerSocket()
 	CString szName;
-	//void *pWholePacket;				// -- not created with 'new'
-	CHwTimer *m_pElapseTimer;
+	CHwTimer *m_pElapseTimer;	// created in CServerSocket::CServerSocket()
+								// deleted in CServerSocket::~CServerSocket()
 	int m_nElapseTime;
 	int m_nOnAcceptClientIndex;		// cheating to let OnAccept pass info to OnClose
 	int m_nSeqCntDbg[1024];
@@ -100,7 +113,6 @@ public:
 	int m_dbg_cnt;		// counter to select pHeaderDbg variable
 	int m_nListCount;	// how deep is the linked list?
 	int m_nListCountChanged;
-
 	};
 
 #endif

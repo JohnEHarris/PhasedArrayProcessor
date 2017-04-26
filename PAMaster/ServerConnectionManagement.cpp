@@ -5,7 +5,7 @@ Date:		14-Aug-2012
 Purpose:	Collect resource necessary to support TCP/IP Send and Receive operations from a server.
 
 Revised:	Adapted from ClientConnectionManagement for the same reason - to manage the resources of
-			a TCP/Ip connetion. This connection is made by a server. It is assumed that all clients 
+			a TCP/Ip connection. This connection is made by a server. It is assumed that all clients 
 			on a given connection are requesting the same kind of service and supplying the same data
 			set to the server.
 			If there are n number of different services offered (n different listening ports), 
@@ -27,7 +27,7 @@ How it is intended to work:
 
 
 	The information which connects the various sockets and threads to the rest of the program is held in structures which
-	at static global memory areas. Thus information is available to other parts of the program with only a minimal amount
+	are static global memory areas. Thus information is available to other parts of the program with only a minimal amount
 	needing to be passed when a socket/thread is created.
 	
 
@@ -54,6 +54,75 @@ extern THE_APP_CLASS theApp;
 #endif
 
 
+// A C function to copy ST_SERVERS_CLIENT_CONNECTION from one thread to another
+// May be useful when initializing threads. String copy initializes strings and constants which
+// remain through out the program life.
+void CopySCCStrings(ST_SERVERS_CLIENT_CONNECTION *pDest, ST_SERVERS_CLIENT_CONNECTION *pSrc)
+	{
+	if (pDest == NULL)
+		{
+		TRACE(_T("CopySCCStrings pDest == NULL\n"));
+		return;
+		}
+	if (pSrc == NULL)
+		{
+		TRACE(_T("CopySCCStrings pSrc == NULL\n"));
+		return;
+		}
+	pDest->szSocketName = pSrc->szSocketName;	// does not change during program execution
+	pDest->sClientName	= pSrc->sClientName;
+	pDest->sClientIP4	= pSrc->sClientIP4;
+	pDest->uClientPort	= pSrc->uClientPort;
+	// items such as the following change dynamically so no
+	// point in having a static copy
+	//pDest->bStopSendRcv = pSrc->bStopSendRcv;
+	//pDest->bConnected	= pSrc->bConnected;
+	//pDest->wMsgSeqCnt	= pSrc->wMsgSeqCnt;
+	//pDest->uPacketsReceived = pSrc->uPacketsReceived;
+	//pDest->uBytesReceived = pSrc->uBytesReceived
+
+	}
+
+// A new thread will change the original SCC struct pointers from null to the newly created version.
+void CopySCCPtrs(ST_SERVERS_CLIENT_CONNECTION *pDest, ST_SERVERS_CLIENT_CONNECTION *pSrc)
+	{
+	if (pDest == NULL)
+		{
+		TRACE(_T("CopySCCPtrs pDest == NULL\n"));
+		return;
+		}
+	if (pSrc == NULL)
+		{
+		TRACE(_T("CopySCCPtrs pSrc == NULL\n"));
+		return;
+		}
+	pDest->pCSSendPkt	= pSrc->pCSSendPkt;
+	pDest->pSendPktList = pSrc->pSendPktList;
+	pDest->pCSRcvPkt	= pSrc->pCSRcvPkt;
+	pDest->pRcvPktList	= pSrc->pRcvPktList;
+	if (pSrc->pSocket)
+		{
+		pDest->pSocket = pSrc->pSocket;
+		}
+	if (pSrc->pServerSocketOwnerThread)
+		{
+		pDest->pServerSocketOwnerThread = pSrc->pServerSocketOwnerThread;
+		//pDest->pServerSocketOwnerThread->m_nMyServer = pSrc->pServerSocketOwnerThread->m_nMyServer;
+		// need to test this next item m_pConnectionSocket
+		pDest->pServerSocketOwnerThread->m_pConnectionSocket = pSrc->pServerSocketOwnerThread->m_pConnectionSocket;
+		//pDest->pServerSocketOwnerThread->m_pMySCM = pSrc->pServerSocketOwnerThread->m_pMySCM;
+		}
+	if (pSrc->pServerRcvListThread)
+		{
+		pDest->pServerRcvListThread = pSrc->pServerRcvListThread;
+		//pDest->pServerRcvListThread->m_nMyServer = pSrc->pServerRcvListThread->m_nMyServer;
+		}
+	if (pSrc->m_nClientIndex)	//thread index tells us which client connection we are in an array of client connections.
+		{
+		//pDest->m_nClientIndex = pSrc->m_nClientIndex;
+		}
+
+	}
 
 CServerConnectionManagement::CServerConnectionManagement(int nMyServerIndex)
 	{
@@ -83,22 +152,32 @@ CServerConnectionManagement::CServerConnectionManagement(int nMyServerIndex)
 
 	// Set up debug lists which are by server and not by connection
 	m_pstSCM->pCSDebugIn	= new CRITICAL_SECTION();
+	i = sizeof(m_pstSCM->pCSDebugIn);	// = 
 	m_pstSCM->pCSDebugOut	= new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(m_pstSCM->pCSDebugIn,4);
 	InitializeCriticalSectionAndSpinCount(m_pstSCM->pCSDebugOut,4);
+	i = sizeof(m_pstSCM->pCSDebugIn);	// = 
 	m_pstSCM->pInDebugMessageList	= new CPtrList(64);
+	i = sizeof(m_pstSCM->pInDebugMessageList);	// = 
 	m_pstSCM->pOutDebugMessageList	= new CPtrList(64);
 	m_pstSCM->ListenThreadID		= 0;
 	m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL;
 
+	//  This is all done in CServerSocket::OnAcceptInitializeConnectionStats on individual socket basis
 	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 		{
-		m_pstSCM->pCS_ClientConnectionSndList[i] = new CRITICAL_SECTION();
-		InitializeCriticalSectionAndSpinCount(m_pstSCM->pCS_ClientConnectionSndList[i],4);
-		m_pstSCM->pCS_ClientConnectionRcvList[i] = new CRITICAL_SECTION();
-		InitializeCriticalSectionAndSpinCount(m_pstSCM->pCS_ClientConnectionRcvList[i],4);
 		m_pstSCM->pClientConnection[i]	= NULL;
-		m_pstSCM->nComThreadExited[i]	= 0;		// signify that previously running thread has exited.
+		m_pstSCM->nComThreadExited[i]	= 0;		
+#if 0
+		// signify that previously running thread has exited.
+		// create critical sections and linked lists for every potential client connected
+		m_pstSCM->pCS_ClientConnectionRcvList[i]	= new CRITICAL_SECTION();
+		m_pstSCM->pCS_ClientConnectionSndList[i]	= new CRITICAL_SECTION();
+		InitializeCriticalSectionAndSpinCount(m_pstSCM->pCS_ClientConnectionRcvList[i],4);
+		InitializeCriticalSectionAndSpinCount(m_pstSCM->pCS_ClientConnectionSndList[i],4);
+		m_pstSCM->pRcvPktList[i]		= new CPtrList(64);
+		m_pstSCM->pSendPktList[i]		= new CPtrList(64);
+#endif
 		}
 
 	};
@@ -110,8 +189,6 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 	CString s;
 	i = 0;
 
-	if (m_pstSCM == 0) 
-		goto EXIT;
 	if (m_pstSCM->pServerListenThread)
 		{
 		PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID,WM_QUIT, 0L, 0L);
@@ -119,44 +196,73 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 
 
 	/******************/
-	LockDebugIn();
-	n = m_pstSCM->pInDebugMessageList->GetCount();
-	if ( n >= 0)
+	//  This is all done in CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam) on individual socket basis
+#if 0
+	CRITICAL_SECTION *pCS;
+	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 		{
-		while (!m_pstSCM->pInDebugMessageList->IsEmpty())	// empty the list
+		if (pCS = m_pstSCM->pCS_ClientConnectionRcvList[i])
 			{
-			pV = (void *) m_pstSCM->pInDebugMessageList->RemoveHead();
-			delete pV;
+			EnterCriticalSection(pCS);
+			while (m_pstSCM->pRcvPktList[i]->GetCount())
+				{
+				pV = m_pstSCM->pRcvPktList[i]->RemoveHead();
+				delete pV;
+				}
+			LeaveCriticalSection(pCS);
+			delete m_pstSCM->pRcvPktList[i];
+			delete pCS;
+			m_pstSCM->pRcvPktList[i] = 0;
+			m_pstSCM->pCS_ClientConnectionRcvList[i] = 0;
 			}
-		delete m_pstSCM->pInDebugMessageList;				// delete the list 2016-08-10 break
-		
-		}
-	m_pstSCM->pInDebugMessageList = 0;
 
-	UnLockDebugIn();
+		if (pCS = m_pstSCM->pCS_ClientConnectionSndList[i])
+			{
+			EnterCriticalSection(pCS);
+			while (m_pstSCM->pSendPktList[i]->GetCount())
+				{
+				pV = m_pstSCM->pSendPktList[i]->RemoveHead();
+				delete pV;
+				}
+			LeaveCriticalSection(pCS);
+			delete m_pstSCM->pSendPktList[i];
+			delete pCS;
+			m_pstSCM->pSendPktList[i] = 0;
+			m_pstSCM->pCS_ClientConnectionSndList[i] = 0;
+			}
+		}
+
+#endif
+
 	if (m_pstSCM->pCSDebugIn)
 		{
+		LockDebugIn();
+		n = m_pstSCM->pInDebugMessageList->GetCount();
+		while (!m_pstSCM->pInDebugMessageList->IsEmpty())	// empty the list
+			{
+			pV = (void *)m_pstSCM->pInDebugMessageList->RemoveHead();
+			delete pV;
+			}
+		delete m_pstSCM->pInDebugMessageList;				// delete the list
+		m_pstSCM->pInDebugMessageList = 0;
+		UnLockDebugIn();
 		delete m_pstSCM->pCSDebugIn;	// delete the critcial section
 		m_pstSCM->pCSDebugIn = 0;
 		}
 
 	/******************/
-	LockDebugOut();
-	n = m_pstSCM->pOutDebugMessageList->GetCount();
-	if ( n >= 0)
+	if (m_pstSCM->pCSDebugOut)
 		{
+		LockDebugOut();
+		n = m_pstSCM->pOutDebugMessageList->GetCount();
 		while (!m_pstSCM->pOutDebugMessageList->IsEmpty())
 			{
-			pV = (void *) m_pstSCM->pOutDebugMessageList->RemoveHead();
+			pV = (void *)m_pstSCM->pOutDebugMessageList->RemoveHead();
 			delete pV;
 			}
 		delete m_pstSCM->pOutDebugMessageList;
-		}
-	m_pstSCM->pOutDebugMessageList = 0;
-
-	UnLockDebugOut();
-	if (m_pstSCM->pCSDebugOut)
-		{
+		m_pstSCM->pOutDebugMessageList = 0;
+		UnLockDebugOut();
 		delete m_pstSCM->pCSDebugOut;
 		m_pstSCM->pCSDebugOut = 0;
 		}
@@ -177,13 +283,7 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 		}
 #endif
 
-	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
-		{
-		delete m_pstSCM->pCS_ClientConnectionSndList[i];
-		delete m_pstSCM->pCS_ClientConnectionRcvList[i];
-		delete m_pstSCM->pClientConnection[i];
-		}
-EXIT:
+
 	s.Format(_T("~CServerConnectionManagement Destructor[%d] has run\n"), m_nMyServer);
 	TRACE(s);
 	}
@@ -221,6 +321,7 @@ int CServerConnectionManagement::StartListenerThread(int nMyServer)
 	SetListenThreadID(pThread->m_nThreadID);	// necessary later for OnAccept to work
 
 	// post a message to init the listener thread. Feed in a pointer to this instancec of SCM
+	// causes afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam) to execute
 	pThread->PostThreadMessage(WM_USER_INIT_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
 	return 0;	// success
 	}
@@ -234,12 +335,12 @@ int CServerConnectionManagement::StopListenerThread(int nMyServer)
 	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
 		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);	
 	// post a message to init the listener thread. Feed in a pointer to this instance of SCM
-	m_pstSCM->pServerListenThread->PostThreadMessage(WM_QUIT,0,0l);	
-	//PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
-	//PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID,WM_QUIT, 0L, 0L);
+	//m_pstSCM->pServerListenThread->PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
+	PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID,WM_QUIT, 0L, 0L);
 	Sleep(20);
 	return 0;	// success
 	}
+
 
 // Kill the listener thread and shut down this instance of the server
 // 20-Sep-12 Let the threads close/destroy all object they control in their ExitInstance() routine.
@@ -247,18 +348,15 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 	{
 	int i, j;
 	CString s;
-	int nResult;
 	CWinThread *pThread;
-	//void *pV;
-
 //	StopListenerThread(nMyServer);
 	if (nMyServer < 0)							return 3;
 	if (nMyServer >= MAX_SERVERS)				return 3;
 	if (NULL == m_pstSCM)						return 3;
 	m_pstSCM->nSeverShutDownFlag = 1;
-	//if (NULL == m_pstSCM->pServerListenThread)	nReturn = 3;
+	if (NULL == m_pstSCM->pServerListenThread)	return 3;
 
-#if 1
+#if 0
 	// global shutdown flag now handles this
 	for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 		{
@@ -269,15 +367,16 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		}
 #endif
 
-	if (NULL == m_pstSCM->pServerListenThread)
-		{
-		TRACE("m_pstSCM->pServerListenThread IS NULL\n");
-		goto NO_SERVERLISTENTHREAD;
-		}
 
-	// Listening thread kills listening socket and itself
-	nResult = StopListenerThread(nMyServer);
+	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
+		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);	
+	// post a message to init the listener thread. Feed in a pointer to this instance of SCM
+	//m_pstSCM->pServerListenThread->PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
+	//Sleep(20);
 
+	pThread = (CWinThread *) m_pstSCM->pServerListenThread; 
+	PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
+	Sleep(10);
 	for ( i = 0; i < 100; i++)	// wait a little while for listener to go away
 		{
 		if (m_pstSCM->pServerListenThread == NULL)		break;
@@ -288,67 +387,161 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		TRACE(_T("Listener Exit routine didn't run or didn't NULL pServerListenThread\n"));
 		}
 
-NO_SERVERLISTENTHREAD:
-
-	// Kill the debug critical sections and lists
 #if 0
-	// move to destructor
-	if (m_pstSCM->pCSDebugIn)
-		{
-		EnterCriticalSection(m_pstSCM->pCSDebugIn );
-		while (	m_pstSCM->pInDebugMessageList->GetCount() > 0)
-			{
-			pV = (void *) m_pstSCM->pInDebugMessageList->RemoveHead();
-			delete pV;
-			}
-		LeaveCriticalSection(m_pstSCM->pCSDebugIn );
-		//delete m_pstSCM->pInDebugMessageList;
-		}
+	// done in CServerSocketOwnerThread::ExitInstance()
+	// Kill the RcvListThread
+	int nDeadThreadQty, nDeadThreadStart;	// start is initial number of dead thread before waiting for threads to die
 
-			
-
-	if (m_pstSCM->pCSDebugOut)
-		{
-		EnterCriticalSection(m_pstSCM->pCSDebugOut );
-		while (	m_pstSCM->pOutDebugMessageList->GetCount() > 0)
-			{
-			pV = (void *) m_pstSCM->pOutDebugMessageList->RemoveHead();
-			delete pV;
-			}
-		LeaveCriticalSection(m_pstSCM->pCSDebugOut );
-		//delete m_pstSCM->pOutDebugMessageList;
-		}
-#endif
-//SERVERS_CLIENT_LOOP:
-
-	// Now kill all the ServerSocketOwner threads which themselves have to close and kill their sockets
+	nDeadThreadQty = 0;
 	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 		{
+		if (NULL == m_pstSCM->pClientConnection[i])
+			{
+			nDeadThreadQty++;
+			continue;	// go to end of loop
+			}
+		pThread = (CWinThread *) m_pstSCM->pClientConnection[i]->pServerRcvListThread;
+		if (NULL != pThread)
+			{
+			PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
+			Sleep(10);
+			}
+		else nDeadThreadQty++;
+		}
+
+	if (nDeadThreadQty != MAX_CLIENTS_PER_SERVER)
+		{
+		// Wait for RcvListThreads to die
+		for ( j = 0; j < 10; j++)
+			{
+			nDeadThreadStart = nDeadThreadQty;
+			nDeadThreadQty = 0;
+			if (nDeadThreadStart == MAX_CLIENTS_PER_SERVER)	break;	// we are done
+			for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
+				{
+				if (NULL == m_pstSCM->pClientConnection[i])
+					{
+					nDeadThreadQty++;
+					continue;	// go to end of loop
+					}
+				pThread = (CWinThread *) m_pstSCM->pClientConnection[i]->pServerRcvListThread;
+				if (NULL != pThread)
+					{
+					//PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
+					Sleep(10);
+					}
+				else nDeadThreadQty++;
+				}	// for MAX_CLIENTS_PER_SERVER	
+			}
+		}
+	if (nDeadThreadQty != MAX_CLIENTS_PER_SERVER)
+		{
+		s.Format(_T("Failed to kill %d ServerRcvListThreads\n"), MAX_CLIENTS_PER_SERVER - nDeadThreadQty);
+		TRACE(s);
+		}
+#endif
+
+	// Now kill all the ServerConnection threads which themselves have to close and kill their sockets
+	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
+		{
+		Sleep(10);
 		if (NULL == m_pstSCM->pClientConnection[i])	continue;	// go to end of loop
 
 		pThread = (CWinThread *) m_pstSCM->pClientConnection[i]->pServerSocketOwnerThread;
 		if (NULL != pThread)
-			//PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
-			PostThreadMessage(pThread->m_nThreadID,WM_USER_KILL_OWNER_SOCKET,
-								(WORD)i, (LPARAM)m_pstSCM->pClientConnection[i]);
+			PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
 		Sleep(10);
 		for ( j = 0; j < 60; j++)
 			{
-			if (m_pstSCM->nComThreadExited[i])					
+			if (m_pstSCM->nComThreadExited[i])
+				{
+				// set to 0 in ServerSocketOwnerThread::MyDestructor
+				// m_pstSCM->pClientConnection[i]->pServerSocketOwnerThread = 0;
 				break;
-			Sleep(50);
+				}
+			Sleep(5);
 			}	// for ( j = 0; j < 60; j++)
 
 		if ( j == 60)
 			{
 			s.Format(_T("ServerComThread Exit routine didn't run or didn't NULL pServerSocketOwnerThread[%d]\n"), i);
 			TRACE(s);
-			return 2;
 			}
+		KillClientConnection(nMyServer,i);
+		Sleep(10);
 		}	// for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 
 	return 0;
 	}
+
+	
+void CServerConnectionManagement::KillClientConnection(int nMyServer, int nClient)
+	{
+	void *pv;
+	int i,j;
+	ST_SERVERS_CLIENT_CONNECTION *pscc;
+	CString s;
+	m_pstSCM = &stSCM[m_nMyServer];
+	pscc = m_pstSCM->pClientConnection[nClient];
+	if (pscc == NULL)
+		{
+		s.Format(_T("pscc == NULL in KillClientConnection, client = %d\n"), nClient);
+		TRACE(s);
+		return;
+		}
+
+	// Empty list, delete critical sections and lists, delete SCC structure
+	if (pscc->pCSRcvPkt)
+		{
+		EnterCriticalSection(pscc->pCSRcvPkt);
+		if (pscc->pRcvPktList)
+			{
+			while (pscc->pRcvPktList->GetCount())
+				{
+				pv = pscc->pRcvPktList->RemoveHead();
+				delete pv;
+				}
+			}
+		LeaveCriticalSection(pscc->pCSRcvPkt);
+		delete pscc->pCSRcvPkt;
+		pscc->pCSRcvPkt = 0;
+		delete pscc->pRcvPktList;
+		pscc->pRcvPktList = 0;
+		}
+
+	if (pscc->pCSSendPkt)
+		{
+		EnterCriticalSection(pscc->pCSSendPkt);
+		if (pscc->pSendPktList)
+			{
+			while (pscc->pSendPktList->GetCount())
+				{
+				pv = pscc->pSendPktList->RemoveHead();
+				delete pv;
+				}
+			}
+		LeaveCriticalSection(pscc->pCSSendPkt);
+		delete pscc->pCSSendPkt;
+		pscc->pCSSendPkt = 0;
+		delete pscc->pSendPktList;
+		pscc->pSendPktList = 0;
+		}
+
+	for ( i = 0; i < MAX_SEQ_COUNT; i++)
+		for (j = 0; j < MAX_CHNLS_PER_MAIN_BANG; j++)
+			{
+			if (pscc->pvChannel[i][j])
+				{
+				delete pscc->pvChannel[i][j];
+				pscc->pvChannel[i][j] = 0;
+				}
+			}
+		
+	delete pscc;
+	m_pstSCM->pClientConnection[nClient] = 0;
+
+	}
+
 
 // Debug listener shutdown problem
 void CServerConnectionManagement::DoNothing(void)
@@ -572,7 +765,7 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 	// Message activates CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, (WORD) nClientIndex, 0L);
 //	return nBytes+sizeof(int);
-	return sizeof(PAP_INST_CHNL_NCNX); // only one message now
+	return nBytes;	//sizeof(PAM_INST_CHNL_INFO); // only one message now
 	}
 #endif
 

@@ -1,25 +1,11 @@
 #pragma once
 
-/*
-1.  Raw Data  |
-2.  Raw Data  |
-:             |-> m_pOutputRawDataPacket same structure, collected from 16 inputs
-16. Raw Data  |
-
-m_pOutputRawDataPacket(ch1), m_pOutputRawDataPacket(ch2), m_pOutputRawDataPacket(ch30.. -> stPeakData(1), stPeakData(2) etc
-Final output to PT/Receiver system is 
-{
-header inf0+
-stPeakData Results[179];
-} IDATA_PACKET
-
-*/
-
 #ifndef SERVER_RCV_LIST_THREAD_H
 #define SERVER_RCV_LIST_THREAD_H
 
 #ifdef THIS_IS_SERVICE_APP
 #include "ServiceApp.h"
+//#include "../include/cfg100.h"
 #include "../include/pa2struct.h"
 class CInstState;
 extern  CInspState InspState;
@@ -27,7 +13,6 @@ extern  CInspState InspState;
 #else
 #include "Truscan.h"
 #include "TScanDlg.h"
-#include "ServerRcvListThreadBase.h"		// 11-16-12 jeh
 #endif
 
 // CServerRcvListThread
@@ -42,7 +27,7 @@ class CServerSocket;
 class CServerSocketPA_Master;
 class CServerConnectionManagement;
 
-class CServerRcvListThread : public CServerRcvListThreadBase
+class CServerRcvListThread : public CWinThread
 	{
 	DECLARE_DYNCREATE(CServerRcvListThread)
 
@@ -54,27 +39,38 @@ public:
 	virtual BOOL InitInstance();
 	virtual int ExitInstance();
 	afx_msg void ProcessRcvList(WPARAM w, LPARAM lParam);
-	afx_msg void FlushRcvList(WPARAM w, LPARAM lParam);
+
+	CHwTimer *m_pElapseTimer;
+	int m_nElapseTime;
+
+	CServerConnectionManagement *m_pSCM;		// managing class ptr
+	int m_nMyServer;							// which instance of stSCM[] we are
+	int m_nClientIndex;							// which one of SSC are we
+	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// managing structure ptr
+	ST_SERVERS_CLIENT_CONNECTION *m_pSCC;		// ptr to my connection info/statistics/objects
+
+	void SetClientPortIndex( int indx ) { m_nClientIndex = indx; }
+	// call these get/set function from ServerSocketOwnerThread ExitInstance to update
+	// the values
+	ST_SERVERS_CLIENT_CONNECTION * GetpSCC( void )	{ return m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]; }
+	void SetpSCC( ST_SERVERS_CLIENT_CONNECTION* p ) { m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  p; }
+	void NullpSCC(void)								{m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  0;}
 
 #ifdef THIS_IS_SERVICE_APP
-//	afx_msg void InitRunningAverage(WPARAM w, LPARAM lParam);
 	void ProcessInstrumentData(InputRawDataPacket *pIData);
 	
-	//void MakeFakeDataHead(SRawDataPacketOld *pData); worked with Yiqing simulator
-	//void MakeFakeData(SRawDataPacketOld *pData);
 	void MakeFakeDataHead(InputRawDataPacket *pData);
 	void MakeFakeData(InputRawDataPacket *pData);
-	//int GetSequenceModulo(SRawDataPacketOld *pData);
-	//void BuildOutputPacket(SRawDataPacketOld *pRaw);
 	void BuildOutputPacket(InputRawDataPacket *pInput);
 	void SaveFakeData(CString& s);
 
 	void AddToIdataPacket(CvChannel *pChannel, int nCh, int nSeq, int nSendFlag);
 	// create a processing class instance for each wall channel
-//	CRunningAverage *m_pRunAvg[MAX_WALL_CHANNELS];
 		
 	int m_nInspectMode;
 	int m_nMotionTime;
+	int m_nFakeDataSeqNumber;
+	int m_nFrameCount;	// every 16th frame send data to the PAG/Receiver
 	int m_nFakeDataCallCount;	// how many times fake data called.
 
 	// Add state variable for Fake Data to determine start seq and start chnl
@@ -128,8 +124,8 @@ public:
 
 	// 11-12-2012
 		
-	CHwTimer *m_pElapseTimer;
-	int m_nElapseTime;
+//	CHwTimer *m_pElapseTimer;
+//	int m_nElapseTime;
 
 protected:
 	DECLARE_MESSAGE_MAP()

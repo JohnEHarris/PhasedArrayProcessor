@@ -13,13 +13,18 @@ Revised:
 
 
 #include "stdafx.h"
+#ifdef _I_AM_PAG
+#include "tscandlg.h"
+#else
 #include "ServiceApp.h"
+#endif
 
 CCmdFifo::CCmdFifo(int PacketSize)
 	{
 	//m_PacketSize = PacketSize;
 	m_In = m_Out = m_Size = 0;
 	Reset();
+	m_nFifoCnt = gnFifoCnt++;
 	};
 
 CCmdFifo::~CCmdFifo()

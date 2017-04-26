@@ -39,6 +39,7 @@ CHwTimer :: CHwTimer()	// constructor
 	CString s;
 	s.Format(_T("New HwTimer created by thread ID = 0x%04x\n"), nId);
 	TRACE(s);
+	strcpy(tag, " ");
 	}
 
 

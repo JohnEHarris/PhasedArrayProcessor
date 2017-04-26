@@ -176,7 +176,6 @@
     <ClInclude Include="NTService.h" />
     <ClInclude Include="NTServiceEventLogMsg.h" />
     <ClInclude Include="ServerRcvListThread.h" />
-    <ClInclude Include="ServerRcvListThreadBase.h" />
     <ClInclude Include="ServerSocketOwnerThread.h" />
     <ClInclude Include="ServerConnectionManagement.h" />
     <ClInclude Include="ServerListenThread.h" />
@@ -208,7 +207,6 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="ServerRcvListThread.cpp" />
-    <ClCompile Include="ServerRcvListThreadBase.cpp" />
     <ClCompile Include="ServerSocketOwnerThread.cpp" />
     <ClCompile Include="ServerConnectionManagement.cpp" />
     <ClCompile Include="ServerListenThread.cpp" />

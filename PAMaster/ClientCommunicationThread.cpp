@@ -36,37 +36,27 @@ Revised:	02-Mar-2005 This code works the same, but the CClientSocket is now usin
 
 #endif
 #include "stdafx.h"
+#include <string.h>
 					
 //#include "MC_SysCPTestClient.h"
 //#include "MC_SysCPTestClientDlg.h"
-#include "resource.h"
-//#include "ServiceApp.h"
-#include "ClientSocket.h"
-#include "ClientConnectionManagement.h"
-#include "ClientCommunicationThread.h"
-//#include "TCPCommunicationDlg.h"
-
-//#include "ClientCommunicationThread.h"
-
-extern CString GetTimeString(void);
-
 #ifdef _I_AM_PAG
 #include "Truscan.h"
 #include "TscanDlg.h"
 class CTscanDlg;
 extern CTscanDlg* pCTscanDlg;
+extern CString GetTimeString(void);
+#include "resource.h"
+
+
 #else
-
-#ifndef stSEND_PACKET
-typedef struct
-	{
-	int nLength;		// number of bytes to send
-//	BYTE *pMsg;			// ptr to the message bytes to send.
-	BYTE Msg[1];		// ptr to the message bytes to send.
-	}	stSEND_PACKET;
+#include "ServiceApp.h"
 #endif
 
-#endif
+#include "ClientSocket.h"
+#include "ClientConnectionManagement.h"
+#include "ClientCommunicationThread.h"
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -74,7 +64,15 @@ typedef struct
 static char THIS_FILE[] = __FILE__;
 #endif
 
-
+		
+#if	0		//ndef stSEND_PACKET
+typedef struct
+	{
+	int nLength;		// number of bytes to send
+//	BYTE *pMsg;			// ptr to the message bytes to send.
+	BYTE Msg[1];		// ptr to the message bytes to send.
+	}	stSEND_PACKET;
+#endif
 /////////////////////////////////////////////////////////////////////////////
 // CClientCommunicationThread
 
@@ -97,6 +95,7 @@ CClientCommunicationThread::CClientCommunicationThread()
 	m_DebugLimit		= 0;
 	m_nDebugEmptyList	= 0;
 	m_pElapseTimer		= new CHwTimer();
+	strcpy(m_pElapseTimer->tag, "CComThrd89 ");
 	m_nTimerPacketsWaiting = 0;
 	}
 
@@ -108,6 +107,9 @@ CClientCommunicationThread::~CClientCommunicationThread()
 
 	if (m_pElapseTimer)
 		{
+		strcat(m_pElapseTimer->tag, "CComThrd102\n");
+		s = m_pElapseTimer->tag;
+		TRACE(s);
 		delete m_pElapseTimer;
 		m_pElapseTimer = 0;
 		}
@@ -134,7 +136,8 @@ CClientCommunicationThread::~CClientCommunicationThread()
 			m_pstCCM->pSocket = NULL;
 			t = _T("~CClientCommunicationThread() ASync socket not null\n");
 			}
-
+		TRACE(s);
+		if (t.GetLength()) TRACE(t);
 		break;
 	case 2:
 		s.Format(_T("Send Com thread[%d],handle %0x Destructor ran\n"), i, this->m_hThread);	
@@ -144,10 +147,11 @@ CClientCommunicationThread::~CClientCommunicationThread()
 			m_pstCCM->pSendThread = NULL;
 			t = _T("~CClientCommunicationThread() send thread not null\n");
 			}
+		TRACE(s);
+		if (t.GetLength()) TRACE(t);
 		break;
 		}
-	TRACE(s);
-	if (t.GetLength()) TRACE(t);
+
 	}
 
 
@@ -170,12 +174,71 @@ BOOL CClientCommunicationThread::InitInstance()
 int CClientCommunicationThread::ExitInstance()
 	{
 	// TODO:  perform any per-thread cleanup here
+	void *pv;
 	switch (m_nMyRole)
 		{
 	default:	TRACE(_T("?? Com thread ExitInstance()\n"));	break;
 	case 1:		
 		TRACE(_T("Rcvr Com thread ExitInstance()\n"));
-		//delete m_pstCCM->pReceiveThread;
+		if (NULL == m_pMyCCM)				break;
+		if (NULL == m_pstCCM)				break;
+		if (NULL == m_pstCCM->pCSRcvPkt)	break;
+		m_pMyCCM->SetConnectionState(0);
+		EnterCriticalSection(m_pstCCM->pCSRcvPkt);
+		if (m_pSocket)
+			{
+			m_pSocket->Close();
+			Sleep(10);
+			delete m_pSocket;
+			m_pSocket = NULL;
+			}
+		while (m_pstCCM->pRcvPktPacketList->GetCount())
+			{
+			pv = m_pstCCM->pRcvPktPacketList->RemoveHead();
+			delete pv;
+			}
+		LeaveCriticalSection(m_pstCCM->pCSRcvPkt);
+		delete m_pstCCM->pRcvPktPacketList;
+		delete m_pstCCM->pCSRcvPkt;
+		m_pstCCM->pRcvPktPacketList = 0;
+		m_pstCCM->pCSRcvPkt = 0;
+		// repeat for other lists and sections
+
+		EnterCriticalSection(m_pstCCM->pCSDebugIn);
+		while (m_pstCCM->pInDebugMessageList->GetCount())
+			{
+			pv = m_pstCCM->pInDebugMessageList->RemoveHead();
+			delete pv;
+			}
+		LeaveCriticalSection(m_pstCCM->pCSDebugIn);
+		delete m_pstCCM->pInDebugMessageList;
+		delete m_pstCCM->pCSDebugIn;
+		m_pstCCM->pInDebugMessageList = 0;
+		m_pstCCM->pCSDebugIn = 0;
+
+		EnterCriticalSection(m_pstCCM->pCSDebugOut);
+		while (m_pstCCM->pOutDebugMessageList->GetCount())
+			{
+			pv = m_pstCCM->pOutDebugMessageList->RemoveHead();
+			delete pv;
+			}		
+		LeaveCriticalSection(m_pstCCM->pCSDebugOut);
+		delete m_pstCCM->pOutDebugMessageList;
+		delete m_pstCCM->pCSDebugOut;
+		m_pstCCM->pOutDebugMessageList = 0;
+		m_pstCCM->pCSDebugOut = 0;
+
+		EnterCriticalSection(m_pstCCM->pCSSendPkt);
+		while (m_pstCCM->pSendPktList->GetCount())
+			{
+			pv = m_pstCCM->pOutDebugMessageList->RemoveHead();
+			delete pv;
+			}
+		LeaveCriticalSection(m_pstCCM->pCSSendPkt);
+		delete m_pstCCM->pSendPktList;
+		delete m_pstCCM->pCSSendPkt;
+		m_pstCCM->pSendPktList = 0;
+		m_pstCCM->pCSSendPkt = 0;
 
 		break;
 
@@ -193,8 +256,8 @@ BEGIN_MESSAGE_MAP(CClientCommunicationThread, CWinThread)
 	//}}AFX_MSG_MAP
 
 	ON_THREAD_MESSAGE(WM_USER_INIT_TCP_THREAD,InitTcpThread)
-	ON_THREAD_MESSAGE(WM_USER_KILL_RECV_THREAD,KillReceiveThread)
-	ON_THREAD_MESSAGE(WM_USER_KILL_SEND_THREAD,KillSendThread)
+//	ON_THREAD_MESSAGE(WM_USER_KILL_RECV_THREAD,KillReceiveThread)
+//	ON_THREAD_MESSAGE(WM_USER_KILL_SEND_THREAD,KillSendThread)
 	//ON_THREAD_MESSAGE(WM_USER_RESTART_TCP_COM_DLG,RestartTcpComDlg)
 	ON_THREAD_MESSAGE(WM_USER_RESTART_ADP_CONNECTION,RestartTcpComDlg)
 	ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, TransmitPackets)	
@@ -252,6 +315,7 @@ afx_msg void CClientCommunicationThread::InitTcpThread(WPARAM w, LPARAM lParam)
 	}
 
 // For shutdown must kill threads and linked lists
+#if 0
 afx_msg void CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lParam)
 	{
 	int nError;
@@ -324,7 +388,7 @@ afx_msg void CClientCommunicationThread::KillSendThread(WPARAM w, LPARAM lParam)
 	//ExitInstance();
 	//delete m_pstCCM->pSendThread;
 	}
-	
+#endif
 
 
 // Taken from CTCPCommunicationDlg to eliminate need for hidden windows dialog
@@ -361,7 +425,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 
 	m_pMyCCM->SetConnectionState(0);	// now assume we are not connected
 
-	EnterCriticalSection(m_pstCCM->cpCSRcvPkt);
+	EnterCriticalSection(m_pstCCM->pCSRcvPkt);
 //	if (m_pSocket)
 	if (m_pstCCM->pSocket)
 		{
@@ -392,7 +456,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 #endif
 
 
-	LeaveCriticalSection(m_pstCCM->cpCSRcvPkt);
+	LeaveCriticalSection(m_pstCCM->pCSRcvPkt);
 	
 	if( !m_pSocket )
 		{
@@ -446,6 +510,8 @@ void CClientCommunicationThread::StartTCPCommunication()
 				m_pSocket->ShutDown(2);
 				m_pSocket->Close();		
 				delete m_pSocket;
+				m_pSocket = NULL;
+				m_pMyCCM->SetSocketPtr(m_pSocket);
 				return;	// C_CLIENT_SOCKET_CREATION_ERROR;
 				}
 			}
@@ -498,13 +564,16 @@ void CClientCommunicationThread::StartTCPCommunication()
 			m_pSocket->ShutDown(2);
 			m_pSocket->Close();		
 			delete m_pSocket;
+			m_pSocket = NULL;
+			m_pMyCCM->SetSocketPtr(m_pSocket);
 			return;	// C_CLIENT_SOCKET_CREATION_ERROR;
 			}
 		else
 			{
-			s.Format(_T("SysCP or %s: connected.\n"), stmp);
-			TRACE(s);   //DebugMsg(s)	// Connect to server named xxx at ip = yyyy
 			m_pMyCCM->SetSocketPtr(m_pSocket);		// store socket into stCCM for use by send and receive threads
+			s.Format(_T("SysCP or %s: connected using socket at 0x%08x sizeof=%d.\n"), 
+				stmp, m_pSocket, sizeof(CClientSocket));
+			TRACE(s);   //DebugMsg(s)	// Connect to server named xxx at ip = yyyy
 			}
 
 	}
@@ -549,68 +618,64 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		s.Format(_T("Transmit Packet old thread id=%d New thread id=%d\n"), m_nThreadIdOld, nId);
 		m_nThreadIdOld = nId;
 		nRole = m_nMyRole;
-		DebugMsg(s);
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
+
 		}
 
 	s = _T("CClientCommunicationThread::TransmitPackets ");
 	if (!m_pMyCCM)
 		{
 		s += _T("!m_pMyCCM\n");
-		DebugMsg(s);
-		ASSERT(0);	// about to return and leave an orphaned memory segment in SendPktList
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
 		return;	// (LRESULT) 0;
 		}
 	if (!m_pstCCM)
 		{
 		s += _T("!m_pstCCM\n");
-		DebugMsg(s);
-		ASSERT(0);	// about to return and leave an orphaned memory segment in SendPktList
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
 		return;	// (LRESULT) 0;
 		}
-
 	if (m_pstCCM->pSendPktList->IsEmpty())
 		{
-		i = m_pMyCCM->m_pstCCM->pSendPktList->GetCount();
-		s += _T("m_pstCCM->pSendPktList->IsEmpty()");
-#if 0
-		t.Format(_T(", triggered by %d\n"), w);
-		s += t;
-		DebugMsg(s);
-		if (w == 1)	// came from timer
-			{
-			s.Format(_T("Address of m_pMyCCM->m_pstCCM->pSendPktList = 0x%08x\n"), &m_pMyCCM->m_pstCCM->pSendPktList);
-			TRACE(s);
-			}
-#endif
-		m_nDebugEmptyList++;
-		if (m_nDebugEmptyList > 5)
-			s = _T("Break Here");
+		s += _T("m_pstCCM->pSendPktList->IsEmpty()\n");
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif		
 		return;	// (LRESULT) 0;	// nothing to send
 		}
 		
-	m_nDebugEmptyList = 0;
+	//m_nDebugEmptyList = 0;
 
 	// Since we got here we know the list is not empty
 	IDATA_PACKET *pSendPkt;	// ptr to the packet info in the linked list of send packets
 
 	if (!m_pstCCM->pSocket)
 		{
-		// kill the recently added members of the linked list
-
-		m_pMyCCM->LockSendPktList();
-		while (m_pstCCM->pSendPktList->GetCount() > 0)
-			{
-			pSendPkt = (IDATA_PACKET *)m_pstCCM->pSendPktList->RemoveHead();
-			delete pSendPkt;
-			}
-		m_pMyCCM->UnLockSendPktList();	// give a higher priority thread a chance to add packets
-		
-		if (pSendPkt != NULL)
-			delete pSendPkt;
-		pSendPkt = NULL;
-
-		s += _T("!m_pstCCM->pSocket.. killed SendPktList member\n");
-		DebugMsg(s);
+		s += _T("!m_pstCCM->pSocket\n");
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif		
 		return;	// (LRESULT) 0;	// no socket to send with
 		}
 
@@ -618,6 +683,13 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 
 
 	s += _T("Send queued messages if any\n");
+	TRACE(s);
+#ifdef	_I_AM_PAG
+		if (CNcNx::m_pDlg)
+			CNcNx::m_pDlg->DebugOut(s);
+#else
+		TRACE(s);
+#endif
 
 	// if we get to here, there is at least one packet to send
 	while (m_pstCCM->pSendPktList->GetCount() > 0)
@@ -757,8 +829,8 @@ afx_msg void CClientCommunicationThread::OnTimer(WPARAM w, LPARAM lParam)
 	case eFake_GDP_Pipe_Data:
 		// call back to the main dialog to generate and send some fake pipe data to gdp
 		// fake data is taken from yiqing's void CAmalogSimDlg::OnStopSequence() 
-		if ((m_nTick & 3) == 0)
-			pCTscanDlg->MakeFakeGDP_Data();
+//		if ((m_nTick & 3) == 0)
+//			pCTscanDlg->MakeFakeGDP_Data();
 		break;
 #endif
 
@@ -768,19 +840,7 @@ afx_msg void CClientCommunicationThread::OnTimer(WPARAM w, LPARAM lParam)
 
 
 
-	// In case we have packets to send and haven't been pinged to send them  w = 1
-	int i;
-	m_pMyCCM->LockSendPktList();
-	i = m_pMyCCM->m_pstCCM->pSendPktList->GetCount();
-	m_pMyCCM->UnLockSendPktList();
-	if (i > 0)
-		{
-#if 0
-		s.Format(_T("OnTimer-Address of m_pMyCCM->m_pstCCM->pSendPktList = 0x%08x, queued = %5d\n"), 
-			&m_pMyCCM->m_pstCCM->pSendPktList, i);
-		TRACE(s);
-#endif
-		// or maybe just call TransmitPacket directly from here
-		m_pMyCCM->m_pstCCM->pSendThread->PostThreadMessage(WM_USER_SEND_TCPIP_PACKET, 1, i);
-		}
+	// In case we have packets to send and haven't been pinged to send them
+	if (m_pMyCCM->m_pstCCM->pSendPktList->GetCount())
+		m_pMyCCM->m_pstCCM->pSendThread->PostThreadMessage(WM_USER_SEND_TCPIP_PACKET,0,0L);
 	}

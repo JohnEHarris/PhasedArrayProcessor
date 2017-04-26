@@ -42,9 +42,17 @@ public:
 	afx_msg void Exit2(WPARAM w, LPARAM lParam);
 	afx_msg void MyDestructor();
 	void KillServerSocketClass(void);
-	CServerConnectionManagement *m_pMySCM;		// managing class ptr
+	CServerConnectionManagement *m_pSCM;		// managing class ptr
 	int m_nMyServer;							// which instance of stSCM[] we are
-	int m_nThreadIndex;							// which one of SSC are we
+	int m_nClientIndex;							// which one of SSC are we
+	void SetClientPortIndex( int indx ) { m_nClientIndex = indx; }
+	// call these get/set function from ServerSocketOwnerThread ExitInstance to update
+	// the values
+	ST_SERVERS_CLIENT_CONNECTION * GetpSCC( void )	{ return m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]; }
+	void SetpSCC( ST_SERVERS_CLIENT_CONNECTION* p ) { m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  p; }
+	void NullpSCC(void)								{m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  0;}
+
+
 	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// managing structure ptr
 	ST_SERVERS_CLIENT_CONNECTION *m_pSCC;		// ptr to my connection info/statistics/objects
 

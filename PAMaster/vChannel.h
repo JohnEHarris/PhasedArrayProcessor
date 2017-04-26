@@ -2,7 +2,7 @@
 Author: jeh
 Date:	2016-05-31
 Purpose:Simulate hardware processing of wall and flaw channels. One class instance for each channel
-		Will perform Nc and Nx operations on a give Ascan out of 32 (at this time).
+		Will perform Nc and Nx operations on a given Ascan out of 32 (at this time).
 		Over 16 complete sequences of time will generate the Nc out put for a flaw channel and the Nx wall reading
 		providing both max and min wall reading for the interval.
 		1  1  1  1 -> processed value for Nx/Nx for first "channel" sequence
@@ -17,23 +17,31 @@ Purpose:Simulate hardware processing of wall and flaw channels. One class instan
 		2016-11-11 Add interface gate (gate 1) and FIFO into vChnl. Use default setting for now. NO direct command
 					to set gate parameters at this time.
 */
+#if _MSC_VER > 1000
+#pragma once
+#endif // _MSC_VER > 1000
 
 #ifndef V_CHANNEL_H
 #define V_CHANNEL_H
+#include "../Include/PA2Struct.h"
 
+#ifdef THIS_IS_SERVICE_APP
 #include "ServiceApp.h"
+#endif
 
 class CvChannel
 	{
 public:
-	CvChannel(int nInst, int nSeq, int nChnl);
+	//CvChannel(int nInst, int nSeq, int nChnl);
+	CvChannel(int nSeq, int nChnl);
 	virtual ~CvChannel();
+#if 1
 
 	/*********************** Flaw processing routines ***********************/
 	// Nc_FIFO is defined in PA2Struct.h
 	Nc_FIFO NcFifo[3];	// id=0, od=1, interface=2
 
-	// An amplitued is input and an Nc qualified reading is returned.
+	// An amplitude is input and an Nc qualified reading is returned.
 	// bIdOd selects which FIFO id=0, od=1,bAmp is the input to the fifo
 	BYTE InputFifo(BYTE bIdOd,BYTE bAmp);
 
@@ -134,6 +142,11 @@ public:
 	// in the ServiceApp along with the linked lists. Layers below ServiceApp are destroyed/recreated on a disconnect.
 	// However, a reconnect will need to have NcNx refreshed to the instrument
 	// by PAP transparent to the rest of the system.
+	// changed on 2017-04-18 to create/destroy as instrument clients connect.
+	// This is so the PAG and PAP code can be almost identical.
+	// PAG is much easier to debug. PAG must work this way by assuming there is nothing existing
+	// before and instrument connects.
+#endif
 	};	
 
 #endif

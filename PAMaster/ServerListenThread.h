@@ -34,6 +34,7 @@ public:
 
 	CServerConnectionManagement *m_pMySCM;		// managing class ptr
 	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// managing structure ptr
+	
 
 protected:
 

@@ -29,20 +29,23 @@ static char THIS_FILE[] = __FILE__;
 
 IMPLEMENT_DYNAMIC(CClientSocket, CAsyncSocket);
 
-
-
 // New constructor for ClientConnectionManagment
 // Pass a ptr to the CCM class instance managing this socket/connection
 CClientSocket::CClientSocket( CClientConnectionManagement *pCCM	)
 	{
+	CString s;
 		if (pCCM)	
 		{
 			m_pCCM = pCCM;
-			TRACE(_T("Valid CCM ptr, use OnReceive1()\n"));
 			m_nChooseYourOnReceive = 1;	// new constructor gets new OnReceive jeh
 			//m_pMainDlg = (CMC_SysCPTestClientDlg *) theApp.m_pMainWnd;
 			if (m_pCCM->m_pstCCM)
 				m_pCCM->m_pstCCM->pSocket = this;
+			m_nAsyncSocketCnt = gnAsyncSocketCnt++;
+			m_nOwningThreadId = AfxGetThread()->m_nThreadID;
+			s.Format(_T("Valid CCM ptr, use OnReceive1(), Socket# =%d, CreateThread = %d\n"),
+				m_nAsyncSocketCnt, m_nOwningThreadId);
+			TRACE(s);
 		}
 		else
 		{
@@ -55,9 +58,20 @@ CClientSocket::CClientSocket( CClientConnectionManagement *pCCM	)
 
 CClientSocket::~CClientSocket()
 	{
+	CString s;
 	if (NULL == m_pCCM)				return;
 	if (NULL == m_pCCM->m_pstCCM)	return;
-	m_pCCM->m_pstCCM->pSocket = NULL;
+	s.Format(_T("~CClientSocket Socket# =%d, CreateThread = %d\n"),
+				m_nAsyncSocketCnt, m_nOwningThreadId);
+	TRACE(s);
+	if (m_pCCM->m_pstCCM->m_pFifo != NULL)
+		{
+		s.Format(_T("~CClientConnectionManagement Fifo cnt=%d,  ThreadID=0x%08x\n"),
+		m_pCCM->m_pstCCM->m_pFifo->m_nFifoCnt,  m_pCCM->m_pstCCM->m_pFifo->m_nOwningThreadId);
+		TRACE(s);
+		delete m_pCCM->m_pstCCM->m_pFifo;
+		m_pCCM->m_pstCCM->m_pFifo = 0;
+		}
 	}
 
 
@@ -102,7 +116,10 @@ void CClientSocket::DebugOutMessage(CString s)
 	CString s1 = _T("CClientSocket..");
 	s1 += s + _T("\n");
 	TRACE(s1);
+#ifdef THIS_IS_SERVICE_APP
 	theApp.SaveDebugLog(s1);
+#endif
+
 }
 
 // This is the legacy OnReceive. Selected by using the legacy constructor
@@ -115,7 +132,7 @@ void CClientSocket::OnReceive0(int nErrorCode)
 #if 0
 	n = Receive( (void *) Data, sizeof(TCPDUMMY), 0 );
 	m_pListDataIn->AddTail( Data );
-	s.Format( _T("OnReceive0(): Received %d bytes."), n );
+	s.Format( _T("OnReceive0(): Received %d bytes.\n"), n );
 	DebugInMessage( s );
 #endif
 }
@@ -148,24 +165,7 @@ void CClientSocket::OnReceive1(int nErrorCode)
 
 // Override the base class OnReceive method
 // A method to allow mixture of Yanmings original code with this code
-#if 0
-void CClientSocket::OnReceive(int nErrorCode) 
-{
-	switch (m_nChooseYourOnReceive)
-	{
-	case 0:		// legacy
-		OnReceive0(nErrorCode);
-		break;
-	case 1:		// new.. uses CCM class and objects
-		OnReceive1(nErrorCode);
-		break;
-	default:
-		TRACE(_T("Not a valid choice for OnReceive, Houston, we have a problem\n"));
-		break;
-	}
-	CAsyncSocket::OnReceive(nErrorCode);	
-}
-#endif
+
 
 
 // Clean up the code w/o 2 OnReceive methods
@@ -193,6 +193,17 @@ void CClientSocket::OnAccept(int nErrorCode)
 
 void CClientSocket::OnClose(int nErrorCode) 
 	{
+	if (m_pCCM)
+		{
+		// Let the client manager decide if a restart of the receive/send thread is needed
+		m_pCCM->SetConnectionState(0);
+		if ( m_pCCM->m_pstCCM)
+			{
+			m_pCCM->InitReceiveThread();
+			}
+		}
+
+
 	CAsyncSocket::OnClose(nErrorCode);
 	}
 
@@ -236,7 +247,7 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
               _T("used with this socket.\n"));
               break;
            case WSAECONNREFUSED: 
-              MyMessageBox(_T("The attempt to connect was forcefully rejected.\n"));	//10061
+              //MyMessageBox(_T("The attempt to connect was forcefully rejected.\n"));	//10061
               break;
            case WSAEDESTADDRREQ: 
               MyMessageBox(_T("A destination address is required.\n"));
@@ -289,7 +300,9 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		GetSockName(s1, uCPort);
 		s.Format(_T("PAM client IP = %s:%d connected to the PAG server = %s:%d "), s1, uCPort, s0, uSPort);
 		DebugOutMessage(s);
+#ifdef THIS_IS_SERVICE_APP
 		theApp.SetMy_PAM_Number(s1, uCPort);
+#endif
 		DebugOutMessage(s);
 		// may need to replace this with some sort of call to MakeConnectionDetail
 		// changed when CLIENT_IDENTITY_DETAIL removed from structure ST_CLIENT_CONNECTION_MANAGEMENT
@@ -316,11 +329,11 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		int nSize;
 		int nSizeOf = sizeof(int);
 		GetSockOpt(SO_SNDBUF, &nSize, &nSizeOf, SOL_SOCKET);
-		s.Format(_T("NIC Transmit Buffer Size = %d"), nSize);
+		s.Format(_T("NIC Transmit Buffer Size = %d\n"), nSize);
 		DebugOutMessage(s);
 
 		GetSockOpt(SO_RCVBUF, &nSize, &nSizeOf, SOL_SOCKET);
-		s.Format(_T("NIC Receiver Buffer Size = %d"), nSize);
+		s.Format(_T("NIC Receiver Buffer Size = %d\n"), nSize);
 		DebugOutMessage(s);
 
 		// Do all servers utilize the same message structure????

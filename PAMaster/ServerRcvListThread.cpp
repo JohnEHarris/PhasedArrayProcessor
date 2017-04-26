@@ -27,18 +27,11 @@ static char THIS_FILE[] = __FILE__;
 // THIS_IS_SERVICE_APP is defined in the PAM project under C++ | Preprocessor Definitions 
 
 #ifdef THIS_IS_SERVICE_APP
-#include "../include/pa2struct.h"
-
-// for rnadom number generator
+// for random number generator
 #include <stdlib.h>
 
 class CInstState;
 extern  CInspState InspState;
-//extern 	C_MSG_ALL_THOLD  g_AllTholds;
-//extern 	C_MSG_NC_NX g_NcNx;
-//extern I_MSG_RUN SendBuf;
-//extern DWORD  g_nStation2JointNum;// = 0;
-//extern I_MSG_RUN SendCalBuf;
 
 extern UINT uAppTimerTick;
 extern CServiceApp theApp;
@@ -47,7 +40,7 @@ extern CServiceApp theApp;
 int nLoc = 20;
 
 /** External function prototypes... mostly in Service.cpp   **/
-extern void Inspection_Process_Control();
+//extern void Inspection_Process_Control();
 
 // Assume this is PAG if not ServiceApp
 #else
@@ -71,38 +64,52 @@ extern void Inspection_Process_Control();
 
 // This thread is created by the ServerSocketOwnerThread in its InitInstance() function
 
+// 2017-04-03 Remove the ServerRcvListThreadBase from the project.
+// ON creation pass the specific ClientConnection ptr to the thread 
+// and pass the server ID. Then the thread will know the nature
+// of the server by its ID. ID= PAP for the GUI. We do not need to be concerned with
+// the socket are anything related to TCP/IP. This thread merely call some function
+// to process data in a linked list. The routine called is dependent on the server function
+// identified by the server ID number. Further refinement in the function called is obtained
+// by examining the message ID contained in the linked list of messages from the PAP in the
+// case of the PAG - Phased Array GUI receiving packet from the PAP
 // CServerRcvListThread
 
-IMPLEMENT_DYNCREATE(CServerRcvListThread, CServerRcvListThreadBase)
+IMPLEMENT_DYNCREATE(CServerRcvListThread, CWinThread)
 
 CServerRcvListThread::CServerRcvListThread()
 	{
+#ifdef THIS_IS_SERVICE_APP
+	m_nFakeDataSeqNumber = 0;
+	m_nFrameCount = 0;
 	m_nFakeDataCallCount = 0;
 	srand( (unsigned)time( NULL ) );	// seed random number generator
-#if 0
-	// The output packet has the same structure and the input. It is a compress version of the input
-	m_pOutputRawDataPacket = new InputRawDataPacket;
-	memset(m_pOutputRawDataPacket, 0, sizeof (InputRawDataPacket));
 #endif
-
-	m_pIdataPacket = NULL;
-	//m_uMsgSeqCnt = 0;
+	m_pElapseTimer = 0;
+	CString s;
+	int nId = AfxGetThread()->m_nThreadID;
+	s.Format(_T("CServerRcvListThread[%d][%d] = 0x%08x, Id=0x%04x constructor\n"), m_nMyServer, m_nClientIndex, this, nId);
+	TRACE(s);
 	}
 
 CServerRcvListThread::~CServerRcvListThread()
 	{
 	CString s;
 	int nId = AfxGetThread()->m_nThreadID;
-	s.Format(_T("~CServerRcvListThread[%d][%d] = 0x%08x, Id=0x%04x has run\n"), m_nMyServer, m_nThreadIndex, this, nId);
+	s.Format(_T("~CServerRcvListThread[%d][%d] = 0x%08x, Id=0x%04x has run\n"), m_nMyServer, m_nClientIndex, this, nId);
 	TRACE(s);
-#if 0
-	if (m_pOutputRawDataPacket != NULL)
-		delete m_pOutputRawDataPacket;
-	m_pOutputRawDataPacket = 0;
-#endif
+	if (m_pElapseTimer)
+		delete m_pElapseTimer;
+	m_pElapseTimer = 0;
+
+#ifdef THIS_IS_SERVICE_APP
 	if (m_pIdataPacket != NULL)
 		delete m_pIdataPacket;
 	m_pIdataPacket = 0;
+#endif
+	if (NULL == m_pSCC)			return;
+	m_pSCC->pServerRcvListThread = NULL;
+
 	}
 
 // We have to over-ride the parents InitInstance since this thread is created by the parent in InitInstance()
@@ -114,15 +121,13 @@ BOOL CServerRcvListThread::InitInstance()
 	CString s;
 	int i;
 	
-	// TODO:  perform and per-thread initialization here
-#ifndef _AFXDLL
-	AFX_MODULE_THREAD_STATE* pState = AfxGetModuleThreadState();	// debug checking
-	AfxSocketInit();
-#endif
-
 #ifdef THIS_IS_SERVICE_APP
 
-	CServerRcvListThreadBase::InitInstance();
+	s.Format(_T("Instrument Client[%d] accepted to server on socket %s : %d\n"), m_nThreadIndex, 
+		m_ConnectionSocket.m_pSCC->sClientIP4, m_ConnectionSocket.m_pSCC->uClientPort); 
+	TRACE(s);
+	TRACE(m_ConnectionSocket.m_pSCC->szSocketName);
+
 	m_pElapseTimer = new CHwTimer();
 	i = sizeof(CHwTimer);		// 364
 	m_FDstartSeq = m_FDstartCh = 0;	// Fake data simulator state variables
@@ -131,11 +136,10 @@ BOOL CServerRcvListThread::InitInstance()
 
 #else
 	// not THIS_IS_SERVICE_APP
-
-	CServerRcvListThreadBase::InitInstance();
+	s.Format(_T("m_pstSCM = 0x%x, m_pSCC = 0x%x, m_MyServer = %d\n"),
+		m_pstSCM, m_pSCC, m_nMyServer);
 	TRACE(s);
-	TRACE(m_ConnectionSocket.m_pSCC->szSocketName);
-	//InitRunningAverage(0,0);
+
 	return TRUE;
 
 #endif		// not THIS_IS_SERVICE_APP
@@ -162,20 +166,20 @@ int CServerRcvListThread::ExitInstance()
 	// may need to get rid of ServerSocketOwnerThread elements also
 
 #endif
-	s.Format(_T("CServerRcvListThread, Srv[%d]Instrument[%d] has exited\n"),m_nMyServer, m_nThreadIndex);
+	s.Format(_T("CServerRcvListThread, Srv[%d]Instrument[%d] has exited\n"),m_nMyServer, m_nClientIndex);
 	TRACE(s);
-	return CServerRcvListThreadBase::ExitInstance();
+	return 0;	// CServerRcvListThreadBase::ExitInstance();
 
 }
 
+
 //BEGIN_MESSAGE_MAP(CServerRcvListThread, CServerSocketOwnerThread)	// changed (xx,CWin) to (xx,CServerSocketOwnerThread)
-BEGIN_MESSAGE_MAP(CServerRcvListThread, CServerRcvListThreadBase)
+BEGIN_MESSAGE_MAP(CServerRcvListThread, CWinThread)
 
 
 #ifdef THIS_IS_SERVICE_APP
 	ON_THREAD_MESSAGE(WM_USER_SERVERSOCKET_PKT_RECEIVED, ProcessRcvList)// manually added by jeh 11-06-12
-//	ON_THREAD_MESSAGE(WM_USER_INIT_RUNNING_AVERAGE, InitRunningAverage)	// manually added by jeh 11-09-12
-	ON_THREAD_MESSAGE(WM_USER_FLUSH_LINKED_LISTS, FlushRcvList)			// manually added jeh 09-20-16
+//	ON_THREAD_MESSAGE(WM_USER_FLUSH_LINKED_LISTS, FlushRcvList)			// manually added jeh 09-20-16
 #endif
 
 #ifdef _I_AM_PAG
@@ -188,78 +192,62 @@ END_MESSAGE_MAP()
 // CServerRcvListThread message handlers
 // Thread message WM_USER_SERVERSOCKET_PKT_RECEIVED activates this procedure
 // comes from CServerSocket::OnReceive()
-afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
-	{
-	InputRawDataPacket *pIdataPacket;
-	int nCS = (int) w;	// which critical section's linked list will feed the data
-	int i;
-	if ( m_pstSCM)
-		{
-		if (m_pstSCM->pCS_ClientConnectionRcvList[nCS]) 
-			{
-			if (0 == TryEnterCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[nCS]))	
-				return;	 // try again later
-			}
-		}
-	else return;
-
-	// if here we are in a critical section
-
-	while (i = m_pSCC->cpRcvPktList->GetCount() )
-		{
-		pIdataPacket = (InputRawDataPacket *) m_pstSCM->pRcvPktList[nCS]->RemoveHead();				//m_pSCC->cpRcvPktList->RemoveHead();
-		//m_pSCC->pSocket->UnLockRcvPktList();
-#ifdef THIS_IS_SERVICE_APP
-		ProcessInstrumentData(pIdataPacket);	// local call to this class memeber
-#else
-		ProcessPAM_Data(pV);
-#endif
-		}
-
-	LeaveCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[nCS]);
-	}
-
-// this procedure activated by WM_USER_FLUSH_LINKED_LISTS
-// WPARAM is the specific client connection to flush 
-void CServerRcvListThread::FlushRcvList(WPARAM w, LPARAM lParam)
+void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 	{
 	void *pV;
-	int j = (int) w;
-	if ( m_pstSCM)
+	int i;
+#ifdef THIS_IS_SERVICE_APP
+	InputRawDataPacket *pIdata;
+#else
+	IDATA_PACKET *pIdata;	// output data from PAP/PAM-- debugging
+#endif
+	//m_pSCC = GetpSCC(); receive list does not have to know about the rest of the structures
+	if (m_pSCC)
 		{
-		if (m_pstSCM->pCS_ClientConnectionRcvList[j]) 
+		if (m_pSCC->pSocket)
 			{
-			if (0 == TryEnterCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]))	return;	 // try again later
+			m_pSCC->pSocket->LockRcvPktList();
+#ifdef THIS_IS_SERVICE_APP
+		while (i = m_pSCC->cpRcvPktList->GetCount() )
+			{
+			pV = m_pSCC->cpRcvPktList->RemoveHead();
+			m_pSCC->pSocket->UnLockRcvPktList();
+			pIdata = (InputRawDataPacket *)pV;
+			ProcessInstrumentData(pIdata);	// local call to this class memeber
+#else
+			while (i = m_pSCC->pRcvPktList->GetCount() )
+				{
+				pV = m_pSCC->pRcvPktList->RemoveHead();
+				m_pSCC->pSocket->UnLockRcvPktList();
+				pIdata = (IDATA_PACKET *)pV;	// examine contents with debugger
+				ProcessPAM_Data(pV);
+
+				
+#endif
+				m_pSCC->pSocket->LockRcvPktList();
+				}
+			m_pSCC->pSocket->UnLockRcvPktList();
 			}
 		}
-	else return;
-
-	// if here we are in a critical section
-
-	while (m_pSCC->cpRcvPktList->GetCount() )
-		{
-		pV = m_pstSCM->pRcvPktList[j]->RemoveHead();				//m_pSCC->cpRcvPktList->RemoveHead();
-
-		delete pV;
-		}
-	LeaveCriticalSection(m_pstSCM->pCS_ClientConnectionRcvList[j]);
 	}
 
-//void CServerRcvListThread::MakeFakeDataHead(SRawDataPacketOld *pData)
+#ifdef THIS_IS_SERVICE_APP
 void CServerRcvListThread::MakeFakeDataHead(InputRawDataPacket *pData)
+//void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
 	{
-	//pData->wMsgID	= eRawInsp;	// raw data=10
-	//pData->wByteCount = 1460;
-	pData->bDin		= FORWARD | PIPE_PRESENT;
-	//pData->wMsgSeqCnt++;
-	pData->wLocation = nLoc++;
-	if (nLoc > 500) 
-		nLoc = 20;
-	pData->wClock	= nLoc % 12;
-	pData->wPeriod	= 1465;	// 300 ms = 200 rpm
+	pData->DataHead.bMsgID	= eRawInsp;	// raw data=10
+	pData->DataHead.bSeq	= m_nFakeDataSeqNumber;
+	m_nFakeDataSeqNumber	+= 128;	// the next packet will 128 Ascans/Main bangs later
+	m_nFakeDataSeqNumber	= m_nFakeDataSeqNumber % 128;
+
+	pData->DataHead.bDin = FORWARD | PIPE_PRESENT;
+	pData->DataHead.wMsgSeqCnt++;
+	pData->DataHead.wLocation = nLoc++;
+	if (nLoc > 500) nLoc = 20;
+	pData->DataHead.wClock = nLoc % 12;
+	pData->DataHead.wPeriod = 1465;	// 300 ms = 200 rpm
 	}
-
-
+#endif
 // Random number between 0 and 100
 // Notice - not a class member
 //
@@ -270,7 +258,7 @@ BYTE GetRand(void)
 	//wReturn = (WORD)(((double)rand() / (RAND_MAX + 1)) * 100);
 	return (BYTE)(wReturn % 100);
 	}
-
+#ifdef THIS_IS_SERVICE_APP
 void CServerRcvListThread::IncFDstartCh(void)
 	{
 	m_FDstartCh++;
@@ -307,6 +295,12 @@ void CServerRcvListThread::MakeFakeData(InputRawDataPacket *pData)
 	SaveFakeData(s);
 
 	MakeFakeDataHead(pData);
+	// we could have fewer than 32 channels, ie sequence number could be less than 32
+	// Consider the number of ascans needed to fire all multiplexed channels (say 8)
+	// Give this number the name "frame". A frame is the number of ascans to fire all the channels
+	// Then 8 ascans would be a frame  - and 128/8 = 16 frames in the packet.
+	// Every 16 frames, generate the max and min wall reading and the max Nc qualified flaw reading for
+	// every channel. 
 
 	// Assuming only 7 sequences to fit the data size. Need to do something different if not 7 sequences in packet
 	// Doing something different
@@ -326,8 +320,10 @@ void CServerRcvListThread::MakeFakeData(InputRawDataPacket *pData)
 				{
 				t.Format(_T("\r\n[%3d] "), i); s += t;
 				// Input flaw gates before wall since the 16 Ascan reset is done by the wall code
-				//k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp1 = 1 + (GetRand() / 2);	// 1-51 amplitude
-				//t.Format(_T("%3d  "), (k)); s += t;
+#ifdef CLIVE_RAW_DATA
+				k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp1 = 1 + (GetRand() / 2);	// 1-51 amplitude
+				t.Format(_T("%3d  "), (k)); s += t;
+#endif
 				k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp2 = 5 + (GetRand() / 2);	// 5-55 amplitude
 				t.Format(_T("%3d  "), (k)); s += t;
 				k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp3 = 10 + (GetRand() / 2);	// 10-60 amplitude
@@ -338,7 +334,9 @@ void CServerRcvListThread::MakeFakeData(InputRawDataPacket *pData)
 				}
 			else
 				{
-				//pData->stSeqPkt[iSeqPkt].RawData[i].bAmp1 = 1 + (GetRand() / 2);
+#ifdef CLIVE_RAW_DATA
+				pData->stSeqPkt[iSeqPkt].RawData[i].bAmp1 = 1 + (GetRand() / 2);
+#endif
 				pData->stSeqPkt[iSeqPkt].RawData[i].bAmp2 = 5 + (GetRand() / 2);	// 5-55 amplitude
 				pData->stSeqPkt[iSeqPkt].RawData[i].bAmp3 = 10 + (GetRand() / 2);	// 10-60 amplitude
 				pData->stSeqPkt[iSeqPkt].RawData[i].wTof = 300 + GetRand();
@@ -372,8 +370,13 @@ int CServerRcvListThread::GetSequenceModulo(SRawDataPacketOld *pData)
 #if 0
 	int i;
 	int nStartSeqCount, nSeqQty;
-	// Since length == 1040 we have 128 ascan samples. 
-
+	// Since length == 1040 we have 128 ascan samples. The header tells us the 1st vChnl in the packet
+	nStartSeqCount = pData->DataHead.bSeq;
+	//Scan the whole packet to see when the start seq count occurs again .. this is the number of vChnls in th packet
+	for ( i = 1; i < 128; i++)
+		{
+		if (pData->RawData
+		}
 #endif
 	return 32;
 
@@ -384,6 +387,7 @@ int CServerRcvListThread::GetSequenceModulo(SRawDataPacketOld *pData)
 // Build Output packet as individual channel peak held data becomes available
 // could return the index in Idata
 // If SendFlag is non zero, send the packet as is
+
 void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int nSeq, int nSendFlag)
 	{
 	if (m_pIdataPacket == NULL)
@@ -391,7 +395,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int n
 		m_pIdataPacket = new (IDATA_PACKET);	// sizeof = 1460 179 RESULTS
 		memset((void *) m_pIdataPacket,0, sizeof(IDATA_PACKET));
 		m_pIdataPacket->bPAPNumber	= (BYTE) theApp.GetMy_PAM_Number();
-		m_pIdataPacket->bBoardNumber	= m_pSCC->m_nMyThreadIndex;
+		m_pIdataPacket->bBoardNumber	= m_pSCC->m_nClientIndex;
 
 		m_pIdataPacket->uSync		= SYNC;
 		m_pIdataPacket->wMsgSeqCnt = 0;	// m_uMsgSeqCnt++;
@@ -413,7 +417,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int n
 	pChannel->ClearOverRun();
 	pChannel->SetRead();
 	// if (nSendFlag) Send the packet now.
-	}
+	}	// AddToIdataPacket
 
 
 int CServerRcvListThread::GetIdataPacketIndex(void)
@@ -422,6 +426,7 @@ int CServerRcvListThread::GetIdataPacketIndex(void)
 	return m_IdataInPt;	// how may Result buffers are full. Limit is 179
 	}
 
+#endif
 
 
 // delete the pRaw packet and create a new packet for transmission
@@ -502,10 +507,12 @@ void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata)
 	pCCM_PAG->UnLockSendPktList();
 	//ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, CClientCommunicationThread::TransmitPackets)
 	PostThreadMessage(WM_USER_SEND_TCPIP_PACKET,(WORD) 3,(LPARAM) i);
-	}
+
+	}	//SendIdataToPag
 
 void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 	{
+
 	// see ServicApp.cpp the procedure tInstMsgProcess() for legacy operation
 	//
 	//stSEND_PACKET *pBuf = (stSEND_PACKET *) pData;
@@ -523,7 +530,7 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
 	i = sizeof(InputRawDataPacket);
-	if (pIData->wByteCount >= INSTRUMENT_PACKET_SIZE -16)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
+	if (pIData->wByteCount >= INSTRUMENT_PACKET_SIZE -132)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
 		{
 		/******************************************************************/
 #if 0
@@ -569,7 +576,9 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 					continue;
 				// Get flaw Nc qualified Max values for this channel
 				// Not defined what to do with status ???????
-				//bGateTmp = pChannel->InputFifo(eIf, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp1);
+#ifdef CLIVE_RAW_DATA
+				bGateTmp = pChannel->InputFifo(eIf, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp1);
+#endif
 				bGateTmp = pChannel->InputFifo(eId, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp2);	// output of the Nc peak holder
 				bGateTmp = pChannel->InputFifo(eOd, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp3);
 
@@ -593,6 +602,8 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 						// that is not a class member
 						IDATA_PACKET *pIdataPacket = new (IDATA_PACKET);
 						memcpy((void*)pIdataPacket, (void *)m_pIdataPacket, sizeof(IDATA_PACKET));
+						//
+						//pIdataPacket->wMsgID = NC_NX_IDATA_ID; //already 1 before break
 						SendIdataToPag( (GenericPacketHeader *) pIdataPacket);
 						delete m_pIdataPacket;
 						m_pIdataPacket = NULL;
@@ -633,27 +644,31 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 // Take the code from TScanDlg which processes packets from PAM and insert here
 #ifdef _I_AM_PAG
 
-extern void DistributeMessage(I_MSG_RUN *pReadBuf, CTcpThreadRxList *pTcpThreadRxList);
 
 void CServerRcvListThread::ProcessPAM_Data(void *pData)
 	{
 	CString s;
-	CTcpThreadRxList *pTcpThreadRxList = pCTscanDlg->GetTcpThreadList();
-	if (NULL == pTcpThreadRxList)
+	int i;
+	IDATA_PACKET *pIdata = (IDATA_PACKET *)pData;
+
+	if (pIdata->wMsgID == NC_NX_IDATA_ID)
 		{
-		delete pData;
-		s = _T("CServerRcvListThread::ProcessPAM_Data - Could not get valid pTcpThreadRxList");
+		s.Format(_T("wByteCount=%d, wMsgSeqCnt=%d, bPAPNumber=%d, bBoardNumber=%d, bStartSeqNumber=%d\n"),
+			pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->bPAPNumber, pIdata->bBoardNumber, pIdata->bStartSeqNumber);
+		// use debugger to view
 		TRACE(s);
-		return;
+		s.Format(_T("bSequenceLength=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
+			pIdata->bSequenceLength, pIdata->bStartChannel, pIdata->bMaxVChnlsPerSequence);
+		TRACE(s);
+		s.Format(_T("Results[0].Id2=%d, Od3=%d TOFmin=%d, TOFmax=%d\n"),
+			pIdata->Results[0].bId2, pIdata->Results[0].bOd3, pIdata->Results[0].wTofMin, pIdata->Results[0].wTofMax );
+		TRACE(s);
 		}
-	I_MSG_RUN *pMR = new I_MSG_RUN;
-	// strip off the length added by OnReceive
-	stSEND_PACKET *pTmp = (stSEND_PACKET *) pData;
-	memcpy( (void *) pMR, pTmp->Msg, pTmp->nLength);	// move all data to the new buffer
-	pMR->MstrHdr.nSlave = m_pSCC->m_nMyThreadIndex;
-	::DistributeMessage(pMR, pTcpThreadRxList);
+	else
+		{
+		i = pIdata->wMsgID;
+		}
 	delete pData;
-	}
+	}	// ProcessPAM_Data(void *pData)
 
 #endif
-

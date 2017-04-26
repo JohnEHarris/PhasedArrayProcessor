@@ -87,7 +87,7 @@ CInspState InspState;		// one instance of a state keeping class.. not a pointer!
 //C_MSG_ALL_THOLD  g_AllTholds;
 //C_MSG_NC_NX g_NcNx;
 float  g_fMotionPulseLen = 0.506329f;
-
+int gnFifoCnt, gnAsyncSocketCnt;
 /*  End Globals */
 
 
@@ -1361,7 +1361,7 @@ void CServiceApp::InitializeServerConnectionManagement(void)
 					{
 					pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j]	= new CRITICAL_SECTION();
 					InitializeCriticalSectionAndSpinCount(pSCM[i]->m_pstSCM->pCS_ClientConnectionSndList[j] ,4);
-					pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[J]	= new CRITICAL_SECTION();
+					pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j]	= new CRITICAL_SECTION();
 					InitializeCriticalSectionAndSpinCount(pSCM[i]->m_pstSCM->pCS_ClientConnectionRcvList[j] ,4);
 					pSCM[i]->m_pstSCM->pSendPktList[j]					= new CPtrList();
 					pSCM[i]->m_pstSCM->pRcvPktList[j]					= new CPtrList();
@@ -1672,10 +1672,10 @@ void CServiceApp::InitializeClientConnectionManagement(void)
 //
 //ifdef SERVER_RCVLIST_THREADBASE		
 // DEFINE in project defines under C/C++ | Preprocessor
-CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNumber, int nPriority)
+CServerRcvListThread* CServiceApp::CreateServerReceiverThread(int nServerNumber, int nPriority)
 	{
 	CString s;
-	CServerRcvListThreadBase *pThread = NULL;
+	CServerRcvListThread *pThread = NULL;
 
 	if (nServerNumber >= MAX_SERVERS)
 		{
@@ -1692,7 +1692,7 @@ CServerRcvListThreadBase* CServiceApp::CreateServerReceiverThread(int nServerNum
 		// custom thread to process the data which came from the client.
 		pThread = 
 			
-				(CServerRcvListThreadBase *) AfxBeginThread(
+				(CServerRcvListThread *) AfxBeginThread(
 					RUNTIME_CLASS (CServerRcvListThread),
 					nPriority,	0, CREATE_SUSPENDED, NULL);		// normally normal priority
 		break;

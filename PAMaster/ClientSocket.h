@@ -32,7 +32,10 @@ public:
 #endif
 	//
 	int m_nChooseYourOnReceive;		// 0 if legacy OnReceive0, 1 if new, then OnReceive1
-	CClientConnectionManagement *m_pCCM;
+	CClientConnectionManagement *m_pCCM; 
+	int m_nOwningThreadId;			// debugging
+	int m_nAsyncSocketCnt;			// debugging
+
 	//CMC_SysCPTestClientDlg *m_pMainDlg;		// the main dialog the application created
 // Operations
 public:

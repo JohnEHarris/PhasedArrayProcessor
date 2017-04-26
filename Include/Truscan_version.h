@@ -3,7 +3,7 @@
 
 // check out in PhasedArrayHeaders project before editing!!!
 #define CURRENT_VERSION		_T("Version 1.2")
-#define BUILD_VERSION			12
+#define BUILD_VERSION			13
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           2
@@ -11,6 +11,7 @@
 #define TRUSCAN_VERSION _T("Version = Phase Array Wall %d.%d.%d"), VERSION_MAJOR, VERSION_MINOR, VERSION_BUILD 
 
 #if 0
+1.2.13		15-Mar-17	Change MsgId of NcNx from 1 to 1+0x200
 1.2.12		26-Apr-13	Child class CCM_GDP to interface with the GDP
 1.2.11		12-Mar-13	Timer tick restarts stalled ConnectionClient. Uses partially implement MMI_CMD command steering
 1.2.10		28-Nov-12	Move SysCp specific processing from base class ClientConnectionManagement into CCM_SysCp. Remove

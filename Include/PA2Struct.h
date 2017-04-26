@@ -30,7 +30,7 @@ enum IdOdTypes {eId, eOd, eIf};
 
 #define MAX_PAM_QTY			1
 #define MAX_PAM_INSTS_QTY	8
-#define NC_NX_CMD_ID		1
+#define NC_NX_CMD_ID		1+0x200
 #define ASCANS_TO_AVG		10
 
 
@@ -43,7 +43,7 @@ enum IdOdTypes {eId, eOd, eIf};
 
 
 // edit this value if more client connections to servers are needed
-#define	MAX_SERVERS							1
+// #define	MAX_SERVERS							1 do it in ServerConnection Management for which ever type of server we are using
 // Likely will have at least 2 server types. 1 for inspetion data and 1 for pulsers
 // Mixing pulsers in with gate boards will make it more difficult to put dimensions on things like virtual channels. 2016-10-19
 
@@ -336,17 +336,6 @@ typedef struct
 	} ST_SMALL_CMD;		// sizeof() = 32
 
 
-typedef struct
-	{
-	GenericPacketHeader Head;	// cmd 2
-	BYTE bSeq;			// set to 0
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
-	BYTE bSpare;	// 16 bytes to here
-	WORD wDelay;	// in 80 Mhz clocks
-	WORD wFill[7];	// all 0
-	} ST_GATE_DELAY_CMD;	// sizeof() = 32
-
 
 
 // If we want 2 out of 3 above threshold for Nc qualified, then bMod = 3. The Fifo is 3 elements deep.
@@ -463,9 +452,9 @@ typedef struct
 typedef struct
 	{
 	WORD wMsgID;		// commands are identified by their ID
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	WORD wByteCount;	// Number of bytes in this packet. Make even number
 	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
@@ -523,7 +512,17 @@ typedef struct
 
 
 // the trigger word sets the values for all 4 gates, hence bGateNumber has no value
-// this originally was called gate control cmd
+// this originally was called gate_control_cmd
+/*
+The high nibble of wTrigger sets the trigger agent for each gate. 
+A bit value of 1 means trigger on threshold, 0 means trigger on main bang strobe. 
+Bit7=gate3, bit6=gate2, bit5=gate1, bit4= gate0.
+
+The low nibble of wTrigger is an enable/disable switch for each gate. 
+A bit value of 1 means enabled, 0 means disabled.
+Bit3=gate3, bit2=gate2, bit1=gate1, bit0= gate0.
+
+*/
 typedef struct
 	{
 	GenericPacketHeader Head;	// wMsgID= SET_GATES_TRIGGER_CMD_ID, gph is 12 bytes
@@ -536,7 +535,16 @@ typedef struct
 	}	ST_GATES_TRIGGER_CMD;
 
 // the polarity word sets the values for all 4 gates, hence bGateNumber has no value
-// this originally was called gate data mode cmd
+// this originally was called gate_data_mode_cmd
+/*
+The following gate command sets all 4 gates with one single command. 
+This is done by using bit fields. Only the low byte of wPolarity is used. 
+“Rf+” means radio frequency, a bipolar wave. “Rf-“ means an inverted bipolar wave. 
+“Fw” means full wave, a rectified or unipolar wave.
+Bits 7-6 for gate3 	   | 5-4 for gate2	       | 3-2 for gate1	        | 1-0 for gate0
+00=rf+, 01=rf-, 1x=fw  | 00=rf+, 01=rf-, 1x=fw | 00=rf+, 01=rf-, 1x=fw	| 00=rf+, 01=rf-, 1x=fw
+
+*/
 typedef struct
 	{
 	GenericPacketHeader Head;	// wMsgID= SET_GATES_POLARITY_CMD_ID, gph is 12 bytes
@@ -549,7 +557,20 @@ typedef struct
 	}	ST_GATES_POLARITY_CMD;
 
 // the TOF word sets the values for 3 gates, hence bGateNumber has no value
-// this originally was called gate TOF mode cmd
+// this originally was called gate_TOF_mode_cmd
+/*
+The following gate command sets the time of flight characteristics for gates 1-3 with one command. 
+This is done by using bit fields. Bits 7-6 select which one of the gates will be used 
+for time of flight output. Gate 0 is not available. 
+
+
+Bits 7-6         | Bit 5 start gate3, 0=Main bang, 1= Pk detect | Bit 2 stop gate3, 0=Thld detect, 1= Pk detect
+11= gate3        | Bit 4 start gate2, 0=Main bang, 1= Pk detect | Bit 1 stop gate2, 0=Thld detect, 1= Pk detect
+10= gate2        | Bit 3 start gate1, 0=Main bang, 1= Pk detect | Bit 0 stop gate1, 0=Thld detect, 1= Pk detect
+01=gate1          
+00 not allowed     
+
+*/
 typedef struct
 	{
 	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
@@ -557,9 +578,66 @@ typedef struct
 	BYTE bChnl;		// which virtual probe
 	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
 	BYTE bSpare;	// 16 bytes to here
-	WORD wTOF;	//
+	WORD wTOF;		// only the low byte is used
 	WORD wFill[7];	// all 0
 	}	ST_GATES_TOF_CMD;
+
+
+/*
+TCG runs at 80 Mhz clock - too fast for TCG steps. This command divides down the TCG clock from 80 Mhz
+into the gain time step interval desired.
+*/
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= 
+	BYTE bSeq;		// 
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
+	BYTE bSpare;	// 16 bytes to here
+	WORD wStep;		//
+	WORD wFill[7];	// all 0
+	}	ST_SET_TCG_STEP_SIZE_CMD;
+
+/*
+After the TCG trigger we can have a delay before TCG starts to run
+This command sets the delay time in 80 Mhz clock counts.
+*/
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= 
+	BYTE bSeq;		// 
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
+	BYTE bSpare;	// 16 bytes to here
+	WORD wDelay;	//
+	WORD wFill[7];	// all 0
+	}	ST_SET_TCG_DELAY_CMD;
+
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= 
+	BYTE bSeq;		// 
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
+	BYTE bSpare;	// 16 bytes to here
+	WORD wStep;	//
+	WORD wFill[7];	// all 0
+	}	ST_TCG_GAIN_DELAY_CMD;
+
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
+	BYTE bSeq;		// 
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
+	BYTE bSpare;	// 16 bytes to here
+	WORD wDelay;	//
+	WORD wFill[7];	// all 0
+	}	ST_CHNL_GAIN_DELAY_CMD;
+
+//
+//=================================================
+// LARGE COMMNAD STRUCTURES
 
 typedef struct
 	{
@@ -576,6 +654,30 @@ typedef struct
 	BYTE bSpare[4];		// 16
 	ST_NC_NX stNcNx[52];		// 1040	
 	} CANNED_GATES; // SIZEOF() = 1056 replaces CHANNEL_CMD_1
+
+
+typedef struct 
+	{
+	// The generic header
+	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
+	BYTE bSeqNumber;	// when relevant, which sequence of virtual probes the command affects
+	BYTE bSpare[19];	// 32 bytes to here
+    WORD wGain[512];	// 512 words or 1024 bytes .. ony first 128 used. wGain[128] to wGain[511= = 0
+	} ST_ELEMENT_GAIN;		// 1056 bytes 
+
+
+typedef struct	// NOT SURE ABOUT THIS COMMAND 2017-03-16
+	{
+	// The generic header
+	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
+	BYTE bSeqNumber;	// when relevant, which sequence of virtual probes the command affects
+	BYTE bChnl;
+	BYTE bSpare[18];	// 32 bytes to here
+    WORD wGain[512];	// 512 words or 1024 bytes .. ony first 128 used. wGain[128] to wGain[511= = 0
+	} ST_CHNL_GAIN;		// 1056 bytes 
+
+
+
 
 /*****************	STRUCTURES	END *********************/
 

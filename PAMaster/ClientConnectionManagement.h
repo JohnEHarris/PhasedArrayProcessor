@@ -36,7 +36,7 @@ Revised:	12-Jun-12 Abandon 'C' worker threads in favor of using a class method f
 #define WM_USER_RESTART_TCP_COM_DLG					WM_USER+0x208
 #define WM_USER_RESTART_ADP_CONNECTION				WM_USER+0x202	// also in TScanDlg.h
 #define WM_USER_SEND_TCPIP_PACKET					WM_USER+0x211	// also in TScanDlg.h
-#define WM_USER_TIMER_TICK							WM_USER+0x21B 	// also in TScanDlg.h
+#define WM_USER_TIMER_TICK							WM_USER+0x220 	// also in TScanDlg.h
 #define WM_USER_SERVER_SEND_PACKET					WM_USER+0x20A		// post thread msg when Server needs to send packet
 
 // ClientConnectionManagement
@@ -48,11 +48,11 @@ Revised:	12-Jun-12 Abandon 'C' worker threads in favor of using a class method f
 #ifdef THIS_IS_SERVICE_APP
 // 2016-05-17 the PAM/Receiver is connected only to the PT as a client
 // The PAG was connected to the database, the SysCp and the GDP
-#define	MAX_CLIENTS				1		
+#define	MAX_CLIENTS				8		
 // edit this value if more client connections to servers are needed
 #else
 #define THE_APP_CLASS	CTscanApp
-#define	MAX_CLIENTS				2		
+#define	MAX_CLIENTS				5		// 2017-03-21 5 clients in registry		
 // edit this value if more client connections to servers are needed
 #endif
 
@@ -85,6 +85,9 @@ class CAsyncSocket;
 // connected to the PAM thru its ServerConnectionManagement structure. Command information has to move from the
 //  ClientConnetionManagement CCM side to the SCM side by some mechanism in order to reach the instruments.
 //
+// Objects create with the 'new' operator such as CRITICAL_SECTION *pCSSendPkt and CPtrList* pSendPktList
+// are destroyed in CClientCommunicationThread::ExitInstance()
+
 typedef struct
 	{
 	HWND hWnd;						// window handle of the primary dialog which sends/receives on this connection
@@ -103,9 +106,9 @@ typedef struct
 	// Send-to-server items
 	CClientCommunicationThread *pSendThread;	// thread to control sending messages to server
 	//CTCPCommunicationDlg *pSendDlg;			// a dialog created byte the SendThread
-	//HWND hSendDlg;				// windows handle to the Send Dialog
-	CRITICAL_SECTION *cpCSSendPkt;	// control access to output (send) list
-	CPtrList* pSendPktList;			// list containing packets to send
+	//HWND hSendDlg;					// windows handle to the Send Dialog
+	CRITICAL_SECTION *pCSSendPkt;	// control access to output (send) list
+	CPtrList* pSendPktList;	// list containing packets to send
 	int nSendPriority;				// should normally be THREAD_PRIORITY_BELOW_NORMAL
 
 	// Receive-from-server items
@@ -116,7 +119,7 @@ typedef struct
 	CClientCommunicationThread *pReceiveThread;	// thread to control receiving messages from server
 	//CTCPCommunicationDlg *pReceiveDlg;			// a dialog created by the ReceiveThread
 	//HWND hReceiveDlg;					// windows handle to the Receive Dialog
-	CRITICAL_SECTION *cpCSRcvPkt;	// control access to input (receive) list
+	CRITICAL_SECTION *pCSRcvPkt;	// control access to input (receive) list
 	CPtrList* pRcvPktPacketList;	// list containing packets received
 	int nReceivePriority;			// should normally be THREAD_PRIORITY_ABOVE_NORMAL
 
@@ -146,6 +149,7 @@ typedef struct
 	UINT uIdataAcksSent;			// Only for UDP protocol..count idata packets acks.. 10-Jan-11
 	CRITICAL_SECTION *pCSDebugIn;
 	CRITICAL_SECTION *pCSDebugOut;
+	CCmdFifo *m_pFifo;
 	//UINT uRestartMsg;				// windows message.. probably no use in this scenario
 									// relate restart windows handles to instrument selector
 
@@ -307,13 +311,13 @@ public:
 	void SendPacket(BYTE *pB, int nBytes, int nDeleteFlag);			
 
 	// To add data to the input data list, lock the critical section, add data to the list tail, and unlock critical section
-	void LockRcvPktList(void)		{ EnterCriticalSection(m_pstCCM->cpCSRcvPkt);	}
+	void LockRcvPktList(void)		{ EnterCriticalSection(m_pstCCM->pCSRcvPkt);	}
 	void AddTailRcvPkt(void *pV)	{ m_pstCCM->pRcvPktPacketList->AddTail(pV);		}
-	void UnLockRcvPktList(void)		{ LeaveCriticalSection(m_pstCCM->cpCSRcvPkt);	}
+	void UnLockRcvPktList(void)		{ LeaveCriticalSection(m_pstCCM->pCSRcvPkt);	}
 
-	void LockSendPktList(void)		{ EnterCriticalSection(m_pstCCM->cpCSSendPkt);	}
+	void LockSendPktList(void)		{ EnterCriticalSection(m_pstCCM->pCSSendPkt);	}
 	void AddTailSendPkt(void *pV)	{ m_pstCCM->pSendPktList->AddTail(pV);	}
-	void UnLockSendPktList(void)	{ LeaveCriticalSection(m_pstCCM->cpCSSendPkt);	}
+	void UnLockSendPktList(void)	{ LeaveCriticalSection(m_pstCCM->pCSSendPkt);	}
 
 	void LockDebugOut(void)			{ EnterCriticalSection(m_pstCCM->pCSDebugOut );	}
 	//void AddTailDebugOut(CString s)	{ m_pstCCM->pOutDebugMessageList->AddTail(&s);	}
@@ -355,9 +359,9 @@ public:
 
 	//BYTE m_RcvBuf[0x10000];						// 16 k receiver buffer.. now 64k
 	// replace above with CmdFifo
-	CCmdFifo *m_pFifo;
-	//void *pWholePacket;
-	// debug info
+	//CCmdFifo *m_pFifo;		// created in CClientConnectionManagement(int nMyConnection, USHORT wOriginator) constructor
+							// deleted in ~CClientConnectionManagement(void)
+
 	CString szName;
 	};	
 // End of CClientConnectionManagement class declaration.

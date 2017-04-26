@@ -66,6 +66,7 @@ How it is intended to work:
 
 
 #include "stdafx.h"
+#include "string.h"
 #define I_AM_CCM
 // THIS_IS_SERVICE_APP is defined in the PAM project under C++ | Preprocessor Definitions 
 
@@ -87,6 +88,7 @@ extern THE_APP_CLASS theApp;
 #include "ClientConnectionManagement.h"
 #include "ClientCommunicationThread.h"
 #include "CmdProcessThread.h"
+#include "vChannel.h"
 
 // nMyConnection selects which one of MAX_CLIENTS connections we are managing with this instance
 // wOriginator selects family type from Constants, eg. TRUSCOPE_COMMAND_PROCESSOR - Only for PAG use
@@ -128,27 +130,38 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 	m_pstCCM->uPacketsSent				= 0;
 
 	// create critical sections, linked lists and events
-	m_pstCCM->cpCSRcvPkt		= new CRITICAL_SECTION();
-	m_pstCCM->cpCSSendPkt		= new CRITICAL_SECTION();
-	m_pstCCM->pCSDebugIn		= new CRITICAL_SECTION();
-	m_pstCCM->pCSDebugOut	= new CRITICAL_SECTION();
-	i = sizeof(CRITICAL_SECTION);		// 24
+	m_pstCCM->pCSRcvPkt = new CRITICAL_SECTION();
+	m_pstCCM->pCSSendPkt = new CRITICAL_SECTION();
+	m_pstCCM->pCSDebugIn = new CRITICAL_SECTION();
+	m_pstCCM->pCSDebugOut = new CRITICAL_SECTION();
 
-	InitializeCriticalSectionAndSpinCount(m_pstCCM->cpCSRcvPkt,4);
-	InitializeCriticalSectionAndSpinCount(m_pstCCM->cpCSSendPkt,4);
+	InitializeCriticalSectionAndSpinCount(m_pstCCM->pCSRcvPkt,4);
+	InitializeCriticalSectionAndSpinCount(m_pstCCM->pCSSendPkt,4);
 	InitializeCriticalSectionAndSpinCount(m_pstCCM->pCSDebugIn,4);
 	InitializeCriticalSectionAndSpinCount(m_pstCCM->pCSDebugOut,4);
 
-	m_pstCCM->pRcvPktPacketList		= new CPtrList(64);	// our input inspection data goes here
-	m_pstCCM->pSendPktList			= new CPtrList(64);	// commands from somebody go here
-	m_pstCCM->pInDebugMessageList	= new CPtrList(64);
-	m_pstCCM->pOutDebugMessageList	= new CPtrList(64);
+	m_pstCCM->pRcvPktPacketList = new CPtrList(64);	// our input inspection data goes here
+	m_pstCCM->pSendPktList = new CPtrList(64);	// commands from somebody go here
+	m_pstCCM->pInDebugMessageList = new CPtrList(64);
+	m_pstCCM->pOutDebugMessageList = new CPtrList(64);
 	i = sizeof(CPtrList);					// 28
-	i = sizeof(CClientConnectionManagement);//65584
-	i = sizeof(CClientCommunicationThread);//128
-	i = sizeof(CClientSocket);				//16
+	i = sizeof(CRITICAL_SECTION);			// 24
+	i = sizeof(CClientConnectionManagement);//16
+	i = sizeof(CClientCommunicationThread);//150
+	i = sizeof(CClientSocket);				//24
 	i = sizeof(CCmdProcessThread);			//76
-	i = sizeof(CCCM_PAG);					//65596
+//	i = sizeof(CCCM_SysCp);					//65596?
+	i = sizeof(CCmdFifo);					//16414
+	i = sizeof(CAsyncSocket);				//8
+	i = sizeof(CHwTimer);					//364
+	i = sizeof(CServerSocket);				//4278
+	i = sizeof(CServerListenThread);		//80
+	i = sizeof(CServerSocketOwnerThread);	//108
+	i = sizeof(CServerRcvListThread);		//4370
+	i = sizeof(CServerConnectionManagement);//12
+//	i = sizeof(CvChannel);					//4
+	i = sizeof(ST_SERVERS_CLIENT_CONNECTION);//2164
+
 
 	m_pstCCM->uLastTick		= 0;
 
@@ -161,7 +174,9 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 
 	// if (NULL == m_pstCCM)	return;		//fatal flaw
 
-	m_pFifo = new CCmdFifo(1460);		// FIFO control for receiving cmd packets from PAG	 was 1454
+	m_pstCCM->m_pFifo = new CCmdFifo(1460);		// FIFO control for receiving cmd packets from PAG	 was 1454
+	m_pstCCM->m_pFifo->m_nOwningThreadId = AfxGetThread()->m_nThreadID;
+	strcpy(m_pstCCM->m_pFifo->tag, "CCM179 ");
 	}
 
 
@@ -169,6 +184,7 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	{
 	void *pV;
 	int i, n;
+	CString s;
 
 	// if the socket is not closed, close it and terminate the threads
 	if (m_pstCCM->pSocket)
@@ -178,13 +194,15 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 			m_pstCCM->pSocket->Close();
 			}
 		}
-
+	//delete m_pstCCM->pSocket; this crashes the program
 
 	//
 	if (m_pstCCM->pReceiveThread)
 		{
 
 		// Receive thread closes and destroys socket
+		// Empties all client lists associated with this socket
+		// Destroys all critical sections and sets all pointer to 0
 		m_pstCCM->pReceiveThread->PostThreadMessage(WM_QUIT,0,0l);
 		for ( i = 0; i < 100; i++)	// wait a little while for listener to go away
 			{
@@ -234,63 +252,23 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 #endif
 	Sleep(10);
 	/******************/
-#if 1
-	LockRcvPktList();
-	n = m_pstCCM->pRcvPktPacketList->GetCount();
-	while (!m_pstCCM->pRcvPktPacketList->IsEmpty())
-		{
-		pV = (void *) m_pstCCM->pRcvPktPacketList->RemoveHead();
-		delete pV;
-		}
-	delete m_pstCCM->pRcvPktPacketList;
-	UnLockRcvPktList();
-	m_pstCCM->pRcvPktPacketList = 0;
-	if (m_pstCCM->cpCSRcvPkt)		delete m_pstCCM->cpCSRcvPkt;
+	// All the commented out below is handled by the ClientCommunicationThread ExitInstance for 
+	// the send and receive threads. Not necessary in the destructor here.
+	// Search for delete m_pstCCM->pRcvPktPacketList; and find it in this destructor and in
+	// CClientCommunicationThread::~CClientCommunicationThread()
 
-	/******************/
-	LockSendPktList();
-	n = m_pstCCM->pSendPktList->GetCount();
-	while (!m_pstCCM->pSendPktList->IsEmpty())
+	
+	if (m_pstCCM->m_pFifo != NULL)
 		{
-		pV = (void *) m_pstCCM->pSendPktList->RemoveHead();
-		delete pV;
+		strcat(m_pstCCM->m_pFifo->tag, "Kill CCM263\n");
+		s = m_pstCCM->m_pFifo->tag;
+		TRACE(s);
+		s.Format(_T("~CClientConnectionManagement Fifo cnt=%d,  ThreadID=0x%08x\n"),
+		m_pstCCM->m_pFifo->m_nFifoCnt,  m_pstCCM->m_pFifo->m_nOwningThreadId);
+		TRACE(s);
+		delete m_pstCCM->m_pFifo;
+		m_pstCCM->m_pFifo = 0;
 		}
-	delete m_pstCCM->pSendPktList;
-	m_pstCCM->pSendPktList = 0;
-	UnLockSendPktList();
-	if (m_pstCCM->cpCSSendPkt)		delete m_pstCCM->cpCSSendPkt;
-
-	/******************/
-	LockDebugIn();
-	n = m_pstCCM->pInDebugMessageList->GetCount();
-	while (!m_pstCCM->pInDebugMessageList->IsEmpty())
-		{
-		pV = (void *) m_pstCCM->pInDebugMessageList->RemoveHead();
-		delete pV;
-		}
-	delete m_pstCCM->pInDebugMessageList;
-	m_pstCCM->pInDebugMessageList = 0;
-	UnLockDebugIn();
-	if (m_pstCCM->pCSDebugIn)		
-		delete m_pstCCM->pCSDebugIn;
-
-	/******************/
-	LockDebugOut();
-	n = m_pstCCM->pOutDebugMessageList->GetCount();
-	while (!m_pstCCM->pOutDebugMessageList->IsEmpty())
-		{
-		pV = (void *) m_pstCCM->pOutDebugMessageList->RemoveHead();
-		delete pV;
-		}
-	delete m_pstCCM->pOutDebugMessageList;
-	m_pstCCM->pOutDebugMessageList = 0;
-	UnLockDebugOut();
-	if (m_pstCCM->pCSDebugOut)		
-		delete m_pstCCM->pCSDebugOut;
-
-	if (m_pFifo != NULL)
-		delete m_pFifo;
-#endif
 	}
 
 // Begin the Receive Thread
@@ -321,6 +299,7 @@ void CClientConnectionManagement::InitReceiveThread(void)
 	m_pstCCM->pReceiveThread->PostThreadMessage(WM_USER_INIT_TCP_THREAD, (WORD) 1, (LPARAM) this);
 	}
 
+// nOT ORIGAINALLY IN mmi
 void CClientConnectionManagement::KillReceiveThread(void)
 	{
 	int i = 0;
@@ -473,7 +452,7 @@ void CClientConnectionManagement::DebugOut(CString s)
 #endif
 	// new attempt.. convert string to tchar and store in linked list
 	CString s1 = s + _T("\n");	// s1 on stack
-#
+
 	TRACE(s1);
 }
 
@@ -539,42 +518,40 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 	int n;
 	CString s,t;
 
-#ifdef THIS_IS_SERVICE_APP
-
 	// A real hardware FIFO would shift data to the output side instantly
-	m_pFifo->Shift();
-	BYTE *pCmd = m_pFifo->GetInLoc();
+	m_pstCCM->m_pFifo->Shift();
+	BYTE *pCmd = m_pstCCM->m_pFifo->GetInLoc();
 	// Receive() receives data into fifo memory pointed to by pCmd
 	n = pSocket->Receive( (void *) pCmd, 0x2000, 0 );	// ask for 8k byte into 16k buffer
 	//PAM assumes we will get partial packets and have to extract whole packets
 	if ( n > 0)
 		{
-		m_pFifo->AddBytesToFifo(n);
+		m_pstCCM->m_pFifo->AddBytesToFifo(n);
 #if	DEBUG_TCPIP_FROM_PAG
 			{
-			s.Format(_T("CCM OnReceive got %d bytes"), n);
+			s.Format(_T("CCM OnReceive got %d bytes\n"), n);
 			DebugOut(s);
 			}
 #endif
-		nPacketSize = m_pFifo->GetPacketSize();	
+		nPacketSize = m_pstCCM->m_pFifo->GetPacketSize();	
 
 
 		
 		while (1)
 			{	// get packets
 
-			wByteCnt = m_pFifo->GetFIFOBytes();
+			wByteCnt = m_pstCCM->m_pFifo->GetFIFOBytes();
 			if (wByteCnt < sizeof(GenericPacketHeader))
 				{
 				break;
 				}
-			nPacketSize = m_pFifo->GetPacketSize();
+			nPacketSize = m_pstCCM->m_pFifo->GetPacketSize();
 			if ((nPacketSize <= 0) || (wByteCnt < nPacketSize))
 				{
 				break;
 				}
 
-			pPacket = (GenericPacketHeader*) m_pFifo->GetNextPacket();
+			pPacket = (GenericPacketHeader*) m_pstCCM->m_pFifo->GetNextPacket();
 			if (pPacket == NULL)
 				{
 				//CAsyncSocket::OnReceive(nErrorCode);
@@ -607,44 +584,7 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 			//m_pstCCM->pCmdProcessThread->PostThreadMessageA(WM_USER_CLIENT_PKT_RECEIVED, 0, 0L);
 			m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_USER_CLIENT_PKT_RECEIVED, 0, 0L);
 		}	// n > 0
-#endif
 
-#ifdef _I_AM_PAG
-
-	// PAG assumes it can catch whole packets all the time
-	n = pSocket->Receive( (void *) m_RcvBuf, MAX_MSG_BYTES, 0 );	// read all data available into Buf
-	// message size varies. One message is 530 bytes , another is 20 bytes
-	if ( n < 1)
-		{
-		s += _T(" nothing queued");
-		DebugOut(s);
-		return;
-		}
-	s.Format(_T("OnReceive got %d bytes"), n);
-
-	BYTE *pB2 = new BYTE[n];	// resize the buffer that will actually be used
-	memcpy( (void *) pB2, (void *) m_RcvBuf, n);	// move all data to the new buffer
-	// put it in the linked list and let someone else decipher it
-	LockRcvPktList();
-	AddTailRcvPkt(pB2);	// put the buffer into the recd data linked list
-	UnLockRcvPktList();
-	if (m_pstCCM)
-		{
-		m_pstCCM->uBytesReceived += n;
-		m_pstCCM->uPacketsReceived++;
-		if (m_pstCCM->uMaxPacketReceived < (unsigned) n)	
-			m_pstCCM->uMaxPacketReceived = n;	// capture size of maximum packet/
-		}
-		// Signal the main dialog that client data has been received by this client.
-		// Format of data may vary from client to client. Let main dlg decide how to process
-		// data based on which client supplied it.
-		// Main dlg typical response will be to call ProcessReceivedMessage() below. That routine will
-		// run at the priority level of the main dlg.
-		AfxGetMainWnd()->PostMessage(WM_USER_CLIENT_PKT_RECEIVED, (WPARAM) m_nMyConnection,0);
-	
-		DebugOut(s);
-
-#endif
 
 	}	// OnReceive(CClientSocket *pSocket)
 
@@ -760,6 +700,11 @@ CString CClientConnectionManagement::RetrieveKeyValue(CString sTargetKey)
 	
 	return (lszKeyData);
 }
+
+void CClientConnectionManagement::SendClientIdentity(void)
+	{
+	TRACE(_T("Need to implement SendClientIdentity\n"));
+	}
 
 #endif
 

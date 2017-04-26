@@ -146,6 +146,9 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		case 4:
 		case 5:
 		case 6:
+		case 7:
+		case 8:
+
 			if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber])
 				{
 				CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;

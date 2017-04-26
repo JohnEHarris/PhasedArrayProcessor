@@ -1,0 +1,9 @@
+10:18 AM 4/19/2017
+Take existing PAP from Stealth machine and begin to merge with working PAG code.
+PAP code is not working at the moment on Stealth.
+
+Remove vChannel initialization from top level initialization as 3d element and 
+put the code into the client connection. 
+
+Then all critical sections/linked lists
+will have the same name in PAG and PAP.

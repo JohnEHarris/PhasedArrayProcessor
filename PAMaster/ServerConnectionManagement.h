@@ -38,6 +38,9 @@ typedef struct
 #define eInstrument_Server	0	// the one and only server for all instrument connected to a PAM
 
 
+// An instrument client can have up to this many virtual channels
+#define MAX_CHNLS_PER_INSTRUMENT			32
+
 // THIS_IS_SERVICE_APP is defined in the PAM project under C++ | Preprocessor Definitions 
 
 #ifdef THIS_IS_SERVICE_APP
@@ -52,6 +55,11 @@ class CServiceApp;
 // since we are working with a service and not a window, these terms don't apply
 #define THE_APP_CLASS	NULL
 #define MAIN_DLG_NAME	NULL
+
+// edit this value if more client connections to servers are needed
+#define	MAX_SERVERS							2
+#define MAX_CLIENTS_PER_SERVER				8
+
 
 
 #define INSTRUMENT_PACKET_SIZE				1056		//old 1040
@@ -68,6 +76,7 @@ class CServiceApp;
 
 #include "..\Include\MC_SysCp_constants.h"
 #include "tscandlg.h"
+#include "Truscan.h"
 
 class CTscanDlg;
 
@@ -75,12 +84,12 @@ class CTscanDlg;
 #define MAIN_DLG_NAME	CTscanDlg
 
 // edit this value if more client connections to servers are needed
-#define	MAX_SERVERS							2
+#define	MAX_SERVERS							1
 #define MAX_CLIENTS_PER_SERVER				8
 extern THE_APP_CLASS theApp;
 
 
-#define INSTRUMENT_PACKET_SIZE				1460		//old 1040
+//#define INSTRUMENT_PACKET_SIZE				1460		//old 1040
 #define MASTER_PACKET_SIZE					1260
 #define PAG_CMD_PACKET_SIZE					1040
 
@@ -123,9 +132,11 @@ class CServerListenThread;			// Thread to listen for connection on a given serve
 class CServerSocket;				// our specific implementation of an ASync socket
 class CServerSocketOwnerThread;		// a thread to control the resource of the management class and the dialog
 class CAsyncSocket;
-class CServerRcvListThreadBase;		// a thread to read the linked list filled from the data received from the client
+//class CServerRcvListThreadBase;		// a thread to read the linked list filled from the data received from the client
 class CServerRcvListThread;			// a thread to read the linked list filled from the data received from the client
 class CvChannel;					// array of ptrs of this type to logically connect channels to instruments
+
+
 /** =============================================================================**/
 // A structure to define the operation of the server with one particular client.
 //
@@ -150,20 +161,21 @@ typedef struct
 	CString sClientName;			// symbolic name of the client network address,  eg., MC_ACP_HOSTNAME = "mc-acp"
 	CString sClientIP4;				// IP4 dotted address of client, normally this computers NIC address, eg., 192.168.10.10 
 	UINT uClientPort;				// set when connection to server made
-	CRITICAL_SECTION *cpCSSendPkt;	// control access to output (send) list-- not created with 'new'
-	CPtrList* cpSendPktList;			// list containing packets to send-- not created with 'new'
-	CRITICAL_SECTION *cpCSRcvPkt;	// control access to input (receive) list-- not created with 'new'
-	CPtrList* cpRcvPktList;			// list containing packets received from client-- not created with 'new'
+	CRITICAL_SECTION *pCSSendPkt;	// control access to output (send) list
+	CPtrList* pSendPktList;			// list containing packets to send
+	CRITICAL_SECTION *pCSRcvPkt;	// control access to input (receive) list
+	CPtrList* pRcvPktList;			// list containing packets received from client
 	CServerSocket * pSocket;		// ASync socket fills RcvPktList with OnReceive method.
 									// same socket is used to send packets to CLIENT
 									// This socket is owned by ServerSocketOwnerThread
 	CServerSocketOwnerThread *pServerSocketOwnerThread;	// thread to control sending to a connected client
-	CServerRcvListThreadBase *pServerRcvListThread;		// a thread to process data from the connected client
+	CServerRcvListThread *pServerRcvListThread;		// a thread to process data from the connected client
 	int nSSOwnerThreadPriority;
 	int nSSRcvListThreadPriority;	// THREAD_PRIORITY_NORMAL
 
 	DWORD ServerRcvListThreadID;	// the ID of the rcv thread... allows posting messages w/o thread ptr
-	int m_nMyThreadIndex;			// which instance of this we are?
+	int m_nClientIndex;			// which instance of this we are?
+	BYTE m_bIsClosing;			// got a tcpip close -- in progress
 	BYTE bStopSendRcv;				// have socket throw away all input/output data
 
 	BYTE bConnected;				// eNotConnected, eNotConfigured, eConfigured .. detected in receive thread.
@@ -176,19 +188,21 @@ typedef struct
 	UINT uLostReceivedPackets;		// count the jumps in message sequence count
 	UINT uDuplicateReceivedPackets;	// same packet received again
 	UINT uBytesSent;
-	UINT uPacketsSent;
+	UINT uPacketsSent;				// if this resets it means the instrument has disconnected/reconnected
 	UINT uUnsentPackets;			// Sending was aborted w/o sending the packet
 
 	UINT uLastTick;					// Use with main app uAppTimerTick value to provide keep alive messages
 	// 2016-06-06 jeh
 	// initialized in CServerSocket::OnAcceptInitializeConnectionStats
-	CvChannel* pvChannel[MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];	// array of ptrs to virtual channels associated 
-							// with each client connection. Pointer is
+	CvChannel* pvChannel[MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];	
+		// array of ptrs to virtual channels associated 
+		// with each client connection. Pointer is
 	
 	RAW_INSTRUMENT_STATUS InstrumentStatus;	// Status info which comes with each TCPIP packet from an instrument
 
 
-	} ST_SERVERS_CLIENT_CONNECTION;	// Name means for a given server what are the properties of each connected client
+	} ST_SERVERS_CLIENT_CONNECTION;	
+// Name means for a given server what are the properties of each connected client
 
 /** =============================================================================**/
 
@@ -232,11 +246,14 @@ typedef struct
 	CRITICAL_SECTION *pCS_ClientConnectionRcvList[MAX_CLIENTS_PER_SERVER];	// created by the app with new
 	CPtrList* pRcvPktList[MAX_CLIENTS_PER_SERVER];	// created by the app with new
 	CPtrList* pSendPktList[MAX_CLIENTS_PER_SERVER];	// created by the app with new
-	ST_SERVERS_CLIENT_CONNECTION *pClientConnection[MAX_CLIENTS_PER_SERVER];	// an array of pointers to 
-									// information about individual clients connected to this server.
-									// not all potential clients may be connected. These client connections will be
-									// some way indicative of the IP address of the Phased Array Masters connected
-	CvChannel* pvChannel[MAX_CLIENTS_PER_SERVER][MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];
+	ST_SERVERS_CLIENT_CONNECTION *pClientConnection[MAX_CLIENTS_PER_SERVER];	
+		// an array of pointers to 
+		// information about individual clients connected to this server.
+		// not all potential clients may be connected. These client connections will be
+		// some way indicative of the IP address of the Phased Array Masters connected
+	//CvChannel* pvChannel[MAX_CLIENTS_PER_SERVER][MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];
+	// CvChannels must become part fo the pClientConnection ie, moved into ST_SERVERS_CLIENT_CONNECTION
+	// 2017-04-18 jeh
 	int nComThreadExited[MAX_CLIENTS_PER_SERVER];	// when nonZero indicates thread has exited
 
 	// VARIOUS other controls common to the server	
@@ -334,7 +351,12 @@ public:
 
 	int StartListenerThread(int nMyServer);
 	int StopListenerThread(int nMyServer);
+	// the socket associated with this connection calls the manager to create an owner thread
+	// for the connection.
+
 	int ServerShutDown(int nMyServer);
+	void KillClientConnection(int nMyServer, int nClient);	// Called by ServerShutDown
+
 	void DoNothing(void);
 	
 	CServerSocket* GetListenerSocket(void)	{ ( m_pstSCM ? m_pstSCM->pServerListenSocket : NULL );	}
@@ -375,6 +397,10 @@ CServerConnectionManagement *pSCM[MAX_SERVERS];	// global, static ptrs to class 
 CServerConnectionManagement *pSCM[];
 #endif
 
+// C functions for copying mostly pointers from ST_SERVERS_CLIENT_CONNECTION
+//
+void CopySCCStrings(ST_SERVERS_CLIENT_CONNECTION *pDest, ST_SERVERS_CLIENT_CONNECTION *pSrc);
+void CopySCCPtrs(ST_SERVERS_CLIENT_CONNECTION *pDest, ST_SERVERS_CLIENT_CONNECTION *pSrc);
 
 
 #endif

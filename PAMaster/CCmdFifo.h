@@ -20,7 +20,6 @@ class CCmdFifo
 		int m_Out;		// index in m_Mem where next output from FIFO will start
 		int m_Size;		// number of bytes unread in FIFO
 		int m_PacketSize;	// FIFO holds bytes but bytes should only be made available in PacketSize chunks
-
 	public:
 		CCmdFifo(int PacketSize);
 		virtual ~CCmdFifo();
@@ -34,6 +33,9 @@ class CCmdFifo
 		WORD m_wMsgSeqCnt;
 		void Shift(void);
 
+		int m_nFifoCnt;
+		int m_nOwningThreadId;			// debugging
+		char tag[128];		// tell who created and who destroyed.
 	};
 
 #endif

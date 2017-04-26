@@ -5,53 +5,59 @@ Author:		jeh
 Date:		01-Jun-2016
 Revised:	modeled somewhat like RunningAverage. The two may be merged in the future. Simulates
 			FIFO's holding wall and flaw values. Used to compute Nc and Nx values
+			2016-07-11 a dummy class to satisfy ST_SERVERS_CLIENT_CONNECTION pointers to CvChannel[]
 
 */
 
-
 #include "stdafx.h"
+#include "vChannel.h"
+#ifdef THIS_IS_SERVICE_APP
 #include "ServiceApp.h"
-//#include "math.h"
-
-//#include <windows.h>
-//#include <process.h>
-//#include <stddef.h>
-//#include <stdlib.h>
-//#include <conio.h>
-//#include <string.h>
-//#include <stdio.h>
-//#include "vChannel.h"
 #include "InstMsgProcess.h"
 extern UINT uVchannelConstructor[MAX_CLIENTS_PER_SERVER][MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];
+#endif
+
+
+
+
+
+
 
 // NcNx values are loaded by the ServiceApp program and are data structures in that program.
 // When an instrument disconnects and then reconnects, these structures remain in place.
+// 2017-04-18 now part of ClientConnection structure. Created when client connects,
+// destroyed when client instrument disconnects
 // Must reload from GUI or store last good Nc Nx info in a static table
-CvChannel::CvChannel(int nInst, int nSeq, int nChnl)
+//CvChannel::CvChannel(int nInst, int nSeq, int nChnl)
+CvChannel::CvChannel(int nSeq, int nChnl)
 	{
+#if 1
 	// id/od, Nc, Thold, bMod
-	FifoInit(0,3,20,5);	// id default 0,1,20,1
-	FifoInit(1,3,25,4);	// od default 0,1,20,1
+	FifoInit(0,1,20,1);	// id default 0,1,20,1
+	FifoInit(1,1,20,1);	// od default 0,1,20,1
 	FifoInit(2,1,20,1);	// interface gate1
 	
 	m_bInputCnt = 0; 
 	// Wall processing routines
 	// Nx, Max allowed, Min, DropOut cnt
-	WFifoInit(4,1377,27,14);	// nominal 1,1377,27,4
+	WFifoInit(1,1377,27,10);	// nominal 1,1377,27,4
 	//if ( nInst > 3) return;
 	//if (nChnl > 39) return;
 	// counter of how many time constructor runs for each chnl/instrument
-	uVchannelConstructor[nInst][nSeq][nChnl]++;
+	//uVchannelConstructor[nSeq][nChnl]++;
 	memset(&m_PeakData,0, sizeof (stPeakData));
 	m_bChnl = nChnl;
 	m_bSeq  = nSeq;
 	w_DefaultConfig = DEFAULT_CFG;
+#endif
+
 	};
 
 CvChannel::~CvChannel()
 	{
 	};
 
+#if 1
 
 // Data is collected over a number of frames or main-bangs (typically 16)
 // After data is collected and reported out to the Mill Console system,
@@ -315,3 +321,4 @@ void CvChannel::GetPeakData(void)
 	m_PeakData.wTofMin = m_wTOFMinSum;
 	m_PeakData.wTofMax = m_wTOFMaxSum;
 	}
+#endif

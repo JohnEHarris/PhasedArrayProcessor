@@ -31,7 +31,7 @@ public:
 	int m_nMyRole;		//0= undefined, 1= Receiver, 2= Sender
 	CString m_sMyRole;	// Receiver, Sender, I dont know
 
-	CClientConnectionManagement *m_pMyCCM;
+	CClientConnectionManagement *m_pMyCCM;	// ptr to static struct. Not created or destroyed
 	int m_nWinVersion;
 	int m_nConnectRetryTick;
 	int m_nThreadIdOld;
@@ -42,7 +42,8 @@ public:
 	WORD m_wMsgSeqCount;
 	int m_DebugLimit;
 
-	CHwTimer *m_pElapseTimer;
+	CHwTimer *m_pElapseTimer;	// created in CClientCommunicationThread::CClientCommunicationThread()
+								// deleted in ~CClientCommunicationThread()
 	int m_nElapseTime;
 
 	CString GetRole(void)	{ return m_sMyRole;	}
@@ -51,7 +52,8 @@ public:
     // ClientSocket is an AsyncSocket
 	// In particular, it receives data 'automatically' with the OnReceive
 	// procedure of the class
-	CClientSocket* m_pSocket;
+	CClientSocket* m_pSocket;	// created in CClientCommunicationThread::StartTCPCommunication()
+								// destroyed in CClientCommunicationThread::ExitInstance()
 	SOCKET m_hSocket;
 	int m_nTick;
 	int m_nDebugCount;	// miscellaneous debugging

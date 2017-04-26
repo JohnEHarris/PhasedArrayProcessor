@@ -78,7 +78,7 @@ of bytes as a config file for a 40 channel system.
 #endif
 
 #ifndef XDCR_TYPE
-#define XDCR_TYPE  6
+#define XDCR_TYPE  8
 #endif
 
 #define MAX_DELTA_WALL		25

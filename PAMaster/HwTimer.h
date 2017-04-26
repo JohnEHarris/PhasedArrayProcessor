@@ -20,6 +20,7 @@ public:
 //	char where[16];		// where in code is this timing done... debugging
 //	CString where;		// where in code is this timing done... debugging
 	// 10-Jun-08 jeh
+	char tag[128];		// tell who created and who destroyed.
 	unsigned int m_uMaxDeltaT;
 	float m_fScaleToMicroseconds;
 

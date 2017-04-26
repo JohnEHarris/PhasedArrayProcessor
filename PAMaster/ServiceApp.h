@@ -25,7 +25,6 @@ using namespace std;
 #include "ServerConnectionManagement.h"
 #include "ServerSocketOwnerThread.h"	// 8-14-12 jeh
 #include "ServerListenThread.h"
-#include "ServerRcvListThreadBase.h"		// 11-16-12 jeh
 #include "ServerRcvListThread.h"		// 11-06-12 jeh
 #include "ClientConnectionManagement.h"	// 21-Jan-13 jeh
 #include "TestThread.h"
@@ -83,6 +82,7 @@ see ServiceApp.cpp
 
 #define ePAM_Client_Of_PAG_Server			0
 extern CServiceApp theApp;
+extern int gnFifoCnt, gnAsyncSocketCnt;
 
 class CServiceApp : public CWinApp, public CNTService
 	{
@@ -161,7 +161,7 @@ public:
 	short GetServerPort(int nClient)		{ return (stSocketNames[nClient].nPort & 0xffff);		}	// clinets port
 	void SetServerPort(int nClient, short n){ stSocketNames[nClient].nPort = n;			}
 
-	CServerRcvListThreadBase* CreateServerReceiverThread(int nServerNumber, int nPriority);
+	CServerRcvListThread* CreateServerReceiverThread(int nServerNumber, int nPriority);
 	//int PamSendToPag(void *pBuf, int nLen);
 	IDATA_PACKET m_LastGoodSend;
 

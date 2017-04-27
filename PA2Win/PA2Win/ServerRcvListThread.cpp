@@ -86,10 +86,13 @@ CServerRcvListThread::CServerRcvListThread()
 	srand( (unsigned)time( NULL ) );	// seed random number generator
 #endif
 	m_pElapseTimer = 0;
+#if 0
 	CString s;
 	int nId = AfxGetThread()->m_nThreadID;
+	// m_nMyServer, m_nClientIndex not available yet
 	s.Format(_T("CServerRcvListThread[%d][%d] = 0x%08x, Id=0x%04x constructor\n"), m_nMyServer, m_nClientIndex, this, nId);
 	TRACE(s);
+#endif
 	}
 
 CServerRcvListThread::~CServerRcvListThread()
@@ -233,6 +236,23 @@ void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 		}
 	}
 
+#if 0
+void CServerRcvListThread::MakeFakeDataHead(InputRawDataPacket *pData)
+//void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
+	{
+	pData->DataHead.bMsgID	= eRawInsp;	// raw data=10
+	pData->DataHead.bSeq	= m_nFakeDataSeqNumber;
+	m_nFakeDataSeqNumber	+= 128;	// the next packet will 128 Ascans/Main bangs later
+	m_nFakeDataSeqNumber	= m_nFakeDataSeqNumber % 128;
+
+	pData->DataHead.bDin = FORWARD | PIPE_PRESENT;
+	pData->DataHead.wMsgSeqCnt++;
+	pData->DataHead.wLocation = nLoc++;
+	if (nLoc > 500) nLoc = 20;
+	pData->DataHead.wClock = nLoc % 12;
+	pData->DataHead.wPeriod = 1465;	// 300 ms = 200 rpm
+	}
+#endif
 // Random number between 0 and 100
 // Notice - not a class member
 //
@@ -460,8 +480,7 @@ void CServerRcvListThread::IncStartSeq(void)
 // the client socket to the PHASED ARRAY GUI - PAG
 void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata)
 	{
-#if 0
-	//ifdef I_AM_PAP
+#ifdef I_AM_PAP
 	if (pCCM_PAG == NULL)
 		{
 		ASSERT(0);

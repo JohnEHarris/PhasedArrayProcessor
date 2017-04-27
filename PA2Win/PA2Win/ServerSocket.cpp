@@ -124,6 +124,7 @@ CServerSocket::~CServerSocket()
 	{
 	CString s,t,u;
 	void *pv;
+	int i, j;
 	int nId = AfxGetThread()->m_nThreadID;
 	t.Format(_T("Thread Id=0x%04x - m_pSCC= %x "), nId, m_pSCC);
 
@@ -137,7 +138,9 @@ CServerSocket::~CServerSocket()
 		break;
 	case eOnStack:
 		s = _T( "Temporary socket to create ServerConnection\n" );
-		break;
+		t += s;
+		TRACE( t );
+		return;	// don't want to proceed and delete all we just built
 	default:
 		s = _T("Unknown Socket Destructor called \n");
 		break;
@@ -179,6 +182,16 @@ CServerSocket::~CServerSocket()
 			m_pSCC->pCSSendPkt = 0;
 			delete m_pSCC->pSendPktList;
 			m_pSCC->pSendPktList = 0;
+			}
+			
+		for ( i = 0; i < MAX_SEQ_COUNT; i++)
+		for ( j = 0; j < MAX_CHNLS_PER_INSTRUMENT; j++)
+			{
+			if (m_pSCC->pvChannel[i][j])
+				{
+				delete m_pSCC->pvChannel[i][j];
+				m_pSCC->pvChannel[i][j] = 0;
+				}
 			}
 		}
 
@@ -373,7 +386,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 #endif
 
 
-	char cIp4[20];
+	//char cIp4[20];
 
 	Asocket.GetSockName(Ip4,uPort);	// my socket info??
 	s.Format(_T("Server side socket %s : %d\n"), Ip4, uPort);	// crash here 7-14-16 on reconnect by instrument
@@ -381,9 +394,15 @@ void CServerSocket::OnAccept(int nErrorCode)
 	Asocket.GetPeerName(Ip4,uPort);	// connecting clients info??
 	s.Format(_T("Client side socket %s : %d\n"), Ip4, uPort);
 	TRACE(s);
-	//
-	CstringToChar(Ip4,cIp4);
-	int ntmp = ntohl(inet_addr(cIp4));
+	int ntmp;
+	s = Ip4;
+	if (1 != InetPton(AF_INET, s, &wClientBaseAddress) )
+		{	TRACE(_T("InetPton error\n"));		return;		}
+	else
+		{	TRACE(_T("InetPton success in OnAccept\n"));
+		ntmp = ntohl(*(u_long*)&wClientBaseAddress);		}
+
+
 	nClientPortIndex = (ntmp - uClientBaseAddress);	// 0-n
 
 #ifdef I_AM_PAP
@@ -507,10 +526,10 @@ winsock2.h
 		OnAcceptInitializeConnectionStats(pscc,nMyServer, nClientPortIndex);
 		pscc->sClientIP4 = Ip4;
 #ifdef I_AM_PAP
-		s.Format(_T("PAMSrv[%d]:Instrument[%d]"), nMyServer, nClientPortIndex);
+		s.Format(_T("PAPSrv[%d]:Instrument[%d]"), nMyServer, nClientPortIndex);
 		t = s + _T("  OnAccept() creating critical sections/lists/vChannels\n");
 #else
-		s.Format(_T("PAGSrv[%d]:MasterInst[%d] OnAccept\n"), nMyServer, nClientPortIndex);
+		s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept\n"), nMyServer, nClientPortIndex);
 		t = s;
 #endif
 		TRACE(t);
@@ -532,6 +551,8 @@ winsock2.h
 		OnClose(nErrorCode); // OnClose kills ServerSocketOwnerThread but the base Async OnClose does not
 		TRACE("CServerSocketOwnerThread ALREADY exists... kill it\n");
 		m_pSCC = GetpSCC();
+		if (m_pSCC)
+			{
 #if 0
 		CWinThread * pThread1 = 
 			(CWinThread *)m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread;
@@ -551,16 +572,18 @@ winsock2.h
 		TRACE(s);
 		if ( i == 50) ASSERT(0);
 #endif
+
 		// redo what was above as if pClientConnection had never existed <<<< crashed here on friday 9-16-16
 		// after instrument power cycle.
 		// m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];	
 		//nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, nClientPortIndex);
-
-		m_pSCC->sClientIP4 = Ip4;
-		s.Format(_T("PAGSrv[%d]:MasterInst[%d]"), nMyServer, nClientPortIndex);
-		m_pSCC->szSocketName = s;
-		m_pSCC->uClientPort = uPort;
-		m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
+			OnAcceptInitializeConnectionStats(m_pSCC,nMyServer, nClientPortIndex);
+			m_pSCC->sClientIP4 = Ip4;
+			s.Format( _T( "PAGSrv[%d]:MasterInst[%d]" ), nMyServer, nClientPortIndex );
+			m_pSCC->szSocketName = s;
+			m_pSCC->uClientPort = uPort;
+			m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
+			}
 		}
 
 	else
@@ -1030,6 +1053,7 @@ void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTI
 	pscc->uBytesSent				= 0;
 	pscc->uUnsentPackets			= 0;
 	pscc->uLastTick					= 0;
+	SetpSCC( pscc );	// important or we get nulls
 
 // Only in PAP - done on individual connection for every sequence and channel
 #ifdef I_AM_PAP

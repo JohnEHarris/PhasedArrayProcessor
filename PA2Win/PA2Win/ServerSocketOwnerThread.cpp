@@ -283,70 +283,62 @@ int CServerSocketOwnerThread::ExitInstance()
 	s = _T("CServerSocketOwnerThread::ExitInstance() is running\n");
 	TRACE(s);
 	m_pSCC = GetpSCC();
-	if ((m_nMyServer >= 0) && (m_nMyServer < MAX_SERVERS) )
-		// m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread 
-		{
-		if (m_pSCC->pSocket)
-			{
-			switch (m_pSCC->pSocket->m_nOwningThreadType)
-				{
-			case eListener:
-				s = _T("Listener Socket Destructor called \n");	// called when Asocket on stack disappears in OnAccept
-				TRACE( s );
-				break;
-			case eServerConnection:
-				s.Format(_T("Server[%d] Connection Socket[%d] Destructor called \n"), m_nMyServer, m_nClientIndex);
-				//m_pSCC->pSocket = 0;
-				TRACE( s );
-				break;
-			default:
-				s = _T("Unknown Socket Destructor called \n");
-				TRACE( s );
-				break;
-				}
-			if ((int)m_pSCC->pSocket->m_hSocket > 0)	//&& ((int)m_pSCC->pSocket->m_hSocket < 32000))
-				{	// check socket handle range
-
-				//if (m_pSCC->m_pConnectionSocket->ShutDown(2))
-				if (i = m_pSCC->pSocket->ShutDown(2))
+	if (m_pSCC)
+		{	//m_pSCC not NULL
+		if ((m_nMyServer >= 0) && (m_nMyServer < MAX_SERVERS))
+			{	// IN SERVER RANGE NUMBER
+			if (m_pSCC->pSocket)
+				{	// m_pSCC->pSocket
+				switch (m_pSCC->pSocket->m_nOwningThreadType)
 					{
-					s.Format(_T("Shutdown of client socket was successful status = %d\n"), i);
-					TRACE(s);
-					m_pSCC->pSocket->Close();
+					case eListener:
+						s = _T( "Listener Socket Destructor called \n" );	// called when Asocket on stack disappears in OnAccept
+						TRACE( s );
+						break;
+					case eServerConnection:
+						s.Format( _T( "Server[%d] Connection Socket[%d] Destructor called \n" ), m_nMyServer, m_nClientIndex );
+						//m_pSCC->pSocket = 0;
+						TRACE( s );
+						break;
+					default:
+						s = _T( "Unknown Socket Destructor called \n" );
+						TRACE( s );
+						break;
 					}
-				else
+				if ((int)m_pSCC->pSocket->m_hSocket > 0)	//&& ((int)m_pSCC->pSocket->m_hSocket < 32000))
 					{
-					s = _T("Shutdown of client socket failed\n");
-					TRACE(s);
+					if (i = m_pSCC->pSocket->ShutDown( 2 ))
+						{
+						s.Format( _T( "Shutdown of client socket was successful status = %d\n" ), i );
+						TRACE( s );
+						m_pSCC->pSocket->Close();
+						}
+					else
+						{
+						s = _T( "Shutdown of client socket failed\n" );
+						TRACE( s );
+						}
+
+					// now destroy the CServerSocket class which was created in ServerSocket::OnAccept
+					// This class has a 64k fifo included in its member variables which is why it is such a big class
+					delete m_pSCC->pSocket;
 					}
+				//m_pSCC->pSocket = 0;	
+				}	//m_pSCC->pSocket
 
-				// now destroy the CServerSocket class which was created in ServerSocket::OnAccept
-				// This class has a 64k fifo included in its member variables which is why it is such a big class
-				delete m_pSCC->pSocket;
-				}		// check socket handle range
-			//m_pSCC->pSocket = 0;
-			}
 
-		if ( m_pSCC)	// this points to pClientConnection
-			{
 #ifdef _DEBUG
-			s.Format(_T("ServerSocket[%d][%d] closed\n"),m_nMyServer, m_nClientIndex);
-			TRACE(s);
+			s.Format( _T( "ServerSocket[%d][%d] closed\n" ), m_nMyServer, m_nClientIndex );
+			TRACE( s );
 			int n = m_pSCC->uPacketsSent;
 			int m = m_pSCC->uPacketsReceived;
 			int k = m_pSCC->uUnsentPackets;
-			s.Format(_T("Packets Sent = %5d, Packets Received = %5d, Packets Unsent = %5d\n"), n, m, k);
-			TRACE(s);
+			s.Format( _T( "Packets Sent = %5d, Packets Received = %5d, Packets Unsent = %5d\n" ), n, m, k );
+			TRACE( s );
 
 #endif
-			//m_pConnectionSocket->KillpClientConnectionStruct();
-			//delete m_pSCC->pSocket; corrupts heap STOPPED here on 2016-08-01 jeh .. need to delete?
-			//m_pSCC->pSocket = NULL;	 // was deleted above under the name of m_pConnectionSocket 
-			//delete m_pSCC->pSocket; corrupts heap
-			// thread was created with AutoDelete turned on. So don't delete here
-			//m_pSCC->pServerSocketOwnerThread = NULL;
-			}
-			m_pSCC->bConnected = (BYTE) eNotConnected;
+
+			m_pSCC->bConnected = (BYTE)eNotConnected;
 			//delete m_pSCC;	// wait til destructor
 			//m_pSCC = NULL;
 			//
@@ -354,49 +346,50 @@ int CServerSocketOwnerThread::ExitInstance()
 #if 1
 			if (m_pSCC->pServerRcvListThread)
 				{
-				m_pSCC->pServerRcvListThread->PostThreadMessage(WM_QUIT, 0, 0L);
-				Sleep(10);
+				m_pSCC->pServerRcvListThread->PostThreadMessage( WM_QUIT, 0, 0L );
+				Sleep( 10 );
 				for (i = 0; i < 10; i++)
 					{
 					if (NULL == m_pSCC->pServerRcvListThread)	break;
-					Sleep(10);
+					Sleep( 10 );
 					}
 				}
-			if ( i == 100)
+			if (i == 100)
 				{
-				s.Format(_T("CServerSocketOwnerThread::ExitInstance[%d][%d] failed to kill pServerRcvListThread\n"),
-					m_nMyServer, m_nClientIndex);
-				TRACE(s);
+				s.Format( _T( "CServerSocketOwnerThread::ExitInstance[%d][%d] failed to kill pServerRcvListThread\n" ),
+					m_nMyServer, m_nClientIndex );
+				TRACE( s );
 				}
 			else
 				{
-				s.Format(_T("CServerSocketOwnerThread::ExitInstance killed ServerRcvListThread in less than %d ms\n"), i);
-				TRACE(s);
+				s.Format( _T( "CServerSocketOwnerThread::ExitInstance killed ServerRcvListThread in less than %d ms\n" ), i );
+				TRACE( s );
 				}
 #endif
 
 #ifdef _DEBUG
-		s.Format(_T("CServerSocketOwnerThread::ExitInstance[%d][%d]\n"),m_nMyServer, m_nClientIndex);
-		TRACE(s);
+			s.Format( _T( "CServerSocketOwnerThread::ExitInstance[%d][%d]\n" ), m_nMyServer, m_nClientIndex );
+			TRACE( s );
 #endif
+			}		// IN SERVER RANGE NUMBER
+		}		//m_pSCC not NULL
 
-		if (m_pstSCM)
+	if (m_pstSCM)
+		{
+		if (m_pstSCM->pClientConnection[m_nClientIndex])
 			{
-			if (m_pstSCM->pClientConnection[m_nClientIndex])
-				{
-				// must delete the following before deleting the connection:
-				// send/rcv list and their sections, pSocket, pServerSocketOwnerThread,
-				// pServerRcvListThread, pvChannel[][]
-				// pSocket destructor deletes m_pFifo and m_pElapseTimer if they exist
-				// pSocket destructor deletes the critical sections and lists it uses
-				//
-				//m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread = NULL;
-				// Created in ServiceApp -- must be killed there on shutdown
-				delete m_pstSCM->pClientConnection[m_nClientIndex];
-				m_pstSCM->pClientConnection[m_nClientIndex] = NULL;
-				m_pSCC = 0;
-				m_pstSCM->nComThreadExited[m_nClientIndex] = 1;
-				}
+			// must delete the following before deleting the connection:
+			// send/rcv list and their sections, pSocket, pServerSocketOwnerThread,
+			// pServerRcvListThread, pvChannel[][]
+			// pSocket destructor deletes m_pFifo and m_pElapseTimer if they exist
+			// pSocket destructor deletes the critical sections and lists it uses
+			//
+			//m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread = NULL;
+			// Created in ServiceApp -- must be killed there on shutdown
+			delete m_pstSCM->pClientConnection[m_nClientIndex];
+			m_pstSCM->pClientConnection[m_nClientIndex] = NULL;
+			m_pSCC = 0;
+			m_pstSCM->nComThreadExited[m_nClientIndex] = 1;
 			}
 		}
 	//delete this; -- MOVE CODE IN owner destructor to this location and make sure auto delete is on

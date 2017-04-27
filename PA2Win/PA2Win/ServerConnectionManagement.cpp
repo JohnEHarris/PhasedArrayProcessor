@@ -458,7 +458,8 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 			{
 			if (m_pstSCM->nComThreadExited[i])
 				{
-				m_pstSCM->pClientConnection[i]->pServerSocketOwnerThread = 0;
+				// set to 0 in ServerSocketOwnerThread::MyDestructor
+				// m_pstSCM->pClientConnection[i]->pServerSocketOwnerThread = 0;
 				break;
 				}
 			Sleep(5);

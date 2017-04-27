@@ -56,7 +56,7 @@ public:
 	// call these get/set function from ServerSocketOwnerThread ExitInstance to update
 	// the values
 	ST_SERVERS_CLIENT_CONNECTION * GetpSCC( void )	{ return m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]; }
-	void SetpSCC( ST_SERVERS_CLIENT_CONNECTION* p, int n ) { m_pSCM->m_pstSCM->pClientConnection[n] =  p; }
+	void SetpSCC( ST_SERVERS_CLIENT_CONNECTION* p ) { m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  p; }
 	void NullpSCC(void)								{m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  0;}
 
 #ifdef I_AM_PAP

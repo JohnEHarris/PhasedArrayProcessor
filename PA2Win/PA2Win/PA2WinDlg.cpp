@@ -1221,7 +1221,7 @@ CServerRcvListThread* CPA2WinDlg::CreateServerReceiverThread(int nServerNumber, 
 
 	if (nServerNumber >= MAX_SERVERS)
 		{
-		s.Format(_T("CTscanDlg::CreateReceiverThread invalid server index = %d\n"), nServerNumber);
+		s.Format(_T("CPA2WinDlg::CreateReceiverThread invalid server index = %d\n"), nServerNumber);
 		TRACE(s);
 		return pThread;	// NULL is invalid for a thread ptr
 		}

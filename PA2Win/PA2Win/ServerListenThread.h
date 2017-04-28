@@ -37,7 +37,7 @@ public:
 
 protected:
 
-	CServerSocket *m_pListenSocket;
+	CServerSocket *m_pListenSocket;	// try as CASyncSocket
 
 	DECLARE_MESSAGE_MAP()
 };

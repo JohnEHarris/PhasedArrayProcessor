@@ -172,6 +172,9 @@ public:
 	void SaveWindowLastPosition( LPCTSTR lpszEntry, WINDOWPLACEMENT *wp );
 	void GetWindowLastPosition( LPCTSTR lpszEntry, RECT *rect );
 
+	void StructSizes( void );
+	void DlgDebugOut( CString s );
+
 // Dialog Data
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_PA2WIN_DIALOG };
@@ -198,4 +201,5 @@ public:
 	afx_msg void OnFileExit();
 	afx_msg void OnTimer( UINT_PTR nIDEvent );
 	afx_msg void OnConfigureNcNx();
+	afx_msg void OnBnClickedBnEraseDbg();
 	};

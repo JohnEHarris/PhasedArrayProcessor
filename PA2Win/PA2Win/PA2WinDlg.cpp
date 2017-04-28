@@ -313,6 +313,7 @@ BEGIN_MESSAGE_MAP(CPA2WinDlg, CDialogEx)
 	ON_WM_TIMER()
 	ON_WM_DESTROY()
 	ON_COMMAND( ID_CONFIGURE_NCNX, &CPA2WinDlg::OnConfigureNcNx )
+	ON_BN_CLICKED( IDC_BN_ERASE_DBG, &CPA2WinDlg::OnBnClickedBnEraseDbg )
 END_MESSAGE_MAP()
 
 
@@ -354,6 +355,7 @@ BOOL CPA2WinDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
+	m_lbOutput.ResetContent();
 	StartTimer();
 	// Used to attempt to connect to servers
 
@@ -361,7 +363,7 @@ BOOL CPA2WinDlg::OnInitDialog()
 	InitializeClientConnectionManagement();	// moved from after thread list creation
 	InitializeServerConnectionManagement();
 
-
+	StructSizes();
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 	}
@@ -1401,6 +1403,9 @@ void CPA2WinDlg::DestroySCM( void )
 	int i,j,k;
 	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM;
 	CString s;
+	// lower thread priority to allow signaled thread chance to exit
+	AfxGetThread()->SetThreadPriority( THREAD_PRIORITY_BELOW_NORMAL );
+
 	for (i = 0; i < gnMaxServers; i++)
 		{
 		if ( pSCM[i])
@@ -1418,21 +1423,19 @@ void CPA2WinDlg::DestroySCM( void )
 				s.Format( _T( "Failed to kill Listener thread for Server %d DestroySCM 1369\n" ), i );
 				pMainDlg->SaveDebugLog( s );
 				}
-			for (j = 0; j < gnMaxClientsPerServer; j++)
-				{
+			
 #ifdef I_AM_PAG
-		// The GUI has 1 or more PAP's connected as clients
-				pSCM[i]->KillClientConnection( i, j );
+
+			pSCM[i]->ServerShutDown( i );
 
 #else
 		// IF here we are the PAP. The PAP has gnMaxClientsPerServer UT hardware systems connected
 		// as clients
 
 #endif
-				}	// for (j = 0; j < gnMaxClientsPerServer; j++)
 			delete pSCM[i];
+			}
 			pSCM[i] = 0;
-			}	// if ( pSCM[i])
 		}	// for (i = 0; i < gnMaxServers; i++)
 	}
 
@@ -1526,4 +1529,40 @@ void CPA2WinDlg::GetWindowLastPosition(LPCTSTR lpszEntry, RECT *rect)
 	sscanf(t, "%d,%d,%d,%d", &rect->top, &rect->bottom, 
 			&rect->left, &rect->right);
 
+	}
+
+// gather size of the structures used in this program
+void CPA2WinDlg::StructSizes( void )
+	{
+	int i;
+	CString s;
+	i = sizeof(CCmdFifo);	// 16544
+	s.Format( _T( "sizeof(CCmdFifo) %d" ), i );
+	DlgDebugOut( s );
+	i = sizeof(CClientCommunicationThread);		// 152
+	i = sizeof(CClientConnectionManagement);	// 16
+	i = sizeof(CClientSocket);	// 36
+	i = sizeof(CCmdProcessThread);	// 76
+	i = sizeof(CHwTimer);	// 496
+	i = sizeof(CNcNx);	// 488
+	i = sizeof(CServerConnectionManagement);	// 12
+	i = sizeof(CServerListenThread);	// 80
+	i = sizeof(CServerRcvListThread);	// 96
+	i = sizeof(CServerSocket);	// 4280
+	i = sizeof(CServerSocketOwnerThread);	// 108
+	i = sizeof(CvChannel);	// 160
+//	i = sizeof();
+
+	}
+
+// Display string s on main dlg list box
+void CPA2WinDlg::DlgDebugOut( CString s )
+	{
+	m_lbOutput.AddString( s );
+	}
+
+void CPA2WinDlg::OnBnClickedBnEraseDbg()
+	{
+	// TODO: Add your control notification handler code here
+	m_lbOutput.ResetContent();
 	}

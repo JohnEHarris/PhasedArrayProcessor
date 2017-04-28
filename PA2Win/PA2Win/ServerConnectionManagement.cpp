@@ -336,10 +336,12 @@ int CServerConnectionManagement::StopListenerThread(int nMyServer)
 
 	if (NULL == m_pstSCM)			return 3;
 	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
-		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);	
-	// post a message to init the listener thread. Feed in a pointer to this instance of SCM
-	//m_pstSCM->pServerListenThread->PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
+		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);
+
 	PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID,WM_QUIT, 0L, 0L);
+	// Exit thread kills the socket also.
+	// post a message to init the listener thread. Feed in a pointer to this instance of SCM
+	// m_pstSCM->pServerListenThread->PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
 	Sleep(10);
 	return 0;	// success
 	}
@@ -444,8 +446,8 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		}
 #endif
 
-	// Now kill all the ServerConnection threads which themselves have to close and kill their sockets
-	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
+	// Now kill all the ServerConnection threads which themselves have to close and kill their sockets MAX_CLIENTS_PER_SERVER
+	for (i = 0; i < gnMaxClientsPerServer; i++)
 		{
 		Sleep(10);
 		if (NULL == m_pstSCM->pClientConnection[i])	continue;	// go to end of loop

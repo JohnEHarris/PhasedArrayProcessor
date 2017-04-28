@@ -199,16 +199,30 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 
 afx_msg void CServerListenThread::StopListnerThread(WPARAM w, LPARAM lParam)
 	{
+	int i;
 	if (m_pstSCM == NULL)	return;
 	if (m_pstSCM->pServerListenThread == NULL)	return;
 	if (m_pListenSocket != NULL)
 		{
-		m_pListenSocket->Close();
+		
+#if 0
+
+WSANOTINITIALISED A successful AfxSocketInit must occur before using this API. 10093L
+標SAENETDOWN The Windows Sockets implementation detected that the network subsystem failed. 10050L
+標SAEINVAL nHow is not valid. 10022L
+標SAEINPROGRESS A blocking Windows Sockets operation is in progress. 10036L
+標SAENOTCONN The socket is not connected ( SOCK_STREAM only). 10057L
+標SAENOTSOCK The descriptor is not a socket. 10038L
+
+
+		i = m_pListenSocket->ShutDown( 2 );
 		delete m_pListenSocket;
 		m_pListenSocket = NULL;
+#endif
+
 		}
 	CWinThread *pThread = this;
-	PostThreadMessage(WM_QUIT, 0L, 0L);
+	PostThreadMessage(WM_QUIT, 0L, 0L);	// does the same as the above code
 	}
 
 // debugging aid

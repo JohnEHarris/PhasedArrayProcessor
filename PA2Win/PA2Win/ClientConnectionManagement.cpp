@@ -253,57 +253,70 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	Sleep(10);
 	/******************/
 #if 1
-	LockRcvPktList();
-	n = m_pstCCM->pRcvPktPacketList->GetCount();
-	while (!m_pstCCM->pRcvPktPacketList->IsEmpty())
+	if (m_pstCCM->pRcvPktPacketList)
 		{
-		pV = (void *) m_pstCCM->pRcvPktPacketList->RemoveHead();
-		delete pV;
+		LockRcvPktList();
+		n = m_pstCCM->pRcvPktPacketList->GetCount();
+		while (!m_pstCCM->pRcvPktPacketList->IsEmpty())
+			{
+			pV = (void *)m_pstCCM->pRcvPktPacketList->RemoveHead();
+			delete pV;
+			}
+		delete m_pstCCM->pRcvPktPacketList;
+		m_pstCCM->pRcvPktPacketList = 0;
 		}
-	delete m_pstCCM->pRcvPktPacketList;
-	m_pstCCM->pRcvPktPacketList = 0;
 	if (m_pstCCM->pCSRcvPkt)		
 		delete m_pstCCM->pCSRcvPkt;
 
 	/******************/
-	LockSendPktList();
-	n = m_pstCCM->pSendPktList->GetCount();
-	while (!m_pstCCM->pSendPktList->IsEmpty())
+	if (m_pstCCM->pSendPktList)
 		{
-		pV = (void *) m_pstCCM->pSendPktList->RemoveHead();
-		delete pV;
+		LockSendPktList();
+		n = m_pstCCM->pSendPktList->GetCount();
+		while (!m_pstCCM->pSendPktList->IsEmpty())
+			{
+			pV = (void *)m_pstCCM->pSendPktList->RemoveHead();
+			delete pV;
+			}
+		delete m_pstCCM->pSendPktList;
+		m_pstCCM->pSendPktList = 0;
+		UnLockSendPktList();
 		}
-	delete m_pstCCM->pSendPktList;
-	m_pstCCM->pSendPktList = 0;
-	UnLockSendPktList();
 	if (m_pstCCM->pCSSendPkt)		
 		delete m_pstCCM->pCSSendPkt;
 
 	/******************/
-	LockDebugIn();
-	n = m_pstCCM->pInDebugMessageList->GetCount();
-	while (!m_pstCCM->pInDebugMessageList->IsEmpty())
+
+	if (m_pstCCM->pInDebugMessageList)
 		{
-		pV = (void *) m_pstCCM->pInDebugMessageList->RemoveHead();
-		delete pV;
+		LockDebugIn();
+		n = m_pstCCM->pInDebugMessageList->GetCount();
+		while (!m_pstCCM->pInDebugMessageList->IsEmpty())
+			{
+			pV = (void *)m_pstCCM->pInDebugMessageList->RemoveHead();
+			delete pV;
+			}
+		delete m_pstCCM->pInDebugMessageList;
+		m_pstCCM->pInDebugMessageList = 0;
+		UnLockDebugIn();
 		}
-	delete m_pstCCM->pInDebugMessageList;
-	m_pstCCM->pInDebugMessageList = 0;
-	UnLockDebugIn();
 	if (m_pstCCM->pCSDebugIn)		
 		delete m_pstCCM->pCSDebugIn;
 
 	/******************/
-	LockDebugOut();
-	n = m_pstCCM->pOutDebugMessageList->GetCount();
-	while (!m_pstCCM->pOutDebugMessageList->IsEmpty())
+	if (m_pstCCM->pOutDebugMessageList)
 		{
-		pV = (void *) m_pstCCM->pOutDebugMessageList->RemoveHead();
-		delete pV;
+		LockDebugOut();
+		n = m_pstCCM->pOutDebugMessageList->GetCount();
+		while (!m_pstCCM->pOutDebugMessageList->IsEmpty())
+			{
+			pV = (void *)m_pstCCM->pOutDebugMessageList->RemoveHead();
+			delete pV;
+			}
+		delete m_pstCCM->pOutDebugMessageList;
+		m_pstCCM->pOutDebugMessageList = 0;
+		UnLockDebugOut();
 		}
-	delete m_pstCCM->pOutDebugMessageList;
-	m_pstCCM->pOutDebugMessageList = 0;
-	UnLockDebugOut();
 	if (m_pstCCM->pCSDebugOut)		
 		delete m_pstCCM->pCSDebugOut;
 
@@ -329,6 +342,7 @@ void CClientConnectionManagement::CreateReceiveThread(void)
 	TRACE(s);
 	bAutoDelete = m_pstCCM->pReceiveThread->m_bAutoDelete; // autodelete is default
 	m_pstCCM->pReceiveThread->m_bAutoDelete = true;
+	m_pstCCM->pReceiveThread->m_nMyRole = 1;	// receiver
 	m_pstCCM->pReceiveThread->ResumeThread();
 	}
 
@@ -346,11 +360,12 @@ void CClientConnectionManagement::KillReceiveThread(void)
 	// receiver role is 1, send role is 2. Passed thru wParam
 	// Thread message is serviced by CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lParam)
 	m_pstCCM->pReceiveThread->PostThreadMessage(WM_USER_KILL_RECV_THREAD, (WORD) 1, (LPARAM) this);
-	while ( (m_pstCCM->pSocket ) && i < 50)
+	while ( (m_pstCCM->pReceiveThread ) && i < 50)
 		{
 		Sleep(10);	 i++;
 		}
-	m_pstCCM->pReceiveThread->PostThreadMessage(WM_QUIT,0,0);
+	// Quit could shut down sender instead of receiver
+	//	m_pstCCM->pReceiveThread->PostThreadMessage(WM_QUIT,0,0);
 	Sleep(10);
 	}
 
@@ -383,11 +398,11 @@ void CClientConnectionManagement::KillSendThread(void)
 	// receiver role is 1, send role is 2
 	int i = 0;
 	m_pstCCM->pSendThread->PostThreadMessage(WM_USER_KILL_SEND_THREAD, (WORD) 2, (LPARAM) this);
-	while ( (m_pstCCM->pSocket ) && i < 50)
+	while ( (m_pstCCM->pSendThread ) && i < 50)
 		{
 		Sleep(10);	 i++;
 		}
-	m_pstCCM->pSendThread->PostThreadMessage(WM_QUIT,0,0);
+	//m_pstCCM->pSendThread->PostThreadMessage(WM_QUIT,0,0);
 	Sleep(10);	
 	}
 
@@ -419,9 +434,14 @@ void CClientConnectionManagement::CreateCmdProcessThread(void)
 
 void CClientConnectionManagement::KillCmdProcessThread(void)
 	{
+	int i = 0;
 	if (m_pstCCM == NULL)	return;
 	if (m_pstCCM->pCmdProcessThread == NULL) return;
 	m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_QUIT,0,0L);
+	while ( (m_pstCCM->pCmdProcessThread ) && i < 50)
+		{
+		Sleep(10);	i++;
+		}
 	}
 
 
@@ -504,7 +524,7 @@ void CClientConnectionManagement::DebugOut(CString s)
 
 
 // If the socket closes, let the client manager decide if thread restarts are in order or if the app is closing
-// Called when the client socket closes by the clien socket
+// Called when the client socket closes by the client socket
 void CClientConnectionManagement::OnSocketClose(int nErrorCode)
 {
 	// check thread states and reason for socket closing

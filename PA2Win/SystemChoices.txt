@@ -3,5 +3,5 @@
 I_AM_PAG  The GUI
 
 
-I_AM_PAP  The PA PROCESSOR to doing NcNx operation on instrument data
+I_AM_PAP  The PA PROCESSOR doing NcNx operation on instrument data
 

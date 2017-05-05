@@ -30,6 +30,7 @@ CCmdProcessThread::~CCmdProcessThread()
 	if (NULL == m_pstCCM->pCmdProcessThread)	return;
 	//delete m_pstCCM->pCmdProcessThread;
 	m_pstCCM->pCmdProcessThread = NULL;
+	AfxEndThread( 0 );
 	}
 
 BOOL CCmdProcessThread::InitInstance()
@@ -41,6 +42,7 @@ BOOL CCmdProcessThread::InitInstance()
 int CCmdProcessThread::ExitInstance()
 	{
 	// TODO:  perform any per-thread cleanup here
+	TRACE( _T( "ExitInstance()\n" ) );
 	return CWinThread::ExitInstance();
 	}
 

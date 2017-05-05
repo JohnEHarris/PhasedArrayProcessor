@@ -1,8 +1,6 @@
 ================================================================================
     MICROSOFT FOUNDATION CLASS LIBRARY : PA2Win Project Overview
 ===============================================================================
-2:55 PM 4/19/2017
-Made a mistake and blew away the previous git repo. Oh well.
 
 
 The application wizard has created this PA2Win application for

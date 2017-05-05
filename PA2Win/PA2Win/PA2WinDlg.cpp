@@ -21,6 +21,17 @@
 #define new DEBUG_NEW
 #endif
 
+#ifdef I_AM_PAG
+/*
+I AM THE GUI
+*/
+#endif
+
+#ifdef I_AM_PAP
+/*
+I AM THE PHASED ARRAY PROCESSOR
+*/
+#endif
 
 // CAboutDlg dialog used for App About
 
@@ -215,10 +226,13 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_PA2WIN_DIALOG, pParent)
 	{
 	int i;
-
+	nLoc = 20;
 	m_ptheApp = (CPA2WinApp *) AfxGetApp();
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	gDlg.pUIDlg = this;
+	nShutDown = 0;
+
+	g_hTimerTick = ::CreateEvent(0, TRUE, FALSE, 0);
 
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{		pSCM[i] = NULL;		}
@@ -273,14 +287,39 @@ Here, ClientBaseIp[16] = 192.168.10.201
 
 CPA2WinDlg::~CPA2WinDlg()
 	{
+	int i, j;
 	// In general, whatever was built in OnInitDialog should be destroyed here
+	nShutDown = 1;	// Stop TestThread worker loop
+	// lower thread priority to allow signaled thread chance to exit
+	AfxGetThread()->SetThreadPriority( THREAD_PRIORITY_BELOW_NORMAL );
+
+	// KIll the test thread
+	if (m_pTestThread)
+		{
+		::SetEvent(g_hTimerTick);
+		Sleep(500);
+#if 0
+		i = m_pTestThread->PostThreadMessage(WM_USER_TEST_THREAD_BAIL,0,0L); // fails, returns 0
+		Sleep(10);
+		Sleep(10);
+		if (i)
+			j = i;
+		else 
+		j = i*2;
+#endif
+		Sleep(20);
+		}
+
 	DestroyCCM();
 	DestroySCM();
-	delete pCSSaveDebug;
-	pCSSaveDebug = 0;
 		
 	CloseFakeData();
 	CloseDebugLog();
+	Sleep( 100 );
+	if (pCSSaveDebug)
+		delete pCSSaveDebug;
+	pCSSaveDebug = 0;
+
 	if (gDlg.pNcNx)
 		{
 		delete gDlg.pNcNx;
@@ -323,6 +362,7 @@ BOOL CPA2WinDlg::OnInitDialog()
 	{
 	CString sDlgName;
 	CDialogEx::OnInitDialog();
+	int i;
 #ifdef I_AM_PAG
 	sDlgName = _T( "PA2Win -- Phase Array GUI Version -- PAG" );
 #else
@@ -358,6 +398,21 @@ BOOL CPA2WinDlg::OnInitDialog()
 	m_lbOutput.ResetContent();
 	StartTimer();
 	// Used to attempt to connect to servers
+
+// Test thread creation and thread message posting
+	m_pTestThread = (CTestThread *) AfxBeginThread(
+										RUNTIME_CLASS(CTestThread),
+										THREAD_PRIORITY_NORMAL,
+										0,	// stack size
+										0,	// create flag, run on start//CREATE_SUSPENDED,	// runstate
+										NULL);	// security ptr
+
+
+	// Test posting a message to newly created thread
+	if (m_pTestThread)
+		i = m_pTestThread->PostThreadMessage(WM_USER_THREAD_HELLO_WORLD,1,5L);
+
+	Sleep(50);
 
 	GetAllIP4AddrForThisMachine();	
 	InitializeClientConnectionManagement();	// moved from after thread list creation
@@ -646,9 +701,10 @@ void CPA2WinDlg::GetAllIP4AddrForThisMachine()
 		}
 	}
 
-void CPA2WinDlg::InitializeClientConnectionManagement()
+
+void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	{
-	int i;
+	int i, j;
 #if 1
 	// Instantiate all CCM instances for as many client connections as are going to be supported
 	// Convention is for case 0 to be SysCp connection since all connect to SysCp
@@ -656,117 +712,164 @@ void CPA2WinDlg::InitializeClientConnectionManagement()
 	// Convention is for case 2 to be connection to the database
 	// Convention is for case 3 to be connection to the PLC -- no handled with clives class
 	// 	All these connections are tcp/ip clients and the other end is a tcp/ip server.
-	CString sClientIP,  sServerIp;
+	CString sClientIP,  sServerIp, sServerName, s;	// sServerName use the url for this server
+	UINT uServerPort;
 
 	for ( i = 0; i < MAX_CLIENTS; i++)
 		{
 		if (pCCM[i])	continue;	// instance already exists
-
-#ifdef I_AM_PAG
-		// If here I am the GUI. In test mode have nothing to connect to.
 		switch (i)
 			{
-		case 0:		// assume connecting to scp
+		case 0:
+#ifdef I_AM_PAG
+		// If here I am the GUI. In test mode have nothing to connect to.
+				switch (i)
+					{
+					case 0:		// assume connecting to scp
 
-			if ( 0 == FindServerSideIP(i) )
-				{
-				// Could not find the server
-				TRACE("Could not find a server for SysCp - case 0\n");
-				break;
-				}
-			if ( 0 == FindClientSideIP(i) )
-				{	// find client side connection for 1st connection... probably the same IP for all 
-					// client side connections unless more than one NIC
-				TRACE("Could not find a client IP for SysCp - case 0\n");
-				break;
-				}
+						if (0 == FindServerSideIP( i ))
+							{
+							// Could not find the server
+							TRACE( "Could not find a server for SysCp - case 0\n" );
+							break;
+							}
+						if (0 == FindClientSideIP( i ))
+							{	// find client side connection for 1st connection... probably the same IP for all 
+								// client side connections unless more than one NIC
+							TRACE( "Could not find a client IP for SysCp - case 0\n" );
+							break;
+							}
 #if 0		
 			// Make a specific child class of CCM to handle the SysCp
-			pCCM_SysCp = (CCCM_SysCp *)new CCCM_SysCp(i, PHASE_ARRAY_WALL_COMMAND_PROCESSOR);	// ptr to the class, not the connection structure
-			if (NULL == pCCM_SysCp)
+						pCCM_SysCp = (CCCM_SysCp *)new CCCM_SysCp( i, PHASE_ARRAY_WALL_COMMAND_PROCESSOR );	// ptr to the class, not the connection structure
+						if (NULL == pCCM_SysCp)
+							{
+							TRACE1( "pCCM_SysCp[%d] is NULL\n", i );
+							break;
+							}
+						if (pCCM_SysCp->m_pstCCM == NULL)
+							{
+							TRACE1( "pCCM_SysCp[%d]->m_pstCCM is NULL\n", i );
+							break;
+							}
+						//pCCM[i] = pCCM_SysCp; causes problem on shut down
+
+						pCCM_SysCp->UniqueProc();	//just for debugging
+						pCCM_SysCp->SetSocketName( _T( "CCM_SysCp" ) );
+						pCCM_SysCp->SetWinVersion( theApp.m_iWinVer );
+
+						if (pCCM_SysCp->m_pstCCM->sClientIP4.GetLength() > 6)	// copy found IP for client into identity struct
+							pCCM_SysCp->SetClientIp( pCCM_SysCp->m_pstCCM->sClientIP4 );
+						if (pCCM_SysCp->m_pstCCM->sServerIP4.GetLength() > 6)	// copy found IP for server into identity struct
+							pCCM_SysCp->SetServerIp( pCCM_SysCp->m_pstCCM->sServerIP4 );
+
+						// Set thread priorities for send and receive threads
+						pCCM_SysCp->m_pstCCM->nReceivePriority		= THREAD_PRIORITY_ABOVE_NORMAL;
+						pCCM_SysCp->m_pstCCM->nSendPriority			= THREAD_PRIORITY_BELOW_NORMAL;
+						pCCM_SysCp->m_pstCCM->nCmdProcessPriority	= THREAD_PRIORITY_NORMAL;	// not used by PAG
+						pCCM_SysCp->CreateReceiveThread();		Sleep( 50 );
+						pCCM_SysCp->CreateSendThread();			Sleep( 50 );
+						pCCM_SysCp->InitReceiveThread();		Sleep( 50 );
+						// causes CClientCommunicationThread::InitTcpThread(WPARAM w, LPARAM lParam) to run
+						pCCM_SysCp->InitSendThread();			Sleep( 50 );
+						//pCCM_PAG->CreateCmdProcessThread();		Sleep(50);	// only in PAM
+#endif
+						break;	// case 0
+
+
+					case 1:		// assume connectiong to GDP
+						if (!FindServerSideIP( i ))
+							{
+							TRACE( "Could not find server IP for GDP.. we are toast\n" );
+							break;
+							}
+						sServerIp = stCCM[i].sServerIP4;
+
+						if (0 == FindClientSideIP( i ))
+							{	// find client side connection for 1st connection... probably the same IP for all 
+								// client side connections unless more than one NIC
+							TRACE( "Could not find a client IP for SysCp - case 0\n" );
+							break;
+							}
+
+						// FindClientSideIP(i);	// assume syscp found the ip for this client for all other servers. If not
+						// craft CODE in FindClientSideIP to find another ip address to link with the database.
+						if (stCCM[0].sClientIP4.GetLength() > 6)
+							sClientIP = stCCM[0].sClientIP4;	// use case 0 for syscp
+						else
+							{	// try something else. If that fails, abort since we can't hook up with the data base
+							}
+
+#if 0
+			// Make a specific child class of CCM to handle the GDP
+						pCCM_GDP = (CCCM_GDP *) new CCCM_GDP( i, PHASE_ARRAY_WALL_COMMAND_PROCESSOR );	// ptr to the class, not the connection structure
+						if (NULL == pCCM_GDP)
+							{
+							TRACE1( "pCCM_GDP[%d] is NULL\n", i );
+							break;
+							}
+						if (pCCM_GDP->m_pstCCM == NULL)
+							{
+							TRACE1( "pCCM_GDP[%d]->m_pstCCM is NULL\n", i );
+							break;
+							}
+#endif
+
+						break;	// case 1
+
+
+					default:
+						pCCM[i] = NULL;
+						break;
+
+					}
+
+#else
+	// I_AM_PAP. I connect only to the PAG
+			sClientIP = GetClientIP( i );
+			sServerIp = GetServerIP( i );
+			sServerName = GetServerName( i );
+			uServerPort = GetServerPort( i ) & 0xffff;	// port on the PAG server that we will try to connect to
+			// Make a specific child class of CCM to handle the Phased Array GUI - PAG
+			pCCM_PAG = (CCCM_PAG *) new CCCM_PAG( i );
+			j = sizeof( CCCM_PAG );
+			if (NULL == pCCM_PAG)
 				{
-				TRACE1("pCCM_SysCp[%d] is NULL\n", i);
+				TRACE1( "pCCM_PAG[%d] is NULL\n", i );
 				break;
 				}
-			if (pCCM_SysCp->m_pstCCM == NULL) 
+			if (pCCM_PAG->m_pstCCM == NULL)
 				{
-				TRACE1("pCCM_SysCp[%d]->m_pstCCM is NULL\n", i);
+				TRACE1( "pCCM_PAG[%d]->m_pstCCM is NULL\n", i );
 				break;
 				}
 			//pCCM[i] = pCCM_SysCp; causes problem on shut down
 
-			pCCM_SysCp->UniqueProc();	//just for debugging
-			pCCM_SysCp->SetSocketName(_T("CCM_SysCp"));
-			pCCM_SysCp->SetWinVersion(theApp.m_iWinVer);
+			pCCM_PAG->UniqueProc();	// JUST FOR DEBUG
+			pCCM_PAG->SetSocketName( _T( "CCM_PAG" ) );
+			//pCCM_PAG->SetWinVersion(theApp.m_iWinVer);
+			pCCM_PAG->SetClientIp( sClientIP );
+			pCCM_PAG->SetServerIp( sServerIp );
+			pCCM_PAG->SetServerName( sServerName );	// url of server, e.g. srvhouapp67
+			pCCM_PAG->SetServerPort( uServerPort );
 
-			if (pCCM_SysCp->m_pstCCM->sClientIP4.GetLength() > 6)	// copy found IP for client into identity struct
-				pCCM_SysCp->SetClientIp(pCCM_SysCp->m_pstCCM->sClientIP4);
-			if (pCCM_SysCp->m_pstCCM->sServerIP4.GetLength() > 6)	// copy found IP for server into identity struct
-				pCCM_SysCp->SetServerIp(pCCM_SysCp->m_pstCCM->sServerIP4);
 
-			// Set thread priorities for send and receive threads
-			pCCM_SysCp->m_pstCCM->nReceivePriority		= THREAD_PRIORITY_ABOVE_NORMAL;
-			pCCM_SysCp->m_pstCCM->nSendPriority			= THREAD_PRIORITY_BELOW_NORMAL;
-			pCCM_SysCp->m_pstCCM->nCmdProcessPriority	= THREAD_PRIORITY_NORMAL;	// not used by PAG
-			pCCM_SysCp->CreateReceiveThread();		Sleep(50);
-			pCCM_SysCp->CreateSendThread();			Sleep(50);
-			pCCM_SysCp->InitReceiveThread();		Sleep(50);
+			pCCM_PAG->m_pstCCM->nReceivePriority	= THREAD_PRIORITY_ABOVE_NORMAL;
+			pCCM_PAG->m_pstCCM->nSendPriority		= THREAD_PRIORITY_BELOW_NORMAL;
+			pCCM_PAG->m_pstCCM->nCmdProcessPriority	= THREAD_PRIORITY_BELOW_NORMAL;
+			pCCM_PAG->CreateReceiveThread();		Sleep( 50 );
+			pCCM_PAG->CreateSendThread();			Sleep( 50 );
+			pCCM_PAG->InitReceiveThread();			Sleep( 50 );
 			// causes CClientCommunicationThread::InitTcpThread(WPARAM w, LPARAM lParam) to run
-			pCCM_SysCp->InitSendThread();			Sleep(50);
-			//pCCM_PAG->CreateCmdProcessThread();		Sleep(50);	// only in PAM
-#endif
-			break;	// case 0
-
-
-		case 1:		// assume connectiong to GDP
-			if (!FindServerSideIP(i))
-				{
-				TRACE("Could not find server IP for GDP.. we are toast\n");
-				break;
-				}
-			sServerIp = stCCM[i].sServerIP4;
-
-			if ( 0 == FindClientSideIP(i) )
-				{	// find client side connection for 1st connection... probably the same IP for all 
-					// client side connections unless more than one NIC
-				TRACE("Could not find a client IP for SysCp - case 0\n");
-				break;
-				}
-
-			// FindClientSideIP(i);	// assume syscp found the ip for this client for all other servers. If not
-			// craft CODE in FindClientSideIP to find another ip address to link with the database.
-			if (stCCM[0].sClientIP4.GetLength() > 6)
-				sClientIP = stCCM[0].sClientIP4;	// use case 0 for syscp
-			else
-				{	// try something else. If that fails, abort since we can't hook up with the data base
-				}
-
-#if 0
-			// Make a specific child class of CCM to handle the GDP
-			pCCM_GDP = (CCCM_GDP *) new CCCM_GDP(i, PHASE_ARRAY_WALL_COMMAND_PROCESSOR);	// ptr to the class, not the connection structure
-			if (NULL == pCCM_GDP)
-				{
-				TRACE1("pCCM_GDP[%d] is NULL\n", i);
-				break;
-				}
-			if (pCCM_GDP->m_pstCCM == NULL) 
-				{
-				TRACE1("pCCM_GDP[%d]->m_pstCCM is NULL\n", i);
-				break;
-				}
-#endif
-
-			break;	// case 1
-
+			pCCM_PAG->InitSendThread();				Sleep( 50 );
+			pCCM_PAG->CreateCmdProcessThread();		Sleep( 50 );
+			break;
 
 		default:
 			pCCM[i] = NULL;
-			break;
 
+				break;
 			}
-
-#else
-	// I_AM_PAP. I connect only to the PAP
 
 #endif
 		}	// for ( i
@@ -928,7 +1031,7 @@ int CPA2WinDlg::FindServerSideIP(int nWhichConnection)
 
 	case 0:		// SysCp by convention
 
-		TRACE(_T("Resolving SysCP server IP...."));
+		TRACE(_T("Resolving SysCP server IP....\n"));
 		if (!sServerName.IsEmpty())
 			{
 			stmp = GetIPv4(sServerName);			// sometimes (MC_SCP_HOSTNAME);
@@ -965,7 +1068,7 @@ int CPA2WinDlg::FindServerSideIP(int nWhichConnection)
 
 	case 1:		// CASE 1 is now GDP
 
-		TRACE(_T("Resolving GDP server IP...."));
+		TRACE(_T("Resolving GDP server IP....\n"));
  		if (!sServerName.IsEmpty())
 			{
 			stmp = GetIPv4(sServerName);			
@@ -1189,6 +1292,7 @@ HCURSOR CPA2WinDlg::OnQueryDragIcon()
 void CPA2WinDlg::OnBnClickedOk()
 	{
 	// TODO: Add your control notification handler code here
+	StopTimer();
 	CDialogEx::OnOK();
 	}
 
@@ -1196,6 +1300,7 @@ void CPA2WinDlg::OnBnClickedOk()
 void CPA2WinDlg::OnBnClickedCancel()
 	{
 	// TODO: Add your control notification handler code here
+	StopTimer();
 	CDialogEx::OnCancel();
 	}
 
@@ -1371,36 +1476,106 @@ bool CPA2WinDlg::UpdateTimeDate(time_t *tNow)
 // Deconstruct/destroy all created for Client Connection Management system
 void CPA2WinDlg::DestroyCCM( void )
 	{
-	int i;
+	int i, nError, j;
+	CString s;
+
 	for (i = 0; i < gnMaxClients; i++)
 		{
-				
-		if (pCCM[i])
+		// every client connetion to an external server will likely have different characteristics
+		// Thus each connection will involve different shut down operations
+		// Assume the firs connection is to the test GUI aka PAG
+		switch (i)
 			{
+		case 0:
 #ifdef I_AM_PAG
-		//PAG for my purposes does not connect to any other server. For further
-		// testing it could connect to the SysCp or the GDP SERVERS
-			if (pCCM[i]->m_pstCCM->pSocket)
+			// PAG does not connect to any server at the present. Thus nothing to do
+#endif
+#ifdef I_AM_PAP
+			// PAP does connect to the GUI - PAG.
+			// It is a special child case of the general CCM
+		if (pCCM_PAG)
+			{
+			// close down the connection to the	PAG BY 
+			// closing the connected socket, deleteing critical sections and lists
+			// and deleting any other supporting threads.
+			// delete the client socket, then the cmd process thread, then the send thread, then the receive thead
+			if (pCCM_PAG->m_pstCCM)
 				{
-				TRACE( _T(" CCM has a listener socket\n" ) );
+				if (pCCM_PAG->m_pstCCM->pSocket)
+					{	// socket exists
+					if (pCCM_PAG->m_pstCCM->pSocket->m_hSocket > 0) 
+						{
+						if (j = pCCM_PAG->m_pstCCM->pSocket->ShutDown(2))
+							{
+							s.Format( _T("Shutdown of client socket was successful, result = %d\n"), j);
+							TRACE(s);					
+							nError = GetLastError();
+							}
+						else
+							{
+							nError = GetLastError();	// WSAENOTCONN                      10057L
+							s .Format(_T("Shutdown of client socket[%d] failed\n"), nError);
+							TRACE(s);
+							}
+						}	
+					}	// socket exists
+
 				}
 
-#else
-		// This is the PAP. It is a server to the UT boards and a client
-		// of the PAG
+			pCCM_PAG->KillReceiveThread();
+			Sleep( 20 );
+			i = 0;
+			while (( i < 50 ) && ( pCCM_PAG->m_pstCCM->pReceiveThread != 0) )
+				{	Sleep (10);		i++;	}
+			if ( i >= 50) TRACE("CCM - Failed to kill Receive Thread");
+			
+			pCCM_PAG->KillSendThread();
+			Sleep( 20 );
+			i = 0;
+			while (( i < 50 ) && ( pCCM_PAG->m_pstCCM->pSendThread != 0) )
+				{	Sleep (10);		i++;	}
+			if ( i >= 50) TRACE("CCM - Failed to kill Send Thread");
+
+			pCCM_PAG->KillCmdProcessThread();
+			Sleep( 20 );
+			i = 0;
+				while (( i < 50 ) && ( pCCM_PAG->m_pstCCM->pCmdProcessThread != 0) )
+					{	Sleep (10);		i++;	}
+				if ( i >= 50) TRACE("CCM - Failed to kill CmdProcess Thread");
+			
+			delete pCCM_PAG;	
+			pCCM_PAG = NULL;		
+			break;
+			}	// if (pCCM_PAG)
+			// delete send thread and critical sections, delete receive thread and critical sections
+
 
 
 
 #endif
-			}	//if (pCCM[i])
-		}
-	}
+
+		default:
+			for ( i = 0; i < MAX_CLIENTS; i++)
+				{
+				if (pCCM[i])	delete pCCM[i];	// in 2016 there is only pCCM_PAG
+				pCCM[i] = NULL;
+				//Sleep(10);
+				}
+			i = 14;
+			s = _T("Here we are trying to close CCM stuff");
+			TRACE(s);
+			break;
+
+			}	 // switch (i)
+
+		}	// for (i = 0; i < gnMaxClients; i++)
+	}	// DestroyCCM( void )
 
 // Deconstruct/destroy all created for Server Connection Management system
 // called from the destructor of CPA2WinDlg
 void CPA2WinDlg::DestroySCM( void )
 	{
-	int i,j,k;
+	int i;		// , j, k;
 	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM;
 	CString s;
 	// lower thread priority to allow signaled thread chance to exit
@@ -1411,6 +1586,7 @@ void CPA2WinDlg::DestroySCM( void )
 		if ( pSCM[i])
 			{
 			pstSCM = pSCM[i]->m_pstSCM;
+#if 0
 			pSCM[i]->StopListenerThread(i);
 			for (k = 0; k < 5; k++)
 				{
@@ -1423,6 +1599,7 @@ void CPA2WinDlg::DestroySCM( void )
 				s.Format( _T( "Failed to kill Listener thread for Server %d DestroySCM 1369\n" ), i );
 				pMainDlg->SaveDebugLog( s );
 				}
+#endif
 			
 #ifdef I_AM_PAG
 
@@ -1440,20 +1617,6 @@ void CPA2WinDlg::DestroySCM( void )
 	}
 
 
-// This called when main dialog dismissed with cancel or OK
-// NO, do all in destructor
-#if 0
-void CPA2WinDlg::OnDestroy()
-	{
-	CDialogEx::OnDestroy();
-
-	// TODO: Add your message handler code here
-	//DestroyCCM()
-	//DestroySCM()
-	CloseFakeData();
-	CloseDebugLog();
-	}
-#endif
 
 
 void CPA2WinDlg::OnConfigureNcNx()
@@ -1547,7 +1710,7 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(CNcNx);	// 488
 	i = sizeof(CServerConnectionManagement);	// 12
 	i = sizeof(CServerListenThread);	// 80
-	i = sizeof(CServerRcvListThread);	// 96
+	i = sizeof(CServerRcvListThread);	// 140
 	i = sizeof(CServerSocket);	// 4280
 	i = sizeof(CServerSocketOwnerThread);	// 108
 	i = sizeof(CvChannel);	// 160

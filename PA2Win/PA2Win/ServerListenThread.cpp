@@ -222,7 +222,9 @@ WSANOTINITIALISED A successful AfxSocketInit must occur before using this API. 1
 
 		}
 	CWinThread *pThread = this;
-	PostThreadMessage(WM_QUIT, 0L, 0L);	// does the same as the above code
+	// Maybe use 
+	AfxEndThread( 0 );
+	//PostThreadMessage(WM_QUIT, 0L, 0L);	// does the same as the above code
 	}
 
 // debugging aid

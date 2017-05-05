@@ -30,10 +30,13 @@ public:
 public:
 	int m_nMyRole;		//0= undefined, 1= Receiver, 2= Sender
 	CString m_sMyRole;	// Receiver, Sender, I dont know
+	CString m_sSrv;
+	short m_nPort;
+
 
 	CClientConnectionManagement *m_pMyCCM;	// ptr to static struct. Not created or destroyed
 	int m_nWinVersion;
-	int m_nConnectRetryTick;
+	int m_nConnectRetryTick[3];
 	int m_nThreadIdOld;
 	int m_nInXmitLoop;
 	int m_uXmitLoopCount;
@@ -72,7 +75,7 @@ public:
 	afx_msg void InitTcpThread(WPARAM w, LPARAM lParam);
 	afx_msg void KillReceiveThread(WPARAM w, LPARAM lParam);
 	afx_msg void KillSendThread(WPARAM w, LPARAM lParam);
-	afx_msg void RestartTcpComDlg(WPARAM w, LPARAM lParam);
+	//afx_msg void RestartTcpComDlg(WPARAM w, LPARAM lParam);
 	afx_msg void TransmitPackets(WPARAM w, LPARAM l);
 	afx_msg void OnTimer(WPARAM w, LPARAM lParam);
 	int m_nTimerPacketsWaiting;

@@ -41,3 +41,6 @@ PubExt int gMaxSeqCount;
 PubExt int gnMaxServers, gnMaxClientsPerServer;		// Server Connection Management
 PubExt int gnMaxClients;							// Client Connection Management
 PubExt int gnFifoCnt, gnAsyncSocketCnt;
+PubExt HANDLE	g_hTimerTick;
+PubExt int nLoc;
+

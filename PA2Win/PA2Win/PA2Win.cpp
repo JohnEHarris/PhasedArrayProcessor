@@ -35,6 +35,7 @@ CPA2WinApp::CPA2WinApp()
 
 CPA2WinApp theApp;
 CPA2WinDlg *pMainDlg;
+int nShutDown;
 
 // Limit to only one copy running at a time
 #include "LimitSingleInstance.h"

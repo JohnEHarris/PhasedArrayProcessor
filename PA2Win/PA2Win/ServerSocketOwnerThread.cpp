@@ -202,7 +202,7 @@ BOOL CServerSocketOwnerThread::InitInstance()
 		// one rcv list thread for each client connection
 		// create suspended in theApp and set pointers to structures here
 	CServerRcvListThread *pThread =
-		m_pSCC->pServerRcvListThread = theApp.CreateServerReceiverThread(m_nMyServer, m_pSCC->nSSRcvListThreadPriority);
+		m_pSCC->pServerRcvListThread = pMainDlg->CreateServerReceiverThread(m_nMyServer, m_pSCC->nSSRcvListThreadPriority);
 		// assuming that theApp returns the thread pointer pThread, then save the ID in SCC structure.
 		m_pSCC->ServerRcvListThreadID = pThread->m_nThreadID;
 		pThread->m_nClientIndex		=  m_pSCC->m_nClientIndex = m_nClientIndex;	// added from PAG
@@ -394,7 +394,7 @@ int CServerSocketOwnerThread::ExitInstance()
 		}
 	//delete this; -- MOVE CODE IN owner destructor to this location and make sure auto delete is on
 	MyDestructor();
-	
+	// Maybe use AfxEndThread (0) 
 	return CWinThread::ExitInstance();
 	}
 
@@ -514,6 +514,7 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 	s += t;
 	TRACE(s);
 	//delete m_pSCC->pServerSocketOwnerThread;
+	// Maybe use AfxEndThread (0) instead of ExitInstance
 	}
 
 // The creation of this thread included the creation of the ServerSocket class before the thread was resumed.

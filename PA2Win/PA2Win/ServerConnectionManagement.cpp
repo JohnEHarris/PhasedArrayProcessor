@@ -194,6 +194,7 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 
 	if (m_pstSCM->pServerListenThread)
 		{
+		// Maybe use AfxEndThread (0) instead of post message
 		PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID,WM_QUIT, 0L, 0L);
 		}
 
@@ -374,10 +375,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 
 
 	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
-		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);	
-	// post a message to init the listener thread. Feed in a pointer to this instance of SCM
-	//m_pstSCM->pServerListenThread->PostThreadMessageW(WM_USER_STOP_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
-	//Sleep(20);
+		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);
 
 	pThread = (CWinThread *) m_pstSCM->pServerListenThread; 
 	PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
@@ -464,7 +462,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 				// m_pstSCM->pClientConnection[i]->pServerSocketOwnerThread = 0;
 				break;
 				}
-			Sleep(5);
+			Sleep(10);
 			}	// for ( j = 0; j < 60; j++)
 
 		if ( j == 60)

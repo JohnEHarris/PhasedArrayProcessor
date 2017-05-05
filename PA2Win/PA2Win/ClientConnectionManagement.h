@@ -131,9 +131,10 @@ typedef struct
 	CCmdProcessThread			*pCmdProcessThread;
 	int nCmdProcessPriority;		// should normally be THREAD_PRIORITY_BELOW_NORMAL
 
-	// should probably be a CClientSocket !!!!
-
-	CClientSocket *pSocket;			// ASync socket fills RcvPktPacketList with OnReceive method.
+	
+	CClientSocket *pSocket;			// THIS IS A COPY OF THE SOCKET IN 	
+									// CClientCommunicationThread *pReceiveThread	
+									// ASync socket fills RcvPktPacketList with OnReceive method.
 									// same socket is used by Send thread to send packets to server
 	BYTE bConnected;				// true if connection is successful.. detected in receive thread.
 	UINT uPacketsReceived;
@@ -316,21 +317,21 @@ public:
 	void SendPacket(BYTE *pB, int nBytes, int nDeleteFlag);			
 
 	// To add data to the input data list, lock the critical section, add data to the list tail, and unlock critical section
-	void LockRcvPktList(void)		{ EnterCriticalSection(m_pstCCM->pCSRcvPkt);	}
-	void AddTailRcvPkt(void *pV)	{ m_pstCCM->pRcvPktPacketList->AddTail(pV);		}
-	void UnLockRcvPktList(void)		{ LeaveCriticalSection(m_pstCCM->pCSRcvPkt);	}
+	void LockRcvPktList(void)		{ if (m_pstCCM->pCSRcvPkt) EnterCriticalSection(m_pstCCM->pCSRcvPkt);	}
+	void AddTailRcvPkt(void *pV)	{ if (m_pstCCM->pRcvPktPacketList) m_pstCCM->pRcvPktPacketList->AddTail(pV);		}
+	void UnLockRcvPktList(void)		{ if (m_pstCCM->pCSRcvPkt) LeaveCriticalSection(m_pstCCM->pCSRcvPkt);	}
 
-	void LockSendPktList(void)		{ EnterCriticalSection(m_pstCCM->pCSSendPkt);	}
-	void AddTailSendPkt(void *pV)	{ m_pstCCM->pSendPktList->AddTail(pV);	}
-	void UnLockSendPktList(void)	{ LeaveCriticalSection(m_pstCCM->pCSSendPkt);	}
+	void LockSendPktList(void)		{ if (m_pstCCM->pCSSendPkt) EnterCriticalSection(m_pstCCM->pCSSendPkt);	}
+	void AddTailSendPkt(void *pV)	{ if (m_pstCCM->pSendPktList) m_pstCCM->pSendPktList->AddTail(pV);	}
+	void UnLockSendPktList(void)	{ if (m_pstCCM->pCSSendPkt) LeaveCriticalSection(m_pstCCM->pCSSendPkt);	}
 
-	void LockDebugOut(void)			{ EnterCriticalSection(m_pstCCM->pCSDebugOut );	}
+	void LockDebugOut(void)			{ if (m_pstCCM->pCSDebugOut) EnterCriticalSection(m_pstCCM->pCSDebugOut );	}
 	//void AddTailDebugOut(CString s)	{ m_pstCCM->pOutDebugMessageList->AddTail(&s);	}
-	void UnLockDebugOut(void)		{ LeaveCriticalSection(m_pstCCM->pCSDebugOut );	}
+	void UnLockDebugOut(void)		{ if (m_pstCCM->pCSDebugOut) LeaveCriticalSection(m_pstCCM->pCSDebugOut );	}
 
-	void LockDebugIn(void)			{ EnterCriticalSection(m_pstCCM->pCSDebugIn );	}
+	void LockDebugIn(void)			{ if (m_pstCCM->pCSDebugIn) EnterCriticalSection(m_pstCCM->pCSDebugIn );	}
 	//void AddTailDebugIn(CString s)	{ m_pstCCM->pInDebugMessageList->AddTail(&s);	}
-	void UnLockDebugIn(void)		{ LeaveCriticalSection(m_pstCCM->pCSDebugIn );	}
+	void UnLockDebugIn(void)		{ if (m_pstCCM->pCSDebugIn) LeaveCriticalSection(m_pstCCM->pCSDebugIn );	}
 
 	void DebugOut(CString s);
 

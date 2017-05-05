@@ -23,8 +23,10 @@ using namespace std;
 #include "ClientConnectionManagement.h"
 #include "ClientCommunicationThread.h"
 #include "ClientSocket.h"
+#include "CCM_PAG.h"
 #include "time.h"
 #include "NcNx.h"
+#include "TestThread.h"
 
 
 #define MMI_AS_SERVER_IP_ADDR		"192.168.10.10"		/* Server for the Phased Array Master(s) */
@@ -62,6 +64,8 @@ using namespace std;
 #define WM_USER_CONTINUOUS_REPLAY		WM_USER+0X111
 // manually added by jeh 21-Jun-12
 
+#define WM_USER_THREAD_HELLO_WORLD					WM_USER+0X1B0
+#define WM_USER_TEST_THREAD_BAIL					WM_USER+0X1B1
 #define WM_USER_KILL_COM_DLG						WM_USER+0x200
 #define WM_USER_KILL_ADP_CONNECTION					WM_USER+0x201
 #define WM_USER_RESTART_ADP_CONNECTION				WM_USER+0x202
@@ -99,6 +103,8 @@ using namespace std;
 extern int gnAsyncSocketCnt, gnFifoCnt;		// counter to count sequence of ASyncSocket creation
 extern CPA2WinDlg *pMainDlg;
 extern CPA2WinApp theApp;
+extern int nShutDown;
+extern HANDLE g_hTimerTick;
 
 
 
@@ -118,6 +124,7 @@ public:
 	CPA2WinDlg(CWnd* pParent = NULL);	// standard constructor
 	~CPA2WinDlg();
 	CPA2WinApp	*m_ptheApp;
+	CTestThread *m_pTestThread;
 
 	void MakeDebugFiles(void);
 	void GetServerConnectionManagementInfo( void );
@@ -162,7 +169,22 @@ public:
 	int FindServerSideIP(int nWhichConnection);
 	CString GetIPv4(CString sComputerName);
 	CString GetIPv4(void);
-	LRESULT GetReceivedPackets(WPARAM wWhichList, LPARAM lParam);
+	//LRESULT GetReceivedPackets(WPARAM wWhichList, LPARAM lParam);
+	CString GetClientIP(int nClient)		{ return stSocketNames[nClient].sClientIP4;	}	// clinets IP4
+	void SetClientIP(int nClient, CString s){ stSocketNames[nClient].sClientIP4 = s;	}
+	short GetClientPort(int nClient)		{ return stSocketNames[nClient].nPort;		}	// clinets port
+	void SetClientPort(int nClient, short n){ stSocketNames[nClient].nPort = n;			}
+
+	CString GetServerIP(int nClient)		{ return stSocketNames[nClient].sServerIP4;	}	// server nClient is seeking
+	void SetServerIP(int nClient, CString s){ stSocketNames[nClient].sServerIP4 = s;	}	// server nClient is seeking
+	CString GetServerName(int nClient)		{ return stSocketNames[nClient].sServerName;	}	// url for server nClient is seeking
+	void SetServerName(int nClient, CString s){ stSocketNames[nClient].sServerName = s;	}	// url for server nClient is seeking
+
+	short GetServerPort(int nClient)		{ return (stSocketNames[nClient].nPort & 0xffff);		}	// clinets port
+	void SetServerPort(int nClient, short n){ stSocketNames[nClient].nPort = n;			}
+
+	//CServerRcvListThread* CreateServerReceiverThread(int nServerNumber, int nPriority);
+
 	void InitializeServerConnectionManagement(void);
 	void DestroyCCM( void );
 	void DestroySCM( void );

@@ -132,7 +132,9 @@ CServerSocket::~CServerSocket()
 		{
 	case eListener:
 		s = _T("Listener Socket Destructor called ");	// called when Asocket on stack disappears in OnAccept
-		break;
+		t += s;
+		TRACE( t );
+		return;	// don't want to proceed and delete all we just built
 	case eServerConnection:
 		s.Format(_T("Server Connection Socket Destructor called \n"));
 		break;
@@ -328,8 +330,9 @@ void CServerSocket::OnAccept(int nErrorCode)
 		
 	Sleep( 20 );
 
-	CServerSocket Asocket(m_pSCM, eOnStack);	// a temporary Async socket of our fashioning ON THE STACK
-	Asocket.m_nOwningThreadType = eOnStack;
+//	CServerSocket Asocket(m_pSCM, eOnStack);	// a temporary Async socket of our fashioning ON THE STACK
+//	Asocket.m_nOwningThreadType = eOnStack;
+	CAsyncSocket Asocket;
 	// Asocket.m_pSCM = m_pSCM;
 	// Asocket.m_pstSCM = m_pstSCM; built in constructor
 	// ACCEPT the connection from our client into the temporary socket Asocket
@@ -1018,7 +1021,7 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
 	{
 	CString s;
-	//int i;
+	int i,j;
 
 	s.Format(_T("Send%d"), nClientPortIndex);
 	pscc->szSocketName	= _T("");
@@ -1060,7 +1063,7 @@ void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTI
 	for ( j = 0; j < MAX_SEQ_COUNT; j++)
 	for ( i = 0; i < MAX_CHNLS_PER_INSTRUMENT; i++)
 		{
-		pscc->pvChannel[j][i] = new CvChannel(nClientPortIndex,j,i);
+		pscc->pvChannel[j][i] = new CvChannel(j,i);
 		}
 #endif
 	}

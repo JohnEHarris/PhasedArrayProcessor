@@ -44,6 +44,7 @@ CClientSocket::CClientSocket( CClientConnectionManagement *pCCM	)
 			m_pCCM = pCCM;
 			m_nChooseYourOnReceive = 1;	// new constructor gets new OnReceive jeh
 			//m_pMainDlg = (CMC_SysCPTestClientDlg *) theApp.m_pMainWnd;
+			// this is a copy of the socket pointer in ClientCommunicationThread
 			if (m_pCCM->m_pstCCM)
 				m_pCCM->m_pstCCM->pSocket = this;
 			m_nAsyncSocketCnt = gnAsyncSocketCnt++;
@@ -51,6 +52,8 @@ CClientSocket::CClientSocket( CClientConnectionManagement *pCCM	)
 			s.Format(_T("Valid CCM ptr, use OnReceive1(), Socket# =%d, CreateThread = %d\n"),
 				m_nAsyncSocketCnt, m_nOwningThreadId);
 			TRACE(s);
+			m_pFifo = 0;
+			m_pElapseTimer = 0;
 		}
 		else
 		{
@@ -69,22 +72,29 @@ CClientSocket::~CClientSocket()
 	s.Format(_T("~CClientSocket Socket# =%d, CreateThread = %d\n"),
 				m_nAsyncSocketCnt, m_nOwningThreadId);
 	TRACE(s);
-	if (m_pFifo != NULL)
+	// if the socket exists and was at one time connected then m_pFifo and
+	// m_pElapseTimer are likely valid
+	if ( (m_pCCM->m_pstCCM->pSocket ) ) // && m_pCCM->GetConnectionState())
 		{
-		s.Format(_T("~CClientConnectionManagement_74 Fifo cnt=%d,  ThreadID=0x%08x\n"),
-		m_pFifo->m_nFifoCnt,  m_pFifo->m_nOwningThreadId);
-		TRACE(s);
-		delete m_pFifo;
-		m_pFifo = 0;
+		if (m_pFifo != NULL)
+			{
+			s.Format( _T( "~CClientConnectionManagement_74 Fifo cnt=%d,  ThreadID=0x%08x\n" ),
+				m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId );
+			TRACE( s );
+			delete m_pFifo;
+			m_pFifo = 0;
+			}
+		if (m_pElapseTimer != NULL)
+			{
+			s.Format( _T( "~CClientConnectionManagement_82 Fifo cnt=%dx\n" ),
+				m_pElapseTimer->tag );
+			TRACE( s );
+			delete m_pElapseTimer;
+			m_pElapseTimer = 0;
+			}
 		}
-	if (m_pElapseTimer != NULL)
-		{
-		s.Format( _T( "~CClientConnectionManagement_82 Fifo cnt=%dx\n" ),
-			m_pElapseTimer->tag );
-		TRACE(s);
-		delete m_pElapseTimer;
-		m_pElapseTimer = 0;
-		}
+	m_pCCM->m_pstCCM->pSocket = 0;
+	m_pCCM->SetConnectionState(0);
 	}
 
 
@@ -209,12 +219,16 @@ void CClientSocket::OnClose(int nErrorCode)
 	{
 	if (m_pCCM)
 		{
-		// Let the client manager decide if a restart of the receive/send thread is needed
-		m_pCCM->SetConnectionState(0);
 		if ( m_pCCM->m_pstCCM)
 			{
-			m_pCCM->InitReceiveThread();
+			if (m_pCCM->m_pstCCM->pSocket)
+				{
+				delete m_pCCM->m_pstCCM->pSocket;	// destructor destroys fifo and timer
+				}
+			//m_pCCM->InitReceiveThread();
 			}
+			// Let the client manager decide if a restart of the receive/send thread is needed
+		m_pCCM->SetConnectionState(0);
 		}
 
 
@@ -234,7 +248,7 @@ void CClientSocket::MyMessageBox(CString s)
 // copied from the Microsoft example code for OnConnect
 void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from CAsyncSocket
   {
-	  CString s, s0, s1;
+	  CString s, s0, s1, s2;
 	  char txt[64];
 	  UINT uSPort, uCPort;	// temp to hold port numbers discovered
 	  if (m_pCCM)
@@ -305,6 +319,8 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		if (m_pCCM)	m_pCCM->SetConnectionState(0);	// not connected
 		//s+= _T("FAILED");
         //AfxMessageBox(s);
+		//m_pFifo = 0;
+		//m_pElapseTimer = 0;
 		}	// if there was an error
 	 else	// connection was successful
 		{
@@ -312,7 +328,7 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		//GetPeerName(m_pCCM->m_pstCCM->sServerIP4, m_pCCM->m_pstCCM->uServerPort);
 		GetPeerName(s0, uSPort);
 		GetSockName(s1, uCPort);	// my ip and port
-		s.Format(_T("PAG client IP = %s:%d connected to XXX server = %s:%d "), s1, uCPort, s0, uSPort);
+		s.Format(_T("PAG client IP = %s:%d connected to PAG server = %s:%d "), s1, uCPort, s0, uSPort);
 		DebugOutMessage(s);
 #ifdef I_AM_PAP
 		pMainDlg->SetMy_PAM_Number(s1, uCPort);
@@ -337,7 +353,8 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		strcpy(buffer,GetTimeStringPtr());
 		CstringToChar(s1, txt);
 		printf("PAM client %s:%d connected to PAG server at %s\n",txt,uCPort, buffer);
-		s.Format(_T("PAM client %s:%d connected to PAG server at %s\n"), txt, uCPort, buffer);
+		s2 = buffer;
+		s.Format(_T("PAM client %s:%d connected to PAG server at %s\n"), s1, uCPort, s2);
 		DebugOutMessage(s);
 #endif
 		int nSize;

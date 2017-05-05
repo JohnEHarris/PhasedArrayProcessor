@@ -102,6 +102,12 @@
     <ClInclude Include="NcNx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CCM_PAG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TestThread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PA2Win.cpp">
@@ -159,6 +165,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="NcNx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CCM_PAG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TestThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

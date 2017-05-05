@@ -250,7 +250,6 @@ typedef struct
 									// information about individual clients connected to this server.
 									// not all potential clients may be connected. These client connections will be
 									// some way indicative of the IP address of the Phased Array Masters connected
-	CvChannel* pvChannel[MAX_CLIENTS_PER_SERVER][MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];
 	int nComThreadExited[MAX_CLIENTS_PER_SERVER];	// when nonZero indicates thread has exited
 
 	// VARIOUS other controls common to the server	

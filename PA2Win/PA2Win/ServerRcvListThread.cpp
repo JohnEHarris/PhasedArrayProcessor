@@ -38,7 +38,6 @@ extern  CInspState InspState;
 //extern CServiceApp theApp;
 
 
-int nLoc = 20;
 
 /** External function prototypes... mostly in Service.cpp   **/
 //extern void Inspection_Process_Control();
@@ -112,6 +111,7 @@ CServerRcvListThread::~CServerRcvListThread()
 #endif
 	if (NULL == m_pSCC)			return;
 	m_pSCC->pServerRcvListThread = NULL;
+	// Maybe use AfxEndThread (0) 
 
 	}
 

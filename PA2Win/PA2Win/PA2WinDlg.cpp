@@ -287,7 +287,7 @@ Here, ClientBaseIp[16] = 192.168.10.201
 
 CPA2WinDlg::~CPA2WinDlg()
 	{
-	int i, j;
+	//int i, j;
 	// In general, whatever was built in OnInitDialog should be destroyed here
 	nShutDown = 1;	// Stop TestThread worker loop
 	// lower thread priority to allow signaled thread chance to exit
@@ -298,16 +298,6 @@ CPA2WinDlg::~CPA2WinDlg()
 		{
 		::SetEvent(g_hTimerTick);
 		Sleep(500);
-#if 0
-		i = m_pTestThread->PostThreadMessage(WM_USER_TEST_THREAD_BAIL,0,0L); // fails, returns 0
-		Sleep(10);
-		Sleep(10);
-		if (i)
-			j = i;
-		else 
-		j = i*2;
-#endif
-		Sleep(20);
 		}
 
 	DestroyCCM();
@@ -714,6 +704,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	// 	All these connections are tcp/ip clients and the other end is a tcp/ip server.
 	CString sClientIP,  sServerIp, sServerName, s;	// sServerName use the url for this server
 	UINT uServerPort;
+	j = uServerPort = 0;
 
 	for ( i = 0; i < MAX_CLIENTS; i++)
 		{
@@ -723,9 +714,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 		case 0:
 #ifdef I_AM_PAG
 		// If here I am the GUI. In test mode have nothing to connect to.
-				switch (i)
-					{
-					case 0:		// assume connecting to scp
+
 
 						if (0 == FindServerSideIP( i ))
 							{
@@ -777,28 +766,28 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 						break;	// case 0
 
 
-					case 1:		// assume connectiong to GDP
-						if (!FindServerSideIP( i ))
-							{
-							TRACE( "Could not find server IP for GDP.. we are toast\n" );
-							break;
-							}
-						sServerIp = stCCM[i].sServerIP4;
+		case 1:		// assume connectiong to GDP
+			if (!FindServerSideIP( i ))
+				{
+				TRACE( "Could not find server IP for GDP.. we are toast\n" );
+				break;
+				}
+			sServerIp = stCCM[i].sServerIP4;
 
-						if (0 == FindClientSideIP( i ))
-							{	// find client side connection for 1st connection... probably the same IP for all 
-								// client side connections unless more than one NIC
-							TRACE( "Could not find a client IP for SysCp - case 0\n" );
-							break;
-							}
+			if (0 == FindClientSideIP( i ))
+				{	// find client side connection for 1st connection... probably the same IP for all 
+					// client side connections unless more than one NIC
+				TRACE( "Could not find a client IP for SysCp - case 0\n" );
+				break;
+				}
 
-						// FindClientSideIP(i);	// assume syscp found the ip for this client for all other servers. If not
-						// craft CODE in FindClientSideIP to find another ip address to link with the database.
-						if (stCCM[0].sClientIP4.GetLength() > 6)
-							sClientIP = stCCM[0].sClientIP4;	// use case 0 for syscp
-						else
-							{	// try something else. If that fails, abort since we can't hook up with the data base
-							}
+			// FindClientSideIP(i);	// assume syscp found the ip for this client for all other servers. If not
+			// craft CODE in FindClientSideIP to find another ip address to link with the database.
+			if (stCCM[0].sClientIP4.GetLength() > 6)
+				sClientIP = stCCM[0].sClientIP4;	// use case 0 for syscp
+			else
+				{	// try something else. If that fails, abort since we can't hook up with the data base
+				}
 
 #if 0
 			// Make a specific child class of CCM to handle the GDP
@@ -815,14 +804,14 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 							}
 #endif
 
-						break;	// case 1
+			break;	// case 1
 
 
-					default:
-						pCCM[i] = NULL;
-						break;
+		default:
+			pCCM[i] = NULL;
+			break;
 
-					}
+		}
 
 #else
 	// I_AM_PAP. I connect only to the PAG
@@ -1478,7 +1467,7 @@ void CPA2WinDlg::DestroyCCM( void )
 	{
 	int i, nError, j;
 	CString s;
-
+	nError = j = 0;
 	for (i = 0; i < gnMaxClients; i++)
 		{
 		// every client connetion to an external server will likely have different characteristics

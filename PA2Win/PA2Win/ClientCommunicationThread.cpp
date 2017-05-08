@@ -482,6 +482,9 @@ void CClientCommunicationThread::StartTCPCommunication()
 	// Our main dlg should have identified the client and server side IP's before now
 
 	i = m_pstCCM->bConnected;
+	if (m_pstCCM->bConnected)
+		return;
+
 	//m_pMyCCM->SetConnectionState(0);	// now assume we are not connected
 
 	EnterCriticalSection(m_pstCCM->pCSRcvPkt);
@@ -507,7 +510,6 @@ void CClientCommunicationThread::StartTCPCommunication()
 		m_pSocket = new CClientSocket( m_pMyCCM );	// subtype c0, 16 bytes long.
 		// The constructor makes a copy of the pointer that is in the
 		// ClientCommunicationManager class
-		i = sizeof( CClientSocket );	//24
 
 
 	// Purely Randy's work
@@ -523,11 +525,12 @@ void CClientCommunicationThread::StartTCPCommunication()
 #endif
 
 
-		LeaveCriticalSection( m_pstCCM->pCSRcvPkt );
+		//LeaveCriticalSection( m_pstCCM->pCSRcvPkt );
 
 		if (!m_pSocket)
 			{
 			TRACE( "Failed to create Client Socket\n" );
+			LeaveCriticalSection( m_pstCCM->pCSRcvPkt );
 			return;// C_CLIENT_SOCKET_CREATION_ERROR;	// Socket object creat error
 			}
 
@@ -560,6 +563,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 			{
 
 			TRACE( "Failed to create stream socket... aborting\n" );
+			LeaveCriticalSection( m_pstCCM->pCSRcvPkt );
 			return;	// C_CLIENT_SOCKET_CREATION_ERROR;
 			}
 
@@ -578,6 +582,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 				delete m_pSocket;
 				m_pSocket = NULL;	// null the local member
 				m_pMyCCM->SetSocketPtr( m_pSocket );	// null the pointer in CCM
+				LeaveCriticalSection( m_pstCCM->pCSRcvPkt );
 				return;	// C_CLIENT_SOCKET_CREATION_ERROR;
 				}
 			}
@@ -586,9 +591,9 @@ void CClientCommunicationThread::StartTCPCommunication()
 
 		}		// make a new 'connect' client socket
 	   // PAP if here
-	//===stmp and uport have to be class memebers
+	//===sServerIP4 and uport have to be class memebers
 	LeaveCriticalSection( m_pstCCM->pCSRcvPkt );
-	rtn = m_pSocket->Connect(m_sSrv, m_nPort );
+	rtn = m_pSocket->Connect(m_pstCCM->sServerIP4, m_nPort );
 
 		
 	if ( rtn == 0 )
@@ -596,8 +601,10 @@ void CClientCommunicationThread::StartTCPCommunication()
 		int nError = GetLastError();	//10035 is WSAEWOULDBLOCK..normal 
 		// if it blocks, eventually we will probably get an OnConnect which will
 		// set the connected flag
+		// WSAEINVAL already bound to a socket		10022L
+		// #define WSAEISCONN                       10056L
 
-		if (WSAEWOULDBLOCK == nError)
+		if ( (WSAEWOULDBLOCK == nError) || (WSAEINVAL == nError) || (WSAEISCONN))
 			{
 			// THIS IS WHAT ALWAYS HAPPENS HERE !!!, in a moment it will connect and the OnConnect
 			// code in CClientSocket will complete the socket connection operation.
@@ -863,7 +870,8 @@ afx_msg void CClientCommunicationThread::OnTimer( WPARAM w, LPARAM lParam )
 		case eRestartPAMtoPAG:
 			// if we haven't made the connection after a second or so, retry
 			if (NULL == m_pMyCCM)	return;
-			if (m_pMyCCM->GetConnectionState() == 0)	// not connected yet
+			//if (m_pMyCCM->GetConnectionState() == 0)	// not connected yet
+			if (m_pMyCCM->m_pstCCM->bConnected == 0)	// not connected yet
 				{
 				if (m_nConnectRetryTick[wTargetSystem] >= 50)
 					{

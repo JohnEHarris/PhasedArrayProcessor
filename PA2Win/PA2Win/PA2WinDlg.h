@@ -164,6 +164,7 @@ public:
 	CString sThisMachineIP4Addr[20];			// doubtfull this machine will have 20 "NIC's"
 	UINT uThisMachineIP4Addr[20];				// 32 bit ulong representation of ip4
 
+	void InitializeServerConnectionManagement( void );
 	void InitializeClientConnectionManagement(void);
 	int FindClientSideIP(int nWhichConnection);
 	int FindServerSideIP(int nWhichConnection);
@@ -185,7 +186,6 @@ public:
 
 	//CServerRcvListThread* CreateServerReceiverThread(int nServerNumber, int nPriority);
 
-	void InitializeServerConnectionManagement(void);
 	void DestroyCCM( void );
 	void DestroySCM( void );
 

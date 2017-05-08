@@ -7,8 +7,6 @@
 #include "../include/pa2struct.h"
 
 #ifdef I_AM_PAP
-#include "PA2WinDlg.h"
-#include "../include/pa2struct.h"
 #include "InspState.h"
 class CInstState;
 //extern  CInspState InspState;
@@ -41,8 +39,7 @@ protected:
 public:
 	virtual BOOL InitInstance();
 	virtual int ExitInstance();
-	afx_msg void ProcessRcvList(WPARAM w, LPARAM lParam);
-
+	afx_msg void ProcessRcvList( WPARAM w, LPARAM lParam );
 	CHwTimer *m_pElapseTimer;
 	int m_nElapseTime;
 
@@ -59,12 +56,11 @@ public:
 	void SetpSCC( ST_SERVERS_CLIENT_CONNECTION* p ) { m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  p; }
 	void NullpSCC(void)								{m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  0;}
 
-#ifdef I_AM_PAP
 	void ProcessInstrumentData(InputRawDataPacket *pIData);
 	
 	void MakeFakeDataHead(InputRawDataPacket *pData);
 	void MakeFakeData(InputRawDataPacket *pData);
-	void BuildOutputPacket(InputRawDataPacket *pInput);
+	//void BuildOutputPacket(InputRawDataPacket *pInput);
 	void SaveFakeData(CString& s);
 
 	void AddToIdataPacket(CvChannel *pChannel, int nCh, int nSeq, int nSendFlag);
@@ -119,11 +115,10 @@ public:
 	int GetIdataPacketIndex(void);
 	void SendIdataToPag(GenericPacketHeader *pIdata);
 
-#endif
 
-#ifdef I_AM_PAG
+//#ifdef I_AM_PAG
 	void ProcessPAM_Data(void *pData);
-#endif
+//#endif
 
 	// 11-12-2012
 		

@@ -92,6 +92,9 @@ CServerRcvListThread::CServerRcvListThread()
 	s.Format(_T("CServerRcvListThread[%d][%d] = 0x%08x, Id=0x%04x constructor\n"), m_nMyServer, m_nClientIndex, this, nId);
 	TRACE(s);
 #endif
+
+	m_pIdataPacket = NULL;
+	//m_uMsgSeqCnt = 0;
 	}
 
 CServerRcvListThread::~CServerRcvListThread()
@@ -182,14 +185,9 @@ int CServerRcvListThread::ExitInstance()
 BEGIN_MESSAGE_MAP(CServerRcvListThread, CWinThread)
 
 
-#ifdef I_AM_PAP
 	ON_THREAD_MESSAGE(WM_USER_SERVERSOCKET_PKT_RECEIVED, ProcessRcvList)// manually added by jeh 11-06-12
 //	ON_THREAD_MESSAGE(WM_USER_FLUSH_LINKED_LISTS, FlushRcvList)			// manually added jeh 09-20-16
-#endif
 
-#ifdef I_AM_PAG
-	ON_THREAD_MESSAGE(WM_USER_SERVERSOCKET_PKT_RECEIVED, ProcessRcvList)// manually added by jeh 11-06-12
-#endif
 
 END_MESSAGE_MAP()
 
@@ -197,29 +195,48 @@ END_MESSAGE_MAP()
 // CServerRcvListThread message handlers
 // Thread message WM_USER_SERVERSOCKET_PKT_RECEIVED activates this procedure
 // comes from CServerSocket::OnReceive()
-void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
+
+#ifdef I_AM_PAP
+afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
 	{
 	void *pV;
 	int i;
-#ifdef I_AM_PAP
 	InputRawDataPacket *pIdata;
-#else
-	IDATA_PACKET *pIdata;	// output data from PAP/PAM-- debugging
-#endif
+
 	//m_pSCC = GetpSCC(); receive list does not have to know about the rest of the structures
 	if (m_pSCC)
 		{
 		if (m_pSCC->pSocket)
 			{
 			m_pSCC->pSocket->LockRcvPktList();
-#ifdef I_AM_PAP
 		while (i = m_pSCC->pRcvPktList->GetCount() )
 			{
 			pV = m_pSCC->pRcvPktList->RemoveHead();
 			m_pSCC->pSocket->UnLockRcvPktList();
 			pIdata = (InputRawDataPacket *)pV;
 			ProcessInstrumentData(pIdata);	// local call to this class memeber
+			m_pSCC->pSocket->LockRcvPktList();
+			}
+		m_pSCC->pSocket->UnLockRcvPktList();
+			}
+		}
+	}
 #else
+// PAG
+
+afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
+	{
+	void *pV;
+	int i;
+
+	IDATA_PACKET *pIdata;	// output data from PAP/PAM-- debugging
+	//m_pSCC = GetpSCC(); receive list does not have to know about the rest of the structures
+	if (m_pSCC)
+		{
+		if (m_pSCC->pSocket)
+			{
+			m_pSCC->pSocket->LockRcvPktList();
+
 			while (i = m_pSCC->pRcvPktList->GetCount() )
 				{
 				pV = m_pSCC->pRcvPktList->RemoveHead();
@@ -228,13 +245,15 @@ void CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 				ProcessPAM_Data(pV);
 
 				
-#endif
 				m_pSCC->pSocket->LockRcvPktList();
 				}
 			m_pSCC->pSocket->UnLockRcvPktList();
 			}
 		}
 	}
+
+#endif
+
 
 #if 0
 void CServerRcvListThread::MakeFakeDataHead(InputRawDataPacket *pData)

@@ -1,0 +1,2 @@
+8:21 AM 5/1/2017
+Based on compiler preprocessor defines, this code is either the GUI or the PAP

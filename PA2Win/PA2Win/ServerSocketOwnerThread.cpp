@@ -233,13 +233,13 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	//
 	// duplicate the code from CServerSocket::OnAccept() where we created the ServerSocketOwner thread
 	// since this new thread is a child of the owner thread and has the same member variables.
-#if 0
+#if 1
 	if (pThread)
 		{
-		pThread->m_pMySCM		= this->m_pMySCM;
-		pThread->m_pstSCM		= this->m_pMySCM->m_pstSCM;
-		pThread->m_nMyServer	= this->m_pMySCM->m_pstSCM->pSCM->m_nMyServer;
-		pThread->m_pSCC			= this->m_pMySCM->m_pstSCM->pClientConnection[m_nClientIndex];
+		pThread->m_pSCM		= this->m_pSCM;
+		pThread->m_pstSCM		= this->m_pSCM->m_pstSCM;
+		pThread->m_nMyServer	= this->m_pSCM->m_pstSCM->pSCM->m_nMyServer;
+		pThread->m_pSCC			= this->m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];
 //		pThread->m_pSCC->pSocket = &m_ConnectionSocket;	// point the socket to the ServerSocket on our stack in this thread
 		pThread->m_nClientIndex	= m_nClientIndex;
 //		pThread->m_hConnectionSocket = m_hConnectionSocket;	// hand off the socket we just accepted to the thread

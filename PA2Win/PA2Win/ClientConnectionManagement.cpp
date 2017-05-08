@@ -156,13 +156,7 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 	m_pstCCM->pSendPktList			= new CPtrList(64);	// commands from somebody go here
 	m_pstCCM->pInDebugMessageList	= new CPtrList(64);
 	m_pstCCM->pOutDebugMessageList	= new CPtrList(64);
-	i = sizeof(CRITICAL_SECTION);		// 24
-	i = sizeof(CPtrList);					// 28
-	i = sizeof(CClientConnectionManagement);//65584
-	i = sizeof(CClientCommunicationThread);//128
-	i = sizeof(CClientSocket);				//16
-	i = sizeof(CCmdProcessThread);			//76
-//	i = sizeof(CCCM_PAG);					//65596
+
 
 	m_pstCCM->uLastTick		= 0;
 

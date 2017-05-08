@@ -267,7 +267,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	SOCKADDR SockAddr;
 	int SockAddrLen = sizeof(SOCKADDR);
 	//int i;
-	CString Ip4,s,t;
+	CString Ip4,s,t,sOut;
 	BYTE bIsClosing = 0;
 
 
@@ -650,14 +650,17 @@ winsock2.h
 		
 	// Display the connect socket IP and port
 	Asocket.GetSockName(Ip4,uPort);	// my socket info??
-//	s.Format(_T("Client accepted to server on socket %s : %d\n"), Ip4, uPort);
-//	TRACE(s);
 	pThread->m_pSCC->bConnected = eConfigured;
 		
 	char buffer [80], txt[64];
 	strcpy(buffer,GetTimeStringPtr());
 	CstringToChar(Ip4, txt);
-	printf("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n", nClientPortIndex, txt, uPort, buffer);
+	printf("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n", 
+		nClientPortIndex, txt, uPort, buffer);
+	sOut = txt;
+	s.Format(_T("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n"), 
+		nClientPortIndex,Ip4, uPort, sOut);
+	TRACE(s);
 	Sleep(10);
 			
 	// Asocket.Close();	not necessary. Since Asocket on stack, when this routine ends, Asocket deletes

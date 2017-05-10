@@ -33,6 +33,49 @@ I AM THE PHASED ARRAY PROCESSOR
 */
 #endif
 
+// C code callable from any class
+int KillLinkedList( CRITICAL_SECTION *pCritSec, CPtrList *pList )
+	{
+	int i;
+	void *pv;
+	if( (pCritSec) && (pList))
+		{
+		EnterCriticalSection( (LPCRITICAL_SECTION) pCritSec );
+		while (i= pList->GetCount())
+			{
+			pv = pList->RemoveHead();
+			delete pv;
+			}
+		delete pList;
+		delete pCritSec;
+		pList = 0;
+		pCritSec = 0;
+		return 1;
+		}
+	else
+		{
+		if (pCritSec == 0)	return 0;
+		if (pList == 0)		return 0;
+		}
+	return 1;
+	}
+
+// Probably not suitable for thread which need to exit via AfxEndThread
+// if return = 0, not a valid thread handle
+// if return 101, timed out w/o killing thread
+int KillMyThread( CWinThread *pThread )
+	{
+	int i;
+	if (pThread == NULL)	return 0;
+	pThread->PostThreadMessage(WM_QUIT,0,0l);
+	for (i = 0; i < 100; i++)
+		{
+		if (pThread == 0)	return i + 1;
+		Sleep( 10 );
+		}
+	return i + 1;
+	}
+
 // CAboutDlg dialog used for App About
 
 class CAboutDlg : public CDialogEx
@@ -288,6 +331,7 @@ Here, ClientBaseIp[16] = 192.168.10.201
 CPA2WinDlg::~CPA2WinDlg()
 	{
 	int i, j;
+	i = j = 0;
 	// In general, whatever was built in OnInitDialog should be destroyed here
 	nShutDown = 1;	// Stop TestThread worker loop
 	// lower thread priority to allow signaled thread chance to exit
@@ -297,17 +341,8 @@ CPA2WinDlg::~CPA2WinDlg()
 	if (m_pTestThread)
 		{
 		::SetEvent(g_hTimerTick);
-		Sleep(500);
-#if 0
-		i = m_pTestThread->PostThreadMessage(WM_USER_TEST_THREAD_BAIL,0,0L); // fails, returns 0
-		Sleep(10);
-		Sleep(10);
-		if (i)
-			j = i;
-		else 
-		j = i*2;
-#endif
-		Sleep(20);
+		Sleep(250);
+		Sleep(250);
 		}
 
 	DestroyCCM();
@@ -701,11 +736,11 @@ void CPA2WinDlg::GetAllIP4AddrForThisMachine()
 		}
 	}
 
-
+#ifdef I_AM_PAG
 void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	{
 	int i, j;
-#if 1
+	j = 0;
 	// Instantiate all CCM instances for as many client connections as are going to be supported
 	// Convention is for case 0 to be SysCp connection since all connect to SysCp
 	// Convention is for case 1 to be connection to the GDP
@@ -713,7 +748,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	// Convention is for case 3 to be connection to the PLC -- no handled with clives class
 	// 	All these connections are tcp/ip clients and the other end is a tcp/ip server.
 	CString sClientIP,  sServerIp, sServerName, s;	// sServerName use the url for this server
-	UINT uServerPort;
+	UINT uServerPort = 0;
 
 	for ( i = 0; i < MAX_CLIENTS; i++)
 		{
@@ -721,24 +756,20 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 		switch (i)
 			{
 		case 0:
-#ifdef I_AM_PAG
 		// If here I am the GUI. In test mode have nothing to connect to.
-				switch (i)
-					{
-					case 0:		// assume connecting to scp
-
-						if (0 == FindServerSideIP( i ))
-							{
-							// Could not find the server
-							TRACE( "Could not find a server for SysCp - case 0\n" );
-							break;
-							}
-						if (0 == FindClientSideIP( i ))
-							{	// find client side connection for 1st connection... probably the same IP for all 
-								// client side connections unless more than one NIC
-							TRACE( "Could not find a client IP for SysCp - case 0\n" );
-							break;
-							}
+	
+			if (0 == FindServerSideIP( i ))
+				{
+				// Could not find the server
+				TRACE( "Could not find a server for SysCp - case 0\n" );
+				break;
+				}
+			if (0 == FindClientSideIP( i ))
+				{	// find client side connection for 1st connection... probably the same IP for all 
+					// client side connections unless more than one NIC
+				TRACE( "Could not find a client IP for SysCp - case 0\n" );
+				break;
+				}
 #if 0		
 			// Make a specific child class of CCM to handle the SysCp
 						pCCM_SysCp = (CCCM_SysCp *)new CCCM_SysCp( i, PHASE_ARRAY_WALL_COMMAND_PROCESSOR );	// ptr to the class, not the connection structure
@@ -774,31 +805,31 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 						pCCM_SysCp->InitSendThread();			Sleep( 50 );
 						//pCCM_PAG->CreateCmdProcessThread();		Sleep(50);	// only in PAM
 #endif
-						break;	// case 0
+				break;	// case 0
 
 
-					case 1:		// assume connectiong to GDP
-						if (!FindServerSideIP( i ))
-							{
-							TRACE( "Could not find server IP for GDP.. we are toast\n" );
-							break;
-							}
-						sServerIp = stCCM[i].sServerIP4;
+		case 1:		// assume connectiong to GDP
+			if (!FindServerSideIP( i ))
+				{
+				TRACE( "Could not find server IP for GDP.. we are toast\n" );
+				break;
+				}
+			sServerIp = stCCM[i].sServerIP4;
 
-						if (0 == FindClientSideIP( i ))
-							{	// find client side connection for 1st connection... probably the same IP for all 
-								// client side connections unless more than one NIC
-							TRACE( "Could not find a client IP for SysCp - case 0\n" );
-							break;
-							}
+			if (0 == FindClientSideIP( i ))
+				{	// find client side connection for 1st connection... probably the same IP for all 
+					// client side connections unless more than one NIC
+				TRACE( "Could not find a client IP for SysCp - case 0\n" );
+				break;
+				}
 
-						// FindClientSideIP(i);	// assume syscp found the ip for this client for all other servers. If not
-						// craft CODE in FindClientSideIP to find another ip address to link with the database.
-						if (stCCM[0].sClientIP4.GetLength() > 6)
-							sClientIP = stCCM[0].sClientIP4;	// use case 0 for syscp
-						else
-							{	// try something else. If that fails, abort since we can't hook up with the data base
-							}
+			// FindClientSideIP(i);	// assume syscp found the ip for this client for all other servers. If not
+			// craft CODE in FindClientSideIP to find another ip address to link with the database.
+			if (stCCM[0].sClientIP4.GetLength() > 6)
+						sClientIP = stCCM[0].sClientIP4;	// use case 0 for syscp
+					else
+						{	// try something else. If that fails, abort since we can't hook up with the data base
+						}
 
 #if 0
 			// Make a specific child class of CCM to handle the GDP
@@ -815,16 +846,38 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 							}
 #endif
 
-						break;	// case 1
+			break;	// case 1
 
 
-					default:
-						pCCM[i] = NULL;
-						break;
+		default:
+			pCCM[i] = NULL;
+			break;
 
-					}
+			}
+		}	// for ( i = 0; i < MAX_CLIENTS; i++)
 
-#else
+
+	TRACE1("\nPAG CLIENT CONNECTION MANAGEMENT has completed for MAX_CLIENTS = %d \n", MAX_CLIENTS);
+	}
+#endif
+
+#ifdef I_AM_PAP
+void CPA2WinDlg::InitializeClientConnectionManagement(void)
+	{
+	int i, j;
+	j = 0;
+
+	// 	All these connections are tcp/ip clients and the other end is a tcp/ip server.
+	CString sClientIP,  sServerIp, sServerName, s;	// sServerName use the url for this server
+	UINT uServerPort = 0;
+
+	for ( i = 0; i < MAX_CLIENTS; i++)
+		{
+		if (pCCM[i])	continue;	// instance already exists
+		switch (i)
+			{
+		case 0:
+
 	// I_AM_PAP. I connect only to the PAG
 			sClientIP = GetClientIP( i );
 			sServerIp = GetServerIP( i );
@@ -871,14 +924,12 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 				break;
 			}
 
-#endif
 		}	// for ( i
 
-#endif	
 
-	TRACE1("\nCLIENT CONNECTION MANAGEMENT has completed for MAX_CLIENTS = %d \n", MAX_CLIENTS);
+	TRACE1("\nPAP CLIENT CONNECTION MANAGEMENT has completed for MAX_CLIENTS = %d \n", MAX_CLIENTS);
 	}
-
+#endif
 
 // Initialize the Server subsystems of the Phased Array GUI.
 // This windows program receives inspection data from the Phased Array Master(s) of which there
@@ -1478,6 +1529,7 @@ void CPA2WinDlg::DestroyCCM( void )
 	{
 	int i, nError, j;
 	CString s;
+	nError = j = 0;
 
 	for (i = 0; i < gnMaxClients; i++)
 		{
@@ -1516,6 +1568,10 @@ void CPA2WinDlg::DestroyCCM( void )
 							nError = GetLastError();	// WSAENOTCONN                      10057L
 							s .Format(_T("Shutdown of client socket[%d] failed\n"), nError);
 							TRACE(s);
+							if (nError == WSAENOTCONN)
+								{
+								TRACE( _T( "Client Socket never connected\n" ) );
+								}
 							}
 						}	
 					}	// socket exists

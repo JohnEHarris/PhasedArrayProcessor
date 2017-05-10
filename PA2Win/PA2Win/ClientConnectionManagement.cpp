@@ -107,7 +107,7 @@ ST_CLIENT_CONNECTION_MANAGEMENT stCCM[MAX_CLIENTS];		// a global, static array o
 CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHORT wOriginator)
 	{
 	CString s;
-	int i;
+	int i = 0;
 	m_pstCCM = NULL;
 	m_nMyConnection = -1;
 	//memset((void *) m_RcvBuf,0,sizeof(m_RcvBuf)); THIS STUFF repalce by m_pFifo on 2016-11-03 jeh
@@ -246,7 +246,20 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 #endif
 	Sleep(10);
 	/******************/
-#if 1
+	if (0 == KillLinkedList( m_pstCCM->pCSRcvPkt, m_pstCCM->pRcvPktPacketList ))
+	TRACE( _T( "Failed to kill Receive List\n" ) );
+
+	if ( 0 == KillLinkedList( m_pstCCM->pCSSendPkt, m_pstCCM->pSendPktList ))
+		TRACE( _T( "Failed to kill Send List\n" ) );
+
+	if ( 0 == KillLinkedList( m_pstCCM->pCSDebugIn, m_pstCCM->pInDebugMessageList ))
+		TRACE( _T( "Failed to kill Debug In List\n" ) );
+
+	if ( 0 == KillLinkedList( m_pstCCM->pCSDebugOut, m_pstCCM->pOutDebugMessageList ))
+		TRACE( _T( "Failed to kill Debug Out List\n" ) );
+
+
+#if 0
 	if (m_pstCCM->pRcvPktPacketList)
 		{
 		LockRcvPktList();
@@ -351,6 +364,8 @@ void CClientConnectionManagement::InitReceiveThread(void)
 void CClientConnectionManagement::KillReceiveThread(void)
 	{
 	int i = 0;
+	if (m_pstCCM == NULL)	return;
+	if (m_pstCCM->pReceiveThread == 0)	return;
 	// receiver role is 1, send role is 2. Passed thru wParam
 	// Thread message is serviced by CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lParam)
 	m_pstCCM->pReceiveThread->PostThreadMessage(WM_USER_KILL_RECV_THREAD, (WORD) 1, (LPARAM) this);
@@ -391,6 +406,8 @@ void CClientConnectionManagement::KillSendThread(void)
 	{
 	// receiver role is 1, send role is 2
 	int i = 0;
+	if (m_pstCCM == NULL)	return;
+	if (m_pstCCM->pSendThread == 0)	return;
 	m_pstCCM->pSendThread->PostThreadMessage(WM_USER_KILL_SEND_THREAD, (WORD) 2, (LPARAM) this);
 	while ( (m_pstCCM->pSendThread ) && i < 50)
 		{

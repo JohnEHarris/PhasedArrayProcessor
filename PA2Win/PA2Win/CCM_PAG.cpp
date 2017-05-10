@@ -56,7 +56,98 @@ CCCM_PAG::CCCM_PAG(int nMyConnection) : CClientConnectionManagement(nMyConnectio
 
 CCCM_PAG::~CCCM_PAG(void)
 	{
-	m_pstCCM->pCCM = 0;
+	// last chance to kill crit sections and lists 
+	void *pv;
+	if (0 == KillLinkedList( m_pstCCM->pCSRcvPkt, m_pstCCM->pRcvPktPacketList ))
+		TRACE( _T( "Failed to kill Receive List\n" ) );
+#if 0
+	if (m_pstCCM->pCSRcvPkt)
+		{
+		LockRcvPktList();
+		if (m_pstCCM->pRcvPktPacketList)
+			{
+			while (m_pstCCM->pRcvPktPacketList->GetCount())
+				{
+				pv = m_pstCCM->pRcvPktPacketList->RemoveHead();
+				delete pv;
+				}
+			delete m_pstCCM->pRcvPktPacketList;
+			}
+		delete m_pstCCM->pCSRcvPkt;
+		}
+	m_pstCCM->pRcvPktPacketList = 0;
+	m_pstCCM->pCSRcvPkt = 0;
+#endif	
+
+	if ( 0 == KillLinkedList( m_pstCCM->pCSSendPkt, m_pstCCM->pSendPktList ))
+		TRACE( _T( "Failed to kill Send List\n" ) );
+
+#if 0
+	if (m_pstCCM->pCSSendPkt)
+		{
+		LockRcvPktList();
+		if (m_pstCCM->pSendPktList)
+			{
+			while (m_pstCCM->pSendPktList->GetCount())
+				{
+				pv = m_pstCCM->pSendPktList->RemoveHead();
+				delete pv;
+				}
+			delete m_pstCCM->pSendPktList;
+			}
+		delete m_pstCCM->pCSRcvPkt;
+		}
+	m_pstCCM->pCSRcvPkt = 0;
+	m_pstCCM->pSendPktList = 0;
+#endif	
+
+	if ( 0 == KillLinkedList( m_pstCCM->pCSDebugIn, m_pstCCM->pInDebugMessageList ))
+		TRACE( _T( "Failed to kill Debug In List\n" ) );
+
+#if 0
+	if (m_pstCCM->pCSDebugIn)
+		{
+		LockDebugIn();
+		if (m_pstCCM->pInDebugMessageList)
+			{
+			while (m_pstCCM->pInDebugMessageList->GetCount())
+				{
+				pv = m_pstCCM->pInDebugMessageList->RemoveHead();
+				delete pv;
+				}
+			delete m_pstCCM->pInDebugMessageList;
+			}
+		delete m_pstCCM->pCSDebugIn;
+		}
+	m_pstCCM->pInDebugMessageList = 0;
+	m_pstCCM->pCSDebugIn = 0;
+#endif
+
+	if ( 0 == KillLinkedList( m_pstCCM->pCSDebugOut, m_pstCCM->pOutDebugMessageList ))
+		TRACE( _T( "Failed to kill Debug Out List\n" ) );
+
+#if 0
+
+	if (m_pstCCM->pCSDebugOut)
+		{
+		LockDebugOut();
+		if (m_pstCCM->pOutDebugMessageList)
+			{
+			while (m_pstCCM->pOutDebugMessageList->GetCount())
+				{
+				pv = m_pstCCM->pOutDebugMessageList->RemoveHead();
+				delete pv;
+				}
+			delete m_pstCCM->pOutDebugMessageList;
+			}
+			delete m_pstCCM->pCSDebugOut;
+		}
+		m_pstCCM->pCSDebugOut = 0;
+		m_pstCCM->pOutDebugMessageList = 0;
+#endif
+			
+		m_pstCCM->pCCM = 0;
+
 	TRACE("CCM_PAG Destructor called\n");
 	// base destructor called implicity after this destructor runs
 	}

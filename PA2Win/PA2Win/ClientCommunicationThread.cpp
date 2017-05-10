@@ -456,7 +456,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 	int nSockOpt = TRUE;
 	int  sockerr=0;
 	int i;
-	CString s;
+	CString s,t;
 	BOOL rtn;
 
 
@@ -609,9 +609,9 @@ void CClientCommunicationThread::StartTCPCommunication()
 			// THIS IS WHAT ALWAYS HAPPENS HERE !!!, in a moment it will connect and the OnConnect
 			// code in CClientSocket will complete the socket connection operation.
 			s.Format(_T("Connect Error = %d ...waiting to connect "), nError);
-			m_sSrv = GetTimeString();
-			m_sSrv += _T("\n");
-			s += m_sSrv;
+			t = GetTimeString();
+			t += _T("\n");
+			s += t;
 			DebugMsg(s);
 			return;
 			}

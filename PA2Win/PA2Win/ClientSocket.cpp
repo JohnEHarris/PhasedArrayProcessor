@@ -247,82 +247,82 @@ void CClientSocket::MyMessageBox(CString s)
 
 // copied from the Microsoft example code for OnConnect
 void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from CAsyncSocket
-  {
-	  CString s, s0, s1, s2;
-	  char txt[64];
-	  UINT uSPort, uCPort;	// temp to hold port numbers discovered
-	  if (m_pCCM)
+	{
+	CString s, s0, s1, s2;
+	char txt[64];
+	UINT uSPort, uCPort;	// temp to hold port numbers discovered
+	if (m_pCCM)
 		{
 		s.Format(_T("Client Connection %d = %s"),m_pCCM->m_nMyConnection, m_pCCM->szName);
 		}
-	  else
+	else
 		{
 		s = _T("Client number is unkown..");
 		}
-	  if (0 != nErrorCode)
+	if (0 != nErrorCode)
 		{
-        switch(nErrorCode)
+		switch(nErrorCode)
 			{
-           case WSAEADDRINUSE: 
-              MyMessageBox(_T("The specified address is already in use.\n"));
-              break;
-           case WSAEADDRNOTAVAIL: 
-              MyMessageBox(_T("The specified address is not available from ")
-              _T("the local machine.\n"));
-              break;
-           case WSAEAFNOSUPPORT: 
-              MyMessageBox(_T("Addresses in the specified family cannot be ")
-              _T("used with this socket.\n"));
-              break;
-           case WSAECONNREFUSED: 
-              //MyMessageBox(_T("The attempt to connect was forcefully rejected.\n"));	//10061
-              break;
-           case WSAEDESTADDRREQ: 
-              MyMessageBox(_T("A destination address is required.\n"));
-              break;
-           case WSAEFAULT: 
-              MyMessageBox(_T("The lpSockAddrLen argument is incorrect.\n"));
-              break;
-           case WSAEINVAL: 
-              MyMessageBox(_T("The socket is already bound to an address.\n"));			// 10022L
-              break;
-           case WSAEISCONN: 
-              MyMessageBox(_T("The socket is already connected.\n"));
-              break;
-           case WSAEMFILE: 
-              MyMessageBox(_T("No more file descriptors are available.\n"));
-              break;
-           case WSAENETUNREACH: 
-              MyMessageBox(_T("The network cannot be reached from this host ")
-              _T("at this time.\n"));
-              break;
-           case WSAENOBUFS: 
-              MyMessageBox(_T("No buffer space is available. The socket ")
-                 _T("cannot be connected.\n"));
-              break;
-           case WSAENOTCONN: 
-              MyMessageBox(_T("The socket is not connected.\n"));
-              break;
-           case WSAENOTSOCK: 
-              MyMessageBox(_T("The descriptor is a file, not a socket.\n"));
-              break;
-           case WSAETIMEDOUT: 
-              MyMessageBox(_T("The attempt to connect timed out without ")
-                 _T("establishing a connection. \n"));
-              break;
-           default:
-              TCHAR szError[256];
-              _stprintf_s(szError, _T("OnConnect error: %d"), nErrorCode);
-              MyMessageBox(szError);
-              break;
-			}	// end of the swtich
-		if (m_pCCM)	m_pCCM->SetConnectionState(0);	// not connected
-		//s+= _T("FAILED");
-        //AfxMessageBox(s);
-		//m_pFifo = 0;
-		//m_pElapseTimer = 0;
-		}	// if there was an error
-	 else	// connection was successful
+		case WSAEADDRINUSE: 
+			MyMessageBox(_T("The specified address is already in use.\n"));
+			break;
+		case WSAEADDRNOTAVAIL: 
+			MyMessageBox(_T("The specified address is not available from ")
+			_T("the local machine.\n"));
+			break;
+			case WSAEAFNOSUPPORT: 
+				MyMessageBox(_T("Addresses in the specified family cannot be ")
+				_T("used with this socket.\n"));
+				break;
+			case WSAECONNREFUSED: 
+				//MyMessageBox(_T("The attempt to connect was forcefully rejected.\n"));	//10061
+				break;
+			case WSAEDESTADDRREQ: 
+				MyMessageBox(_T("A destination address is required.\n"));
+				break;
+			case WSAEFAULT: 
+				MyMessageBox(_T("The lpSockAddrLen argument is incorrect.\n"));
+				break;
+			case WSAEINVAL: 
+				MyMessageBox(_T("The socket is already bound to an address.\n"));			// 10022L
+				break;
+			case WSAEISCONN: 
+				MyMessageBox(_T("The socket is already connected.\n"));
+				break;
+			case WSAEMFILE: 
+				MyMessageBox(_T("No more file descriptors are available.\n"));
+				break;
+			case WSAENETUNREACH: 
+				MyMessageBox(_T("The network cannot be reached from this host ")
+				_T("at this time.\n"));
+				break;
+			case WSAENOBUFS: 
+				MyMessageBox(_T("No buffer space is available. The socket ")
+					_T("cannot be connected.\n"));
+				break;
+			case WSAENOTCONN: 
+				MyMessageBox(_T("The socket is not connected.\n"));
+				break;
+			case WSAENOTSOCK: 
+				MyMessageBox(_T("The descriptor is a file, not a socket.\n"));
+				break;
+			case WSAETIMEDOUT: 
+				MyMessageBox(_T("The attempt to connect timed out without ")
+					_T("establishing a connection. \n"));
+				break;
+			default:
+				TCHAR szError[256];
+				_stprintf_s(szError, _T("OnConnect error: %d"), nErrorCode);
+				MyMessageBox(szError);
+				break;
+				}	// end of the swtich
+			if (m_pCCM)	m_pCCM->SetConnectionState(0);	// not connected
+			//s+= _T("FAILED");
+			//AfxMessageBox(s);
+			//m_pFifo = 0;
+			//m_pElapseTimer = 0;
+			}	// if there was an error
+	else	// connection was successful
 		{
 		
 		//GetPeerName(m_pCCM->m_pstCCM->sServerIP4, m_pCCM->m_pstCCM->uServerPort);
@@ -388,19 +388,19 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 														 m_pCCM->m_pstCCM->sClientIP4, 
 														 m_pCCM->m_pstCCM->uClientPort);
 #endif
-		// create the fifo and timer
-	m_pFifo = new CCmdFifo(1460);
-	m_pFifo->m_nOwningThreadId = AfxGetThread()->m_nThreadID;
-	strcpy( m_pFifo->tag, "New m_pFifoClntSkt 364 " );
-	s = m_pFifo->tag;
+			// create the fifo and timer
+		m_pFifo = new CCmdFifo(1460);
+		m_pFifo->m_nOwningThreadId = AfxGetThread()->m_nThreadID;
+		strcpy( m_pFifo->tag, "New m_pFifoClntSkt 364 " );
+		s = m_pFifo->tag;
 
-	m_pElapseTimer = new CHwTimer;	
-	strcpy( m_pElapseTimer->tag, "CClientSocket369\n" );
-	s0 = m_pElapseTimer->tag;
-	s += s0;
-	TRACE( s );
+		m_pElapseTimer = new CHwTimer;	
+		strcpy( m_pElapseTimer->tag, "CClientSocket369\n" );
+		s0 = m_pElapseTimer->tag;
+		s += s0;
+		TRACE( s );
 
-	}
+		}
      CAsyncSocket::OnConnect(nErrorCode);
-  }
+	}
 

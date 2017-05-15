@@ -153,49 +153,9 @@ CServerSocket::~CServerSocket()
 	// Receiver
 	
 	m_pSCC = GetpSCC();
-	if (m_pSCC)
-		{
-		if (m_pSCC->pCSRcvPkt)
-			{
-			EnterCriticalSection(m_pSCC->pCSRcvPkt);
-			while (m_pSCC->pRcvPktList->GetCount())
-				{
-				pv = m_pSCC->pRcvPktList->RemoveHead();
-				delete pv;
-				}
-			LeaveCriticalSection(m_pSCC->pCSRcvPkt);
-			delete m_pSCC->pCSRcvPkt;
-			m_pSCC->pCSRcvPkt = 0;
-			delete m_pSCC->pRcvPktList;
-			m_pSCC->pRcvPktList = 0;
-			}
-
-		// Sender
-		if (m_pSCC->pCSSendPkt)
-			{
-			EnterCriticalSection(m_pSCC->pCSSendPkt);
-			while (m_pSCC->pSendPktList->GetCount())
-				{
-				pv = m_pSCC->pSendPktList->RemoveHead();
-				delete pv;
-				}
-			LeaveCriticalSection(m_pSCC->pCSSendPkt);
-			delete m_pSCC->pCSSendPkt;
-			m_pSCC->pCSSendPkt = 0;
-			delete m_pSCC->pSendPktList;
-			m_pSCC->pSendPktList = 0;
-			}
-			
-		for ( i = 0; i < MAX_SEQ_COUNT; i++)
-		for ( j = 0; j < MAX_CHNLS_PER_INSTRUMENT; j++)
-			{
-			if (m_pSCC->pvChannel[i][j])
-				{
-				delete m_pSCC->pvChannel[i][j];
-				m_pSCC->pvChannel[i][j] = 0;
-				}
-			}
-		}
+	if (0 == KillLinkedList( m_pSCC->pCSRcvPkt, m_pSCC->pRcvPktList ))
+		TRACE( _T( "Failed to kill Receive List\n" ) );
+	else {		m_pSCC->pCSRcvPkt = 0;  m_pSCC->pRcvPktList  = 0;		}
 
 	if (m_pElapseTimer)
 		{
@@ -219,16 +179,7 @@ CServerSocket::~CServerSocket()
 		m_pFifo = 0;
 		}
 
-#if 0
-	if (m_pSCC)
-		{
-		if (m_nOwningThreadType == eServerConnection)
-			{
-			delete m_pSCC;
-			m_pSCC = 0; causes a crash
-			}
-		}
-#endif
+
 
 	if (m_nOwningThreadType == eServerConnection)
 		{
@@ -238,6 +189,12 @@ CServerSocket::~CServerSocket()
 			sizeof( CCmdFifo ), m_nAsyncSocketCnt, m_nOwningThreadId );
 		t += s;
 		TRACE( t );
+		}
+	m_pSCC->pSocket = 0;
+	
+	if (0 == m_pSCM->KillServerSocketOwnerThread( m_pSCM->m_nMyServer, m_pSCC->m_nClientIndex,10 ))
+		{
+		TRACE( _T( "OnClose timed out w/o closing OwnerThread\n" ) );
 		}
 
 	}
@@ -907,39 +864,10 @@ void CServerSocket::OnClose(int nErrorCode)
 		//CAsyncSocket::OnClose(nErrorCode);
 		return;
 		}
-	if (0 == m_pSCM->KillServerSocketOwnerThread( m_nMyServer, m_nClientIndex,1 ))
-		{
-		TRACE( _T( "OnClose timed out w/o closing OwnerThread\n" ) );
-		}
-	
-#if 0
-//	if (nErrorCode) this code works
-		{
-		if (m_pSCC->pServerSocketOwnerThread)
-			{
-			PostThreadMessage(m_pSCC->pServerSocketOwnerThread->m_nThreadID,WM_QUIT, 0L, 0L);
-			TRACE( _T( "OnClose-Post thread message ServerSocketOwnerThread Quit\n" ) );
-			for (i = 0; i < 10; i++)
-				{
-				if (m_pSCC)
-					{
-					if (m_pSCC->pServerSocketOwnerThread == 0)
-						break;	// everything about the connection is shut down, can now make a new one
-					}
-				Sleep( 10 );
-				}
-			if (i >= 10)
-				TRACE( _T( "CServerSocket::OnClose timed out w/o closing OwnerThread\n" ) );
-			else
-				{
-				s.Format( _T( "ServerSocketOwnerThread killed in %d mSec\n" ), i * 10 );
-				TRACE( s );
-				}
-			}
-		}
-#endif
 
-		//CAsyncSocket::OnClose(nErrorCode);
+	delete this;
+
+	//CAsyncSocket::OnClose(nErrorCode);
 
 	}
 

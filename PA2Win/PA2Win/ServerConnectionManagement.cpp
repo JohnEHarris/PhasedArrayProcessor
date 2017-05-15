@@ -295,7 +295,7 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 				TRACE( _T( "Failed to kill RcvPktList List\n" ) );
 			else {	m_pstSCM->pClientConnection[i]->pCSRcvPkt = 0;  
 					m_pstSCM->pClientConnection[i]->pRcvPktList = 0;	}
-			//Send lsit
+			//Send list
 			if (0 == KillLinkedList( m_pstSCM->pClientConnection[i]->pCSSendPkt, 
 				m_pstSCM->pClientConnection[i]->pSendPktList  ))
 				TRACE( _T( "Failed to kill SendPktList List\n" ) );
@@ -396,13 +396,29 @@ int CServerConnectionManagement::KillServerSocketOwnerThread( int nMyServer, int
 		TRACE( _T("m_pstSCM is NULL\n" ));
 		return 0;
 		}
+
+	// if the socket still is open try calling OnClose and let the socket code
+	// kill the socket owner
+
 	pscc = m_pstSCM->pClientConnection[nClientIndex];
 	if (pscc == NULL)
 		{
 		s.Format(_T("pscc == NULL in KillClientConnection, client = %d\n"), nClientIndex);
 		TRACE(s);
-		return 0;
+		//return 0;
 		}
+
+	//if the socket still is open try calling OnClose and let the socket code
+	// kill the socket owner -this doesn't work.
+#if 0
+	if (pscc->pSocket)
+		{
+		pscc->pSocket->OnClose( 0 );
+		Sleep( 10 );
+		pscc->pSocket = 0;
+		}
+#endif
+
 	pThread = (CWinThread *)m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread;
 	if (pThread == NULL)	return 0;
 	pThread->PostThreadMessage(WM_QUIT,0,0l);
@@ -557,7 +573,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		{
 		if (NULL == m_pstSCM->pClientConnection[i])	continue;	// go to end of loop
 
-		if (0 == KillServerSocketOwnerThread( nMyServer, i, 2 ))
+		if (0 == KillServerSocketOwnerThread( nMyServer, i, 10 ))
 			{
 			s.Format( _T( "Timed out w/o killing ServerSocketOwnerThread[i]\n" ), i );
 			TRACE(s);

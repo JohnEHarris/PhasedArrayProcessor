@@ -289,6 +289,8 @@ END_MESSAGE_MAP()
 // Pass in a pointer to the ST_CLIENT_CONNECTION_MANAGEMENT for this socket/machine
 // 6-27-12 pass ptr to controlling ccm class instance
 // WPARAM w contains my role, either receiving (1) or sending (2)
+// called from CClientConnectionManagement::InitReceiveThread(void) which sends
+// a thread message to start this thread function
 afx_msg void CClientCommunicationThread::InitTcpThread(WPARAM w, LPARAM lParam)
 	{
 	int i;		// which thread/socekt/dailog out of several is this

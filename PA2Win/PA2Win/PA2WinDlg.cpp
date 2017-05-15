@@ -34,6 +34,9 @@ I AM THE PHASED ARRAY PROCESSOR
 #endif
 
 // C code callable from any class
+//pointer objects deleted, but not nulled
+// Since we are using poiter to pointer, setting pointer to 0 only sets argument pointer
+// eg, pCritSec and not the pointer that pCritSec points to 
 int KillLinkedList( CRITICAL_SECTION *pCritSec, CPtrList *pList )
 	{
 	int i;
@@ -48,8 +51,8 @@ int KillLinkedList( CRITICAL_SECTION *pCritSec, CPtrList *pList )
 			}
 		delete pList;
 		delete pCritSec;
-		pList = 0;
-		pCritSec = 0;
+		//pList = 0;
+		//pCritSec = 0;
 		return 1;
 		}
 	else
@@ -1777,6 +1780,9 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(CvChannel);	// 160
 	i = sizeof(CTestThread); // 72
 	i = sizeof(CTuboIni); // 12
+	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 2168
+	i = sizeof( ST_SERVER_CONNECTION_MANAGEMENT ); // 148
+	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 156
 
 	}
 

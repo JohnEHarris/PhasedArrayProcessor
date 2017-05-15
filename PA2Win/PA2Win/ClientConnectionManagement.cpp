@@ -247,89 +247,21 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	Sleep(10);
 	/******************/
 	if (0 == KillLinkedList( m_pstCCM->pCSRcvPkt, m_pstCCM->pRcvPktPacketList ))
-	TRACE( _T( "Failed to kill Receive List\n" ) );
+		TRACE( _T( "Failed to kill Receive List\n" ) );
+	else {		m_pstCCM->pCSRcvPkt = 0;  m_pstCCM->pRcvPktPacketList = 0;		}
 
 	if ( 0 == KillLinkedList( m_pstCCM->pCSSendPkt, m_pstCCM->pSendPktList ))
 		TRACE( _T( "Failed to kill Send List\n" ) );
+	else {		m_pstCCM->pCSSendPkt = 0;  m_pstCCM->pSendPktList = 0;		}
 
 	if ( 0 == KillLinkedList( m_pstCCM->pCSDebugIn, m_pstCCM->pInDebugMessageList ))
 		TRACE( _T( "Failed to kill Debug In List\n" ) );
+	else {		m_pstCCM->pCSDebugIn = 0;  m_pstCCM->pInDebugMessageList = 0;		}
 
 	if ( 0 == KillLinkedList( m_pstCCM->pCSDebugOut, m_pstCCM->pOutDebugMessageList ))
 		TRACE( _T( "Failed to kill Debug Out List\n" ) );
+	else {		m_pstCCM->pCSDebugOut = 0;  m_pstCCM->pOutDebugMessageList = 0;		}
 
-
-#if 0
-	if (m_pstCCM->pRcvPktPacketList)
-		{
-		LockRcvPktList();
-		n = m_pstCCM->pRcvPktPacketList->GetCount();
-		while (!m_pstCCM->pRcvPktPacketList->IsEmpty())
-			{
-			pV = (void *)m_pstCCM->pRcvPktPacketList->RemoveHead();
-			delete pV;
-			}
-		delete m_pstCCM->pRcvPktPacketList;
-		m_pstCCM->pRcvPktPacketList = 0;
-		}
-	if (m_pstCCM->pCSRcvPkt)		
-		delete m_pstCCM->pCSRcvPkt;
-
-	/******************/
-	if (m_pstCCM->pSendPktList)
-		{
-		LockSendPktList();
-		n = m_pstCCM->pSendPktList->GetCount();
-		while (!m_pstCCM->pSendPktList->IsEmpty())
-			{
-			pV = (void *)m_pstCCM->pSendPktList->RemoveHead();
-			delete pV;
-			}
-		delete m_pstCCM->pSendPktList;
-		m_pstCCM->pSendPktList = 0;
-		UnLockSendPktList();
-		}
-	if (m_pstCCM->pCSSendPkt)		
-		delete m_pstCCM->pCSSendPkt;
-
-	/******************/
-
-	if (m_pstCCM->pInDebugMessageList)
-		{
-		LockDebugIn();
-		n = m_pstCCM->pInDebugMessageList->GetCount();
-		while (!m_pstCCM->pInDebugMessageList->IsEmpty())
-			{
-			pV = (void *)m_pstCCM->pInDebugMessageList->RemoveHead();
-			delete pV;
-			}
-		delete m_pstCCM->pInDebugMessageList;
-		m_pstCCM->pInDebugMessageList = 0;
-		UnLockDebugIn();
-		}
-	if (m_pstCCM->pCSDebugIn)		
-		delete m_pstCCM->pCSDebugIn;
-
-	/******************/
-	if (m_pstCCM->pOutDebugMessageList)
-		{
-		LockDebugOut();
-		n = m_pstCCM->pOutDebugMessageList->GetCount();
-		while (!m_pstCCM->pOutDebugMessageList->IsEmpty())
-			{
-			pV = (void *)m_pstCCM->pOutDebugMessageList->RemoveHead();
-			delete pV;
-			}
-		delete m_pstCCM->pOutDebugMessageList;
-		m_pstCCM->pOutDebugMessageList = 0;
-		UnLockDebugOut();
-		}
-	if (m_pstCCM->pCSDebugOut)		
-		delete m_pstCCM->pCSDebugOut;
-
-	//if (m_pstCCM->m_pFifo != NULL)
-		//delete m_pstCCM->m_pFifo;
-#endif
 	}
 
 // Begin the Receive Thread

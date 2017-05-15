@@ -126,21 +126,6 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 
 	AFX_MODULE_THREAD_STATE* pState = AfxGetModuleThreadState();
 	AfxSocketInit();	// does the same as the code shown below
-#if 0
-	if (pState->m_pmapSocketHandle	== NULL)	
-		pState->m_pmapSocketHandle	= new CMapPtrToPtr;
-
-	if (pState->m_pmapDeadSockets	== NULL)	
-		pState->m_pmapDeadSockets	= new CMapPtrToPtr;
-//	if (pState->m_pmapHWND			== NULL)
-//		pState->m_pmapHWND			= new CHandleMap();
-
-	if (pState->m_pCurrentWinThread	== NULL)
-		pState->m_pCurrentWinThread	= m_pstSCM->pServerListenThread;
-
-	if (pState->m_plistSocketNotifications == NULL)
-		pState->m_plistSocketNotifications = new CPtrList;
-#endif
 #endif
 
 	s.Format(_T("InitListnerThread OK threadID = Ox%0x\n"), this->m_nThreadID );

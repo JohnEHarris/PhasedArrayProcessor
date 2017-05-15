@@ -440,7 +440,7 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 				pscc->pSocket->m_pElapseTimer = 0;
 				}
 
-			i = sizeof(CServerSocket);	//65620
+			i = sizeof(CServerSocket);
 			if (i = pscc->pSocket->ShutDown(2))
 				{
 				s.Format(_T("Shutdown of client socket was successful status = %d\n"), i);

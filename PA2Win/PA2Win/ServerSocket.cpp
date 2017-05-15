@@ -875,15 +875,45 @@ void CServerSocket::OnClose(int nErrorCode)
 	// KillpClientConnectionStruct();
 	int i = 0;
 	CString s;
-#if 1
 
 	// kill the socket's thread  .. a partial shutdown
 	//CAsyncSocket::OnClose(nErrorCode);	//0x2745 on a restart of instrument = 10053
 	// #define WSAECONNABORTED                  10053L
 	// very different in PAP compared to PAG
+		
+	CAsyncSocket::OnClose(nErrorCode);
+	if (i = this->ShutDown( 2 ))
+		{
+		s.Format( _T( "Shutdown of client socket was successful status = %d\n" ), i );
+		TRACE( s );
+		this->Close();
+		}
+	else
+		{
+		s = _T( "Shutdown of client socket failed\n" );
+		TRACE( s );
+		}
+	Sleep( 10 );
+	if (nErrorCode)
+		{
+		TRACE( _T( "OnClose failed\n" ) );
+		}
+
 	m_pSCC = GetpSCC();
 	m_pSCC->m_bIsClosing = 1;
-//	if (nErrorCode)
+	if (m_pSCM == nullptr)
+		{
+		TRACE( _T( "m_pSCM == nullptr\n" ) );
+		//CAsyncSocket::OnClose(nErrorCode);
+		return;
+		}
+	if (0 == m_pSCM->KillServerSocketOwnerThread( m_nMyServer, m_nClientIndex,1 ))
+		{
+		TRACE( _T( "OnClose timed out w/o closing OwnerThread\n" ) );
+		}
+	
+#if 0
+//	if (nErrorCode) this code works
 		{
 		if (m_pSCC->pServerSocketOwnerThread)
 			{
@@ -907,47 +937,12 @@ void CServerSocket::OnClose(int nErrorCode)
 				}
 			}
 		}
-
-		CAsyncSocket::OnClose(nErrorCode);
 #endif
+
+		//CAsyncSocket::OnClose(nErrorCode);
 
 	}
 
-#if 0
-void CServerSocket::KillpClientConnectionStruct(void)
-	{
-	void *pV;
-	CString s;
-
-	// Kill it at the socket level
-	if (m_pSCC)
-		{
-		m_pSCC->bConnected = (BYTE) eNotConnected;
-		Sleep(5);
-		LockRcvPktList();
-		while ( m_pSCC->pRcvPktList->GetCount() > 0)
-			{
-			pV = (void *) m_pSCC->pRcvPktList->RemoveHead();
-			delete pV;
-			}
-		UnLockRcvPktList();
-		delete m_pSCC->pRcvPktList;		m_pSCC->pRcvPktList	= NULL;
-		delete m_pSCC->pCSRcvPkt;		m_pSCC->pCSRcvPkt	= NULL;
-
-		LockSendPktList();
-		while ( m_pSCC->pSendPktList->GetCount() > 0)
-			{
-			pV = (void *) m_pSCC->pSendPktList->RemoveHead();
-			delete pV;
-			}
-		UnLockSendPktList();
-		delete m_pSCC->pSendPktList;		m_pSCC->pSendPktList	= NULL;
-		delete m_pSCC->pCSSendPkt;			m_pSCC->pCSSendPkt		= NULL;
-
-		}
-	// zero ptrs from thread and SCM class and structure
-	}
-#endif
 
 
 // If the socket is to be used for listening, initialize with 'default' values. Fail and return

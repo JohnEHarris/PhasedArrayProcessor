@@ -111,9 +111,11 @@ CClientCommunicationThread::~CClientCommunicationThread()
 		m_pElapseTimer = 0;
 		}
 
-	if (m_pMyCCM)
+	if (m_pstCCM)
 		{
-		i = m_pMyCCM->m_pstCCM->pCCM->m_nMyConnection;
+		if (m_pstCCM->pCCM)
+			i = m_pstCCM->pCCM->m_nMyConnection;
+		else i = 01234;
 		}
 
 	switch (this->m_nMyRole)
@@ -130,10 +132,12 @@ CClientCommunicationThread::~CClientCommunicationThread()
 			}
 		if (m_pstCCM->pSocket)
 			{
-			m_pstCCM->pSocket = NULL;
+			// 2017-05-16 socket destructor attempts to kill com threads.
+			// at the end, sets its CCM pointer to null.
+			//m_pstCCM->pSocket = NULL;
 			t = _T("~CClientCommunicationThread() ASync socket not null\n");
 			}
-
+		//AfxEndThread( 0 );	// add here, take out in Kill Send Thread
 		break;
 	case 2:
 		s.Format(_T("Send Com thread[%d],handle %0x Destructor ran\n"), i, this->m_hThread);	
@@ -143,6 +147,7 @@ CClientCommunicationThread::~CClientCommunicationThread()
 			m_pstCCM->pSendThread = NULL;
 			t = _T("~CClientCommunicationThread() send thread not null\n");
 			}
+		//AfxEndThread( 0 );	// add here, take out in Kill Send Thread
 		break;
 		}
 	//AfxEndThread( 0 );
@@ -278,8 +283,13 @@ BEGIN_MESSAGE_MAP(CClientCommunicationThread, CWinThread)
 	ON_THREAD_MESSAGE(WM_USER_KILL_SEND_THREAD,KillSendThread)
 	//ON_THREAD_MESSAGE(WM_USER_RESTART_TCP_COM_DLG,RestartTcpComDlg)
 	//ON_THREAD_MESSAGE(WM_USER_RESTART_ADP_CONNECTION,RestartTcpComDlg)
-	ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, TransmitPackets)	
-	ON_THREAD_MESSAGE(WM_USER_TIMER_TICK, OnTimer)	
+	ON_THREAD_MESSAGE(WM_USER_TIMER_TICK, OnTimer)
+	ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, TransmitPackets)
+
+	// These messages go to the receiver thread
+	ON_THREAD_MESSAGE(WM_USER_CREATE_SOCKET, CreateSocket)	
+	ON_THREAD_MESSAGE(WM_USER_CONNECT_SOCKET, ConnectSocket)	
+	ON_THREAD_MESSAGE(WM_USER_KILL_SOCKET, KillSocket)	
 
 END_MESSAGE_MAP()
 
@@ -392,6 +402,7 @@ afx_msg void CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lPar
 
 	//ExitInstance();
 	AfxEndThread( 0 );
+	//delete m_pstCCM->pReceiveThread;
 	i = 3;
 	}
 
@@ -452,7 +463,200 @@ afx_msg void CClientCommunicationThread::KillSendThread(WPARAM w, LPARAM lParam)
 #endif
 
 
+// Create the socket at the priority level of the receiver thread
+void CClientCommunicationThread::CreateSocket(WPARAM w, LPARAM lParam)
+	{
+	int nSockOpt, sockerr;
+	CString s;
+
+
+	if ((int)w != 1)
+		{
+		TRACE( _T( "CreateSocket request of wrong thread type. Must be Receiver thread\n" ) );
+		return;
+		}
+	TRACE( _T( "CreateSocket executed\n" ) );
+	// make a new 'connect' client socket
+
+	m_pSocket = new CClientSocket( m_pMyCCM );	// subtype c0, 16 bytes long.
+	// The constructor makes a copy of the pointer that is in the
+	// ClientCommunicationManager class
+
+
+	// Purely Randy's work
+	// fix a well known Microsoft screw up that occurs
+	// when using sockets in a multithreaded application 
+	// that is linked with static libraries.  It seems the
+	// static libraries do not properly init the hash maps
+	// so we have to do it manually.  sigh........
+#ifndef _AFXDLL
+
+		AFX_MODULE_THREAD_STATE* pState = AfxGetModuleThreadState();
+		AfxSocketInit();
+#endif
+
+
+
+	if (!m_pSocket)
+		{
+		TRACE( "Failed to create Client Socket\n" );
+		//LeaveCriticalSection( m_pstCCM->pCSRcvPkt );
+		return;// C_CLIENT_SOCKET_CREATION_ERROR;	// Socket object creat error
+		}
+
+	// Create the socket, then find the server address and port and attempt to connect
+
+	// Using tcp/ip
+	m_nPort = 0;
+	// we will override an ASyncSocket class virtual function when (1) packet received, (2) connect to server completes, 
+	// (3) the socket closes
+	//	if (m_pSocket->Create(nPort, SOCK_STREAM, FD_READ | FD_CONNECT | FD_CLOSE,  NULL )	!= 0 )
+	if (m_pSocket->Create( m_nPort, SOCK_STREAM, FD_READ | FD_CONNECT | FD_CLOSE, NULL ) != 0)
+		{	// Socket created
+
+		nSockOpt = 1;
+		// need to be able to reuse the ip address
+		sockerr = m_pSocket->SetSockOpt( SO_REUSEADDR, &nSockOpt, sizeof( int ), SOL_SOCKET );
+		if (sockerr == SOCKET_ERROR) TRACE1( "Socket Error SO_REUSEADDR = %0x\n", sockerr );
+
+		nSockOpt = 1;
+		// when data ready to send, send without delay
+		sockerr = m_pSocket->SetSockOpt( TCP_NODELAY, &nSockOpt, sizeof( int ), IPPROTO_TCP );
+		if (sockerr == SOCKET_ERROR) TRACE1( "Socket Error TCP_NODELAY = %0x\n", sockerr );
+
+		nSockOpt = 1;
+		sockerr = m_pSocket->SetSockOpt( SO_DONTLINGER, &nSockOpt, sizeof( int ), SOL_SOCKET );
+		if (sockerr == SOCKET_ERROR) TRACE1( "Socket Error SO_DONTLINGER = %0x\n", sockerr );
+		}
+
+	else
+		{
+
+		TRACE( "Failed to create stream socket... aborting\n" );
+		//LeaveCriticalSection( m_pstCCM->pCSRcvPkt );
+		return;	// C_CLIENT_SOCKET_CREATION_ERROR;
+		}
+
+	// Try server IP4 address before server name
+	m_sSrv = m_pstCCM->sServerIP4;
+
+	if (m_pstCCM->sServerIP4.IsEmpty())
+		{
+		m_sSrv = m_pstCCM->sServerName;
+		if (m_sSrv.IsEmpty())
+			{
+			s = _T( "Could not find Server name or IP Address... Aborting\n" );
+			DebugMsg( s );
+			m_pSocket->ShutDown( 2 );
+			m_pSocket->Close();
+			delete m_pSocket;
+			m_pSocket = NULL;	// null the local member
+			m_pMyCCM->SetSocketPtr( m_pSocket );	// null the pointer in CCM
+			//LeaveCriticalSection( m_pstCCM->pCSRcvPkt );
+			return;	// C_CLIENT_SOCKET_CREATION_ERROR;
+			}
+		}
+
+	m_nPort = m_pstCCM->uServerPort;
+
+		// make a new 'connect' client socket
+	}
+
+// Call the socket connect function from the receiver thread
+void CClientCommunicationThread::ConnectSocket(WPARAM w, LPARAM lParam)
+	{
+	CString s,t;
+	BOOL rtn;
+	if ((int)w != 1)
+		{
+		TRACE( _T( "ConnectSocket request of wrong thread type. Must be Receiver thread\n" ) );
+		return;
+		}
+
+	if (m_pstCCM == nullptr)
+		{		TRACE( _T( "m_pstCCM is null\n" ) );		return;		}
+	if (m_pMyCCM == nullptr)
+		{		TRACE( _T( "m_pMyCCM is null\n" ) );		return;		}
+	if (m_pSocket == nullptr)
+		{		TRACE( _T( "m_pSocket is null\n" ) );		return;		}
+
+	rtn = m_pSocket->Connect(m_pstCCM->sServerIP4, m_nPort );
+		
+	if ( rtn == 0 )
+		{
+		m_pstCCM->nOnConnectError = GetLastError();	//10035 is WSAEWOULDBLOCK..normal 
+		// if it blocks, eventually we will probably get an OnConnect which will
+		// set the connected flag
+		// WSAEINVAL already bound to a socket		10022L
+		// #define WSAEISCONN                       10056L
+
+		if ( (WSAEWOULDBLOCK == m_pstCCM->nOnConnectError) || 
+			(WSAEINVAL == m_pstCCM->nOnConnectError) || 
+			(WSAEISCONN  == m_pstCCM->nOnConnectError))
+			{
+			// THIS IS WHAT ALWAYS HAPPENS HERE !!!, in a moment it will connect and the OnConnect
+			// code in CClientSocket will complete the socket connection operation.
+			s.Format(_T("Connect Error = %d ...waiting to connect "), m_pstCCM->nOnConnectError);
+			t = GetTimeString();
+			t += _T("\n");
+			s += t;
+			DebugMsg(s);
+			return;
+			}
+
+		s.Format(_T("Connect Error = %d\n"), m_pstCCM->nOnConnectError);
+		TRACE(s);   //DebugMsg(s)
+		s = m_pstCCM->szSocketName;
+		s += _T(": connect failed.\n");
+		TRACE(s);   //DebugMsg(s)
+		m_pSocket->ShutDown(2);
+		m_pSocket->Close();		
+		delete m_pSocket;
+		m_pSocket = NULL;
+		m_pMyCCM->SetSocketPtr(m_pSocket);
+		m_pMyCCM->SetConnectionState( 0 );
+		return;	// C_CLIENT_SOCKET_CREATION_ERROR;
+		}
+	else
+			{
+			m_pMyCCM->SetSocketPtr(m_pSocket);		// store socket into stCCM for use by send and receive threads
+			s.Format(_T("PAG or %s: connected using socket at 0x%08x sizeof=%d.\n"), 
+			//s.Format(_T("SysCP or %s: connected using socket at 0x%08x sizeof=%d.\n"), 
+				m_sSrv, m_pSocket, sizeof(CClientSocket));
+			TRACE(s);   //DebugMsg(s)	// Connect to server named xxx at ip = yyyy
+			}
+
+	TRACE( _T( "ConnectSocket executed\n" ) );
+	}
+
+// destroy the socket but leave the send/receive/cmd threads and linked list intact
+void CClientCommunicationThread::KillSocket(WPARAM w, LPARAM lParam)
+	{
+	TRACE( _T( "KillSocket executed\n" ) );
+	if (m_pstCCM->pSocket)
+		{
+		m_pstCCM->pSocket->OnClose(0);
+		m_nConnectionRestartCounter++;
+		}
+	}
+
+void CClientCommunicationThread::MyMessageBox( CString s )
+	{
+	TRACE( s );
+	}
+
+
 // Taken from CTCPCommunicationDlg to eliminate need for hidden windows dialog
+// 2017-05-12 This code must look at the overall situation and determine what if
+// anything needs to be done to start the client socket
+// Situations:
+// The socket does not exist
+// The receive thread which connects the socket does not exist
+// The socket has closed
+// The socket has been refused a connection request
+// The system is shutting down
+// StartTCPCommunication is called because the system believes that the socket is not connected
+//
 void CClientCommunicationThread::StartTCPCommunication()
 	{
 	int nSockOpt = TRUE;
@@ -460,6 +664,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 	int i;
 	CString s,t;
 	BOOL rtn;
+	int nLastConnectError;
 
 
 	if (m_nMyRole != 1)
@@ -480,33 +685,121 @@ void CClientCommunicationThread::StartTCPCommunication()
 		return;	// major trouble here, this should never happen
 		}	
 	
-	// Create an CAsync socket
 	// Our main dlg should have identified the client and server side IP's before now
 
-	i = m_pstCCM->bConnected;
 	if (m_pstCCM->bConnected)
 		return;
 
-	//m_pMyCCM->SetConnectionState(0);	// now assume we are not connected
+	// It there is no receiver thread we are unable to do anything further
+	// It should be running. If not, perhaps create it here
+	if (m_pstCCM->pReceiveThread == 0)
+		{
+		TRACE( _T( "m_pstCCM->pReceiveThread == 0\n" ) );
+		return;
+		}
 
-	EnterCriticalSection(m_pstCCM->pCSRcvPkt);
+	// All futher commands to do something to connect to a server are handled by
+	// the Receiver Thread
+	if (m_pstCCM->pSocket == nullptr)
+		{
+		CreateSocket( eReceiver, (LPARAM) m_pstCCM );
+		if (m_pstCCM->pSocket == nullptr)
+			ASSERT( 0 );
+		//ConnectSocket( eReceiver, (LPARAM) m_pstCCM ); next time
+		return;	//one step at a time
+		}
+
+	// if here we have a socket and a receiver thread, but no connection. Why?
+	nLastConnectError = m_pMyCCM->GetConnectErrorCode();
+	if (nLastConnectError == 0)	// we are connected
+		{
+		m_pstCCM->bConnected = 1;
+		return;
+		}
+
+	switch (nLastConnectError)
+		{
+		case	WSAEWOULDBLOCK:
+			MyMessageBox(_T("Socket would block.\n"));
+			ConnectSocket( eReceiver, (LPARAM) m_pstCCM );
+			return;
+		case WSAEADDRINUSE: 
+			TRACE(_T("The specified address is already in use.\n"));
+			break;
+		case WSAEADDRNOTAVAIL: 
+			TRACE(_T("The specified address is not available from the local machine.\n"));
+			break;
+		case WSAEAFNOSUPPORT: 
+			TRACE(_T("Addresses in the specified family cannot be used with this socket.\n"));
+			break;
+		case WSAECONNREFUSED: 
+			//MyMessageBox(_T("The attempt to connect was forcefully rejected.\n"));	//10061
+			// we will try again later and hope the server is available.
+			ConnectSocket( eReceiver, (LPARAM) m_pstCCM );
+			return;
+		case WSAEDESTADDRREQ: 
+			TRACE(_T("A destination address is required.\n"));
+			break;
+		case WSAEFAULT: 
+			TRACE(_T("The lpSockAddrLen argument is incorrect.\n"));
+			break;
+		case WSAEINVAL: 
+			MyMessageBox(_T("The socket is already bound to an address.\n"));			// 10022L
+			KillSocket( eReceiver, (LPARAM) m_pstCCM );
+			return;
+			break;
+		case WSAEISCONN: 
+			TRACE(_T("The socket is already connected.\n"));
+			// then why are we here?
+			return;
+			break;
+		case WSAEMFILE: 
+			TRACE(_T("No more file descriptors are available.\n"));
+			break;
+		case WSAENETUNREACH: 
+			TRACE(_T("The network cannot be reached from this host at this time.\n"));
+			break;
+		case WSAENOBUFS: 
+			TRACE(_T("No buffer space is available. The socket cannot be connected.\n"));
+			break;
+		case WSAENOTCONN: 
+			TRACE(_T("The socket is not connected.\n"));
+			m_pstCCM->bConnected = 0;
+			return;
+			break;
+		case WSAENOTSOCK: 
+			TRACE(_T("The descriptor is a file, not a socket.\n"));
+			break;
+		case WSAETIMEDOUT: 
+			TRACE(_T("The attempt to connect timed out without establishing a connection. \n"));
+			break;
+		default:
+			TCHAR szError[256];
+			_stprintf_s(szError, _T("OnConnect error: %d"), nLastConnectError);
+			s = szError;
+			MyMessageBox(s);
+			break;
+		}
+
+
+	//EnterCriticalSection(m_pstCCM->pCSRcvPkt);
 //	if (m_pSocket)
 	if (m_pstCCM->pSocket)
 		{
-		TRACE1("[%03d] Client socket already exists....use it\n", m_nConnectionRestartCounter++);
+		TRACE1("[%03d] Client socket already exists....destroy it and its threads\n", 
+			m_nConnectionRestartCounter++);
 		//TRACE1("[%03d] Client socket already exists.... close and destroy before recreating\n", m_nConnectionRestartCounter++);
-		//m_pSocket->Close();
-#if 0
-		m_pstCCM->pSocket->Close();
+		m_pstCCM->pSocket->OnClose(0);
 		Sleep(20);
+#if 0
 		//delete m_pSocket;
 		delete m_pstCCM->pSocket;
 		m_pSocket = NULL;	// the local pointer
 		m_pstCCM->pSocket = NULL;	// the CCM pointer
 #endif
 		}
-
-	else
+#if 1
+	//else
 		{	// make a new 'connect' client socket
 
 		m_pSocket = new CClientSocket( m_pMyCCM );	// subtype c0, 16 bytes long.
@@ -594,7 +887,8 @@ void CClientCommunicationThread::StartTCPCommunication()
 		}		// make a new 'connect' client socket
 	   // PAP if here
 	//===sServerIP4 and uport have to be class memebers
-	LeaveCriticalSection( m_pstCCM->pCSRcvPkt );
+#endif
+	//LeaveCriticalSection( m_pstCCM->pCSRcvPkt );
 	rtn = m_pSocket->Connect(m_pstCCM->sServerIP4, m_nPort );
 
 		
@@ -871,7 +1165,8 @@ afx_msg void CClientCommunicationThread::OnTimer( WPARAM w, LPARAM lParam )
 			// we are targeting the PAM client to the PAG server connection
 		case eRestartPAMtoPAG:
 			// if we haven't made the connection after a second or so, retry
-			if (NULL == m_pMyCCM)	return;
+			if (NULL == m_pMyCCM)	
+				return;
 			//if (m_pMyCCM->GetConnectionState() == 0)	// not connected yet
 			if (m_pMyCCM->m_pstCCM->bConnected == 0)	// not connected yet
 				{

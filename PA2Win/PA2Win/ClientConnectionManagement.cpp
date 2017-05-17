@@ -140,6 +140,7 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 	m_pstCCM->bConnected				= 0;
 	m_pstCCM->uBytesSent				= 0;
 	m_pstCCM->uPacketsSent				= 0;
+	m_pstCCM->nOnConnectError			= WSAECONNREFUSED;
 
 	// create critical sections, linked lists and events
 	m_pstCCM->pCSRcvPkt = new CRITICAL_SECTION();
@@ -301,7 +302,7 @@ void CClientConnectionManagement::KillReceiveThread(void)
 	// receiver role is 1, send role is 2. Passed thru wParam
 	// Thread message is serviced by CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lParam)
 	m_pstCCM->pReceiveThread->PostThreadMessage(WM_USER_KILL_RECV_THREAD, (WORD) 1, (LPARAM) this);
-	while ( (m_pstCCM->pReceiveThread ) && i < 50)
+	while ( (m_pstCCM->pReceiveThread ) && i < 5)
 		{
 		Sleep(10);	 i++;
 		}
@@ -392,8 +393,30 @@ void CClientConnectionManagement::KillCmdProcessThread(void)
 // to check for connectivity to the server
 void CClientConnectionManagement::TimerTick(WORD wTargetSystem)
 	{
+	int i;
 	if ( NULL == m_pstCCM)					return;
-	if ( NULL == m_pstCCM->pReceiveThread)	return;
+	i = pCCM_PAG->GetConnectionState();
+	if (i == 0)
+		{
+		if (NULL == m_pstCCM->pReceiveThread)
+			{	
+			pCCM_PAG->CreateReceiveThread();		Sleep( 50 );
+			pCCM_PAG->InitReceiveThread();			Sleep( 50 );
+			}
+		if (NULL == m_pstCCM->pSendThread)
+			{	
+			pCCM_PAG->CreateSendThread();			Sleep( 50 );
+			pCCM_PAG->InitSendThread();				Sleep( 50 );
+			}
+		if (NULL == m_pstCCM->pCmdProcessThread)
+			{	pCCM_PAG->CreateCmdProcessThread();		Sleep( 50 );	}
+		}
+
+	if (NULL == m_pstCCM->pReceiveThread)
+		{
+		TRACE( _T( "m_pstCCM->pReceiveThread is null\n" ) );
+		return;
+		}
 
 	// This message processed by CClientCommunicationThread::OnTimer
 	m_pstCCM->pReceiveThread->PostThreadMessage(WM_USER_TIMER_TICK, (WORD) wTargetSystem, (LPARAM) 0);

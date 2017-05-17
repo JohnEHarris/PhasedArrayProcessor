@@ -184,7 +184,7 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 
 afx_msg void CServerListenThread::StopListnerThread(WPARAM w, LPARAM lParam)
 	{
-	int i;
+	//int i;
 	if (m_pstSCM == NULL)	return;
 	if (m_pstSCM->pServerListenThread == NULL)	return;
 	if (m_pListenSocket != NULL)

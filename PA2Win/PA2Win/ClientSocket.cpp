@@ -39,26 +39,26 @@ IMPLEMENT_DYNAMIC(CClientSocket, CAsyncSocket);
 CClientSocket::CClientSocket( CClientConnectionManagement *pCCM	)
 	{
 	CString s;
-		if (pCCM)	
+	if (pCCM)	
 		{
-			m_pCCM = pCCM;
-			m_nChooseYourOnReceive = 1;	// new constructor gets new OnReceive jeh
-			//m_pMainDlg = (CMC_SysCPTestClientDlg *) theApp.m_pMainWnd;
-			// this is a copy of the socket pointer in ClientCommunicationThread
-			if (m_pCCM->m_pstCCM)
-				m_pCCM->m_pstCCM->pSocket = this;
-			m_nAsyncSocketCnt = gnAsyncSocketCnt++;
-			m_nOwningThreadId = AfxGetThread()->m_nThreadID;
-			s.Format(_T("Valid CCM ptr, use OnReceive1(), Socket# =%d, CreateThread = %d\n"),
-				m_nAsyncSocketCnt, m_nOwningThreadId);
-			TRACE(s);
-			m_pFifo = 0;
-			m_pElapseTimer = 0;
+		m_pCCM = pCCM;
+		m_nChooseYourOnReceive = 1;	// new constructor gets new OnReceive jeh
+		//m_pMainDlg = (CMC_SysCPTestClientDlg *) theApp.m_pMainWnd;
+		// this is a copy of the socket pointer in ClientCommunicationThread
+		if (m_pCCM->m_pstCCM)
+			m_pCCM->m_pstCCM->pSocket = this;
+		m_nAsyncSocketCnt = gnAsyncSocketCnt++;
+		m_nOwningThreadId = AfxGetThread()->m_nThreadID;
+		s.Format(_T("Valid CCM ptr, use OnReceive1(), Socket# =%d, CreateThread = %d\n"),
+			m_nAsyncSocketCnt, m_nOwningThreadId);
+		TRACE(s);
+		m_pFifo = 0;
+		m_pElapseTimer = 0;
 		}
-		else
+	else
 		{
-			TRACE(_T("InValid CCM ptr, Houston, we have a problem\n"));
-			;
+		TRACE(_T("InValid CCM ptr, Houston, we have a problem\n"));
+		;
 		}
 		//DebugInMessage( "New CClientSocket." );
 	}
@@ -78,7 +78,7 @@ CClientSocket::~CClientSocket()
 		{
 		if (m_pFifo != NULL)
 			{
-			s.Format( _T( "~CClientConnectionManagement_74 Fifo cnt=%d,  ThreadID=0x%08x\n" ),
+			s.Format( _T( "~CClientConnectionManagement Fifo cnt=%d,  ThreadID=0x%08x\n" ),
 				m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId );
 			TRACE( s );
 			delete m_pFifo;
@@ -86,15 +86,17 @@ CClientSocket::~CClientSocket()
 			}
 		if (m_pElapseTimer != NULL)
 			{
-			s.Format( _T( "~CClientConnectionManagement_82 Fifo cnt=%dx\n" ),
+			s.Format( _T( "~CClientConnectionManagement Fifo cnt=%dx\n" ),
 				m_pElapseTimer->tag );
 			TRACE( s );
 			delete m_pElapseTimer;
 			m_pElapseTimer = 0;
 			}
 		}
-	m_pCCM->m_pstCCM->pSocket = 0;
+	m_pCCM->KillSendThread();
+	m_pCCM->KillReceiveThread();
 	m_pCCM->SetConnectionState(0);
+	m_pCCM->m_pstCCM->pSocket = 0;
 	}
 
 
@@ -136,7 +138,7 @@ void CClientSocket::DebugOutMessage(CString s)
     pDlg = (MAIN_DLG_NAME *) theApp.m_pMainWnd;
 	pDlg->AddDebugMessage(s);
 #endif
-	CString s1 = _T("CClientSocket..");
+	CString s1 = _T("\nCClientSocket..");
 	s1 += s + _T("\n");
 	TRACE(s1);
 #ifdef I_AM_PAP
@@ -217,22 +219,45 @@ void CClientSocket::OnAccept(int nErrorCode)
 
 void CClientSocket::OnClose(int nErrorCode) 
 	{
+	int i;
+	CString s;
 	if (m_pCCM)
 		{
+		m_pCCM->SetConnectionState(1);
 		if ( m_pCCM->m_pstCCM)
 			{
 			if (m_pCCM->m_pstCCM->pSocket)
 				{
-				delete m_pCCM->m_pstCCM->pSocket;	// destructor destroys fifo and timer
+				// Destroy send and receive threads associated with this socket
+				// Leave the linked lists intact
+				CAsyncSocket::OnClose(nErrorCode);
+				if (i = this->ShutDown( 2 ))
+					{
+					s.Format( _T( "Shutdown of client socket was successful status = %d\n" ), i );
+					TRACE( s );
+					this->Close();
+					}
+				else
+					{
+					s = _T( "Shutdown of client socket failed\n" );
+					TRACE( s );
+					}
+				Sleep( 10 );
+				if (nErrorCode)
+					{
+					TRACE( _T( "OnClose failed\n" ) );
+					}
+					
+				delete 	m_pCCM->m_pstCCM->pSocket;
+					
+					
+					
 				}
 			//m_pCCM->InitReceiveThread();
 			}
 			// Let the client manager decide if a restart of the receive/send thread is needed
-		m_pCCM->SetConnectionState(0);
 		}
-
-
-	CAsyncSocket::OnClose(nErrorCode);
+	//CAsyncSocket::OnClose(nErrorCode);
 	}
 
 // Add this for an easy way to let PAG have a pop-up message box but PAM output to the dark scree if in debug mode
@@ -249,7 +274,7 @@ void CClientSocket::MyMessageBox(CString s)
 void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from CAsyncSocket
 	{
 	CString s, s0, s1, s2;
-	char txt[64];
+	//char txt[64];
 	UINT uSPort, uCPort;	// temp to hold port numbers discovered
 	if (m_pCCM)
 		{
@@ -263,6 +288,9 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		{
 		switch(nErrorCode)
 			{
+		case	WSAEWOULDBLOCK:
+			MyMessageBox(_T("Socket would block.\n"));
+			break;
 		case WSAEADDRINUSE: 
 			MyMessageBox(_T("The specified address is already in use.\n"));
 			break;
@@ -270,51 +298,51 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 			MyMessageBox(_T("The specified address is not available from ")
 			_T("the local machine.\n"));
 			break;
-			case WSAEAFNOSUPPORT: 
-				MyMessageBox(_T("Addresses in the specified family cannot be ")
-				_T("used with this socket.\n"));
-				break;
-			case WSAECONNREFUSED: 
-				//MyMessageBox(_T("The attempt to connect was forcefully rejected.\n"));	//10061
-				break;
-			case WSAEDESTADDRREQ: 
-				MyMessageBox(_T("A destination address is required.\n"));
-				break;
-			case WSAEFAULT: 
-				MyMessageBox(_T("The lpSockAddrLen argument is incorrect.\n"));
-				break;
-			case WSAEINVAL: 
-				MyMessageBox(_T("The socket is already bound to an address.\n"));			// 10022L
-				break;
-			case WSAEISCONN: 
-				MyMessageBox(_T("The socket is already connected.\n"));
-				break;
-			case WSAEMFILE: 
-				MyMessageBox(_T("No more file descriptors are available.\n"));
-				break;
-			case WSAENETUNREACH: 
-				MyMessageBox(_T("The network cannot be reached from this host ")
-				_T("at this time.\n"));
-				break;
-			case WSAENOBUFS: 
-				MyMessageBox(_T("No buffer space is available. The socket ")
-					_T("cannot be connected.\n"));
-				break;
-			case WSAENOTCONN: 
-				MyMessageBox(_T("The socket is not connected.\n"));
-				break;
-			case WSAENOTSOCK: 
-				MyMessageBox(_T("The descriptor is a file, not a socket.\n"));
-				break;
-			case WSAETIMEDOUT: 
-				MyMessageBox(_T("The attempt to connect timed out without ")
-					_T("establishing a connection. \n"));
-				break;
-			default:
-				TCHAR szError[256];
-				_stprintf_s(szError, _T("OnConnect error: %d"), nErrorCode);
-				MyMessageBox(szError);
-				break;
+		case WSAEAFNOSUPPORT: 
+			MyMessageBox(_T("Addresses in the specified family cannot be ")
+			_T("used with this socket.\n"));
+			break;
+		case WSAECONNREFUSED: 
+			//MyMessageBox(_T("The attempt to connect was forcefully rejected.\n"));	//10061
+			break;
+		case WSAEDESTADDRREQ: 
+			MyMessageBox(_T("A destination address is required.\n"));
+			break;
+		case WSAEFAULT: 
+			MyMessageBox(_T("The lpSockAddrLen argument is incorrect.\n"));
+			break;
+		case WSAEINVAL: 
+			MyMessageBox(_T("The socket is already bound to an address.\n"));			// 10022L
+			break;
+		case WSAEISCONN: 
+			MyMessageBox(_T("The socket is already connected.\n"));
+			break;
+		case WSAEMFILE: 
+			MyMessageBox(_T("No more file descriptors are available.\n"));
+			break;
+		case WSAENETUNREACH: 
+			MyMessageBox(_T("The network cannot be reached from this host ")
+			_T("at this time.\n"));
+			break;
+		case WSAENOBUFS: 
+			MyMessageBox(_T("No buffer space is available. The socket ")
+				_T("cannot be connected.\n"));
+			break;
+		case WSAENOTCONN: 
+			MyMessageBox(_T("The socket is not connected.\n"));
+			break;
+		case WSAENOTSOCK: 
+			MyMessageBox(_T("The descriptor is a file, not a socket.\n"));
+			break;
+		case WSAETIMEDOUT: 
+			MyMessageBox(_T("The attempt to connect timed out without ")
+				_T("establishing a connection. \n"));
+			break;
+		default:
+			TCHAR szError[256];
+			_stprintf_s(szError, _T("OnConnect error: %d"), nErrorCode);
+			MyMessageBox(szError);
+			break;
 				}	// end of the swtich
 			if (m_pCCM)	m_pCCM->SetConnectionState(0);	// not connected
 			//s+= _T("FAILED");
@@ -329,11 +357,10 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		GetPeerName(s0, uSPort);
 		GetSockName(s1, uCPort);	// my ip and port
 		s.Format(_T("PAG client IP = %s:%d connected to PAG server = %s:%d "), s1, uCPort, s0, uSPort);
-		DebugOutMessage(s);
+		//DebugOutMessage(s);
 #ifdef I_AM_PAP
 		pMainDlg->SetMy_PAM_Number(s1, uCPort);
 #endif
-		DebugOutMessage(s);
 		// may need to replace this with some sort of call to MakeConnectionDetail
 		// changed when CLIENT_IDENTITY_DETAIL removed from structure ST_CLIENT_CONNECTION_MANAGEMENT
 		//if (m_pCCM)	m_pCCM->MakeConnectionDetail(s0, uSPort, s1,uCPort); // where server moves from 127.0.0.1 to 10.101.10.190
@@ -346,7 +373,7 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		s += _T("\n");
 		s += m_pCCM->GetSocketName();
 		s += _T(" Succeeded!\n");
-		DebugOutMessage(s);
+		//DebugOutMessage(s);
 
 #ifdef I_AM_PAP
 		char buffer [80];
@@ -391,11 +418,11 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 			// create the fifo and timer
 		m_pFifo = new CCmdFifo(1460);
 		m_pFifo->m_nOwningThreadId = AfxGetThread()->m_nThreadID;
-		strcpy( m_pFifo->tag, "New m_pFifoClntSkt 364 " );
+		strcpy( m_pFifo->tag, "New m_pFifoClntSkt 398 " );
 		s = m_pFifo->tag;
 
 		m_pElapseTimer = new CHwTimer;	
-		strcpy( m_pElapseTimer->tag, "CClientSocket369\n" );
+		strcpy( m_pElapseTimer->tag, "CClientSocket402\n" );
 		s0 = m_pElapseTimer->tag;
 		s += s0;
 		TRACE( s );

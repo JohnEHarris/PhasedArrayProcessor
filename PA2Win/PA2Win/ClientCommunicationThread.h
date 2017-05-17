@@ -78,8 +78,14 @@ public:
 	//afx_msg void RestartTcpComDlg(WPARAM w, LPARAM lParam);
 	afx_msg void TransmitPackets(WPARAM w, LPARAM l);
 	afx_msg void OnTimer(WPARAM w, LPARAM lParam);
+	// Receiver thread commands
+	afx_msg void CreateSocket(WPARAM w, LPARAM lParam);
+	afx_msg void ConnectSocket(WPARAM w, LPARAM lParam);
+	afx_msg void KillSocket(WPARAM w, LPARAM lParam);
+
 	int m_nTimerPacketsWaiting;
 	void StartTCPCommunication();
+	void MyMessageBox( CString s );
 	void DebugMsg(CString s);
 
 // Implementation

@@ -137,6 +137,7 @@ typedef struct
 									// ASync socket fills RcvPktPacketList with OnReceive method.
 									// same socket is used by Send thread to send packets to server
 	BYTE bConnected;				// true if connection is successful.. detected in receive thread.
+	int nOnConnectError;			// error code for OnConnect() operation.
 	UINT uPacketsReceived;
 	UINT uBytesReceived;
 	UINT uPacketsPerSecond;			// received packets
@@ -282,6 +283,11 @@ public:
 	void CreateReceiveThread(void);
 	void InitReceiveThread(void);
 	void KillReceiveThread(void);
+	// commands to receiver thread to manage client connection socket
+	void CreateSocket( void );
+	void ConnectSocket( void );
+	void KillSocket( void );
+
 
 	void CreateSendThread(void);
 	void InitSendThread(void);
@@ -312,7 +318,8 @@ public:
 
 	void SetConnectionState(BYTE b)			{	if (m_pstCCM)	m_pstCCM->bConnected = b;		}	// connected when not 0
 	BYTE GetConnectionState(void)			{	return ( m_pstCCM ? m_pstCCM->bConnected : 0 );	}
-
+	void SetConnectErrorCode(int E)			{	if (m_pstCCM)	m_pstCCM->nOnConnectError = E;		}
+	int GetConnectErrorCode(void)			{	return ( m_pstCCM ? m_pstCCM->nOnConnectError : -1 );	}
 
 	void SendPacket(BYTE *pB, int nBytes, int nDeleteFlag);			
 

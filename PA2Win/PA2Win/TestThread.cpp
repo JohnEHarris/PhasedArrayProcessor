@@ -60,7 +60,7 @@ afx_msg void CTestThread::Bail(WPARAM w, LPARAM lParam)
 		}
 	nShutDown = 3;
 	TRACE( _T( "Exitiing CTestThread\n" ) );
-	ExitInstance();	// NEVER GETS HERE
+	AfxEndThread(0);	// NEVER GETS HERE
 	}
 
 
@@ -100,8 +100,11 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 			switch (i)
 				{
 			case 0:		// the client connection to PAG
-				if ((pCCM_PAG) && (nShutDown == 0))
+				if ((pCCM_PAG) &&
+					(nShutDown == 0))
+					{
 					pCCM_PAG->TimerTick(eRestartPAMtoPAG);
+					}
 				break;
 
 			default:

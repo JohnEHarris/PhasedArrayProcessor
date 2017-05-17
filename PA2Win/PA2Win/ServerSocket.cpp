@@ -123,8 +123,7 @@ ST_SERVERS_CLIENT_CONNECTION * CServerSocket::GetpSCC( void )
 CServerSocket::~CServerSocket()
 	{
 	CString s,t,u;
-	void *pv;
-	int i, j;
+	//int i, j;
 	int nId = AfxGetThread()->m_nThreadID;
 	t.Format(_T("Thread Id=0x%04x - m_pSCC= %x "), nId, m_pSCC);
 
@@ -947,7 +946,7 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
 	{
 	CString s;
-	int i,j;
+	//int i,j;
 
 	s.Format(_T("Send%d"), nClientPortIndex);
 	pscc->szSocketName	= _T("");

@@ -44,7 +44,7 @@ using namespace std;
 // Usefull defines for entire project
 #define IDT_ADP_RESTART_TIMER						109
 
-#define WM_IPX_RXRDY					WM_USER+0x100
+//#define WM_IPX_RXRDY					WM_USER+0x100
 #define WM_USER_KILL_CATCH				WM_USER+0X101
 #define WM_USER_KILL_INSPECT			WM_USER+0X102
 #define WM_USER_INSPECT_ERASE			WM_USER+0X103
@@ -97,6 +97,11 @@ using namespace std;
 #define WM_USER_FLUSH_LINKED_LISTS					WM_USER+0x21F
 
 #define WM_USER_TIMER_TICK							WM_USER+0x220
+
+// Used by CCM receiver thread only
+#define WM_USER_CREATE_SOCKET						WM_USER+0x221
+#define WM_USER_CONNECT_SOCKET						WM_USER+0x222
+#define WM_USER_KILL_SOCKET							WM_USER+0x223
 
 
 // global variables for debugging

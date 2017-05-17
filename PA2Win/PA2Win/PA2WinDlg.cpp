@@ -1576,10 +1576,12 @@ void CPA2WinDlg::DestroyCCM( void )
 								TRACE( _T( "Client Socket never connected\n" ) );
 								}
 							}
-						}	
+						}
+					delete pCCM_PAG->m_pstCCM->pSocket;
 					}	// socket exists
 
 				}
+			Sleep( 10 );
 
 			pCCM_PAG->KillReceiveThread();
 			Sleep( 20 );

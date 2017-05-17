@@ -187,7 +187,6 @@ CServerConnectionManagement::CServerConnectionManagement(int nMyServerIndex)
 
 CServerConnectionManagement::~CServerConnectionManagement(void)
 	{
-	void *pV;
 	int i,n;
 	CString s;
 	i = 0;

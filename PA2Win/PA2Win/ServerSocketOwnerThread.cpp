@@ -305,6 +305,8 @@ int CServerSocketOwnerThread::ExitInstance()
 						TRACE( s );
 						break;
 					}
+
+
 				if ((int)m_pSCC->pSocket->m_hSocket > 0)	//&& ((int)m_pSCC->pSocket->m_hSocket < 32000))
 					{
 					if (i = m_pSCC->pSocket->ShutDown( 2 ))
@@ -322,6 +324,7 @@ int CServerSocketOwnerThread::ExitInstance()
 					// now destroy the CServerSocket class which was created in ServerSocket::OnAccept
 					// This class has a 64k fifo included in its member variables which is why it is such a big class
 					delete m_pSCC->pSocket;
+					m_pSCC->pSocket = 0;
 					}
 				//m_pSCC->pSocket = 0;	
 				}	//m_pSCC->pSocket

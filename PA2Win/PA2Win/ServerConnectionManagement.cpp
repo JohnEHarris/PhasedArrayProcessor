@@ -187,7 +187,7 @@ CServerConnectionManagement::CServerConnectionManagement(int nMyServerIndex)
 
 CServerConnectionManagement::~CServerConnectionManagement(void)
 	{
-	int i,n;
+	int i,n = 0;
 	CString s;
 	i = 0;
 
@@ -475,9 +475,8 @@ int CServerConnectionManagement::KillServerRcvListThread( int nMyServer, int nCl
 // 20-Sep-12 Let the threads close/destroy all object they control in their ExitInstance() routine.
 int CServerConnectionManagement::ServerShutDown(int nMyServer)
 	{
-	int i, j;
+	int i, j = 0;
 	CString s;
-	CWinThread *pThread;
 //	StopListenerThread(nMyServer);
 	if (nMyServer < 0)							return 3;
 	if (nMyServer >= MAX_SERVERS)				return 3;
@@ -495,77 +494,21 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 			}
 		}
 #endif
-
-
-	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
+		TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
 		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);
 
-	pThread = (CWinThread *) m_pstSCM->pServerListenThread;
-
-	j = KillMyThread( pThread );
-	switch (j)
-		{
-	case 0:		TRACE( _T( "NULL thread ptr\n" ) );		break;
-	case 101:	TRACE( _T( "Timed out w/o killing thread\n" ) );		break;
-	default:
-		break;
-		}
-
-
-
-#if 0
-	// done in CServerSocketOwnerThread::ExitInstance()
-	// Kill the RcvListThread
-	int nDeadThreadQty, nDeadThreadStart;	// start is initial number of dead thread before waiting for threads to die
-
-	nDeadThreadQty = 0;
-	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
-		{
-		if (NULL == m_pstSCM->pClientConnection[i])
-			{
-			nDeadThreadQty++;
-			continue;	// go to end of loop
-			}
-		pThread = (CWinThread *) m_pstSCM->pClientConnection[i]->pServerRcvListThread;
-		if (NULL != pThread)
-			{
-			PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
-			Sleep(10);
-			}
-		else nDeadThreadQty++;
-		}
-
-	if (nDeadThreadQty != MAX_CLIENTS_PER_SERVER)
-		{
-		// Wait for RcvListThreads to die
-		for ( j = 0; j < 10; j++)
-			{
-			nDeadThreadStart = nDeadThreadQty;
-			nDeadThreadQty = 0;
-			if (nDeadThreadStart == MAX_CLIENTS_PER_SERVER)	break;	// we are done
-			for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
+			pSCM[nMyServer]->StopListenerThread(nMyServer);
+			for (i = 0; i < 5; i++)
 				{
-				if (NULL == m_pstSCM->pClientConnection[i])
-					{
-					nDeadThreadQty++;
-					continue;	// go to end of loop
-					}
-				pThread = (CWinThread *) m_pstSCM->pClientConnection[i]->pServerRcvListThread;
-				if (NULL != pThread)
-					{
-					//PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
-					Sleep(10);
-					}
-				else nDeadThreadQty++;
-				}	// for MAX_CLIENTS_PER_SERVER	
-			}
-		}
-	if (nDeadThreadQty != MAX_CLIENTS_PER_SERVER)
-		{
-		s.Format(_T("Failed to kill %d ServerRcvListThreads\n"), MAX_CLIENTS_PER_SERVER - nDeadThreadQty);
-		TRACE(s);
-		}
-#endif
+				if (m_pstSCM->pServerListenThread == NULL)
+					break;
+				Sleep( 10 );
+				}
+			if (i == 5)
+				{
+				s.Format( _T( "Failed to kill Listener thread for Server %d DestroySCM 1369\n" ), nMyServer );
+				pMainDlg->SaveDebugLog( s );
+				}
 
 	// Now kill all the ServerConnection threads which themselves have to close and kill their sockets MAX_CLIENTS_PER_SERVER
 	for (i = 0; i < gnMaxClientsPerServer; i++)

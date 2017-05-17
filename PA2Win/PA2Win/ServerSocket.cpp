@@ -125,12 +125,13 @@ CServerSocket::~CServerSocket()
 	CString s,t,u;
 	//int i, j;
 	int nId = AfxGetThread()->m_nThreadID;
+	// for listener socket, m_pSCC is null
 	t.Format(_T("Thread Id=0x%04x - m_pSCC= %x "), nId, m_pSCC);
 
 	switch (m_nOwningThreadType)
 		{
 	case eListener:
-		s = _T("Listener Socket Destructor called ");	// called when Asocket on stack disappears in OnAccept
+		s = _T("Listener Socket Destructor called\n");	// called when Asocket on stack disappears in OnAccept
 		t += s;
 		TRACE( t );
 		return;	// don't want to proceed and delete all we just built
@@ -189,7 +190,8 @@ CServerSocket::~CServerSocket()
 		t += s;
 		TRACE( t );
 		}
-	m_pSCC->pSocket = 0;
+	if (m_pSCC)
+		m_pSCC->pSocket = 0;
 	
 	if (0 == m_pSCM->KillServerSocketOwnerThread( m_pSCM->m_nMyServer, m_pSCC->m_nClientIndex,10 ))
 		{

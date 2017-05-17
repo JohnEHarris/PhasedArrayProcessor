@@ -178,8 +178,8 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 
 CClientConnectionManagement::~CClientConnectionManagement(void)
 	{
-	void *pV;
-	int i, n;
+	void *pV = 0;
+	int i, n = 0;
 
 	// if the socket is not closed, close it and terminate the threads
 	if (m_pstCCM->pSocket)

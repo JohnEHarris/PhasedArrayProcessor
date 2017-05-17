@@ -66,17 +66,21 @@ int KillLinkedList( CRITICAL_SECTION *pCritSec, CPtrList *pList )
 // Probably not suitable for thread which need to exit via AfxEndThread
 // if return = 0, not a valid thread handle
 // if return 101, timed out w/o killing thread
-int KillMyThread( CWinThread *pThread )
+// 2017-05-17 return thread ptr instead of timer count
+CWinThread * KillMyThread( CWinThread *pThread )
 	{
 	int i;
-	if (pThread == NULL)	return 0;
+	CString s;
+	if (pThread == NULL)	return pThread;
 	pThread->PostThreadMessage(WM_QUIT,0,0l);
 	for (i = 0; i < 100; i++)
 		{
-		if (pThread == 0)	return i + 1;
+		if (pThread == 0)	return pThread;	// success
 		Sleep( 10 );
 		}
-	return i + 1;
+	s.Format( _T( "KillMyThread failed, return ptr = %d\n" ), pThread );
+	TRACE( s );
+	return pThread;
 	}
 
 // CAboutDlg dialog used for App About
@@ -1623,7 +1627,7 @@ void CPA2WinDlg::DestroyCCM( void )
 				//Sleep(10);
 				}
 			i = 14;
-			s = _T("Here we are trying to close CCM stuff");
+			s = _T("Here we are trying to close CCM stuff\n");
 			TRACE(s);
 			break;
 
@@ -1662,17 +1666,9 @@ void CPA2WinDlg::DestroySCM( void )
 				}
 #endif
 			
-#ifdef I_AM_PAG
-
 			pSCM[i]->ServerShutDown( i );
-
-#else
-		// IF here we are the PAP. The PAP has gnMaxClientsPerServer UT hardware systems connected
-		// as clients
-			pSCM[i]->ServerShutDown( i );
-
-#endif
 			delete pSCM[i];
+
 			}
 			pSCM[i] = 0;
 		}	// for (i = 0; i < gnMaxServers; i++)
@@ -1773,6 +1769,8 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(CCCM_PAG);					//28
 	i = sizeof(CCmdProcessThread);	// 76
 	i = sizeof(CHwTimer);	// 496
+	i = sizeof( CIniFile );	// 12
+	i = sizeof( CInspState ); // 12
 	i = sizeof(CNcNx);	// 488
 	i = sizeof(CServerConnectionManagement);	// 12
 	i = sizeof(CServerListenThread);	// 80
@@ -1784,7 +1782,14 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(CTuboIni); // 12
 	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 2168
 	i = sizeof( ST_SERVER_CONNECTION_MANAGEMENT ); // 148
-	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 156
+	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 160
+	i = sizeof( CPA2WinDlg );	// 592
+	i = sizeof( CPA2WinApp );	// 204
+	i = sizeof( CIniSectionA );	// 44
+	i = sizeof( CIniKeyA );	// 60
+	i = sizeof( CIniSectionW );	// 44
+	i = sizeof( CIniKeyW );	// 60
+	i = sizeof( CShellManager );	// 12
 
 	}
 

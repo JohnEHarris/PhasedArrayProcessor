@@ -661,7 +661,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 	{
 	int nSockOpt = TRUE;
 	int  sockerr=0;
-	int i;
+	int i = 0;
 	CString s,t;
 	BOOL rtn;
 	int nLastConnectError;

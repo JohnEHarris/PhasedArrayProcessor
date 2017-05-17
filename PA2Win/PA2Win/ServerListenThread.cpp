@@ -67,6 +67,10 @@ int CServerListenThread::ExitInstance()
 		pMainDlg->SaveDebugLog( s );
 		m_pListenSocket->Close();
 		delete m_pListenSocket;	// runs the destructor for CServerSocket
+		if (m_pstSCM)
+			{
+			m_pstSCM->pServerListenSocket = 0;
+			}
 		//m_pListenSocket = NULL;
 		}
 	return CWinThread::ExitInstance();
@@ -132,7 +136,7 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 	TRACE(s);
 	DebugLog(s);
 	// create the listening socket
-	if (m_pListenSocket)
+	if (m_pstSCM->pServerListenSocket)
 		{
 		s = _T("Listening socket already exists.... close and destroy before recreating\n");
 		TRACE(s);

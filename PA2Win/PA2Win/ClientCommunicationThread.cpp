@@ -91,8 +91,8 @@ CClientCommunicationThread::CClientCommunicationThread()
 	m_wMsgSeqCount		= 0;
 	m_DebugLimit		= 0;
 	m_nDebugEmptyList	= 0;
-	m_pElapseTimer		= new CHwTimer();
-	strcpy(m_pElapseTimer->tag, "CComThrd89 ");
+	m_pElapseTimer		= 0;
+	//strcpy(m_pElapseTimer->tag, "CComThrd89 ");
 	m_nTimerPacketsWaiting = 0;
 	}
 
@@ -120,9 +120,8 @@ CClientCommunicationThread::~CClientCommunicationThread()
 
 	switch (this->m_nMyRole)
 		{
-	default:	/*s = _T("?? Com thread Destructor ran\n");*/	break;
 	case 1:		
-		s.Format(_T("Rcvr Com thread[%d],handle %0x Destructor ran\n"), i, this->m_hThread);
+		s.Format(_T("Rcvr Com thread[%d],Thread ID %0x Destructor ran\n"), i, AfxGetThread()->m_nThreadID);
 		TRACE(s);
 		if (m_pstCCM->pReceiveThread)
 			{
@@ -132,15 +131,13 @@ CClientCommunicationThread::~CClientCommunicationThread()
 			}
 		if (m_pstCCM->pSocket)
 			{
-			// 2017-05-16 socket destructor attempts to kill com threads.
-			// at the end, sets its CCM pointer to null.
-			//m_pstCCM->pSocket = NULL;
+			m_pstCCM->pSocket = NULL;
 			t = _T("~CClientCommunicationThread() ASync socket not null\n");
 			}
 		//AfxEndThread( 0 );	// add here, take out in Kill Send Thread
 		break;
 	case 2:
-		s.Format(_T("Send Com thread[%d],handle %0x Destructor ran\n"), i, this->m_hThread);	
+		s.Format(_T("Send Com thread[%d],Thread ID %0x Destructor ran\n"), i, AfxGetThread()->m_nThreadID);	
 		if (m_pstCCM->pSendThread)
 			{
 			//delete m_pstCCM->pSendThread;
@@ -149,6 +146,10 @@ CClientCommunicationThread::~CClientCommunicationThread()
 			}
 		//AfxEndThread( 0 );	// add here, take out in Kill Send Thread
 		break;
+	default:
+		TRACE( _T( "Unknown CCT Thread\n" ) );
+		break;
+		//AfxEndThread( 0 );
 		}
 	//AfxEndThread( 0 );
 	}
@@ -178,6 +179,7 @@ BOOL CClientCommunicationThread::InitInstance()
 // Self deleting threads
 int CClientCommunicationThread::ExitInstance()
 	{
+#if 0
 	// TODO:  perform any per-thread cleanup here
 	void *pv;
 	int i;
@@ -191,12 +193,12 @@ int CClientCommunicationThread::ExitInstance()
 		if (NULL == m_pstCCM->pCSRcvPkt)	break;
 		m_pMyCCM->SetConnectionState(0);
 		EnterCriticalSection(m_pstCCM->pCSRcvPkt);
-		if (m_pSocket)
+		if (m_pstCCM->pSocket)
 			{
-			m_pSocket->Close();
+			m_pstCCM->pSocket->Close();
 			Sleep(10);
-			delete m_pSocket;
-			m_pSocket = NULL;
+			delete m_pstCCM->pSocket;
+			m_pstCCM->pSocket = NULL;
 			m_pMyCCM->SetSocketPtr( NULL );
 			}
 
@@ -271,6 +273,9 @@ int CClientCommunicationThread::ExitInstance()
 		}
 	i = 3;
 	return (i =  CWinThread::ExitInstance());
+#endif
+	return 0;
+	// the 2 threads based on this class both use AfxEndThread()
 	}
 
 BEGIN_MESSAGE_MAP(CClientCommunicationThread, CWinThread)
@@ -333,11 +338,17 @@ afx_msg void CClientCommunicationThread::InitTcpThread(WPARAM w, LPARAM lParam)
 	case 1:		// receiver
 		// Only the receiver thread makes the socket connection
 		//m_pMyCCM->SetSocketPtr(NULL);
+		if (m_pElapseTimer == 0)
+			m_pElapseTimer = new CHwTimer();
+		strcpy( m_pElapseTimer->tag, "CComThrd341-Rcv " );
 		StartTCPCommunication();
 		break;
 
 	case 2:		// sender
 		TRACE(_T("CCT Sender thread cannot create socket\n"));
+		if (m_pElapseTimer == 0)
+			m_pElapseTimer = new CHwTimer();
+		strcpy( m_pElapseTimer->tag, "CComThrd349-Snd " );
 		break;
 	}
 
@@ -362,13 +373,17 @@ afx_msg void CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lPar
 		TRACE("m_pMyCCM is null... will not access client socket\n");
 		return;	// major trouble here, this should never happen
 		}
+
+	if (m_pElapseTimer)
+		{	delete m_pElapseTimer;		m_pElapseTimer = 0;		}
+
 	if (m_pstCCM->pSocket)
 		{
 		if (i = m_pstCCM->pSocket->ShutDown(2))
 			{
 			s.Format(_T("Client Socket to PAG shut down with result = %d\n"),i);
 			TRACE( s );
-			m_pstCCM->pSocket->Close();
+			//m_pstCCM->pSocket->Close();
 			}
 		else
 			{
@@ -394,16 +409,9 @@ afx_msg void CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lPar
 		m_pSocket = 0;
 		}
 
-	if (m_pElapseTimer)
-		{
-		delete m_pElapseTimer;
-		m_pElapseTimer = 0;
-		}
-
-	//ExitInstance();
+	delete	m_pstCCM->pReceiveThread;		//this;
+	//ExitInstance(); never runs because of AfxEndThread
 	AfxEndThread( 0 );
-	//delete m_pstCCM->pReceiveThread;
-	i = 3;
 	}
 
 afx_msg void CClientCommunicationThread::KillSendThread(WPARAM w, LPARAM lParam)
@@ -451,11 +459,9 @@ afx_msg void CClientCommunicationThread::KillSendThread(WPARAM w, LPARAM lParam)
 	m_pstCCM->pSocket = 0;	// memory leak if not already 0
 #endif
 	if (m_pElapseTimer)
-		{
-		delete m_pElapseTimer;
-		m_pElapseTimer = 0;
-		}
+		{	delete m_pElapseTimer;		m_pElapseTimer = 0;		}
 		
+	delete this;
 	AfxEndThread( 0 );
 	//ExitInstance();
 	//delete m_pstCCM->pSendThread;
@@ -477,8 +483,18 @@ void CClientCommunicationThread::CreateSocket(WPARAM w, LPARAM lParam)
 		}
 	TRACE( _T( "CreateSocket executed\n" ) );
 	// make a new 'connect' client socket
+	if (m_pMyCCM == nullptr)
+		{
+		TRACE( _T( "m_pMyCCM == nullptr\n" ) );
+		return;
+		}
+	if (m_pMyCCM->m_pstCCM == nullptr)
+		{
+		TRACE( _T( "m_pMyCCM->m_pstCCM == nullptr\n" ) );
+		return;
+		}
 
-	m_pSocket = new CClientSocket( m_pMyCCM );	// subtype c0, 16 bytes long.
+	m_pMyCCM->m_pstCCM->pSocket = m_pSocket = new CClientSocket( m_pMyCCM );	// subtype c0, 16 bytes long.
 	// The constructor makes a copy of the pointer that is in the
 	// ClientCommunicationManager class
 
@@ -548,7 +564,7 @@ void CClientCommunicationThread::CreateSocket(WPARAM w, LPARAM lParam)
 			s = _T( "Could not find Server name or IP Address... Aborting\n" );
 			DebugMsg( s );
 			m_pSocket->ShutDown( 2 );
-			m_pSocket->Close();
+			//m_pSocket->Close(); The socket object's destructor calls Close for you.
 			delete m_pSocket;
 			m_pSocket = NULL;	// null the local member
 			m_pMyCCM->SetSocketPtr( m_pSocket );	// null the pointer in CCM
@@ -610,7 +626,7 @@ void CClientCommunicationThread::ConnectSocket(WPARAM w, LPARAM lParam)
 		s += _T(": connect failed.\n");
 		TRACE(s);   //DebugMsg(s)
 		m_pSocket->ShutDown(2);
-		m_pSocket->Close();		
+		//m_pSocket->Close();		The socket object's destructor calls Close for you.
 		delete m_pSocket;
 		m_pSocket = NULL;
 		m_pMyCCM->SetSocketPtr(m_pSocket);
@@ -632,12 +648,30 @@ void CClientCommunicationThread::ConnectSocket(WPARAM w, LPARAM lParam)
 // destroy the socket but leave the send/receive/cmd threads and linked list intact
 void CClientCommunicationThread::KillSocket(WPARAM w, LPARAM lParam)
 	{
+	int i, nError;
+	CString s;
 	TRACE( _T( "KillSocket executed\n" ) );
 	if (m_pstCCM->pSocket)
 		{
-		m_pstCCM->pSocket->OnClose(0);
-		m_nConnectionRestartCounter++;
+		i = m_pstCCM->pSocket->ShutDown( 2 );
+		nError = GetLastError();
+		if (i > 0)
+			{
+			s.Format( _T( "Shutdown = %d\n" ), i );
+			TRACE( s );
+			}
+		else
+			{
+			s.Format( _T( "Shutdown Error = %d\n" ), nError );
+			TRACE( s );
+			}
+		// The socket object's destructor calls Close for you. from Microsoft
+		//	m_pstCCM->pSocket->Close();
 		}
+	delete m_pstCCM->pSocket;
+	if (nShutDown)
+		KillReceiveThread( 1, 0L );
+	Sleep( 10 );
 	}
 
 void CClientCommunicationThread::MyMessageBox( CString s )
@@ -745,12 +779,14 @@ void CClientCommunicationThread::StartTCPCommunication()
 			break;
 		case WSAEINVAL: 
 			MyMessageBox(_T("The socket is already bound to an address.\n"));			// 10022L
-			KillSocket( eReceiver, (LPARAM) m_pstCCM );
+			//KillSocket( eReceiver, (LPARAM) m_pstCCM );
+			m_pstCCM->bConnected = 0;
 			return;
 			break;
 		case WSAEISCONN: 
 			TRACE(_T("The socket is already connected.\n"));
 			// then why are we here?
+			ConnectSocket( eReceiver, (LPARAM) m_pstCCM );
 			return;
 			break;
 		case WSAEMFILE: 
@@ -873,7 +909,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 				s = _T( "Could not find Server name or IP Address... Aborting\n" );
 				DebugMsg( s );
 				m_pSocket->ShutDown( 2 );
-				m_pSocket->Close();
+				// m_pSocket->Close();
 				delete m_pSocket;
 				m_pSocket = NULL;	// null the local member
 				m_pMyCCM->SetSocketPtr( m_pSocket );	// null the pointer in CCM
@@ -918,7 +954,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 		s += _T(": connect failed.\n");
 		TRACE(s);   //DebugMsg(s)
 		m_pSocket->ShutDown(2);
-		m_pSocket->Close();		
+		//m_pSocket->Close();		
 		delete m_pSocket;
 		m_pSocket = NULL;
 		m_pMyCCM->SetSocketPtr(m_pSocket);

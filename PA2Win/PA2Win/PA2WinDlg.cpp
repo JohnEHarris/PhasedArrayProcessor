@@ -66,21 +66,17 @@ int KillLinkedList( CRITICAL_SECTION *pCritSec, CPtrList *pList )
 // Probably not suitable for thread which need to exit via AfxEndThread
 // if return = 0, not a valid thread handle
 // if return 101, timed out w/o killing thread
-// 2017-05-17 return thread ptr instead of timer count
-CWinThread * KillMyThread( CWinThread *pThread )
+int KillMyThread( CWinThread *pThread )
 	{
 	int i;
-	CString s;
-	if (pThread == NULL)	return pThread;
+	if (pThread == NULL)	return 0;
 	pThread->PostThreadMessage(WM_QUIT,0,0l);
 	for (i = 0; i < 100; i++)
 		{
-		if (pThread == 0)	return pThread;	// success
+		if (pThread == 0)	return i + 1;
 		Sleep( 10 );
 		}
-	s.Format( _T( "KillMyThread failed, return ptr = %d\n" ), pThread );
-	TRACE( s );
-	return pThread;
+	return i + 1;
 	}
 
 // CAboutDlg dialog used for App About
@@ -1557,36 +1553,23 @@ void CPA2WinDlg::DestroyCCM( void )
 			// close down the connection to the	PAG BY 
 			// closing the connected socket, deleteing critical sections and lists
 			// and deleting any other supporting threads.
-			// delete the client socket, then the cmd process thread, then the send thread, then the receive thead
+			// delete the client socket, then the cmd process thread, then the send thread,
+			// then the receive thead
+			// maybe have receive thread kill socket since it owns it.
 			if (pCCM_PAG->m_pstCCM)
 				{
 				if (pCCM_PAG->m_pstCCM->pSocket)
 					{	// socket exists
-					if (pCCM_PAG->m_pstCCM->pSocket->m_hSocket > 0) 
-						{
-						if (j = pCCM_PAG->m_pstCCM->pSocket->ShutDown(2))
-							{
-							s.Format( _T("Shutdown of client socket was successful, result = %d\n"), j);
-							TRACE(s);					
-							nError = GetLastError();
-							}
-						else
-							{
-							nError = GetLastError();	// WSAENOTCONN                      10057L
-							s .Format(_T("Shutdown of client socket[%d] failed\n"), nError);
-							TRACE(s);
-							if (nError == WSAENOTCONN)
-								{
-								TRACE( _T( "Client Socket never connected\n" ) );
-								}
-							}
-						}
-					delete pCCM_PAG->m_pstCCM->pSocket;
-					}	// socket exists
+					pCCM_PAG->KillSocket();
+					}	
+				}	// socket exists
 
-				}
-			Sleep( 10 );
-
+			// wait for a while for the socket to be destroyed
+			i = 0;
+			while (( i < 100 ) && ( pCCM_PAG->m_pstCCM->pSocket != 0) )
+				{	Sleep (10);		i++;	}
+			if ( i >= 100) TRACE("CCM - Failed to kill Client socket");
+			Sleep( 20 );
 			pCCM_PAG->KillReceiveThread();
 			Sleep( 20 );
 			i = 0;
@@ -1613,7 +1596,6 @@ void CPA2WinDlg::DestroyCCM( void )
 			break;
 			}	// if (pCCM_PAG)
 			// delete send thread and critical sections, delete receive thread and critical sections
-
 
 
 
@@ -1666,9 +1648,17 @@ void CPA2WinDlg::DestroySCM( void )
 				}
 #endif
 			
-			pSCM[i]->ServerShutDown( i );
-			delete pSCM[i];
+#ifdef I_AM_PAG
 
+			pSCM[i]->ServerShutDown( i );
+
+#else
+		// IF here we are the PAP. The PAP has gnMaxClientsPerServer UT hardware systems connected
+		// as clients
+			pSCM[i]->ServerShutDown( i );
+
+#endif
+			delete pSCM[i];
 			}
 			pSCM[i] = 0;
 		}	// for (i = 0; i < gnMaxServers; i++)

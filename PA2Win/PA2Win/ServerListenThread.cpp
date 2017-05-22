@@ -64,6 +64,7 @@ int CServerListenThread::ExitInstance()
 		{
 		i = m_pListenSocket->ShutDown(2);
 		s.Format( _T( "CServerListenThread::ExitInstance value = %d\n" ), i );
+		TRACE( s );
 		pMainDlg->SaveDebugLog( s );
 		m_pListenSocket->Close();
 		delete m_pListenSocket;	// runs the destructor for CServerSocket
@@ -188,7 +189,8 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 
 afx_msg void CServerListenThread::StopListnerThread(WPARAM w, LPARAM lParam)
 	{
-	//int i;
+	int i;
+	CString s;
 	if (m_pstSCM == NULL)	return;
 	if (m_pstSCM->pServerListenThread == NULL)	return;
 	if (m_pListenSocket != NULL)
@@ -202,12 +204,17 @@ WSANOTINITIALISED A successful AfxSocketInit must occur before using this API. 1
 •WSAEINPROGRESS A blocking Windows Sockets operation is in progress. 10036L
 •WSAENOTCONN The socket is not connected ( SOCK_STREAM only). 10057L
 •WSAENOTSOCK The descriptor is not a socket. 10038L
+#endif
 
 
-		i = m_pListenSocket->ShutDown( 2 );
+	if (i = m_pListenSocket->ShutDown( 2 ))
+		{
+		s.Format( _T( "Listener shutdown = %d\n" ), i );
+		TRACE( s );
+		//m_pListenSocket->Close();
+		}
 		delete m_pListenSocket;
 		m_pListenSocket = NULL;
-#endif
 
 		}
 	CWinThread *pThread = this;

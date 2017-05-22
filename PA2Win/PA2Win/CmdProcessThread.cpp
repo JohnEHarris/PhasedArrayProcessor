@@ -28,14 +28,20 @@ CCmdProcessThread::~CCmdProcessThread()
 	{
 	if (NULL == m_pstCCM)						return;
 	if (NULL == m_pstCCM->pCmdProcessThread)	return;
-	//delete m_pstCCM->pCmdProcessThread;
-	m_pstCCM->pCmdProcessThread = NULL;
+	m_pstCCM->pCmdProcessThread = 0;
 	AfxEndThread( 0 );
 	}
 
 BOOL CCmdProcessThread::InitInstance()
 	{
+	CString s;
 	// TODO:  perform and per-thread initialization here
+	if (NULL == m_pstCCM)
+		{		TRACE(_T("NULL == m_pstCCM\n" ));	return TRUE;		}
+	if (NULL == m_pstCCM->pCmdProcessThread)
+		{		TRACE(_T( "NULL == m_pstCCM->pCmdProcessThread\n" )); return TRUE;		}
+	s.Format( _T( "pCmdProcessThread = 0x%x\n" ), m_pstCCM->pCmdProcessThread );
+	TRACE( s );
 	return TRUE;
 	}
 
@@ -49,6 +55,7 @@ int CCmdProcessThread::ExitInstance()
 BEGIN_MESSAGE_MAP(CCmdProcessThread, CWinThread)
 
 	ON_THREAD_MESSAGE(WM_USER_CLIENT_PKT_RECEIVED,ProcessReceivedMessage)
+	ON_THREAD_MESSAGE(WM_USER_TEST_THREAD_BAIL,Bail)
 
 END_MESSAGE_MAP()
 
@@ -85,6 +92,19 @@ void CCmdProcessThread::ProcessReceivedMessage(WPARAM, LPARAM)
 		// this is processed by CClientConnectionManagement::ProcessReceivedMessage(void)
 		m_pMyCCM->ProcessReceivedMessage();
 		}	// switch (m_pMyCCM->m_nMyConnection)
+	}
+
+// Bail out, that is quit
+afx_msg void CCmdProcessThread::Bail( WPARAM w, LPARAM lParam )
+	{
+	CString s;
+	int i;
+	s.Format( _T( "delete this = 0x%x\n" ), this );
+	if (NULL == m_pstCCM)						return;
+	if (NULL == m_pstCCM->pCmdProcessThread)	return;
+	if (this == m_pstCCM->pCmdProcessThread)
+		i = 1;
+	delete m_pstCCM->pCmdProcessThread;	// send us to the destructor
 	}
 
 void CCmdProcessThread::DebugMsg(CString s)

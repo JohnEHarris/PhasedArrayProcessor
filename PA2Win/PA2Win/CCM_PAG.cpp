@@ -57,6 +57,7 @@ CCCM_PAG::CCCM_PAG(int nMyConnection) : CClientConnectionManagement(nMyConnectio
 CCCM_PAG::~CCCM_PAG( void )
 	{
 	// last chance to kill crit sections and lists 
+	void *pv = 0;
 	if (0 == KillLinkedList( m_pstCCM->pCSRcvPkt, m_pstCCM->pRcvPktPacketList ))
 		TRACE( _T( "Failed to kill Receive List\n" ) );
 	else {		m_pstCCM->pCSRcvPkt = 0;  m_pstCCM->pRcvPktPacketList = 0;		}

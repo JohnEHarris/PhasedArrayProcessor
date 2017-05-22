@@ -186,7 +186,7 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 		{
 		if (m_pstCCM->pSocket->ShutDown(2))
 			{
-			m_pstCCM->pSocket->Close();
+			//m_pstCCM->pSocket->Close();
 			}
 		}
 
@@ -196,7 +196,7 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 		{
 
 		// Receive thread closes and destroys socket
-		m_pstCCM->pReceiveThread->PostThreadMessage(WM_QUIT,0,0l);
+		m_pstCCM->pReceiveThread->PostThreadMessage(WM_USER_KILL_RECV_THREAD,0,0l);
 		for ( i = 0; i < 100; i++)	// wait a little while for listener to go away
 			{
 			if (m_pstCCM->pReceiveThread == NULL)		break;
@@ -211,7 +211,7 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	if (m_pstCCM->pSendThread)
 		{
 		// Receive thread closes and destroys socket
-		m_pstCCM->pSendThread->PostThreadMessage(WM_QUIT,0,0l);
+		m_pstCCM->pSendThread->PostThreadMessage(WM_USER_KILL_SEND_THREAD,0,0l);
 		for ( i = 0; i < 100; i++)	// wait a little while for listener to go away
 			{
 			if (m_pstCCM->pSendThread == NULL)		break;
@@ -220,12 +220,13 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 		if ( i == 100)
 			{
 			TRACE(_T("pSendThread Exit routine didn't run or didn't NULL pSendThread\n"));
-			}		
+			}	
+
 		}
-#if 0
+#if 1
 	if (m_pstCCM->pCmdProcessThread)
 		{
-		m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_QUIT,0,0l);
+		m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_USER_KILL_CMD_PROCESS_THREAD,0,0l);
 		for ( i = 0; i < 100; i++)	// wait a little while for listener to go away
 			{
 			if (m_pstCCM->pCmdProcessThread == NULL)		break;
@@ -238,30 +239,36 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 		}
 #endif
 
-#if 0
-	if (m_pstCCM->hReceiveDlg)
-		::SendMessage(m_pstCCM->hReceiveDlg,	WM_USER_KILL_COM_DLG,0,0);
-	Sleep(10);
-	if (m_pstCCM->hSendDlg)
-		::SendMessage(m_pstCCM->hSendDlg,		WM_USER_KILL_COM_DLG,0,0);
-#endif
+
 	Sleep(10);
 	/******************/
-	if (0 == KillLinkedList( m_pstCCM->pCSRcvPkt, m_pstCCM->pRcvPktPacketList ))
-		TRACE( _T( "Failed to kill Receive List\n" ) );
-	else {		m_pstCCM->pCSRcvPkt = 0;  m_pstCCM->pRcvPktPacketList = 0;		}
+	if (m_pstCCM->pRcvPktPacketList)
+		{
+		if (0 == KillLinkedList( m_pstCCM->pCSRcvPkt, m_pstCCM->pRcvPktPacketList ))
+			TRACE( _T( "Failed to kill Receive List\n" ) );
+		else { m_pstCCM->pCSRcvPkt = 0;  m_pstCCM->pRcvPktPacketList = 0; }
+		}
 
-	if ( 0 == KillLinkedList( m_pstCCM->pCSSendPkt, m_pstCCM->pSendPktList ))
-		TRACE( _T( "Failed to kill Send List\n" ) );
-	else {		m_pstCCM->pCSSendPkt = 0;  m_pstCCM->pSendPktList = 0;		}
+	if (m_pstCCM->pSendPktList)
+		{
+		if (0 == KillLinkedList( m_pstCCM->pCSSendPkt, m_pstCCM->pSendPktList ))
+			TRACE( _T( "Failed to kill Send List\n" ) );
+		else { m_pstCCM->pCSSendPkt = 0;  m_pstCCM->pSendPktList = 0; }
+		}
 
-	if ( 0 == KillLinkedList( m_pstCCM->pCSDebugIn, m_pstCCM->pInDebugMessageList ))
-		TRACE( _T( "Failed to kill Debug In List\n" ) );
-	else {		m_pstCCM->pCSDebugIn = 0;  m_pstCCM->pInDebugMessageList = 0;		}
+	if (m_pstCCM->pInDebugMessageList)
+		{
+		if (0 == KillLinkedList( m_pstCCM->pCSDebugIn, m_pstCCM->pInDebugMessageList ))
+			TRACE( _T( "Failed to kill Debug In List\n" ) );
+		else { m_pstCCM->pCSDebugIn = 0;  m_pstCCM->pInDebugMessageList = 0; }
+		}
 
-	if ( 0 == KillLinkedList( m_pstCCM->pCSDebugOut, m_pstCCM->pOutDebugMessageList ))
-		TRACE( _T( "Failed to kill Debug Out List\n" ) );
-	else {		m_pstCCM->pCSDebugOut = 0;  m_pstCCM->pOutDebugMessageList = 0;		}
+	if (m_pstCCM->pOutDebugMessageList)
+		{
+		if (0 == KillLinkedList( m_pstCCM->pCSDebugOut, m_pstCCM->pOutDebugMessageList ))
+			TRACE( _T( "Failed to kill Debug Out List\n" ) );
+		else { m_pstCCM->pCSDebugOut = 0;  m_pstCCM->pOutDebugMessageList = 0; }
+		}
 
 	}
 
@@ -270,6 +277,8 @@ void CClientConnectionManagement::CreateReceiveThread(void)
 	{
 	CString s;
 	BOOL bAutoDelete;
+	if (m_pstCCM->pReceiveThread != 0)
+		ASSERT( 0 );
 	m_pstCCM->pReceiveThread = (CClientCommunicationThread *) AfxBeginThread(
 										RUNTIME_CLASS(CClientCommunicationThread),
 										m_pstCCM->nReceivePriority,
@@ -302,13 +311,28 @@ void CClientConnectionManagement::KillReceiveThread(void)
 	// receiver role is 1, send role is 2. Passed thru wParam
 	// Thread message is serviced by CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lParam)
 	m_pstCCM->pReceiveThread->PostThreadMessage(WM_USER_KILL_RECV_THREAD, (WORD) 1, (LPARAM) this);
-	while ( (m_pstCCM->pReceiveThread ) && i < 5)
+	while ( (m_pstCCM->pReceiveThread ) && i < 50)
 		{
 		Sleep(10);	 i++;
+		if (((i & 7) == 7) && (m_pstCCM->pReceiveThread))
+			{
+			m_pstCCM->pReceiveThread->PostThreadMessage( WM_USER_KILL_RECV_THREAD, (WORD)1, (LPARAM) this );
+			}
 		}
 	// Quit could shut down sender instead of receiver
 	//	m_pstCCM->pReceiveThread->PostThreadMessage(WM_QUIT,0,0);
 	Sleep(10);
+	}
+
+// The receiver thread creates the socket, so let it kill the socket
+void CClientConnectionManagement::KillSocket( void )
+	{
+	int i = 0;
+	if (m_pstCCM == NULL)	return;
+	if (m_pstCCM->pReceiveThread == 0)	return;
+	// receiver role is 1, send role is 2. Passed thru wParam
+	// Thread message is serviced by CClientCommunicationThread::KillSocket(WPARAM w, LPARAM lParam)
+	m_pstCCM->pReceiveThread->PostThreadMessage(WM_USER_KILL_SOCKET, (WORD) 1, (LPARAM) this);
 	}
 
 // Sends tcp/ip messages when nothing else to do. Lower priority than rest of dialog/class
@@ -318,6 +342,8 @@ void CClientConnectionManagement::KillReceiveThread(void)
 // lpParam is used to pass in which instance of the class pointer is being used.
 void CClientConnectionManagement::CreateSendThread(void)
 	{
+	if (m_pstCCM->pSendThread != 0)
+		ASSERT( 0 );
 	m_pstCCM->pSendThread = (CClientCommunicationThread *) AfxBeginThread(
 										RUNTIME_CLASS(CClientCommunicationThread),
 										m_pstCCM->nSendPriority,
@@ -351,17 +377,22 @@ void CClientConnectionManagement::KillSendThread(void)
 	}
 
 
-// Optional in PAG, Needed in PAM
+// Optional in PAG, Needed in PAP
 void CClientConnectionManagement::CreateCmdProcessThread(void)
 	{
+	CString s;
+	if (m_pstCCM->pCmdProcessThread != 0)
+		ASSERT( 0 );
 	m_pstCCM->pCmdProcessThread = (CCmdProcessThread *) AfxBeginThread(
 										RUNTIME_CLASS (CCmdProcessThread),
 										m_pstCCM->nCmdProcessPriority,
 										0,	// stack size
 										CREATE_SUSPENDED,	// create flag, do not run on start
 										NULL);	// security ptr
-//	TRACE3(_T("SenderThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n"), m_pstCCM->pCmdProcessThread, 
-//		m_pstCCM->pCmdProcessThread->m_hThread, m_pstCCM->pCmdProcessThread->m_nThreadID);
+	s.Format(_T("CmdProcessThrea = 0x%04x, handle= 0x%04x, ID=0x%04x\n"), m_pstCCM->pCmdProcessThread, 
+		m_pstCCM->pCmdProcessThread->m_hThread, m_pstCCM->pCmdProcessThread->m_nThreadID);
+	TRACE( s );
+
 	if (NULL == m_pstCCM->pCmdProcessThread)
 		{
 		ASSERT(0);
@@ -370,6 +401,7 @@ void CClientConnectionManagement::CreateCmdProcessThread(void)
 		{
 		m_pstCCM->pCmdProcessThread->m_pstCCM = m_pstCCM;
 		m_pstCCM->pCmdProcessThread->m_pMyCCM = m_pstCCM->pCCM;
+		m_pstCCM->pCmdProcessThread->m_bAutoDelete = 0;		// IOT use AfxEndThread
 		m_pstCCM->pCmdProcessThread->ResumeThread();
 		TRACE(_T("CmdProcessThread is running\n"));
 		}
@@ -381,7 +413,8 @@ void CClientConnectionManagement::KillCmdProcessThread(void)
 	int i = 0;
 	if (m_pstCCM == NULL)	return;
 	if (m_pstCCM->pCmdProcessThread == NULL) return;
-	m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_QUIT,0,0L);
+	//m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_QUIT,0,0L);
+	m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_USER_TEST_THREAD_BAIL,0,0L);
 	while ( (m_pstCCM->pCmdProcessThread ) && i < 50)
 		{
 		Sleep(10);	i++;
@@ -391,26 +424,12 @@ void CClientConnectionManagement::KillCmdProcessThread(void)
 
 // In the windows version, the main dialog OnTimer sends ticks to the CCM receive threads
 // to check for connectivity to the server
+// But this timer is driven by the TestThread.
 void CClientConnectionManagement::TimerTick(WORD wTargetSystem)
 	{
 	int i;
 	if ( NULL == m_pstCCM)					return;
 	i = pCCM_PAG->GetConnectionState();
-	if (i == 0)
-		{
-		if (NULL == m_pstCCM->pReceiveThread)
-			{	
-			pCCM_PAG->CreateReceiveThread();		Sleep( 50 );
-			pCCM_PAG->InitReceiveThread();			Sleep( 50 );
-			}
-		if (NULL == m_pstCCM->pSendThread)
-			{	
-			pCCM_PAG->CreateSendThread();			Sleep( 50 );
-			pCCM_PAG->InitSendThread();				Sleep( 50 );
-			}
-		if (NULL == m_pstCCM->pCmdProcessThread)
-			{	pCCM_PAG->CreateCmdProcessThread();		Sleep( 50 );	}
-		}
 
 	if (NULL == m_pstCCM->pReceiveThread)
 		{

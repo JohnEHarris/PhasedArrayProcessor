@@ -111,7 +111,7 @@ extern CPA2WinApp theApp;
 extern int nShutDown;
 extern HANDLE g_hTimerTick;
 extern int KillLinkedList( CRITICAL_SECTION *pCritSec, CPtrList *pList );
-extern CWinThread *  KillMyThread( CWinThread *pThread );
+extern int  KillMyThread( CWinThread *pThread );
 
 
 

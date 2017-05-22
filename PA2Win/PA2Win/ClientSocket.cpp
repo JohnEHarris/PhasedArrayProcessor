@@ -66,7 +66,8 @@ CClientSocket::CClientSocket( CClientConnectionManagement *pCCM	)
 
 CClientSocket::~CClientSocket()
 	{
-	CString s;
+	CString s,t;
+	int i;
 	if (NULL == m_pCCM)				return;
 	if (NULL == m_pCCM->m_pstCCM)	return;
 	s.Format(_T("~CClientSocket Socket# =%d, CreateThread = %d\n"),
@@ -78,24 +79,33 @@ CClientSocket::~CClientSocket()
 		{
 		if (m_pFifo != NULL)
 			{
-			s.Format( _T( "~CClientConnectionManagement Fifo cnt=%d,  ThreadID=0x%08x\n" ),
+			s.Format( _T( "~CClientSocket Fifo cnt=%d,  ThreadID=0x%08x\n" ),
 				m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId );
 			TRACE( s );
 			delete m_pFifo;
 			m_pFifo = 0;
 			}
-		if (m_pElapseTimer != NULL)
+		if (m_pCCM->m_pstCCM->pSocket->m_pElapseTimer != NULL)
 			{
-			s.Format( _T( "~CClientConnectionManagement Fifo cnt=%dx\n" ),
-				m_pElapseTimer->tag );
+			strcat( m_pElapseTimer->tag, "CClientSocket89 " );
+			t = m_pElapseTimer->tag;
+			s.Format( _T( "~CClientSocket ElapseTime %s\n" ), t );
 			TRACE( s );
-			delete m_pElapseTimer;
-			m_pElapseTimer = 0;
+			delete m_pCCM->m_pstCCM->pSocket->m_pElapseTimer;
+			m_pCCM->m_pstCCM->pSocket->m_pElapseTimer = 0;
 			}
 		}
-	m_pCCM->KillSendThread();
-	m_pCCM->KillReceiveThread();
-	m_pCCM->SetConnectionState(0);
+//	m_pCCM->KillSendThread();
+//	m_pCCM->KillReceiveThread();
+//	m_pCCM->SetConnectionState(0);
+	i = (int)m_pCCM->m_pstCCM->pSocket->m_hSocket;
+	if (i > 0)
+		{
+		m_pCCM->m_pstCCM->pSocket->Close(); // necessary or else KillReceiverThread does not run
+		CAsyncSocket::Close();
+		m_pCCM->m_pstCCM->bConnected = 0;
+		Sleep( 10 );
+		}
 	m_pCCM->m_pstCCM->pSocket = 0;
 	}
 
@@ -221,43 +231,24 @@ void CClientSocket::OnClose(int nErrorCode)
 	{
 	int i;
 	CString s;
+	CAsyncSocket::OnClose(nErrorCode);
+
 	if (m_pCCM)
 		{
-		m_pCCM->SetConnectionState(1);
-		if ( m_pCCM->m_pstCCM)
+		m_pCCM->SetConnectionState(0);
+		if (m_pCCM->m_pstCCM)
 			{
 			if (m_pCCM->m_pstCCM->pSocket)
 				{
-				// Destroy send and receive threads associated with this socket
-				// Leave the linked lists intact
-				CAsyncSocket::OnClose(nErrorCode);
-				if (i = this->ShutDown( 2 ))
-					{
-					s.Format( _T( "Shutdown of client socket was successful status = %d\n" ), i );
-					TRACE( s );
-					this->Close();
-					}
-				else
-					{
-					s = _T( "Shutdown of client socket failed\n" );
-					TRACE( s );
-					}
-				Sleep( 10 );
-				if (nErrorCode)
-					{
-					TRACE( _T( "OnClose failed\n" ) );
-					}
-					
-				delete 	m_pCCM->m_pstCCM->pSocket;
-					
-					
-					
+				i = m_pCCM->m_pstCCM->pSocket->m_hSocket;
+				if ( nShutDown == 0)
+					//m_pCCM->m_pstCCM->pSocket->Close( );
+				i = (int) m_pCCM->m_pstCCM->pSocket;
+				delete  m_pCCM->m_pstCCM->pSocket;
 				}
-			//m_pCCM->InitReceiveThread();
 			}
-			// Let the client manager decide if a restart of the receive/send thread is needed
+
 		}
-	//CAsyncSocket::OnClose(nErrorCode);
 	}
 
 // Add this for an easy way to let PAG have a pop-up message box but PAM output to the dark scree if in debug mode
@@ -274,7 +265,7 @@ void CClientSocket::MyMessageBox(CString s)
 void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from CAsyncSocket
 	{
 	CString s, s0, s1, s2;
-	//char txt[64];
+	char txt[64] ={ 0 };
 	UINT uSPort, uCPort;	// temp to hold port numbers discovered
 	if (m_pCCM)
 		{
@@ -418,11 +409,11 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 			// create the fifo and timer
 		m_pFifo = new CCmdFifo(1460);
 		m_pFifo->m_nOwningThreadId = AfxGetThread()->m_nThreadID;
-		strcpy( m_pFifo->tag, "New m_pFifoClntSkt 398 " );
+		strcpy( m_pFifo->tag, "New m_pFifoClntSkt 407 " );
 		s = m_pFifo->tag;
 
 		m_pElapseTimer = new CHwTimer;	
-		strcpy( m_pElapseTimer->tag, "CClientSocket402\n" );
+		strcpy( m_pElapseTimer->tag, "CClientSocket 411\n" );
 		s0 = m_pElapseTimer->tag;
 		s += s0;
 		TRACE( s );

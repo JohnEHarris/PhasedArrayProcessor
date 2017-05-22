@@ -187,6 +187,7 @@ CServerConnectionManagement::CServerConnectionManagement(int nMyServerIndex)
 
 CServerConnectionManagement::~CServerConnectionManagement(void)
 	{
+	void *pV = 0;
 	int i,n = 0;
 	CString s;
 	i = 0;
@@ -477,6 +478,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 	{
 	int i, j = 0;
 	CString s;
+	CWinThread *pThread;
 //	StopListenerThread(nMyServer);
 	if (nMyServer < 0)							return 3;
 	if (nMyServer >= MAX_SERVERS)				return 3;
@@ -484,11 +486,34 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 	m_pstSCM->nSeverShutDownFlag = 1;
 	if (NULL == m_pstSCM->pServerListenThread)	return 3;
 
-#if 0
-	// global shutdown flag now handles this
-	for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
+	// Kill listener socket first
+
+
+	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
+		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);
+
+	pThread = (CWinThread *) m_pstSCM->pServerListenThread;
+
+	j = KillMyThread( pThread );
+	switch (j)
 		{
-		if (m_pstSCM->pClientConnection[i])
+	case 0:		TRACE( _T( "NULL thread ptr\n" ) );		break;
+	case 101:	TRACE( _T( "Timed out w/o killing thread\n" ) );		break;
+	default:
+		break;
+		}
+
+
+
+#if 0
+	// done in CServerSocketOwnerThread::ExitInstance()
+	// Kill the RcvListThread
+	int nDeadThreadQty, nDeadThreadStart;	// start is initial number of dead thread before waiting for threads to die
+
+	nDeadThreadQty = 0;
+	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
+		{
+		if (NULL == m_pstSCM->pClientConnection[i])
 			{
 			m_pstSCM->pClientConnection[i]->bStopSendRcv = 1;
 			}
@@ -555,6 +580,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		Sleep(10);
 		}	// for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 
+	//KillLinkedList()
 	return 0;
 	}
 

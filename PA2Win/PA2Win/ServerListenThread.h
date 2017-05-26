@@ -3,10 +3,10 @@
 #include "ServerConnectionManagement.h"
 
 // these defines copied from tscandlg.h
-#define WM_USER_ADD_PA_MASTER						WM_USER+0x213
-#define WM_USER_DELETE_PA_MASTER					WM_USER+0x214
-#define WM_USER_INIT_LISTNER_THREAD					WM_USER+0x215
-#define WM_USER_STOP_LISTNER_THREAD					WM_USER+0x216
+//#define WM_USER_ADD_PA_MASTER						WM_USER+0x213
+//#define WM_USER_DELETE_PA_MASTER					WM_USER+0x214
+//#define WM_USER_INIT_LISTNER_THREAD					WM_USER+0x215
+//#define WM_USER_STOP_LISTNER_THREAD					WM_USER+0x216
 
 
 // CServerListenThread .. created by wizard "Add Class to Project"

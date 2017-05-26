@@ -41,7 +41,9 @@ public:
 	afx_msg void TransmitPackets(WPARAM w, LPARAM lParam);
 	afx_msg void Exit2(WPARAM w, LPARAM lParam);
 	afx_msg void MyDestructor();
-	void KillServerSocketClass(void);
+	afx_msg void KillServerSocket(WPARAM w, LPARAM lParam);
+	afx_msg void KillServerSocketOwner(WPARAM w, LPARAM lParam);
+	afx_msg void Hello(WPARAM w, LPARAM lParam);
 	CServerConnectionManagement *m_pSCM;		// managing class ptr
 	int m_nMyServer;							// which instance of stSCM[] we are
 	int m_nClientIndex;							// which one of SSC are we

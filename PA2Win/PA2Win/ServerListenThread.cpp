@@ -42,10 +42,11 @@ CServerListenThread::CServerListenThread()
 CServerListenThread::~CServerListenThread()
 	{
 	CString t;
-	t.Format(_T("Listener Thread Id=0x%04x - destructor has run\n"), m_pstSCM->ListenThreadID);
+	t.Format(_T("Listener Thread Id=%d - destructor has run\n"), m_pstSCM->ListenThreadID);
 	TRACE(t);
 	m_pstSCM->pServerListenThread = NULL;	// Advise our manager we are gone
 	m_pstSCM->ListenThreadID = 0;
+	AfxEndThread( 0 );
 	}
 
 BOOL CServerListenThread::InitInstance()
@@ -133,7 +134,7 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 	AfxSocketInit();	// does the same as the code shown below
 #endif
 
-	s.Format(_T("InitListnerThread OK threadID = Ox%0x\n"), this->m_nThreadID );
+	s.Format(_T("InitListnerThread OK threadID = %d\n"), this->m_nThreadID );
 	TRACE(s);
 	DebugLog(s);
 	// create the listening socket
@@ -187,13 +188,14 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 
 	}
 
+//ON_THREAD_MESSAGE(WM_USER_STOP_LISTNER_THREAD,StopListnerThread)
 afx_msg void CServerListenThread::StopListnerThread(WPARAM w, LPARAM lParam)
 	{
 	int i;
 	CString s;
 	if (m_pstSCM == NULL)	return;
 	if (m_pstSCM->pServerListenThread == NULL)	return;
-	if (m_pListenSocket != NULL)
+	if (m_pstSCM->pServerListenThread->m_pListenSocket != NULL)
 		{
 		
 #if 0
@@ -207,20 +209,17 @@ WSANOTINITIALISED A successful AfxSocketInit must occur before using this API. 1
 #endif
 
 
-	if (i = m_pListenSocket->ShutDown( 2 ))
-		{
-		s.Format( _T( "Listener shutdown = %d\n" ), i );
-		TRACE( s );
-		//m_pListenSocket->Close();
-		}
-		delete m_pListenSocket;
-		m_pListenSocket = NULL;
+		if (i = m_pListenSocket->ShutDown( 2 ))
+			{
+			s.Format( _T( "Listener shutdown = %d\n" ), i );
+			TRACE( s );
+			//m_pListenSocket->Close();
+			}
+		delete m_pstSCM->pServerListenThread->m_pListenSocket;
+		m_pstSCM->pServerListenThread->m_pListenSocket = NULL;
 
 		}
-	CWinThread *pThread = this;
-	// Maybe use 
-	AfxEndThread( 0 );
-	//PostThreadMessage(WM_QUIT, 0L, 0L);	// does the same as the above code
+	delete m_pstSCM->pServerListenThread;
 	}
 
 // debugging aid
@@ -229,5 +228,6 @@ afx_msg void CServerListenThread::DoNothing(WPARAM w, LPARAM lParam)
 	CString s;
 	s.Format(_T("Do nothing has run\n"));
 	TRACE(s);
+	//StopListnerThread( 0, 0 );
 	}
 

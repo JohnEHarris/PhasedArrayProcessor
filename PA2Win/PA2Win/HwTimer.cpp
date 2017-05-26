@@ -37,7 +37,7 @@ CHwTimer :: CHwTimer()	// constructor
 //		where = _T("N/A");
 	int nId = AfxGetThread()->m_nThreadID;
 	CString s;
-	s.Format(_T("New HwTimer at 0x%08x created by thread ID = 0x%04x\n"), this, nId);
+	s.Format(_T("New HwTimer at 0x%08x created by thread ID = %d\n"), this, nId);
 	TRACE(s);
 	strcpy(tag, " ");
 	}
@@ -47,7 +47,7 @@ CHwTimer::~CHwTimer()	// destructor
 	{
 	int nId = AfxGetThread()->m_nThreadID;
 	CString s;
-	s.Format(_T("HwTimer destructor run by thread ID = 0x%04x\n"), nId);
+	s.Format(_T("HwTimer destructor run by thread ID = %d\n"), nId);
 	TRACE(s);
 	}
 

@@ -102,7 +102,7 @@ using namespace std;
 #define WM_USER_CREATE_SOCKET						WM_USER+0x221
 #define WM_USER_CONNECT_SOCKET						WM_USER+0x222
 #define WM_USER_KILL_SOCKET							WM_USER+0x223
-
+#define WM_USER_KILL_OWNER_SOCKET_THREAD			WM_USER+0x224
 
 // global variables for debugging
 extern int gnAsyncSocketCnt, gnFifoCnt;		// counter to count sequence of ASyncSocket creation

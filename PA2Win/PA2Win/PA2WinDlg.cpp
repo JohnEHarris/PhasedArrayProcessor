@@ -64,13 +64,15 @@ int KillLinkedList( CRITICAL_SECTION *pCritSec, CPtrList *pList )
 	}
 
 // Probably not suitable for thread which need to exit via AfxEndThread
+// Definitely not suitable for thread which must get parameters from the message
 // if return = 0, not a valid thread handle
 // if return 101, timed out w/o killing thread
+#if 0
 int KillMyThread( CWinThread *pThread )
 	{
 	int i;
 	if (pThread == NULL)	return 0;
-	pThread->PostThreadMessage(WM_QUIT,0,0l);
+	pThread->PostThreadMessageW(WM_QUIT,0,0l);
 	for (i = 0; i < 100; i++)
 		{
 		if (pThread == 0)	return i + 1;
@@ -78,6 +80,7 @@ int KillMyThread( CWinThread *pThread )
 		}
 	return i + 1;
 	}
+#endif
 
 // CAboutDlg dialog used for App About
 
@@ -1757,7 +1760,6 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(CClientSocket);				//36
 	i = sizeof(CCmdProcessThread);			//76
 	i = sizeof(CCCM_PAG);					//28
-	i = sizeof(CCmdProcessThread);	// 76
 	i = sizeof(CHwTimer);	// 496
 	i = sizeof( CIniFile );	// 12
 	i = sizeof( CInspState ); // 12
@@ -1774,7 +1776,9 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof( ST_SERVER_CONNECTION_MANAGEMENT ); // 148
 	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 160
 	i = sizeof( CPA2WinDlg );	// 592
-	i = sizeof( CPA2WinApp );	// 204
+	i = sizeof( Nc_FIFO );	// 24 but 3 copies
+	i = sizeof( Nx_FIFO );	// 538
+	i = sizeof( PAP_INST_CHNL_NCNX );	// 1056
 	i = sizeof( CIniSectionA );	// 44
 	i = sizeof( CIniKeyA );	// 60
 	i = sizeof( CIniSectionW );	// 44

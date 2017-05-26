@@ -311,16 +311,11 @@ void CClientConnectionManagement::KillReceiveThread(void)
 	// receiver role is 1, send role is 2. Passed thru wParam
 	// Thread message is serviced by CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lParam)
 	m_pstCCM->pReceiveThread->PostThreadMessage(WM_USER_KILL_RECV_THREAD, (WORD) 1, (LPARAM) this);
-	while ( (m_pstCCM->pReceiveThread ) && i < 50)
+	for ( i = 0; i < 50; i++)
 		{
-		Sleep(10);	 i++;
-		if (((i & 7) == 7) && (m_pstCCM->pReceiveThread))
-			{
-			m_pstCCM->pReceiveThread->PostThreadMessage( WM_USER_KILL_RECV_THREAD, (WORD)1, (LPARAM) this );
-			}
+		if (m_pstCCM->pReceiveThread == 0)	return;
+		Sleep(10);
 		}
-	// Quit could shut down sender instead of receiver
-	//	m_pstCCM->pReceiveThread->PostThreadMessage(WM_QUIT,0,0);
 	Sleep(10);
 	}
 
@@ -368,12 +363,12 @@ void CClientConnectionManagement::KillSendThread(void)
 	if (m_pstCCM == NULL)	return;
 	if (m_pstCCM->pSendThread == 0)	return;
 	m_pstCCM->pSendThread->PostThreadMessage(WM_USER_KILL_SEND_THREAD, (WORD) 2, (LPARAM) this);
-	while ( (m_pstCCM->pSendThread ) && i < 50)
+	for ( i = 0; i < 50; i++)
 		{
-		Sleep(10);	 i++;
+		if (m_pstCCM->pSendThread == 0)	return;
+		Sleep(10);
 		}
 	//m_pstCCM->pSendThread->PostThreadMessage(WM_QUIT,0,0);
-	Sleep(10);	
 	}
 
 
@@ -415,9 +410,10 @@ void CClientConnectionManagement::KillCmdProcessThread(void)
 	if (m_pstCCM->pCmdProcessThread == NULL) return;
 	//m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_QUIT,0,0L);
 	m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_USER_TEST_THREAD_BAIL,0,0L);
-	while ( (m_pstCCM->pCmdProcessThread ) && i < 50)
+	for ( i = 0; i < 50; i++)
 		{
-		Sleep(10);	i++;
+		if (m_pstCCM->pCmdProcessThread == 0)	return;
+		Sleep(10);
 		}
 	}
 

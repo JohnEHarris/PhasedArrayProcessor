@@ -194,97 +194,22 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 
 	if (m_pstSCM->pServerListenThread)
 		{
-		// Maybe use AfxEndThread (0) instead of post message
 		PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID,WM_QUIT, 0L, 0L);
 		}
 
 
 	/******************/
 	//  This is all done in CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam) on individual socket basis
-#if 0
-	CRITICAL_SECTION *pCS;
-	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
-		{
-		if (pCS = m_pstSCM->pCS_ClientConnectionRcvList[i])
-			{
-			EnterCriticalSection(pCS);
-			while (m_pstSCM->pRcvPktList[i]->GetCount())
-				{
-				pV = m_pstSCM->pRcvPktList[i]->RemoveHead();
-				delete pV;
-				}
-			LeaveCriticalSection(pCS);
-			delete m_pstSCM->pRcvPktList[i];
-			delete pCS;
-			m_pstSCM->pRcvPktList[i] = 0;
-			m_pstSCM->pCS_ClientConnectionRcvList[i] = 0;
-			}
-
-		if (pCS = m_pstSCM->pCS_ClientConnectionSndList[i])
-			{
-			EnterCriticalSection(pCS);
-			while (m_pstSCM->pSendPktList[i]->GetCount())
-				{
-				pV = m_pstSCM->pSendPktList[i]->RemoveHead();
-				delete pV;
-				}
-			LeaveCriticalSection(pCS);
-			delete m_pstSCM->pSendPktList[i];
-			delete pCS;
-			m_pstSCM->pSendPktList[i] = 0;
-			m_pstSCM->pCS_ClientConnectionSndList[i] = 0;
-			}
-		}
-
-#endif
 
 	if (0 == KillLinkedList( m_pstSCM->pCSDebugIn, m_pstSCM->pInDebugMessageList))
 		TRACE( _T( "Failed to kill InDebugMessage List\n" ) );
 	else {		m_pstSCM->pCSDebugIn = 0;  m_pstSCM->pInDebugMessageList = 0;	}
 
-#if 0
-// m_pstSCM->pClientConnection[m_nClientIndex]
-
-
-	if (m_pstSCM->pCSDebugIn)
-		{
-		LockDebugIn();
-		n = m_pstSCM->pInDebugMessageList->GetCount();
-		while (!m_pstSCM->pInDebugMessageList->IsEmpty())	// empty the list
-			{
-			pV = (void *)m_pstSCM->pInDebugMessageList->RemoveHead();
-			delete pV;
-			}
-		delete m_pstSCM->pInDebugMessageList;				// delete the list
-		m_pstSCM->pInDebugMessageList = 0;
-		UnLockDebugIn();
-		delete m_pstSCM->pCSDebugIn;	// delete the critcial section
-		m_pstSCM->pCSDebugIn = 0;
-		}
-#endif
 
 	if (0 == KillLinkedList( m_pstSCM->pCSDebugOut, m_pstSCM->pOutDebugMessageList))
 		TRACE( _T( "Failed to kill OutDebugMessageList List\n" ) );
 	else {		m_pstSCM->pCSDebugOut = 0;  m_pstSCM->pOutDebugMessageList = 0;		}
 
-#if 0
-	/******************/
-	if (m_pstSCM->pCSDebugOut)
-		{
-		LockDebugOut();
-		n = m_pstSCM->pOutDebugMessageList->GetCount();
-		while (!m_pstSCM->pOutDebugMessageList->IsEmpty())
-			{
-			pV = (void *)m_pstSCM->pOutDebugMessageList->RemoveHead();
-			delete pV;
-			}
-		delete m_pstSCM->pOutDebugMessageList;
-		m_pstSCM->pOutDebugMessageList = 0;
-		UnLockDebugOut();
-		delete m_pstSCM->pCSDebugOut;
-		m_pstSCM->pCSDebugOut = 0;
-		}
-#endif
 
 	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 		{
@@ -301,26 +226,10 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 				TRACE( _T( "Failed to kill SendPktList List\n" ) );
 			else {	m_pstSCM->pClientConnection[i]->pCSSendPkt = 0;  
 					m_pstSCM->pClientConnection[i]->pSendPktList = 0;	}
-
+			KillClientConnection( m_nMyServer, i );
 			}
 		}
 
-
-	// Kill connections to clients
-#if DONE_IN_COM_THREAD_EXIT_INST
-	for ( i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
-		{
-		if (m_pstSCM->pClientConnection[i])
-			{
-			if (m_pstSCM->pClientConnection[i]->pServerSocketOwnerThread)
-				{
-				PostThreadMessage(m_pstSCM->pClientConnection[i]->pServerSocketOwnerThread->m_nThreadID,WM_QUIT, 0L, 0L);
-				}
-
-			Sleep(200);
-			}
-		}
-#endif
 
 
 	s.Format(_T("~CServerConnectionManagement Destructor[%d] has run\n"), m_nMyServer);
@@ -353,12 +262,13 @@ int CServerConnectionManagement::StartListenerThread(int nMyServer)
 										RUNTIME_CLASS(CServerListenThread),
 										m_pstSCM->nListenThreadPriority,	//	THREAD_PRIORITY_NORMAL,
 										0,	// stack size
-										0,	// create flag, 0=run on start//CREATE_SUSPENDED,	// runstate
+										CREATE_SUSPENDED,	// create flag, 0=run on start//CREATE_SUSPENDED,	// runstate
 										NULL);	// security ptr
 	TRACE3("ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", pThread, pThread->m_hThread, pThread->m_nThreadID);
 
+	m_pstSCM->pServerListenThread->m_bAutoDelete = 0;
 	SetListenThreadID(pThread->m_nThreadID);	// necessary later for OnAccept to work
-
+	m_pstSCM->pServerListenThread->ResumeThread();
 	// post a message to init the listener thread. Feed in a pointer to this instancec of SCM
 	// causes afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam) to execute
 	pThread->PostThreadMessage(WM_USER_INIT_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
@@ -382,7 +292,76 @@ int CServerConnectionManagement::StopListenerThread(int nMyServer)
 	return 0;	// success
 	}
 
+// Following the pattern of the client connection management, this call kills the socke
+// and if in shutdown mode, the socket kill function (this one) call the thread kill
+// function
+int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientIndex, int nWait )
+	{
+	CWinThread *pThread;
+	ST_SERVERS_CLIENT_CONNECTION *pscc;
+	CString s;
+	int i;
+		
+	pscc = m_pstSCM->pClientConnection[nClientIndex];
+	if (pscc == NULL)
+		{
+		s.Format( _T( "pscc == NULL in KillClientConnection, client = %d\n" ), nClientIndex );
+		TRACE( s );
+		//return
+		}
+	pThread = (CWinThread *)m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread;
+	// post message causes CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam) to run
+	if (pThread == NULL)	return 0;
+	pThread->PostThreadMessage(WM_USER_KILL_SOCKET,nClientIndex,(LPARAM)pscc);
+	// set this thread priority to low
+	for (i = 0; i < nWait; i++)
+		{
+		if (pThread == 0)	break;
+		Sleep( 10 );
+		}
+	if (i < nWait)
+		{
+		m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread = 0;
+		return 1;
+		}
+	// If we didn't kill the socket and then the thread, try killing the thread
+	pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET_THREAD,nClientIndex,(LPARAM)pscc);
+
+	return 0;
+	}
+
 int CServerConnectionManagement::KillServerSocketOwnerThread( int nMyServer, int nClientIndex, int nWait )
+	{
+	CWinThread *pThread;
+	ST_SERVERS_CLIENT_CONNECTION *pscc;
+	CString s;
+	int i;
+		
+	pscc = m_pstSCM->pClientConnection[nClientIndex];
+	if (pscc == NULL)
+		{
+		s.Format( _T( "pscc == NULL in KillClientConnection, client = %d\n" ), nClientIndex );
+		TRACE( s );
+		return 0;
+		}
+	pThread = (CWinThread *)m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread;
+	if (pThread == NULL)	return 0;
+	pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET_THREAD,nClientIndex,(LPARAM)pscc);
+	for (i = 0; i < nWait; i++)
+		{
+		if (pThread == 0)	break;
+		Sleep( 10 );
+		}
+	if (i < nWait)
+		{
+		m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread = 0;
+		return 1;
+		}
+	return 0;
+	}
+
+#if 0
+int CServerConnectionManagement::KillServerSocketOwnerThread2( int nMyServer, ST_SERVERS_CLIENT_CONNECTION *pscc)
 	{
 	CWinThread *pThread;
 	ST_SERVERS_CLIENT_CONNECTION *pscc;
@@ -434,6 +413,7 @@ int CServerConnectionManagement::KillServerSocketOwnerThread( int nMyServer, int
 		}
 	return 0;	//fail
 	}
+#endif
 
 int CServerConnectionManagement::KillServerRcvListThread( int nMyServer, int nClientIndex )
 	{
@@ -485,62 +465,48 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 	if (NULL == m_pstSCM)						return 3;
 	m_pstSCM->nSeverShutDownFlag = 1;
 	if (NULL == m_pstSCM->pServerListenThread)	return 3;
-
+	
 	// Kill listener socket first
 
 
-	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
+	TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=%d\n", m_pstSCM->pServerListenThread, 
 		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);
 
 	pThread = (CWinThread *) m_pstSCM->pServerListenThread;
-
-	j = KillMyThread( pThread );
-	switch (j)
+	// test serverlistenthread for ablility to service messages
+	// Serviced by CServerListenThread::DoNothing()
+	if (pThread)
 		{
-	case 0:		TRACE( _T( "NULL thread ptr\n" ) );		break;
-	case 101:	TRACE( _T( "Timed out w/o killing thread\n" ) );		break;
-	default:
-		break;
-		}
+		//pThread->PostThreadMessageW( WM_USER_DO_NOTHING, 1, 2 );
+		//Sleep( 10 );
 
-
-
+		// Will Run ExitInstance which kills socket and thread
+		pThread->PostThreadMessageW( WM_USER_STOP_LISTNER_THREAD, 0, 0 );
 #if 0
-	// done in CServerSocketOwnerThread::ExitInstance()
-	// Kill the RcvListThread
-	int nDeadThreadQty, nDeadThreadStart;	// start is initial number of dead thread before waiting for threads to die
-
-	nDeadThreadQty = 0;
-	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
-		{
-		if (NULL == m_pstSCM->pClientConnection[i])
+		// Should kill the listener socket and then the socket destructor  shoul
+		// kill the listener thread
+		pThread->PostThreadMessageW( WM_USER_STOP_LISTNER_THREAD, 1, 2 );
+#endif
+		for ( i = 0; i < 10; i++)
 			{
-			m_pstSCM->pClientConnection[i]->bStopSendRcv = 1;
+			if (m_pstSCM->pServerListenThread == 0)		break;
+			Sleep( 10 );
+			}
+		if (i >= 10)
+			{
+			s.Format( _T( "Failed to kill Listener thread for Server %d\n" ), nMyServer );
+			pMainDlg->SaveDebugLog( s );
 			}
 		}
-#endif
-		TRACE3("Stop ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", m_pstSCM->pServerListenThread, 
-		m_pstSCM->pServerListenThread->m_hThread, m_pstSCM->pServerListenThread->m_nThreadID);
 
-			pSCM[nMyServer]->StopListenerThread(nMyServer);
-			for (i = 0; i < 5; i++)
-				{
-				if (m_pstSCM->pServerListenThread == NULL)
-					break;
-				Sleep( 10 );
-				}
-			if (i == 5)
-				{
-				s.Format( _T( "Failed to kill Listener thread for Server %d DestroySCM 1369\n" ), nMyServer );
-				pMainDlg->SaveDebugLog( s );
-				}
 
 	// Now kill all the ServerConnection threads which themselves have to close and kill their sockets MAX_CLIENTS_PER_SERVER
 	for (i = 0; i < gnMaxClientsPerServer; i++)
 		{
 		if (NULL == m_pstSCM->pClientConnection[i])	continue;	// go to end of loop
 
-		if (0 == KillServerSocketOwnerThread( nMyServer, i, 10 ))
+		// Killing the socket on shut down will also kill the owner therea
+		if (0 == KillServerSocket( nMyServer, i, 10 ))
 			{
 			s.Format( _T( "Timed out w/o killing ServerSocketOwnerThread[i]\n" ), i );
 			TRACE(s);
@@ -551,30 +517,6 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 			s.Format( _T( "Timed out w/o killing ServerRcvListThread[i]\n" ), i );
 			TRACE(s);
 			}
-
-
-#if 0
-		pThread = (CWinThread *) m_pstSCM->pClientConnection[i]->pServerSocketOwnerThread;
-		if (NULL != pThread)
-			PostThreadMessage(pThread->m_nThreadID,WM_QUIT, 0L, 0L);
-		Sleep(10);
-		for ( j = 0; j < 60; j++)
-			{
-			if (m_pstSCM->nComThreadExited[i])
-				{
-				// set to 0 in ServerSocketOwnerThread::MyDestructor
-				// m_pstSCM->pClientConnection[i]->pServerSocketOwnerThread = 0;
-				break;
-				}
-			Sleep(10);
-			}	// for ( j = 0; j < 60; j++)
-
-		if ( j == 60)
-			{
-			s.Format(_T("ServerComThread Exit routine didn't run or didn't NULL pServerSocketOwnerThread[%d]\n"), i);
-			TRACE(s);
-			}
-#endif
 
 		KillClientConnection(nMyServer,i);
 		Sleep(10);
@@ -591,10 +533,33 @@ void CServerConnectionManagement::KillClientConnection(int nMyServer, int nClien
 	int i,j;
 	ST_SERVERS_CLIENT_CONNECTION *pscc;
 	CString s;
-	m_pstSCM = &stSCM[m_nMyServer];
+	if (nMyServer >= gnMaxServers)
+		{
+		s.Format( _T( "nMyServer[%d] >= gnMaxServers\n"), nMyServer  );
+		TRACE( s );
+		ASSERT( 0 );
+		return;
+		}
+	if (nClient >= gnMaxClientsPerServer)
+		{
+		s.Format( _T("nClient[%d] >= gnMaxClientsPerServe\n"), nClient  );
+		TRACE( s );
+		ASSERT( 0 );
+		return;
+		}
+
+	if (m_pstSCM != &stSCM[nMyServer])
+		{
+		s.Format( _T("m_pstSCM != &stSCM[%d]r\n"), nMyServer  );
+		TRACE( s );
+		ASSERT( 0 );
+		return;
+		}
+	m_pstSCM = &stSCM[nMyServer];
 	if (m_pstSCM == NULL)
 		{
-		TRACE( _T("m_pstSCM is NULL\n" ));
+		TRACE( _T("m_pstSCM is NULL\n"));
+		ASSERT( 0 );
 		return;
 		}
 	pscc = m_pstSCM->pClientConnection[nClient];
@@ -602,6 +567,7 @@ void CServerConnectionManagement::KillClientConnection(int nMyServer, int nClien
 		{
 		s.Format(_T("pscc == NULL in KillClientConnection, client = %d\n"), nClient);
 		TRACE(s);
+		ASSERT( 0 );
 		return;
 		}
 
@@ -625,7 +591,7 @@ void CServerConnectionManagement::KillClientConnection(int nMyServer, int nClien
 			if (pscc->pvChannel[i][j])
 				{
 				delete pscc->pvChannel[i][j];
-				pscc->pvChannel[i][j] = 0;
+				m_pstSCM->pClientConnection[nClient]->pvChannel[i][j] = 0;
 				}
 			}
 		

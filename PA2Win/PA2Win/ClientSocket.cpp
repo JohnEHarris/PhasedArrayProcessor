@@ -79,7 +79,7 @@ CClientSocket::~CClientSocket()
 		{
 		if (m_pFifo != NULL)
 			{
-			s.Format( _T( "~CClientSocket Fifo cnt=%d,  ThreadID=0x%08x\n" ),
+			s.Format( _T( "~CClientSocket Fifo cnt=%d,  ThreadID=%d\n" ),
 				m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId );
 			TRACE( s );
 			delete m_pFifo;

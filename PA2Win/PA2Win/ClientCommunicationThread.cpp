@@ -121,7 +121,7 @@ CClientCommunicationThread::~CClientCommunicationThread()
 	switch (this->m_nMyRole)
 		{
 	case 1:		
-		s.Format(_T("Rcvr Com thread[%d],Thread ID %0x Destructor ran\n"), i, AfxGetThread()->m_nThreadID);
+		s.Format(_T("Rcvr Com thread[%d],Thread ID %d Destructor ran\n"), i, AfxGetThread()->m_nThreadID);
 		TRACE(s);
 		if (m_pstCCM->pReceiveThread)
 			{
@@ -137,7 +137,7 @@ CClientCommunicationThread::~CClientCommunicationThread()
 		//AfxEndThread( 0 );	// add here, take out in Kill Send Thread
 		break;
 	case 2:
-		s.Format(_T("Send Com thread[%d],Thread ID %0x Destructor ran\n"), i, AfxGetThread()->m_nThreadID);	
+		s.Format(_T("Send Com thread[%d],Thread ID %d Destructor ran\n"), i, AfxGetThread()->m_nThreadID);	
 		if (m_pstCCM->pSendThread)
 			{
 			//delete m_pstCCM->pSendThread;
@@ -781,6 +781,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 			MyMessageBox(_T("The socket is already bound to an address.\n"));			// 10022L
 			//KillSocket( eReceiver, (LPARAM) m_pstCCM );
 			m_pstCCM->bConnected = 0;
+			ConnectSocket( eReceiver, (LPARAM) m_pstCCM );
 			return;
 			break;
 		case WSAEISCONN: 

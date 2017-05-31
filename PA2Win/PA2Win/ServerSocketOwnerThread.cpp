@@ -52,7 +52,7 @@ CServerSocketOwnerThread::~CServerSocketOwnerThread()
 	TRACE(s);
 	if (m_pSCC)
 		m_pSCC->pServerSocketOwnerThread = 0;
-	AfxEndThread( 0 );
+	//AfxEndThread( 0 );
 	}
 
 // jeh cant get clean exit when destructor callled when object deleted.
@@ -81,13 +81,13 @@ void CServerSocketOwnerThread::MyDestructor()
 		s.Format(_T("Packets Sent = %5d, Packets Received = %5d\n"), n, m);
 		TRACE(s);
 		pSCC->pServerSocketOwnerThread = 0;
+		//delete pSCC->pServerSocketOwnerThread; auto delete on at creation
 		}
 	s.Format(_T("~MyDestructor[%d][%d] = 0x%08x, Id=%x has run\n"), m_nMyServer, m_nClientIndex, this, nId);
 	TRACE(s);
 			
 	m_pstSCM->nComThreadExited[m_nClientIndex] = 1;
 
-	//delete pSCC->pServerSocketOwnerThread; auto delete on at creation
 	}
 
 
@@ -279,7 +279,7 @@ int CServerSocketOwnerThread::ExitInstance()
 	// 5. delete the pClientConnection structure
 	// 6. set the thread exit flag to true
 	//
-	int i;
+	int i,j;
 	CString Ip4,s, t;
 	//UINT uPort;
 	s = _T("CServerSocketOwnerThread::ExitInstance() is running\n");
@@ -344,7 +344,7 @@ int CServerSocketOwnerThread::ExitInstance()
 			//delete m_pSCC;	// wait til destructor
 			//m_pSCC = NULL;
 			//
-
+			i = 0;
 #if 1
 			if (m_pSCC->pServerRcvListThread)
 				{
@@ -388,6 +388,15 @@ int CServerSocketOwnerThread::ExitInstance()
 			//
 			//m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread = NULL;
 			// Created in ServiceApp -- must be killed there on shutdown
+			for ( i = 0; i < MAX_SEQ_COUNT; i++)
+				for (j = 0; j < MAX_CHNLS_PER_MAIN_BANG; j++)
+					{
+					if (m_pSCC->pvChannel[i][j])
+						{
+						delete m_pSCC->pvChannel[i][j];
+						m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[i][j] = 0;
+						}
+					}			
 			delete m_pstSCM->pClientConnection[m_nClientIndex];
 			m_pstSCM->pClientConnection[m_nClientIndex] = NULL;
 			m_pSCC = 0;
@@ -629,32 +638,32 @@ afx_msg void CServerSocketOwnerThread::KillServerSocketOwner( WPARAM w, LPARAM l
 		{
 		if (m_pConnectionSocket)
 			{
-			i = m_pConnectionSocket->ShutDown( 2 );
-			nError = GetLastError();
-			if (i > 0)
+			if (m_pConnectionSocket->m_hSocket > 0)
 				{
-				s.Format( _T( "Shutdown = %d\n" ), i );
-				TRACE( s );
-				}
-			else
-				{
-				s.Format( _T( "Shutdown Error = %d\n" ), nError );
-				TRACE( s );
+				i = m_pConnectionSocket->ShutDown( 2 );
+				nError = GetLastError();
+				if (i > 0)
+					{
+					s.Format( _T( "Shutdown = %d\n" ), i );
+					TRACE( s );
+					}
 				}
 			}
+
 		if (m_pHwTimer)
 			{
 			delete m_pHwTimer;
 			m_pHwTimer = 0;
 			}
-		delete m_pSCC->pServerSocketOwnerThread;
+		//delete m_pSCC->pServerSocketOwnerThread;
+		PostQuitMessage( 0 );
 		}
 	else
 		{
 		TRACE( _T( "m_pSCC in null\n" ) );
-		ASSERT( 0 );
-		return;
+		//ASSERT( 0 );
 		}
+	PostQuitMessage( 0 );
 	}
 
 afx_msg void Hello( WPARAM w, LPARAM lParam )

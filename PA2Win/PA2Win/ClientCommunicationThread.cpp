@@ -275,7 +275,6 @@ int CClientCommunicationThread::ExitInstance()
 	return (i =  CWinThread::ExitInstance());
 #endif
 	return 0;
-	// the 2 threads based on this class both use AfxEndThread()
 	}
 
 BEGIN_MESSAGE_MAP(CClientCommunicationThread, CWinThread)
@@ -409,9 +408,8 @@ afx_msg void CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lPar
 		m_pSocket = 0;
 		}
 
-	delete	m_pstCCM->pReceiveThread;		//this;
-	//ExitInstance(); never runs because of AfxEndThread
-	AfxEndThread( 0 );
+	//delete	m_pstCCM->pReceiveThread;		//this;
+	PostQuitMessage( 0 );
 	}
 
 afx_msg void CClientCommunicationThread::KillSendThread(WPARAM w, LPARAM lParam)
@@ -438,31 +436,12 @@ afx_msg void CClientCommunicationThread::KillSendThread(WPARAM w, LPARAM lParam)
 		s = _T( "Sender thread exiting\n" );
 		TRACE( s );
 		}
-#if 0
-	if (m_pstCCM->pSocket)
-		{
-		if (i = m_pstCCM->pSocket->ShutDown(2))
-			{
-			s.Format(_T("Client Socket to PAG shut down with result = %d\n"),i);
-			TRACE( s );
-			m_pstCCM->pSocket->Close();
-			m_pstCCM->pSocket = 0;	// ok stop
-			}
-		else
-			{
-			nError = GetLastError();	// WSAENOTCONN   10057L    WSAENOTSOCK     10038L
-			s.Format(_T("Shutdown of client socket[%d] failed\n"), nError);
-			}
-		if (m_pstCCM->pSocket)
-			delete m_pstCCM->pSocket;
-		}
-	m_pstCCM->pSocket = 0;	// memory leak if not already 0
-#endif
+
 	if (m_pElapseTimer)
 		{	delete m_pElapseTimer;		m_pElapseTimer = 0;		}
 		
-	delete this;
-	AfxEndThread( 0 );
+	//delete this;
+	PostQuitMessage( 0 );
 	//ExitInstance();
 	//delete m_pstCCM->pSendThread;
 	}

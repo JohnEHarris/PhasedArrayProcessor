@@ -130,6 +130,15 @@ CServerSocket::~CServerSocket()
 	// for listener socket, m_pSCC is null
 	t.Format(_T("Thread Id=%dx - m_pSCC= %x "), nId, m_pSCC);
 
+	if (m_pSCM == nullptr)
+		ASSERT( 0 );
+	if (m_pSCM->m_pstSCM == nullptr)
+		ASSERT( 0 );
+	if ((m_nClientIndex < 0) || (m_nClientIndex >= gnMaxClientsPerServer))
+		ASSERT( 0 );
+	if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == nullptr)
+		ASSERT( 0 );
+		
 		
 	//CAsyncSocket::Close();
 
@@ -251,6 +260,11 @@ CServerSocket::~CServerSocket()
 		if (0 == KillLinkedList( m_pSCC->pCSRcvPkt, m_pSCC->pRcvPktList ))
 			TRACE( _T( "Failed to kill Receive List\n" ) );
 		else { m_pSCC->pCSRcvPkt = 0;  m_pSCC->pRcvPktList  = 0; }
+
+		if (0 == KillLinkedList( m_pSCC->pCSSendPkt, m_pSCC->pSendPktList ))
+			TRACE( _T( "Failed to kill Receive List\n" ) );
+		else { m_pSCC->pCSSendPkt = 0;  m_pSCC->pSendPktList  = 0; }
+
 
 		//if (0 == m_pSCM->KillServerSocketOwnerThread( m_pSCM->m_nMyServer, (LPARAM) m_pSCC ))
 		m_pSCC->pServerSocketOwnerThread->KillServerSocketOwner( m_nClientIndex, (LPARAM)m_pSCC );
@@ -473,7 +487,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		return;
 		}
 
-	SetClientConnectionIndex( nClientPortIndex );		// this should not change during the course of execution
+	m_nClientIndex = nClientPortIndex;		// this should not change during the course of execution
 														// even when the client disconnects/reconnects
 
 	// Stop crash when instrument power cycles
@@ -561,6 +575,7 @@ winsock2.h
 		pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
 		OnAcceptInitializeConnectionStats(pscc,nMyServer, nClientPortIndex);
 		pscc->sClientIP4 = Ip4;
+		pscc->m_nClientIndex = m_nClientIndex;
 #ifdef I_AM_PAP
 		s.Format(_T("PAPSrv[%d]:Instrument[%d]"), nMyServer, nClientPortIndex);
 		t = s + _T("  OnAccept() creating critical sections/lists/vChannels\n");
@@ -656,11 +671,13 @@ winsock2.h
 		//2017-05-24 try detaching the existing socket and reattaching the new socket
 		SOCKET hSocket;
 		pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];	// shortcut for coding
+		pscc->m_nClientIndex = nClientPortIndex;
 		if (pscc->pSocket == 0)
 			{
 			m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pSocket = new CServerSocket(m_pSCM, eServerConnection);
 			if (pscc->pSocket)
 				{
+				pscc->pSocket->m_nClientIndex = nClientPortIndex;
 				pscc->pSocket->m_pSCM	= m_pSCM;
 				pscc->pSocket->m_pstSCM = m_pSCM->m_pstSCM;
 				pscc->pSocket->m_pSCC	= m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];

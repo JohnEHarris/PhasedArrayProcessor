@@ -266,7 +266,7 @@ int CServerConnectionManagement::StartListenerThread(int nMyServer)
 										NULL);	// security ptr
 	TRACE3("ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", pThread, pThread->m_hThread, pThread->m_nThreadID);
 
-	m_pstSCM->pServerListenThread->m_bAutoDelete = 0;
+	//m_pstSCM->pServerListenThread->m_bAutoDelete = 0;
 	SetListenThreadID(pThread->m_nThreadID);	// necessary later for OnAccept to work
 	m_pstSCM->pServerListenThread->ResumeThread();
 	// post a message to init the listener thread. Feed in a pointer to this instancec of SCM
@@ -312,7 +312,7 @@ int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientInd
 	pThread = (CWinThread *)m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread;
 	// post message causes CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam) to run
 	if (pThread == NULL)	return 0;
-	pThread->PostThreadMessage(WM_USER_KILL_SOCKET,nClientIndex,(LPARAM)pscc);
+	pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET,nClientIndex,(LPARAM)pscc);
 	// set this thread priority to low
 	for (i = 0; i < nWait; i++)
 		{
@@ -325,6 +325,7 @@ int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientInd
 		return 1;
 		}
 	// If we didn't kill the socket and then the thread, try killing the thread
+	if (pThread == NULL)	return 0;
 	pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET_THREAD,nClientIndex,(LPARAM)pscc);
 
 	return 0;
@@ -477,9 +478,6 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 	// Serviced by CServerListenThread::DoNothing()
 	if (pThread)
 		{
-		//pThread->PostThreadMessageW( WM_USER_DO_NOTHING, 1, 2 );
-		//Sleep( 10 );
-
 		// Will Run ExitInstance which kills socket and thread
 		pThread->PostThreadMessageW( WM_USER_STOP_LISTNER_THREAD, 0, 0 );
 #if 0
@@ -505,7 +503,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		{
 		if (NULL == m_pstSCM->pClientConnection[i])	continue;	// go to end of loop
 
-		// Killing the socket on shut down will also kill the owner therea
+		// Killing the socket on shut down will also kill the owner theread
 		if (0 == KillServerSocket( nMyServer, i, 10 ))
 			{
 			s.Format( _T( "Timed out w/o killing ServerSocketOwnerThread[i]\n" ), i );
@@ -567,7 +565,6 @@ void CServerConnectionManagement::KillClientConnection(int nMyServer, int nClien
 		{
 		s.Format(_T("pscc == NULL in KillClientConnection, client = %d\n"), nClient);
 		TRACE(s);
-		ASSERT( 0 );
 		return;
 		}
 

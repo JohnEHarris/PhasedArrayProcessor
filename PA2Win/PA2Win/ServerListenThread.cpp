@@ -46,7 +46,7 @@ CServerListenThread::~CServerListenThread()
 	TRACE(t);
 	m_pstSCM->pServerListenThread = NULL;	// Advise our manager we are gone
 	m_pstSCM->ListenThreadID = 0;
-	AfxEndThread( 0 );
+	//AfxEndThread( 0 );
 	}
 
 BOOL CServerListenThread::InitInstance()
@@ -219,7 +219,8 @@ WSANOTINITIALISED A successful AfxSocketInit must occur before using this API. 1
 		m_pstSCM->pServerListenThread->m_pListenSocket = NULL;
 
 		}
-	delete m_pstSCM->pServerListenThread;
+	//delete m_pstSCM->pServerListenThread; 2017-05-31
+	PostQuitMessage( 0 );
 	}
 
 // debugging aid

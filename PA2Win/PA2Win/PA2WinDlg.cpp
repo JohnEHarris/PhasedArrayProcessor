@@ -394,6 +394,7 @@ BEGIN_MESSAGE_MAP(CPA2WinDlg, CDialogEx)
 	ON_WM_DESTROY()
 	ON_COMMAND( ID_CONFIGURE_NCNX, &CPA2WinDlg::OnConfigureNcNx )
 	ON_BN_CLICKED( IDC_BN_ERASE_DBG, &CPA2WinDlg::OnBnClickedBnEraseDbg )
+	ON_BN_CLICKED( IDC_BN_SHUTDOWN, &CPA2WinDlg::OnBnClickedBnShutdown )
 END_MESSAGE_MAP()
 
 
@@ -1797,4 +1798,27 @@ void CPA2WinDlg::OnBnClickedBnEraseDbg()
 	{
 	// TODO: Add your control notification handler code here
 	m_lbOutput.ResetContent();
+	}
+
+
+void CPA2WinDlg::OnBnClickedBnShutdown()
+	{
+	// TODO: Add your control notification handler code here
+	// Kill all threads but don't exit the program
+	// Used to see if we can delete all objects created with new when the program runs.
+	int i;
+	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM;
+	CString s;
+
+	nShutDown = 1;
+	for (i = 0; i < gnMaxServers; i++)
+		{
+		if (pSCM[i])
+			{
+			pstSCM = pSCM[i]->m_pstSCM;
+			pSCM[i]->ServerShutDown( i );
+			delete pSCM[i];
+			}
+		pSCM[i] = 0;
+		}
 	}

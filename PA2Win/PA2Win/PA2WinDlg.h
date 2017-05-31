@@ -231,4 +231,5 @@ public:
 	afx_msg void OnTimer( UINT_PTR nIDEvent );
 	afx_msg void OnConfigureNcNx();
 	afx_msg void OnBnClickedBnEraseDbg();
-	};
+	afx_msg void OnBnClickedBnShutdown();
+};

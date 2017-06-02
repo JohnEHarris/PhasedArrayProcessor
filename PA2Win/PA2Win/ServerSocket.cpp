@@ -86,7 +86,7 @@ CServerSocket::CServerSocket()
 	//m_nSeqIndx = m_nLastSeqCnt = 0;
 	//memset(&m_nSeqCntDbg[0], 0, sizeof(m_nSeqCntDbg));
 	m_nListCount = m_nListCountChanged = 0;
-	//m_nAsyncSocketCnt = gnAsyncSocketCnt++;
+	m_nAsyncSocketCnt = gnAsyncSocketCnt++;
 	m_nOwningThreadId = AfxGetThread()->m_nThreadID;
 	s.Format(_T("CServerSocket() Called by ThreadID=%d\n"), m_nOwningThreadId);
 	TRACE(s);
@@ -181,6 +181,8 @@ CServerSocket::~CServerSocket()
 			{
 			m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
 			CAsyncSocket::Close();
+			m_pSCC->pSocket = 0;		// has corresponding member in ServerSocketOwnerThread
+			//m_pSCC->pServerSocketOwnerThread->m_pConnectionSocket = 0;
 			m_pSCC->bConnected = 0;
 			Sleep( 10 );
 			}
@@ -226,6 +228,7 @@ CServerSocket::~CServerSocket()
 				{
 				m_pSCM->m_pstSCM->pServerListenSocket->Close(); // necessary or else KillReceiverThread does not run
 				CAsyncSocket::Close();
+				m_pSCM->m_pstSCM->pServerListenSocket = 0;
 				Sleep( 10 );
 				}
 
@@ -490,32 +493,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 	m_nClientIndex = nClientPortIndex;		// this should not change during the course of execution
 														// even when the client disconnects/reconnects
 
-	// Stop crash when instrument power cycles
-	bIsClosing = 0;
-#if 0
-
-	if (m_pSCM)
-		{
-		if (m_pSCM->m_pstSCM)
-			{	// we may have been here before and had an established connection
-			m_pSCC = GetpSCC();
-			if (m_pSCC)
-				if(m_pSCC->m_bIsClosing)
-					bIsClosing = 1;
-			}
-		}
-#endif
-
-	if (bIsClosing)
-		{
-		Asocket.Close();
-		CAsyncSocket::OnAccept(nErrorCode);
-		s.Format(_T("Fatal error - Already connected, nClientPortIndex = %d, Error Code = %d\n"),
-			nClientPortIndex,nErrorCode);
-		TRACE(s);
-		return;
-		}
-
+	if (m_nClientIndex == 0)
+		TRACE( _T( "m_nClientIndex == 0 Since nClientPortIndex=0 in OnAccept )\n" ) );
 #if 0
 winsock2.h
 #define SO_DEBUG        0x0001          /* turn on debugging info recording */
@@ -570,17 +549,17 @@ winsock2.h
 	// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
 	ST_SERVERS_CLIENT_CONNECTION *pscc;
 
-	if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] == NULL)	// first time thru
+	if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)	// first time thru
 		{
-		pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] = new ST_SERVERS_CLIENT_CONNECTION();
-		OnAcceptInitializeConnectionStats(pscc,nMyServer, nClientPortIndex);
+		pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] = new ST_SERVERS_CLIENT_CONNECTION();
+		OnAcceptInitializeConnectionStats(pscc,nMyServer, m_nClientIndex);
 		pscc->sClientIP4 = Ip4;
 		pscc->m_nClientIndex = m_nClientIndex;
 #ifdef I_AM_PAP
-		s.Format(_T("PAPSrv[%d]:Instrument[%d]"), nMyServer, nClientPortIndex);
+		s.Format(_T("PAPSrv[%d]:Instrument[%d]"), nMyServer, m_nClientIndex);
 		t = s + _T("  OnAccept() creating critical sections/lists/vChannels\n");
 #else
-		s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept\n"), nMyServer, nClientPortIndex);
+		s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept\n"), nMyServer, m_nClientIndex);
 		t = s;
 #endif
 		TRACE(t);
@@ -589,7 +568,7 @@ winsock2.h
 		pMainDlg->SaveDebugLog(t);
 		pscc->szSocketName = s;
 		pscc->uClientPort = uPort;
-		m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
+		m_pstSCM->nComThreadExited[m_nClientIndex] = 0;
 		SetpSCC( pscc );
 		
 ///////////////////////////////////////
@@ -599,7 +578,7 @@ winsock2.h
 		// This allows (we think) the socket to run at a high priority level
 		// create a new thread IN SUSPENDED STATE. LEAVE AUTODELETE ON !!!
 		CServerSocketOwnerThread * pThread =
-		m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread = (CServerSocketOwnerThread *) AfxBeginThread(RUNTIME_CLASS (CServerSocketOwnerThread),
+		m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread = (CServerSocketOwnerThread *) AfxBeginThread(RUNTIME_CLASS (CServerSocketOwnerThread),
 	   	   					  													THREAD_PRIORITY_ABOVE_NORMAL,
 																				0,					// stacksize
 																				CREATE_SUSPENDED,	// runstate
@@ -607,34 +586,33 @@ winsock2.h
 		//pThread->m_bAutoDelete = 0;
 
 		s.Format(_T("CServerSocketOwnerThread[%d][%d]= 0x%08x, Id=0x%04x was created\n"),
-						nMyServer, nClientPortIndex, pThread, pThread->m_nThreadID);
+						nMyServer, m_nClientIndex, pThread, pThread->m_nThreadID);
 		TRACE(s);
 		// Init some things in the thread before it runs. We are now accessing things inside the new thread, not in this thread
 		if (pThread)
 			{
 			// This is how we boost the ServerSocket to a higher priority
-			pThread->m_pConnectionSocket					= new CServerSocket(m_pSCM, eServerConnection);
-			s.Format(_T("CServerSocket::OnAccept, pThread->m_pConnectionSocket = 0x%08x\n"), pThread->m_pConnectionSocket);
+			//pThread->m_pConnectionSocket					= new CServerSocket(m_pSCM, eServerConnection);
+			pThread->m_pSCM		= m_pSCM;
+			pThread->m_pstSCM	= m_pSCM->m_pstSCM;
+			pThread->m_nMyServer= m_pSCM->m_pstSCM->pSCM->m_nMyServer;
+			pThread->m_pSCC		= m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];
+			pThread->m_nClientIndex	= m_nClientIndex;
+			pThread->m_pSCC->pSocket = new CServerSocket(m_pSCM, eServerConnection); ;
+			s.Format( _T( "CServerSocket::OnAccept, pThread->m_pSCC->pSocket = 0x%08x\n" ), pThread->m_pSCC->pSocket );
 			TRACE(s);
-			pThread->m_pConnectionSocket->m_pSCM			=	pThread->m_pSCM		= m_pSCM;
-			pThread->m_pConnectionSocket->m_pSCM->m_pstSCM	=	pThread->m_pstSCM	= m_pSCM->m_pstSCM;
-			pThread->m_pConnectionSocket->m_nMyServer		=	pThread->m_nMyServer= m_pSCM->m_pstSCM->pSCM->m_nMyServer;
-			pThread->m_pConnectionSocket->m_pSCC			=	pThread->m_pSCC		= m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];
-			pThread->m_pConnectionSocket->m_pThread			=	pThread;
-			pThread->m_pConnectionSocket->m_pSCC->m_nClientIndex = pThread->m_nClientIndex	= nClientPortIndex;
-			pThread->m_pConnectionSocket->m_pSCC->pSocket	=	pThread->m_pConnectionSocket;
-			pThread->m_pConnectionSocket->GetPeerName(Ip4,uPort);
-			pThread->m_pConnectionSocket->SetClientIp4(Ip4);
-			pThread->m_pConnectionSocket->m_pSCC->sClientIP4 = Ip4;
-			pThread->m_pConnectionSocket->m_pSCC->uClientPort= uPort;
+	
 
 			//pThread->m_pSCC->pSocket = NULL;
-			pThread->m_nClientIndex	= nClientPortIndex;
 			pThread->m_hConnectionSocket = Asocket.Detach();	// hand off the socket we just accepted to the thread
 			Sleep(10);
 			// Resume will cause CServerSocketOwnerThread::InitInstance() to execute
 			// pThread->m_pSCC->pSocket = (CServerSocket *) FromHandle(Asocket.Detach()); doesn't work
-			pThread->m_pConnectionSocket->m_pSCC->pSocket->m_nOwningThreadType = eServerConnection;
+			pThread->m_pSCC->pSocket->m_nOwningThreadType = eServerConnection;
+			pThread->m_pSCC->pSocket->m_pSCC = pThread->m_pSCC;
+			pThread->m_pSCC->pSocket->m_pSCM = pThread->m_pSCM;
+			pThread->m_pSCC->pSocket->m_pstSCM = pThread->m_pstSCM;
+			pThread->m_pSCC->pSocket->m_nClientIndex = m_nClientIndex;
 			pThread->ResumeThread();
 			}
 		else
@@ -651,10 +629,10 @@ winsock2.h
 		strcpy(buffer,GetTimeStringPtr());
 		CstringToChar(Ip4, txt);
 		printf("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n", 
-			nClientPortIndex, txt, uPort, buffer);
+			m_nClientIndex, txt, uPort, buffer);
 		sOut = txt;
 		s.Format(_T("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n"), 
-			nClientPortIndex,Ip4, uPort, sOut);
+			m_nClientIndex,Ip4, uPort, sOut);
 		TRACE(s);
 		Sleep(10);
 			
@@ -662,73 +640,34 @@ winsock2.h
 		// destructor closes the socket
 		
 		
-		}	// if (m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] == NULL)
+		}	// if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)
 	/************************** What if already connected ?? *******************/
 
-	else 	if	(m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex] && 
-				(m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread))
+	else 	if	(m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] && 
+				(m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread))
 		{
 		//2017-05-24 try detaching the existing socket and reattaching the new socket
 		SOCKET hSocket;
-		pscc = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];	// shortcut for coding
-		pscc->m_nClientIndex = nClientPortIndex;
+		pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];	// shortcut for coding
+		pscc->m_nClientIndex = m_nClientIndex;
 		if (pscc->pSocket == 0)
 			{
-			m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pSocket = new CServerSocket(m_pSCM, eServerConnection);
+			m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pSocket = new CServerSocket(m_pSCM, eServerConnection);
 			if (pscc->pSocket)
 				{
-				pscc->pSocket->m_nClientIndex = nClientPortIndex;
+				pscc->pSocket->m_nClientIndex = m_nClientIndex;
 				pscc->pSocket->m_pSCM	= m_pSCM;
 				pscc->pSocket->m_pstSCM = m_pSCM->m_pstSCM;
-				pscc->pSocket->m_pSCC	= m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];
-				//hSocket = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pSocket->Detach();
+				pscc->pSocket->m_pSCC	= m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];
+				//hSocket = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pSocket->Detach();
 				}			
 			}
 		hSocket = Asocket.Detach();
-		m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread->m_hConnectionSocket = hSocket;
-		m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread->m_pConnectionSocket = pscc->pSocket;
-		m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread->m_pConnectionSocket->Attach( hSocket );
+		m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread->m_hConnectionSocket = hSocket;
+		m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread->m_pSCC->pSocket = pscc->pSocket;
+		m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread->m_pSCC->pSocket->Attach( hSocket );
 		Sleep(10);
-		Sleep(10);
-
-#if 0
-		m_nOnAcceptClientIndex = nClientPortIndex;
-		// a little cheating here to get info to OnClose for this situation
-		OnClose(nErrorCode); // OnClose kills ServerSocketOwnerThread but the base Async OnClose does not
-		TRACE("CServerSocketOwnerThread ALREADY exists... kill it\n");
-		m_pSCC = GetpSCC();
-		if (m_pSCC)
-			{
-		CWinThread * pThread1 = 
-			(CWinThread *)m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex]->pServerSocketOwnerThread;
-		// wParam = ClientPortIndex, lParam = ST_SERVERS_CLIENT_CONNECTION *
-		PostThreadMessage(pThread1->m_nThreadID,WM_USER_KILL_OWNER_SOCKET, (WORD)nClientPortIndex, (LPARAM)m_pSCC);	
-		// this will cause ServerSocketOwner to execute ExitInstance()
-		// ExitInstance() will close the socket and delete the pClientConnection structures
-
-		for ( i = 0; i <50; i++)
-			{
-			if (m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex])	
-				break;
-			Sleep(10);	// pretty bad to sleep inside an OS call back function!!!!
-			}
-		s.Format("Wait loop in OnAccept for ComThreadExited is %d\n", i);
-		TRACE(s);
-		if ( i == 50) ASSERT(0);
-
-		// redo what was above as if pClientConnection had never existed <<<< crashed here on friday 9-16-16
-		// after instrument power cycle.
-		// m_pSCC = m_pSCM->m_pstSCM->pClientConnection[nClientPortIndex];	
-		//nResult = BuildClientConnectionStructure(m_pSCC, m_nMyServer, nClientPortIndex);
-			OnAcceptInitializeConnectionStats(m_pSCC,nMyServer, nClientPortIndex);
-			m_pSCC->sClientIP4 = Ip4;
-			s.Format( _T( "PAGSrv[%d]:MasterInst[%d]" ), nMyServer, nClientPortIndex );
-			m_pSCC->szSocketName = s;
-			m_pSCC->uClientPort = uPort;
-			m_pSCM->m_pstSCM->nComThreadExited[nClientPortIndex] = 0;
-			}
-#endif
-
+		//Sleep(10);
 		}
 
 	else
@@ -776,6 +715,8 @@ void CServerSocket::OnReceive(int nErrorCode)
 	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)	return;
 	if (m_pSCC == NULL)							return;
 
+	if (m_nClientIndex == 0)
+		TRACE( _T( "m_nClientIndex == 0 In OnReceive\n" ) );
 
 	if (m_pSCC->bStopSendRcv)
 			{
@@ -975,7 +916,12 @@ void CServerSocket::OnClose(int nErrorCode)
 		TRACE( _T( "OnClose failed\n" ) );
 		}
 
+	if (m_nClientIndex == 0)
+		TRACE( _T( "m_nClientIndex == 0 BEFORE GetpSCC()\n" ) );
 	m_pSCC = GetpSCC();
+
+	if (m_nClientIndex == 0)
+		TRACE( _T( "m_nClientIndex == 0 After GetpSCC()\n" ) );
 //	m_pSCC->m_bIsClosing = 1;
 	if (m_pSCM == nullptr)
 		{

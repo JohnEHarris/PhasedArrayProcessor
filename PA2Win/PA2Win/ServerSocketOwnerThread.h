@@ -60,7 +60,7 @@ public:
 
 	SOCKET m_hConnectionSocket;
 	//CServerSocket m_ConnectionSocket;			// server's connection to the client .. on stack
-	CServerSocket *m_pConnectionSocket;			// server's connection to the client .. on stack 2016-08-12 new
+	//CServerSocket *m_pConnectionSocket;			// server's connection to the client .. on stack 2016-08-12 new
 
 	int nDebug;
 	class CHwTimer *m_pHwTimer;

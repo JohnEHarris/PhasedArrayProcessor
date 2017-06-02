@@ -141,41 +141,37 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	// 	pThread->m_pConnectionSocket = new CServerSocket(); about line 367 in void CServerSocket::OnAccept(int nErrorCode)
 
 
-	m_pConnectionSocket->m_nClientIndex = m_nClientIndex;
-	m_pConnectionSocket->m_pThread	= this;
+	//m_pConnectionSocket->m_nClientIndex = m_nClientIndex;
+	//m_pConnectionSocket->m_pThread	= this;
+	//m_pThread = this;
 #if 0
 	m_pConnectionSocket->m_pSCM			= this->m_pMySCM;	// ST_SERVER_CONNECTION_MANAGEMENT
 	m_pConnectionSocket->m_nMyServer	= this->m_nMyServer;
 	m_pConnectionSocket->m_pSCC			= this->m_pSCC;		//m_pMySCM->m_pstSCM->pClientConnection[0]; // Server's client connection
 #endif
-	m_pConnectionSocket->m_pstSCM		= this->m_pSCM->m_pstSCM;
-	m_pConnectionSocket->m_pSCC->pServerSocketOwnerThread = this;
+	//m_pConnectionSocket->m_pstSCM		= this->m_pSCM->m_pstSCM;
+	//m_pConnectionSocket->m_pSCC->pServerSocketOwnerThread = this;
 	// m_hConnectionSocket = Asocket.Detach(); set when thread created suspended
 	// take default setting on next line
-	m_pConnectionSocket->Attach(m_hConnectionSocket);
-#if 0
-	m_pConnectionSocket->m_pSCC->pSocket = m_pConnectionSocket;
-	m_pConnectionSocket->GetPeerName(Ip4,uPort);	// connecting clients info??
-	m_pConnectionSocket->SetClientIp4(Ip4);
-	m_pConnectionSocket->m_pSCC->sClientIP4 = Ip4;
-	m_pConnectionSocket->m_pSCC->uClientPort = uPort;
-#endif
-	Ip4 = m_pConnectionSocket->m_pSCC->sClientIP4;
-	uPort = m_pConnectionSocket->m_pSCC->uClientPort;
+	m_pSCC->pSocket->Attach( m_hConnectionSocket );
+	//m_pConnectionSocket->Attach(m_hConnectionSocket);
+
+	Ip4 = m_pSCC->sClientIP4;
+	uPort = m_pSCC->uClientPort;
 	//m_pConnectionSocket->m_pElapseTimer = new CHwTimer(); done by new 
-	m_pConnectionSocket->m_pSCC->szSocketName.Format(_T("ServerSocket Connection Skt[%d][%d]\n"),  m_nMyServer, m_nClientIndex);
+	m_pSCC->szSocketName.Format(_T("ServerSocket Connection Skt[%d][%d]\n"),  m_nMyServer, m_nClientIndex);
 
 	#ifdef I_AM_PAP
-	m_pConnectionSocket->m_pSCC->sClientName.Format(_T("Instrument[%d] on PAM Server[%d]\n"), m_nClientIndex, m_nMyServer);
+	m_pSCC->sClientName.Format(_T("Instrument[%d] on PAM Server[%d]\n"), m_nClientIndex, m_nMyServer);
 #else
-	m_pConnectionSocket->m_pSCC->sClientName.Format(_T("PAM Client[%d] on PAG Server[%d]\n"), m_nClientIndex, m_nMyServer);
+	m_pSCC->sClientName.Format(_T("PAM Client[%d] on PAG Server[%d]\n"), m_nClientIndex, m_nMyServer);
 #endif
-	m_pConnectionSocket->m_nOwningThreadType = eServerConnection;
+	m_pSCC->pSocket->m_nOwningThreadType = eServerConnection;
 
 #ifdef _DEBUG
 		s.Format(_T("Client socket at %s : %d connected to server\n"), Ip4, uPort);
 		TRACE(s);
-		s = m_pConnectionSocket->m_pSCC->szSocketName;
+		s = m_pSCC->szSocketName;
 		s += _T("\n");
 		TRACE(s);
 #endif
@@ -576,30 +572,9 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 		//	m_pstCCM->pSocket->Close();
 		// if in shutdown, the destructor will delete the owner thread
 		delete pscc->pSocket;
+		pscc->pSocket = 0;
 		}
-#if 0
-	// in destructor
-	CString s;
-	if ( m_pConnectionSocket ==  NULL)	return;
-	if ( m_pConnectionSocket->m_pElapseTimer)
-		{
-		strcat(m_pConnectionSocket->m_pElapseTimer->tag, "SktOwnerThrd519\n");
-		s = (m_pConnectionSocket->m_pElapseTimer->tag);
-		TRACE(s);
-		delete m_pConnectionSocket->m_pElapseTimer;
-		m_pConnectionSocket->m_pElapseTimer = 0;
-		}
-	if (m_pConnectionSocket->m_pFifo)
-		{
-		s.Format(_T("CServerSocketOwnerThread::KillServerSocket Fifo cnt=%d,  ThreadID=%d\n"),
-		m_pConnectionSocket->m_pFifo->m_nFifoCnt,  m_pConnectionSocket->m_pFifo->m_nOwningThreadId);
-		TRACE(s);
-		delete m_pConnectionSocket->m_pFifo;
-		m_pConnectionSocket->m_pFifo = 0;
-		}
-	//delete m_pConnectionSocket;   ~ServiceApp deletes
-	//m_pConnectionSocket = 0;
-#endif
+
 
 	}
 
@@ -636,11 +611,13 @@ afx_msg void CServerSocketOwnerThread::KillServerSocketOwner( WPARAM w, LPARAM l
 
 	if (m_pSCC)
 		{
-		if (m_pConnectionSocket)
+		if (m_pSCC->pSocket)
+		if (m_pSCC->pSocket)
 			{
-			if (m_pConnectionSocket->m_hSocket > 0)
+			i = (int)m_pSCC->pSocket->m_hSocket;
+			if (i > 0)
 				{
-				i = m_pConnectionSocket->ShutDown( 2 );
+				i = m_pSCC->pSocket->ShutDown( 2 );
 				nError = GetLastError();
 				if (i > 0)
 					{
@@ -686,20 +663,20 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	int i = -1;
 	int nError;
 	ST_LARGE_CMD *pCmd;
-	CServerSocket *pSocket = m_pConnectionSocket;
+	//CServerSocket *pSocket = m_pConnectionSocket;
 
 
 	// if there are any packets in the linked list, extract and send using socket interface
-	if ( m_pConnectionSocket->m_pSCC == NULL )
+	if ( m_pSCC->pSocket == NULL )
 		{
-		TRACE(_T("TransmitPackets m_pConnectionSocket->m_pSCC == NULL\n"));
+		TRACE(_T("TransmitPackets m_pSCC->pSocket == NULL\n"));
 		return;
 		}
-	while (i = m_pConnectionSocket->m_pSCC->pSendPktList->GetCount() > 0 )
+	while (i = m_pSCC->pSendPktList->GetCount() > 0 )
 		{
-		m_pConnectionSocket->LockSendPktList();
-		pCmd = (ST_LARGE_CMD *) m_pConnectionSocket->m_pSCC->pSendPktList->RemoveHead();
-		m_pConnectionSocket->UnLockSendPktList();
+		m_pSCC->pSocket->LockSendPktList();
+		pCmd = (ST_LARGE_CMD *) m_pSCC->pSendPktList->RemoveHead();
+		m_pSCC->pSocket->UnLockSendPktList();
 			
 		int nElapse = 0;
 		switch (pCmd->wMsgID)
@@ -729,7 +706,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			pNc = (PAP_INST_CHNL_NCNX *)pCmd;
 			s.Format(_T("NC_NX_CMD_ID Msg seq cnt =%d, seq=%2d, chnl=%3d, PktListSize= %3d\n"), 
 				pCmd->wMsgSeqCnt, pNc->stNcNx->bSeqNumber, pNc->stNcNx->bChnlNumber, i);
-			pCmd->wMsgSeqCnt = m_pConnectionSocket->m_pSCC->wMsgSeqCnt++;
+			pCmd->wMsgSeqCnt = m_pSCC->wMsgSeqCnt++;
 			nMsgSize = pNc->wByteCount;
 			//theApp.SaveDebugLog(s);
 			pMainDlg->SaveDebugLog(s);
@@ -742,7 +719,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		case 7:		// Gate polarity cmd
 		case 8:		// Gate TOF cmd
 			s = _T("Gate Cmd");
-			pCmd->wMsgSeqCnt = pSocket->m_pSCC->wMsgSeqCnt++;
+			pCmd->wMsgSeqCnt = m_pSCC->wMsgSeqCnt++;
 			nMsgSize = pCmd->wByteCount;	//sizeof(PAP_INST_CHNL_NCNX);
 
 			break;
@@ -758,17 +735,17 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		// up to 50 attempts to send
 		for ( i = 0; i < 50; i++)
 			{
-			nSent = m_pConnectionSocket->Send( (void *) pCmd, nMsgSize,0);
+			nSent = m_pSCC->pSocket->Send( (void *) pCmd, nMsgSize,0);
 			if (nSent == nMsgSize)
 				{
-				m_pConnectionSocket->m_pSCC->uBytesSent += nSent;
-				m_pConnectionSocket->m_pSCC->uPacketsSent++;
+				m_pSCC->uBytesSent += nSent;
+				m_pSCC->uPacketsSent++;
 				m_nConfigMsgQty++;
 				// debug info to trace output.. losing connection when attempting to download config file
-				if ((m_pConnectionSocket->m_pSCC->uPacketsSent))	// &0xff) == 0)
+				if ((m_pSCC->uPacketsSent))	// &0xff) == 0)
 					{
 					s.Format(_T("ServerSocketOwnerThread Pkts sent to instrument = %d, Pkts lost = %d\n"),
-					m_pConnectionSocket->m_pSCC->uPacketsSent, m_pConnectionSocket->m_pSCC->uUnsentPackets);
+					m_pSCC->uPacketsSent, m_pSCC->uUnsentPackets);
 					TRACE(s);
 					}
 
@@ -792,10 +769,10 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			// if here we are having a problem sending
 			if ( i == 49)	// last time thru loop.. loose packet after this
 				{
-				m_pConnectionSocket->m_pSCC->uUnsentPackets++;
+				m_pSCC->uUnsentPackets++;
 				s.Format(_T("ServerSocketOwnerThread Sent=%d, list cnt=%d, Pkts sent=%d, Pkts lost=%d, msgSeq=%d, Error=%d\n"),
-					nSent, m_pConnectionSocket->m_pSCC->pSendPktList->GetCount(), m_pConnectionSocket->m_pSCC->uPacketsSent,
-					m_pConnectionSocket->m_pSCC->uUnsentPackets, pCmd->wMsgSeqCnt, nError);
+					nSent, m_pSCC->pSendPktList->GetCount(), m_pSCC->uPacketsSent,
+					m_pSCC->uUnsentPackets, pCmd->wMsgSeqCnt, nError);
 				TRACE(s);
 				}
 			// 10054L is forcibly closed by remote host

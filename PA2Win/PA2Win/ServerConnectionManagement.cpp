@@ -110,7 +110,7 @@ void CopySCCPtrs(ST_SERVERS_CLIENT_CONNECTION *pDest, ST_SERVERS_CLIENT_CONNECTI
 		pDest->pServerSocketOwnerThread = pSrc->pServerSocketOwnerThread;
 		//pDest->pServerSocketOwnerThread->m_nMyServer = pSrc->pServerSocketOwnerThread->m_nMyServer;
 		// need to test this next item m_pConnectionSocket
-		pDest->pServerSocketOwnerThread->m_pConnectionSocket = pSrc->pServerSocketOwnerThread->m_pConnectionSocket;
+		pDest->pServerSocketOwnerThread->m_pSCC->pSocket = pSrc->pServerSocketOwnerThread->m_pSCC->pSocket;
 		//pDest->pServerSocketOwnerThread->m_pMySCM = pSrc->pServerSocketOwnerThread->m_pMySCM;
 		}
 	if (pSrc->pServerRcvListThread)
@@ -226,6 +226,7 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 				TRACE( _T( "Failed to kill SendPktList List\n" ) );
 			else {	m_pstSCM->pClientConnection[i]->pCSSendPkt = 0;  
 					m_pstSCM->pClientConnection[i]->pSendPktList = 0;	}
+
 			KillClientConnection( m_nMyServer, i );
 			}
 		}

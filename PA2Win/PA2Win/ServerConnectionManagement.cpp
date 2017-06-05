@@ -486,12 +486,12 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		// kill the listener thread
 		pThread->PostThreadMessageW( WM_USER_STOP_LISTNER_THREAD, 1, 2 );
 #endif
-		for ( i = 0; i < 10; i++)
+		for ( i = 0; i < 100; i++)
 			{
 			if (m_pstSCM->pServerListenThread == 0)		break;
 			Sleep( 10 );
 			}
-		if (i >= 10)
+		if (i >= 100)
 			{
 			s.Format( _T( "Failed to kill Listener thread for Server %d\n" ), nMyServer );
 			pMainDlg->SaveDebugLog( s );
@@ -505,7 +505,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		if (NULL == m_pstSCM->pClientConnection[i])	continue;	// go to end of loop
 
 		// Killing the socket on shut down will also kill the owner theread
-		if (0 == KillServerSocket( nMyServer, i, 10 ))
+		if (0 == KillServerSocket( nMyServer, i, 100 ))
 			{
 			s.Format( _T( "Timed out w/o killing ServerSocketOwnerThread[i]\n" ), i );
 			TRACE(s);

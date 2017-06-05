@@ -39,8 +39,7 @@ public:
 	//afx_msg void InitCommunicationThread(WPARAM w, LPARAM lParam);
 	//afx_msg void KillCommunicationThread(WPARAM w, LPARAM lParam);
 	afx_msg void TransmitPackets(WPARAM w, LPARAM lParam);
-	afx_msg void Exit2(WPARAM w, LPARAM lParam);
-	afx_msg void MyDestructor();
+	//afx_msg void Exit2(WPARAM w, LPARAM lParam);
 	afx_msg void KillServerSocket(WPARAM w, LPARAM lParam);
 	afx_msg void KillServerSocketOwner(WPARAM w, LPARAM lParam);
 	afx_msg void Hello(WPARAM w, LPARAM lParam);

@@ -271,7 +271,7 @@ CServerSocket::~CServerSocket()
 
 		//if (0 == m_pSCM->KillServerSocketOwnerThread( m_pSCM->m_nMyServer, (LPARAM) m_pSCC ))
 		m_pSCC->pServerSocketOwnerThread->KillServerSocketOwner( m_nClientIndex, (LPARAM)m_pSCC );
-		for (i = 0; i < 10; i++)
+		for (i = 0; i < 100; i++)
 			{
 			if (m_pSCC->pServerSocketOwnerThread == 0)
 				{
@@ -280,7 +280,7 @@ CServerSocket::~CServerSocket()
 			Sleep( 10 );
 
 			}
-		if (i >= 10)
+		if (i >= 100)
 			{
 			TRACE( _T( "OnClose timed out w/o closing OwnerThread\n" ) );
 			}

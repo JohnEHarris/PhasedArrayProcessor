@@ -75,6 +75,8 @@ int CServerListenThread::ExitInstance()
 			}
 		//m_pListenSocket = NULL;
 		}
+	if (m_pstSCM)
+		m_pstSCM->pServerListenThread = 0;
 	return CWinThread::ExitInstance();
 	}
 

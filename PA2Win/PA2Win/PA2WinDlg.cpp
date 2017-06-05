@@ -1776,6 +1776,7 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 2168
 	i = sizeof( ST_SERVER_CONNECTION_MANAGEMENT ); // 148
 	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 160
+	i = sizeof( CPA2WinApp );	// 204
 	i = sizeof( CPA2WinDlg );	// 592
 	i = sizeof( Nc_FIFO );	// 24 but 3 copies
 	i = sizeof( Nx_FIFO );	// 538

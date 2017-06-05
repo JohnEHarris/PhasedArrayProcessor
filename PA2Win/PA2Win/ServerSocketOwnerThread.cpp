@@ -55,40 +55,6 @@ CServerSocketOwnerThread::~CServerSocketOwnerThread()
 	//AfxEndThread( 0 );
 	}
 
-// jeh cant get clean exit when destructor callled when object deleted.
-// called just before ExitInstance calls the default CWin destructor.
-void CServerSocketOwnerThread::MyDestructor()
-	{
-	CString s;
-	int nId = AfxGetThread()->m_nThreadID;
-	CServerConnectionManagement *p = m_pSCM;
-	ST_SERVERS_CLIENT_CONNECTION *pSCC = stSCM[m_nMyServer].pClientConnection[m_nClientIndex];
-
-	s = _T("CServerSocketOwnerThread::MyDestructor() is running\n");
-	TRACE(s);
-
-	if (m_pHwTimer)
-		{
-		s = m_pHwTimer->tag;
-		TRACE(s);
-		delete m_pHwTimer;
-		m_pHwTimer = NULL;
-		}
-	if ( pSCC)
-		{
-		int n = pSCC->uPacketsSent;
-		int m = pSCC->uPacketsReceived;
-		s.Format(_T("Packets Sent = %5d, Packets Received = %5d\n"), n, m);
-		TRACE(s);
-		pSCC->pServerSocketOwnerThread = 0;
-		//delete pSCC->pServerSocketOwnerThread; auto delete on at creation
-		}
-	s.Format(_T("~MyDestructor[%d][%d] = 0x%08x, Id=%x has run\n"), m_nMyServer, m_nClientIndex, this, nId);
-	TRACE(s);
-			
-	m_pstSCM->nComThreadExited[m_nClientIndex] = 1;
-
-	}
 
 
 
@@ -217,9 +183,9 @@ BOOL CServerSocketOwnerThread::InitInstance()
 		m_pSCC->ServerRcvListThreadID = pThread->m_nThreadID;
 		pThread->m_nClientIndex		=  m_pSCC->m_nClientIndex = m_nClientIndex;
 		// build the static pointer of the ServerRcvListThread from the values of the SocketOwner
-		pThread->m_pstSCM	= m_pConnectionSocket->m_pstSCM;
-		pThread->m_pSCC	= m_pConnectionSocket->m_pSCC;
-		pThread->m_nMyServer = m_pConnectionSocket->m_nMyServer;
+		pThread->m_pstSCM	= m_pstSCM;
+		pThread->m_pSCC	= m_pSCC;
+		pThread->m_nMyServer = m_nMyServer;
 		pThread->ResumeThread();
 #endif
 
@@ -346,7 +312,7 @@ int CServerSocketOwnerThread::ExitInstance()
 				{
 				m_pSCC->pServerRcvListThread->PostThreadMessage( WM_QUIT, 0, 0L );
 				Sleep( 10 );
-				for (i = 0; i < 10; i++)
+				for (i = 0; i < 100; i++)
 					{
 					if (NULL == m_pSCC->pServerRcvListThread)	break;
 					Sleep( 10 );
@@ -392,16 +358,23 @@ int CServerSocketOwnerThread::ExitInstance()
 						delete m_pSCC->pvChannel[i][j];
 						m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[i][j] = 0;
 						}
-					}			
+					}
 			delete m_pstSCM->pClientConnection[m_nClientIndex];
 			m_pstSCM->pClientConnection[m_nClientIndex] = NULL;
 			m_pSCC = 0;
 			m_pstSCM->nComThreadExited[m_nClientIndex] = 1;
 			}
 		}
-	//delete this; -- MOVE CODE IN owner destructor to this location and make sure auto delete is on
-	MyDestructor();
-	// Maybe use AfxEndThread (0) 
+	// make sure auto delete is on
+	if (m_pHwTimer)
+		{
+		s = m_pHwTimer->tag;
+		TRACE(s);
+		delete m_pHwTimer;
+		m_pHwTimer = NULL;
+		}
+			
+	m_pstSCM->nComThreadExited[m_nClientIndex] = 1;	
 	return CWinThread::ExitInstance();
 	}
 
@@ -422,6 +395,7 @@ END_MESSAGE_MAP()
 //
 // See ServerSocket::int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
 // The SocketOwner Thread will undo what the BuildClientConnection routine buit in the class ServerSocket
+#if 0
 afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 	{
 	int nReturn;
@@ -524,6 +498,7 @@ afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
 	//delete m_pSCC->pServerSocketOwnerThread;
 	// Maybe use AfxEndThread (0) instead of ExitInstance
 	}
+#endif
 
 // ON shutdown, kill the server socket associated with the client connection.
 // Then this thread call will kill the serversocket owner itself.
@@ -611,7 +586,6 @@ afx_msg void CServerSocketOwnerThread::KillServerSocketOwner( WPARAM w, LPARAM l
 
 	if (m_pSCC)
 		{
-		if (m_pSCC->pSocket)
 		if (m_pSCC->pSocket)
 			{
 			i = (int)m_pSCC->pSocket->m_hSocket;

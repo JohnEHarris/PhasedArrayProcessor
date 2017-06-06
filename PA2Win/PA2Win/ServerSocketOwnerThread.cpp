@@ -275,7 +275,7 @@ int CServerSocketOwnerThread::ExitInstance()
 						{
 						s.Format( _T( "Shutdown of client socket was successful status = %d\n" ), i );
 						TRACE( s );
-						//m_pSCC->pSocket->Close();
+						m_pSCC->pSocket->Close();
 						}
 					else
 						{
@@ -511,11 +511,11 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 	TRACE(s);
 	ST_SERVERS_CLIENT_CONNECTION *pscc = (ST_SERVERS_CLIENT_CONNECTION *) lParam;
 	void *pV = 0;
-	int i, nError;
+	//int i, nError;
 
 	if (pscc->pSocket == nullptr)
 		{
-		TRACE( "pscc->pSocket == nullpt  \n" );
+		TRACE( "pscc->pSocket == nullptr  \n" );
 		ASSERT( 0 );
 		return;
 		}
@@ -529,28 +529,31 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 		TRACE( _T( "m_nClientIndex != (int)]\n" ) );
 		}
 
-	if (pscc->pSocket)
+	if (m_pSCC != pscc)
 		{
-		i = pscc->pSocket->ShutDown( 2 );
-		nError = GetLastError();
-		if (i > 0)
-			{
-			s.Format( _T( "Shutdown = %d\n" ), i );
-			TRACE( s );
-			}
-		else
-			{
-			s.Format( _T( "Shutdown Error = %d\n" ), nError );
-			TRACE( s );
-			}
-		// The socket object's destructor calls Close for you. from Microsoft
-		//	m_pstCCM->pSocket->Close();
-		// if in shutdown, the destructor will delete the owner thread
-		delete pscc->pSocket;
-		pscc->pSocket = 0;
+		TRACE( _T( "pscc != m_pSCC\n" ) );
+		ASSERT( 0 );
 		}
 
-
+	delete pscc->pSocket;
+	// destructor does everything in the excluded code below
+#if 0
+	if (m_pSCC->pSocket)
+		{
+		i = (int)m_pSCC->pSocket->m_hSocket;
+		if (i > 0)	// a valid socket handle
+			{
+			i = m_pSCC->pSocket->ShutDown( 2 );
+			nError = GetLastError();
+			if (i > 0)
+				{
+				s.Format( _T( "Shutdown = %d\n" ), i );
+				TRACE( s );
+				}
+			m_pSCC->pSocket->Close();
+			}
+		}
+#endif
 	}
 
 // w = client index and lParam = pClientConnection
@@ -560,7 +563,7 @@ afx_msg void CServerSocketOwnerThread::KillServerSocketOwner( WPARAM w, LPARAM l
 	TRACE(s);
 	ST_SERVERS_CLIENT_CONNECTION *pscc = (ST_SERVERS_CLIENT_CONNECTION *) lParam;
 	void *pV = 0;
-	int i, nError;
+	//int i, nError;
 
 	if (pscc == nullptr)
 		{
@@ -577,19 +580,30 @@ afx_msg void CServerSocketOwnerThread::KillServerSocketOwner( WPARAM w, LPARAM l
 	if (m_nClientIndex != (int)w)
 		{
 		TRACE( _T( "m_nClientIndex != (int)]\n" ) );
+		ASSERT( 0 );
 		}
 	// debugging check. pscc should be 
 	if (pscc != m_pstSCM->pClientConnection[w])
 		{
 		TRACE( _T( "pscc != m_pstSCM->pClientConnection[w]\n" ) );
+		ASSERT( 0 );
+		}
+	if (m_pSCC != pscc)
+		{
+		TRACE( _T( "pscc != m_pSCC\n" ) );
+		ASSERT( 0 );
 		}
 
 	if (m_pSCC)
 		{
 		if (m_pSCC->pSocket)
+			delete m_pSCC->pSocket;
+		// destructor causes all the code below to run
+#if 0
+		if (m_pSCC->pSocket)
 			{
 			i = (int)m_pSCC->pSocket->m_hSocket;
-			if (i > 0)
+			if (i > 0)	// a valid socket handle
 				{
 				i = m_pSCC->pSocket->ShutDown( 2 );
 				nError = GetLastError();
@@ -598,9 +612,15 @@ afx_msg void CServerSocketOwnerThread::KillServerSocketOwner( WPARAM w, LPARAM l
 					s.Format( _T( "Shutdown = %d\n" ), i );
 					TRACE( s );
 					}
-				}
+				else
+					{
+					s.Format( _T( "Last Socket Error = %d\n" ), nError );
+					TRACE( s );
+					}
+				m_pSCC->pSocket->Close();
+				}	// a valid socket handle
 			}
-
+#endif
 		if (m_pHwTimer)
 			{
 			delete m_pHwTimer;
@@ -612,9 +632,9 @@ afx_msg void CServerSocketOwnerThread::KillServerSocketOwner( WPARAM w, LPARAM l
 	else
 		{
 		TRACE( _T( "m_pSCC in null\n" ) );
-		//ASSERT( 0 );
+		ASSERT( 0 );
 		}
-	PostQuitMessage( 0 );
+	//PostQuitMessage( 0 );
 	}
 
 afx_msg void Hello( WPARAM w, LPARAM lParam )

@@ -268,7 +268,8 @@ CServerSocket::~CServerSocket()
 			TRACE( _T( "Failed to kill Receive List\n" ) );
 		else { m_pSCC->pCSSendPkt = 0;  m_pSCC->pSendPktList  = 0; }
 
-
+#if 0
+// this creates a race condition with multiple attempts to shut down owner thread
 		//if (0 == m_pSCM->KillServerSocketOwnerThread( m_pSCM->m_nMyServer, (LPARAM) m_pSCC ))
 		m_pSCC->pServerSocketOwnerThread->KillServerSocketOwner( m_nClientIndex, (LPARAM)m_pSCC );
 		for (i = 0; i < 100; i++)
@@ -278,12 +279,12 @@ CServerSocket::~CServerSocket()
 				break;	// success
 				}
 			Sleep( 10 );
-
 			}
 		if (i >= 100)
 			{
 			TRACE( _T( "OnClose timed out w/o closing OwnerThread\n" ) );
 			}
+#endif
 
 		}
 	if (m_pSCC)

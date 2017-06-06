@@ -226,7 +226,7 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 				TRACE( _T( "Failed to kill SendPktList List\n" ) );
 			else {	m_pstSCM->pClientConnection[i]->pCSSendPkt = 0;  
 					m_pstSCM->pClientConnection[i]->pSendPktList = 0;	}
-
+			Sleep( 10 );
 			KillClientConnection( m_nMyServer, i );
 			}
 		}
@@ -293,9 +293,10 @@ int CServerConnectionManagement::StopListenerThread(int nMyServer)
 	return 0;	// success
 	}
 
-// Following the pattern of the client connection management, this call kills the socke
+// Following the pattern of the client connection management, this call kills the socket
 // and if in shutdown mode, the socket kill function (this one) call the thread kill
 // function
+
 int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientIndex, int nWait )
 	{
 	CWinThread *pThread;
@@ -308,28 +309,38 @@ int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientInd
 		{
 		s.Format( _T( "pscc == NULL in KillClientConnection, client = %d\n" ), nClientIndex );
 		TRACE( s );
-		//return
+		return 0;
 		}
+
 	pThread = (CWinThread *)m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread;
 	// post message causes CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam) to run
-	if (pThread == NULL)	return 0;
+	if (pThread == NULL)	
+		return 0;
 	pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET,nClientIndex,(LPARAM)pscc);
 	// set this thread priority to low
 	for (i = 0; i < nWait; i++)
 		{
-		if (pThread == 0)	break;
+		if (m_pstSCM->pClientConnection[nClientIndex] == 0)				break;
+		if (m_pstSCM->pClientConnection[nClientIndex]->pSocket == 0)	break;
 		Sleep( 10 );
 		}
-	if (i < nWait)
+	if (i >= nWait)
 		{
-		m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread = 0;
-		return 1;
+		TRACE( _T( "Failed to kill Server Socket\n" ) );
+		//return 1;
 		}
-	// If we didn't kill the socket and then the thread, try killing the thread
-	if (pThread == NULL)	return 0;
-	pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET_THREAD,nClientIndex,(LPARAM)pscc);
 
-	return 0;
+	if (m_pstSCM->pClientConnection[nClientIndex] == NULL)								return 0;
+	if (m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread == NULL)	return 0;
+#if 0
+	for (i = 0; i < 5; i++)
+		Sleep( 10 );	// code to kill Owner thread may already be running. So
+						// don't request another thread kill righ away. There is a 
+						// race going on here
+
+	// If we didn't kill the socket and then the thread, try killing the thread
+	return KillServerSocketOwnerThread( nMyServer, nClientIndex, nWait );
+#endif
 	}
 
 int CServerConnectionManagement::KillServerSocketOwnerThread( int nMyServer, int nClientIndex, int nWait )
@@ -342,7 +353,7 @@ int CServerConnectionManagement::KillServerSocketOwnerThread( int nMyServer, int
 	pscc = m_pstSCM->pClientConnection[nClientIndex];
 	if (pscc == NULL)
 		{
-		s.Format( _T( "pscc == NULL in KillClientConnection, client = %d\n" ), nClientIndex );
+		s.Format( _T( "pscc == NULL in KillServerSocketOwnerThread, client = %d\n" ), nClientIndex );
 		TRACE( s );
 		return 0;
 		}
@@ -351,71 +362,19 @@ int CServerConnectionManagement::KillServerSocketOwnerThread( int nMyServer, int
 	pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET_THREAD,nClientIndex,(LPARAM)pscc);
 	for (i = 0; i < nWait; i++)
 		{
-		if (pThread == 0)	break;
+		if (m_pstSCM->pClientConnection[nClientIndex]  = 0)		break;
+		if (m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread == 0)	break;
 		Sleep( 10 );
 		}
-	if (i < nWait)
+	if (i >= nWait)
 		{
-		m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread = 0;
+		TRACE( _T( "Failed to kill Server Socket Owner Thread\n" ) );
 		return 1;
 		}
 	return 0;
 	}
 
-#if 0
-int CServerConnectionManagement::KillServerSocketOwnerThread2( int nMyServer, ST_SERVERS_CLIENT_CONNECTION *pscc)
-	{
-	CWinThread *pThread;
-	ST_SERVERS_CLIENT_CONNECTION *pscc;
-	CString s;
-	int i;
 
-	if (nWait == 0)	nWait = 2;
-	m_pstSCM = &stSCM[nMyServer];
-	if (m_pstSCM == NULL)
-		{
-		TRACE( _T("m_pstSCM is NULL\n" ));
-		return 0;
-		}
-
-	// if the socket still is open try calling OnClose and let the socket code
-	// kill the socket owner
-
-	pscc = m_pstSCM->pClientConnection[nClientIndex];
-	if (pscc == NULL)
-		{
-		s.Format(_T("pscc == NULL in KillClientConnection, client = %d\n"), nClientIndex);
-		TRACE(s);
-		//return 0;
-		}
-
-	//if the socket still is open try calling OnClose and let the socket code
-	// kill the socket owner -this doesn't work.
-#if 0
-	if (pscc->pSocket)
-		{
-		pscc->pSocket->OnClose( 0 );
-		Sleep( 10 );
-		pscc->pSocket = 0;
-		}
-#endif
-
-	pThread = (CWinThread *)m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread;
-	if (pThread == NULL)	return 0;
-	pThread->PostThreadMessage(WM_QUIT,0,0l);
-	for (i = 0; i < nWait; i++)
-		{
-		if (pThread == 0)	break;
-		Sleep( 10 );
-		}
-	if (i < nWait)
-		{
-		m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread = 0;
-		return 1;
-		}
-	return 0;	//fail
-	}
-#endif
 
 int CServerConnectionManagement::KillServerRcvListThread( int nMyServer, int nClientIndex )
 	{
@@ -442,7 +401,10 @@ int CServerConnectionManagement::KillServerRcvListThread( int nMyServer, int nCl
 	pThread->PostThreadMessage(WM_QUIT,0,0l);
 	for (i = 0; i < 100; i++)
 		{
-		if (pThread == 0)	break;
+		// multiple thread operations can be running concurrent. Must check
+		// each pointer to avoid bad pointer operations. Assuming nClientIndex does not change
+		if (m_pstSCM->pClientConnection[nClientIndex] == 0)	return 1;
+		if (m_pstSCM->pClientConnection[nClientIndex]->pServerRcvListThread == 0)	return 1;
 		Sleep( 10 );
 		}
 	if (i < 100)
@@ -504,13 +466,20 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		{
 		if (NULL == m_pstSCM->pClientConnection[i])	continue;	// go to end of loop
 
-		// Killing the socket on shut down will also kill the owner theread
+		// Killing the socket on shut down will also kill the owner thread
+		// No, this causes a race condition
 		if (0 == KillServerSocket( nMyServer, i, 100 ))
+			{
+			s.Format( _T( "Timed out w/o killing ServerSocket[i]\n" ), i );
+			TRACE(s);
+			}
+		Sleep( 50 );
+		if (0 == KillServerSocketOwnerThread( nMyServer, i, 100 ))
 			{
 			s.Format( _T( "Timed out w/o killing ServerSocketOwnerThread[i]\n" ), i );
 			TRACE(s);
 			}
-
+		Sleep( 50 );
 		if (0 == KillServerRcvListThread( nMyServer, i ))
 			{
 			s.Format( _T( "Timed out w/o killing ServerRcvListThread[i]\n" ), i );

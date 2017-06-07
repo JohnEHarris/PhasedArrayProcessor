@@ -117,7 +117,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 	TRACE(s);
 	nShutDown = 2;
 	//Sleep( 10 );
-	AfxEndThread(0);
+	PostQuitMessage(0);
 	}
 
 void CTestThread::TestNc(void)

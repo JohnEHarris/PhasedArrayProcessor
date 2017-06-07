@@ -327,7 +327,7 @@ int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientInd
 	if (i >= nWait)
 		{
 		TRACE( _T( "Failed to kill Server Socket\n" ) );
-		//return 1;
+		return 1;
 		}
 
 	if (m_pstSCM->pClientConnection[nClientIndex] == NULL)								return 0;
@@ -341,6 +341,7 @@ int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientInd
 	// If we didn't kill the socket and then the thread, try killing the thread
 	return KillServerSocketOwnerThread( nMyServer, nClientIndex, nWait );
 #endif
+	return 0;
 	}
 
 int CServerConnectionManagement::KillServerSocketOwnerThread( int nMyServer, int nClientIndex, int nWait )
@@ -474,12 +475,14 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 			TRACE(s);
 			}
 		Sleep( 50 );
+#if 0
 		if (0 == KillServerSocketOwnerThread( nMyServer, i, 100 ))
 			{
 			s.Format( _T( "Timed out w/o killing ServerSocketOwnerThread[i]\n" ), i );
 			TRACE(s);
 			}
 		Sleep( 50 );
+#endif
 		if (0 == KillServerRcvListThread( nMyServer, i ))
 			{
 			s.Format( _T( "Timed out w/o killing ServerRcvListThread[i]\n" ), i );
@@ -539,13 +542,20 @@ void CServerConnectionManagement::KillClientConnection(int nMyServer, int nClien
 		}
 
 	// Empty list, delete critical sections and lists, delete SCC structure
-	if (0 == KillLinkedList( m_pstSCM->pClientConnection[nClient]->pCSRcvPkt, m_pstSCM->pClientConnection[nClient]->pRcvPktList ))
-		TRACE( _T( "Failed to kill Receive List\n" ) );
-	else {		m_pstSCM->pClientConnection[nClient]->pCSRcvPkt = 0;	m_pstSCM->pClientConnection[nClient]->pRcvPktList = 0;		}
+	// check to see if already gone
+	if (m_pstSCM->pClientConnection[nClient]->pCSRcvPkt)
+		{
+		if (0 == KillLinkedList( m_pstSCM->pClientConnection[nClient]->pCSRcvPkt, m_pstSCM->pClientConnection[nClient]->pRcvPktList ))
+			TRACE( _T( "Failed to kill Receive List\n" ) );
+		else { m_pstSCM->pClientConnection[nClient]->pCSRcvPkt = 0;	m_pstSCM->pClientConnection[nClient]->pRcvPktList = 0; }
+		}
 
-	if (0 == KillLinkedList( m_pstSCM->pClientConnection[nClient]->pCSSendPkt, pscc->pSendPktList ))
-		TRACE( _T( "Failed to kill Receive List\n" ) );
-	else {		m_pstSCM->pClientConnection[nClient]->pCSSendPkt = 0;  m_pstSCM->pClientConnection[nClient]->pSendPktList = 0;		}
+	if (m_pstSCM->pClientConnection[nClient]->pCSSendPkt)
+		{
+		if (0 == KillLinkedList( m_pstSCM->pClientConnection[nClient]->pCSSendPkt, pscc->pSendPktList ))
+			TRACE( _T( "Failed to kill Receive List\n" ) );
+		else { m_pstSCM->pClientConnection[nClient]->pCSSendPkt = 0;  m_pstSCM->pClientConnection[nClient]->pSendPktList = 0; }
+		}
 
 
 	// 2017-05-14 Now kill threads ... TBD

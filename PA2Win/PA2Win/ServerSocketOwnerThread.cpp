@@ -50,6 +50,11 @@ CServerSocketOwnerThread::~CServerSocketOwnerThread()
 	CString s;
 	s.Format(_T("~CServerSocketOwnerThread destructor is running, pSCC = %0x\n"), m_pSCC);
 	TRACE(s);
+	if (m_pHwTimer)
+		{
+		delete m_pHwTimer;
+		m_pHwTimer = 0;
+		}
 	if (m_pSCC)
 		m_pSCC->pServerSocketOwnerThread = 0;
 	//AfxEndThread( 0 );
@@ -534,7 +539,7 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 		TRACE( _T( "pscc != m_pSCC\n" ) );
 		ASSERT( 0 );
 		}
-
+	
 	delete pscc->pSocket;
 	// destructor does everything in the excluded code below
 #if 0

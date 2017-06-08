@@ -1453,7 +1453,8 @@ void CPA2WinDlg::CloseDebugLog(void)
 		{
 		e->ReportError();
 		e->Delete();
-		}	
+		}
+	m_nDebugLogExists = 0;
 	}
 
 void CPA2WinDlg::SaveFakeData(CString& s)
@@ -1637,34 +1638,10 @@ void CPA2WinDlg::DestroySCM( void )
 		if ( pSCM[i])
 			{
 			pstSCM = pSCM[i]->m_pstSCM;
-#if 0
-			pSCM[i]->StopListenerThread(i);
-			for (k = 0; k < 5; k++)
-				{
-				if (pstSCM->pServerListenThread == NULL)
-					break;
-				Sleep( 10 );
-				}
-			if (k == 5)
-				{
-				s.Format( _T( "Failed to kill Listener thread for Server %d DestroySCM 1369\n" ), i );
-				pMainDlg->SaveDebugLog( s );
-				}
-#endif
-			
-#ifdef I_AM_PAG
-
 			pSCM[i]->ServerShutDown( i );
-
-#else
-		// IF here we are the PAP. The PAP has gnMaxClientsPerServer UT hardware systems connected
-		// as clients
-			pSCM[i]->ServerShutDown( i );
-
-#endif
 			delete pSCM[i];
 			}
-			pSCM[i] = 0;
+		pSCM[i] = 0;
 		}	// for (i = 0; i < gnMaxServers; i++)
 	}
 
@@ -1812,6 +1789,29 @@ void CPA2WinDlg::OnBnClickedBnShutdown()
 	CString s;
 
 	nShutDown = 1;
+	AfxGetThread()->SetThreadPriority( THREAD_PRIORITY_BELOW_NORMAL );
+
+	// KIll the test thread
+	if (m_pTestThread)
+		{
+		::SetEvent(g_hTimerTick);
+		Sleep(250);
+		Sleep(250);
+		}
+
+	DestroyCCM();
+	DestroySCM();
+		
+	CloseFakeData();
+	CloseDebugLog();
+	m_nFakeDataExists = m_nDebugLogExists = 0;
+	Sleep( 100 );
+	if (pCSSaveDebug)
+		delete pCSSaveDebug;
+	pCSSaveDebug = 0;
+
+
+#if 0
 	for (i = 0; i < gnMaxServers; i++)
 		{
 		if (pSCM[i])
@@ -1822,4 +1822,5 @@ void CPA2WinDlg::OnBnClickedBnShutdown()
 			}
 		pSCM[i] = 0;
 		}
+#endif
 	}

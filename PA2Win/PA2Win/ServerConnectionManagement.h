@@ -354,11 +354,11 @@ public:
 	// Called at shut down or when client socket executes OnClose
 	void KillClientConnection(int nMyServer, int nClient);	// Called by ServerShutDown
 	// wait for nWait*10 milliseconds for thread to close
-	//int KillServerSocketOwnerThread( int nMyServer, int nClientIndex, int nWait );
 	int KillServerRcvListThread( int nMyServer, int nClientIndex );
 	// in shutdown, the socket kill will also kill the socket owner
 	int KillServerSocket( int nMyServer, int nClientIndex, int nWait);
 	int KillServerSocketOwnerThread( int nMyServer, int nClientIndex, int nWait);
+	int KillCmdProcessThread( int nMyServer, int nClientIndex );
 	void DoNothing(void);
 	
 	CServerSocket* GetListenerSocket(void)	{ ( m_pstSCM ? m_pstSCM->pServerListenSocket : NULL );	}

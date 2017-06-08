@@ -120,10 +120,6 @@ public:
 	void ProcessPAM_Data(void *pData);
 //#endif
 
-	// 11-12-2012
-		
-//	CHwTimer *m_pElapseTimer;
-//	int m_nElapseTime;
 
 protected:
 	DECLARE_MESSAGE_MAP()

@@ -148,6 +148,7 @@ CServerSocket::~CServerSocket()
 		s = _T("Listener Socket Destructor called\n");	// called when Asocket on stack disappears in OnAccept
 		t += s;
 		TRACE( t );
+		break;
 		//return;	// don't want to proceed and delete all we just built
 	case eServerConnection:
 		s.Format(_T("Server Connection Socket Destructor called \n"));
@@ -181,7 +182,7 @@ CServerSocket::~CServerSocket()
 			{
 			m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
 			CAsyncSocket::Close();
-			m_pSCC->pSocket = 0;		// has corresponding member in ServerSocketOwnerThread
+			//m_pSCC->pSocket = 0;		// has corresponding member in ServerSocketOwnerThread
 			//m_pSCC->pServerSocketOwnerThread->m_pConnectionSocket = 0;
 			m_pSCC->bConnected = 0;
 			Sleep( 10 );
@@ -208,7 +209,8 @@ CServerSocket::~CServerSocket()
 			delete m_pFifo;
 			m_pFifo = 0;
 			}
-		}
+		m_pSCC->pSocket = 0;
+		}	// eServerConnection
 
 	else if (m_nOwningThreadType == eListener)
 		{
@@ -229,7 +231,7 @@ CServerSocket::~CServerSocket()
 				m_pSCM->m_pstSCM->pServerListenSocket->Close(); // necessary or else KillReceiverThread does not run
 				CAsyncSocket::Close();
 				m_pSCM->m_pstSCM->pServerListenSocket = 0;
-				Sleep( 10 );
+				//Sleep( 10 );
 				}
 
 			if (m_pElapseTimer)
@@ -253,10 +255,10 @@ CServerSocket::~CServerSocket()
 				delete m_pFifo;
 				m_pFifo = 0;
 				}
-			return;
 			}
+		return;
+		}	// eListener
 
-		}
 	if (nShutDown)
 		{
 
@@ -268,7 +270,7 @@ CServerSocket::~CServerSocket()
 			TRACE( _T( "Failed to kill Receive List\n" ) );
 		else { m_pSCC->pCSSendPkt = 0;  m_pSCC->pSendPktList  = 0; }
 
-#if 0
+#if 1
 // this creates a race condition with multiple attempts to shut down owner thread
 		//if (0 == m_pSCM->KillServerSocketOwnerThread( m_pSCM->m_nMyServer, (LPARAM) m_pSCC ))
 		m_pSCC->pServerSocketOwnerThread->KillServerSocketOwner( m_nClientIndex, (LPARAM)m_pSCC );
@@ -287,8 +289,8 @@ CServerSocket::~CServerSocket()
 #endif
 
 		}
-	if (m_pSCC)
-		m_pSCC->pSocket = 0;
+	m_pSCC->pSocket = 0;
+
 	}
 
 // CServerSocket member functions

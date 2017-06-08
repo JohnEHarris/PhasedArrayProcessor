@@ -199,7 +199,6 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 
 
 	/******************/
-	//  This is all done in CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam) on individual socket basis
 
 	if (0 == KillLinkedList( m_pstSCM->pCSDebugIn, m_pstSCM->pInDebugMessageList))
 		TRACE( _T( "Failed to kill InDebugMessage List\n" ) );
@@ -297,6 +296,7 @@ int CServerConnectionManagement::StopListenerThread(int nMyServer)
 // and if in shutdown mode, the socket kill function (this one) call the thread kill
 // function
 
+// return 0 on failure
 int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientIndex, int nWait )
 	{
 	CWinThread *pThread;
@@ -327,12 +327,13 @@ int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientInd
 	if (i >= nWait)
 		{
 		TRACE( _T( "Failed to kill Server Socket\n" ) );
-		return 1;
+		return 0;
 		}
 
-	if (m_pstSCM->pClientConnection[nClientIndex] == NULL)								return 0;
-	if (m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread == NULL)	return 0;
+	if (m_pstSCM->pClientConnection[nClientIndex] == NULL)				return 1;
+	if (m_pstSCM->pClientConnection[nClientIndex]->pSocket == NULL)		return 1;
 #if 0
+	// done internally by socket destructor if shutdown is true
 	for (i = 0; i < 5; i++)
 		Sleep( 10 );	// code to kill Owner thread may already be running. So
 						// don't request another thread kill righ away. There is a 
@@ -399,6 +400,13 @@ int CServerConnectionManagement::KillServerRcvListThread( int nMyServer, int nCl
 		}
 	pThread = (CWinThread *)m_pstSCM->pClientConnection[nClientIndex]->pServerRcvListThread;
 	if (pThread == NULL)	return 0;
+
+	// Call for pServerRcvListThread needs to happen after SocketOwnerThread is gone
+	for (i = 0; i < 100; i++)
+		{
+		if (m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread == 0)	break;
+		Sleep( 20 );
+		}
 	pThread->PostThreadMessage(WM_QUIT,0,0l);
 	for (i = 0; i < 100; i++)
 		{
@@ -468,7 +476,6 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		if (NULL == m_pstSCM->pClientConnection[i])	continue;	// go to end of loop
 
 		// Killing the socket on shut down will also kill the owner thread
-		// No, this causes a race condition
 		if (0 == KillServerSocket( nMyServer, i, 100 ))
 			{
 			s.Format( _T( "Timed out w/o killing ServerSocket[i]\n" ), i );

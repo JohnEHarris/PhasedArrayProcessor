@@ -60,7 +60,7 @@ afx_msg void CTestThread::Bail(WPARAM w, LPARAM lParam)
 		}
 	nShutDown = 3;
 	TRACE( _T( "Exitiing CTestThread\n" ) );
-	AfxEndThread(0);	// NEVER GETS HERE
+	PostQuitMessage(0);	// NEVER GETS HERE
 	}
 
 

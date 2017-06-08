@@ -114,8 +114,6 @@ CServerRcvListThread::~CServerRcvListThread()
 #endif
 	if (NULL == m_pSCC)			return;
 	m_pSCC->pServerRcvListThread = NULL;
-	// Maybe use AfxEndThread (0) 
-
 	}
 
 // We have to over-ride the parents InitInstance since this thread is created by the parent in InitInstance()
@@ -161,7 +159,7 @@ int CServerRcvListThread::ExitInstance()
 	int i = 0;
 	//void *pV;
 
-#ifdef I_AM_PAP
+#if 0
 	if (m_pElapseTimer)
 		{
 		delete m_pElapseTimer;

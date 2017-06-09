@@ -513,7 +513,11 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 	if (pscc->pSocket == nullptr)
 		{
 		TRACE( "pscc->pSocket == nullptr  \n" );
-		ASSERT( 0 );
+		// perhaps the client has shut down. In that case
+		// call the thread shutdown if we are in shutdown mode
+		//ASSERT( 0 );
+		if (nShutDown) 
+			KillServerSocketOwner( w, lParam );
 		return;
 		}
 	// debugging check. pscc should be 

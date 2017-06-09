@@ -152,6 +152,7 @@ CServerSocket::~CServerSocket()
 		//return;	// don't want to proceed and delete all we just built
 	case eServerConnection:
 		s.Format(_T("Server Connection Socket Destructor called \n"));
+		TRACE( s );
 		break;
 	case eOnStack:
 		s = _T( "Temporary socket to create ServerConnection\n" );
@@ -177,16 +178,22 @@ CServerSocket::~CServerSocket()
 		t += s;
 		TRACE( t );
 
+		// 2017-06-09 problem on shut down after multiple reconnects???
 		i = (int)m_pSCC->pSocket->m_hSocket;
 		if (i > 0)
 			{
-			m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
-			CAsyncSocket::Close();
+			i = m_pSCC->pSocket->ShutDown();
+			if (i > 0)
+				{
+				m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
+				CAsyncSocket::Close();
+				}
 			//m_pSCC->pSocket = 0;		// has corresponding member in ServerSocketOwnerThread
 			//m_pSCC->pServerSocketOwnerThread->m_pConnectionSocket = 0;
-			m_pSCC->bConnected = 0;
 			Sleep( 10 );
 			}
+			
+		m_pSCC->bConnected = 0;
 
 		if (m_pElapseTimer)
 			{
@@ -929,13 +936,10 @@ void CServerSocket::OnClose(int nErrorCode)
 	if (m_pSCM == nullptr)
 		{
 		TRACE( _T( "m_pSCM == nullptr\n" ) );
-		//CAsyncSocket::OnClose(nErrorCode);
 		return;
 		}
 
 	delete this;
-
-	//CAsyncSocket::OnClose(nErrorCode);
 
 	}
 

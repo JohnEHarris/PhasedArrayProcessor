@@ -508,7 +508,7 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 	TRACE(s);
 	ST_SERVERS_CLIENT_CONNECTION *pscc = (ST_SERVERS_CLIENT_CONNECTION *) lParam;
 	void *pV = 0;
-	//int i, nError;
+	int i, nError;
 
 	if (pscc->pSocket == nullptr)
 		{
@@ -532,6 +532,19 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 		ASSERT( 0 );
 		}
 	
+		i = (int)m_pSCC->pSocket->m_hSocket;
+		if (i > 0)	// a valid socket handle
+			{
+			i = m_pSCC->pSocket->ShutDown( 2 );
+			nError = GetLastError();
+			if (i > 0)
+				{
+				s.Format( _T( "Shutdown = %d\n" ), i );
+				TRACE( s );
+				}
+			m_pSCC->pSocket->Close();
+			}
+
 	delete pscc->pSocket;
 	// destructor does everything in the excluded code below
 #if 0

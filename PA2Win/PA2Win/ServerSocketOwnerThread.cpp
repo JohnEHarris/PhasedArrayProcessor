@@ -541,8 +541,14 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 				{
 				s.Format( _T( "Shutdown = %d\n" ), i );
 				TRACE( s );
+				try
+					{
+					m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
+					}
+				catch (...)
+					{
+					}
 				}
-			m_pSCC->pSocket->Close();
 			}
 
 	delete pscc->pSocket;

@@ -178,23 +178,6 @@ CServerSocket::~CServerSocket()
 		t += s;
 		TRACE( t );
 
-		// 2017-06-09 problem on shut down after multiple reconnects???
-		i = (int)m_pSCC->pSocket->m_hSocket;
-		if (i > 0)
-			{
-			i = m_pSCC->pSocket->ShutDown();
-			if (i > 0)
-				{
-				m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
-				CAsyncSocket::Close();
-				}
-			//m_pSCC->pSocket = 0;		// has corresponding member in ServerSocketOwnerThread
-			//m_pSCC->pServerSocketOwnerThread->m_pConnectionSocket = 0;
-			Sleep( 10 );
-			}
-			
-		m_pSCC->bConnected = 0;
-
 		if (m_pElapseTimer)
 			{
 			strcat( m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n" );
@@ -216,6 +199,29 @@ CServerSocket::~CServerSocket()
 			delete m_pFifo;
 			m_pFifo = 0;
 			}
+
+		// 2017-06-09 problem on shut down after multiple reconnects???
+		i = (int)m_pSCC->pSocket->m_hSocket;
+		if (i > 0)
+			{
+			i = m_pSCC->pSocket->ShutDown();
+			if (i > 0)
+				{
+				try
+					{
+					m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
+					CAsyncSocket::Close();
+					}
+				catch (...)
+					{
+					}
+				}
+			Sleep( 10 );
+			}
+			
+		m_pSCC->bConnected = 0;
+
+
 		m_pSCC->pSocket = 0;
 		}	// eServerConnection
 
@@ -236,7 +242,7 @@ CServerSocket::~CServerSocket()
 			if (i > 0)
 				{
 				m_pSCM->m_pstSCM->pServerListenSocket->Close(); // necessary or else KillReceiverThread does not run
-				CAsyncSocket::Close();
+				//CAsyncSocket::Close();
 				m_pSCM->m_pstSCM->pServerListenSocket = 0;
 				//Sleep( 10 );
 				}

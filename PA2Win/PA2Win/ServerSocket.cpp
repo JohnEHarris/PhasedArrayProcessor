@@ -134,99 +134,14 @@ CServerSocket::~CServerSocket()
 		ASSERT( 0 );
 	if (m_pSCM->m_pstSCM == nullptr)
 		ASSERT( 0 );
-	if ((m_nClientIndex < 0) || (m_nClientIndex >= gnMaxClientsPerServer))
-		ASSERT( 0 );
-	if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == nullptr)
-		ASSERT( 0 );
-		
-		
-	//CAsyncSocket::Close();
 
 	switch (m_nOwningThreadType)
 		{
+		
 	case eListener:
-		s = _T("Listener Socket Destructor called\n");	// called when Asocket on stack disappears in OnAccept
+		s = _T( "Listener Socket Destructor called\n" );	// called when Asocket on stack disappears in OnAccept
 		t += s;
 		TRACE( t );
-		break;
-		//return;	// don't want to proceed and delete all we just built
-	case eServerConnection:
-		s.Format(_T("Server Connection Socket Destructor called \n"));
-		TRACE( s );
-		break;
-	case eOnStack:
-		s = _T( "Temporary socket to create ServerConnection\n" );
-		t += s;
-		TRACE( t );
-		return;	// don't want to proceed and delete all we just built
-	default:
-		s = _T("Unknown Socket Destructor called \n");
-		break;
-		}
-
-	//t += s;
-	// delete critical sections and lists
-	// Receiver
-	
-	m_pSCC = GetpSCC();
-	if (m_nOwningThreadType == eServerConnection)
-		{
-		s += _T( "\n" );
-		t += s;
-		s.Format( _T( " sizeof(CmdFifo) = %d Socket# =%d, CreateThread = %d\n" ),
-			sizeof( CCmdFifo ), m_nAsyncSocketCnt, m_nOwningThreadId );
-		t += s;
-		TRACE( t );
-
-		if (m_pElapseTimer)
-			{
-			strcat( m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n" );
-			s = m_pElapseTimer->tag;
-			TRACE( s );
-			delete m_pElapseTimer;
-			m_pElapseTimer = NULL;
-			}
-
-		if (m_pFifo != NULL)
-			{
-			u.Format( _T( "\n~CServerSocket() Fifo cnt=%d,  ThreadID=%d\n" ),
-				m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId );
-			s += u;
-			TRACE( s );
-			strcat( m_pFifo->tag, "Kill fifo SrvSkt\n" );
-			s = m_pFifo->tag;
-			TRACE( s );
-			delete m_pFifo;
-			m_pFifo = 0;
-			}
-
-		// 2017-06-09 problem on shut down after multiple reconnects???
-		i = (int)m_pSCC->pSocket->m_hSocket;
-		if (i > 0)
-			{
-			i = m_pSCC->pSocket->ShutDown();
-			if (i > 0)
-				{
-				try
-					{
-					m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
-					CAsyncSocket::Close();
-					}
-				catch (...)
-					{
-					}
-				}
-			Sleep( 10 );
-			}
-			
-		m_pSCC->bConnected = 0;
-
-
-		m_pSCC->pSocket = 0;
-		}	// eServerConnection
-
-	else if (m_nOwningThreadType == eListener)
-		{
 		s.Format( _T( " Socket# =%d, CreateThread = %d\n" ),
 			m_nAsyncSocketCnt, nId );
 		TRACE( s );
@@ -268,10 +183,83 @@ CServerSocket::~CServerSocket()
 				delete m_pFifo;
 				m_pFifo = 0;
 				}
-			}
-		return;
-		}	// eListener
+			}	// pServerListenSocket != 0
 
+		m_pSCM->m_pstSCM->pServerListenSocket = 0;
+		return;
+
+	case eOnStack:
+		s = _T( "Temporary socket to create ServerConnection\n" );
+		t += s;
+		TRACE( t );
+		return;	// don't want to proceed and delete all we just built
+
+	case eServerConnection:
+		if ((m_nClientIndex < 0) || (m_nClientIndex >= gnMaxClientsPerServer))
+			ASSERT( 0 );
+		if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == nullptr)
+			ASSERT( 0 );
+		
+		m_pSCC = GetpSCC();
+		s += _T( "\n" );
+		t += s;
+		s.Format( _T( " sizeof(CmdFifo) = %d Socket# =%d, CreateThread = %d\n" ),
+			sizeof( CCmdFifo ), m_nAsyncSocketCnt, m_nOwningThreadId );
+		t += s;
+		TRACE( t );
+
+		if (m_pElapseTimer)
+			{
+			strcat( m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n" );
+			s = m_pElapseTimer->tag;
+			TRACE( s );
+			delete m_pElapseTimer;
+			m_pElapseTimer = NULL;
+			}
+
+		if (m_pFifo != NULL)
+			{
+			u.Format( _T( "\n~CServerSocket() Fifo cnt=%d,  ThreadID=%d\n" ),
+				m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId );
+			s += u;
+			TRACE( s );
+			strcat( m_pFifo->tag, "Kill fifo SrvSkt\n" );
+			s = m_pFifo->tag;
+			TRACE( s );
+			delete m_pFifo;
+			m_pFifo = 0;
+			}		
+	
+		i = (int)m_pSCC->pSocket->m_hSocket;
+		if (i > 0)
+			{
+			i = m_pSCC->pSocket->ShutDown();
+			if (i > 0)
+				{
+				try
+					{
+					m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
+					CAsyncSocket::Close();
+					}
+				catch (...)
+					{
+					}
+				}
+			Sleep( 10 );
+			}
+		m_pSCC->bConnected = 0;
+		m_pSCC->pSocket = 0;
+			break;
+
+
+	default:
+		s = _T("Unknown Socket Destructor called \n");
+		TRACE( s );
+		return;
+		}
+
+
+	// only get here if socket type is eServerConnection
 	if (nShutDown)
 		{
 
@@ -284,8 +272,6 @@ CServerSocket::~CServerSocket()
 		else { m_pSCC->pCSSendPkt = 0;  m_pSCC->pSendPktList  = 0; }
 
 #if 1
-// this creates a race condition with multiple attempts to shut down owner thread
-		//if (0 == m_pSCM->KillServerSocketOwnerThread( m_pSCM->m_nMyServer, (LPARAM) m_pSCC ))
 		m_pSCC->pServerSocketOwnerThread->KillServerSocketOwner( m_nClientIndex, (LPARAM)m_pSCC );
 		for (i = 0; i < 100; i++)
 			{
@@ -301,7 +287,7 @@ CServerSocket::~CServerSocket()
 			}
 #endif
 
-		}
+		}	// if (nShutDown)
 	m_pSCC->pSocket = 0;
 
 	}

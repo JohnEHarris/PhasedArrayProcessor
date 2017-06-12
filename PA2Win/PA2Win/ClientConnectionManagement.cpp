@@ -311,7 +311,7 @@ void CClientConnectionManagement::KillReceiveThread(void)
 	// receiver role is 1, send role is 2. Passed thru wParam
 	// Thread message is serviced by CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lParam)
 	m_pstCCM->pReceiveThread->PostThreadMessage(WM_USER_KILL_RECV_THREAD, (WORD) 1, (LPARAM) this);
-	for ( i = 0; i < 50; i++)
+	for ( i = 0; i < 100; i++)
 		{
 		if (m_pstCCM->pReceiveThread == 0)	return;
 		Sleep(10);
@@ -396,7 +396,7 @@ void CClientConnectionManagement::CreateCmdProcessThread(void)
 		{
 		m_pstCCM->pCmdProcessThread->m_pstCCM = m_pstCCM;
 		m_pstCCM->pCmdProcessThread->m_pMyCCM = m_pstCCM->pCCM;
-		m_pstCCM->pCmdProcessThread->m_bAutoDelete = 0;		// IOT use AfxEndThread
+		//m_pstCCM->pCmdProcessThread->m_bAutoDelete = 0;		// IOT use AfxEndThread
 		m_pstCCM->pCmdProcessThread->ResumeThread();
 		TRACE(_T("CmdProcessThread is running\n"));
 		}
@@ -409,7 +409,7 @@ void CClientConnectionManagement::KillCmdProcessThread(void)
 	if (m_pstCCM == NULL)	return;
 	if (m_pstCCM->pCmdProcessThread == NULL) return;
 	//m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_QUIT,0,0L);
-	m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_USER_TEST_THREAD_BAIL,0,0L);
+	m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_USER_KILL_CMD_PROCESS_THREAD,0,0L);
 	for ( i = 0; i < 50; i++)
 		{
 		if (m_pstCCM->pCmdProcessThread == 0)	return;

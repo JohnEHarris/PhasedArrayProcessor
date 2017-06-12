@@ -29,7 +29,6 @@ CCmdProcessThread::~CCmdProcessThread()
 	if (NULL == m_pstCCM)						return;
 	if (NULL == m_pstCCM->pCmdProcessThread)	return;
 	m_pstCCM->pCmdProcessThread = 0;
-	AfxEndThread( 0 );
 	}
 
 BOOL CCmdProcessThread::InitInstance()
@@ -55,7 +54,7 @@ int CCmdProcessThread::ExitInstance()
 BEGIN_MESSAGE_MAP(CCmdProcessThread, CWinThread)
 
 	ON_THREAD_MESSAGE(WM_USER_CLIENT_PKT_RECEIVED,ProcessReceivedMessage)
-	ON_THREAD_MESSAGE(WM_USER_TEST_THREAD_BAIL,Bail)
+	ON_THREAD_MESSAGE(WM_USER_KILL_CMD_PROCESS_THREAD,KillCmdProcess)
 
 END_MESSAGE_MAP()
 
@@ -94,8 +93,7 @@ void CCmdProcessThread::ProcessReceivedMessage(WPARAM, LPARAM)
 		}	// switch (m_pMyCCM->m_nMyConnection)
 	}
 
-// Bail out, that is quit
-afx_msg void CCmdProcessThread::Bail( WPARAM w, LPARAM lParam )
+afx_msg void CCmdProcessThread::KillCmdProcess( WPARAM w, LPARAM lParam )
 	{
 	CString s;
 	int i;
@@ -104,7 +102,7 @@ afx_msg void CCmdProcessThread::Bail( WPARAM w, LPARAM lParam )
 	if (NULL == m_pstCCM->pCmdProcessThread)	return;
 	if (this == m_pstCCM->pCmdProcessThread)
 		i = 1;
-	delete m_pstCCM->pCmdProcessThread;	// send us to the destructor
+	PostQuitMessage( 0 );	// send us to the destructor
 	}
 
 void CCmdProcessThread::DebugMsg(CString s)

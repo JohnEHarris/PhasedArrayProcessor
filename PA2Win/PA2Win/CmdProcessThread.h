@@ -22,7 +22,7 @@ public:
 	ST_CLIENT_CONNECTION_MANAGEMENT *m_pstCCM;
 	void DebugMsg(CString s);
 	void ProcessReceivedMessage(WPARAM, LPARAM);
-	afx_msg void Bail( WPARAM w, LPARAM lParam );
+	afx_msg void KillCmdProcess( WPARAM w, LPARAM lParam );
 
 protected:
 

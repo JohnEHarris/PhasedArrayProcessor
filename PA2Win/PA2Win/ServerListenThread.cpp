@@ -215,7 +215,7 @@ WSANOTINITIALISED A successful AfxSocketInit must occur before using this API. 1
 			{
 			s.Format( _T( "Listener shutdown = %d\n" ), i );
 			TRACE( s );
-			//m_pListenSocket->Close();
+			m_pListenSocket->Close();
 			}
 		delete m_pstSCM->pServerListenThread->m_pListenSocket;
 		m_pstSCM->pServerListenThread->m_pListenSocket = NULL;

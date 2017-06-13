@@ -125,10 +125,11 @@ CServerSocket::~CServerSocket()
 	CString s,t,u;
 	void *pv = 0;
 	int i, j;
+	int nDummy;
 	i = j = 0;
 	int nId = AfxGetThread()->m_nThreadID;
 	// for listener socket, m_pSCC is null
-	t.Format(_T("Thread Id=%dx - m_pSCC= %x "), nId, m_pSCC);
+	t.Format(_T("Thread Id=%d - m_pSCC= %x "), nId, m_pSCC);
 
 	if (m_pSCM == nullptr)
 		ASSERT( 0 );
@@ -230,31 +231,50 @@ CServerSocket::~CServerSocket()
 			m_pFifo = 0;
 			}		
 	
-		i = (int)m_pSCC->pSocket->m_hSocket;
-		if (i > 0)
+		// safety check from testing operations
+		ST_SERVERS_CLIENT_CONNECTION *m_pCheckSCC;
+		nDummy = 5;	// this had to be declared at the top of the procedure
+		// or we get error saying dummy init skipped by default;
+		m_pCheckSCC = m_pstSCM->pClientConnection[m_nClientIndex];
+		if (m_pCheckSCC == m_pSCC)
 			{
-			i = m_pSCC->pSocket->ShutDown();
+			nDummy = 4;
+
+			i = (int)m_pSCC->pSocket->m_hSocket;
 			if (i > 0)
 				{
-				try
+				i = m_pSCC->pSocket->ShutDown();
+				if (i > 0)
 					{
-					m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
-					CAsyncSocket::Close();
+					try
+						{
+						m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
+						CAsyncSocket::Close();
+						}
+					catch (...)
+						{
+						}
 					}
-				catch (...)
-					{
-					}
+				Sleep( 10 );
 				}
-			Sleep( 10 );
 			}
-		m_pSCC->bConnected = 0;
-		m_pSCC->pSocket = 0;
+		else
+			{
+			nDummy = 4;	// debugging multiple disconnects of client before shutdown
+			}
+
+		if (m_pCheckSCC == m_pSCC)
+			{
+			m_pSCC->bConnected = 0;
+			m_pSCC->pSocket = 0;
+			}
 			break;
 
 
 	default:
 		s = _T("Unknown Socket Destructor called \n");
 		TRACE( s );
+		nDummy = 3;
 		return;
 		}
 
@@ -717,8 +737,8 @@ void CServerSocket::OnReceive(int nErrorCode)
 	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)	return;
 	if (m_pSCC == NULL)							return;
 
-	if (m_nClientIndex == 0)
-		TRACE( _T( "m_nClientIndex == 0 In OnReceive\n" ) );
+	if (m_nClientIndex != 0)
+		TRACE( _T( "m_nClientIndex != 0 In OnReceive\n" ) );
 
 	if (m_pSCC->bStopSendRcv)
 			{
@@ -900,7 +920,7 @@ void CServerSocket::OnClose(int nErrorCode)
 	// #define WSAECONNABORTED                  10053L
 	// very different in PAP compared to PAG
 		
-	CAsyncSocket::OnClose(nErrorCode);
+	//CAsyncSocket::OnClose(nErrorCode);
 	if (i = this->ShutDown( 2 ))
 		{
 		s.Format( _T( "Shutdown of client socket was successful status = %d\n" ), i );
@@ -913,6 +933,7 @@ void CServerSocket::OnClose(int nErrorCode)
 		TRACE( s );
 		}
 	Sleep( 10 );
+	CAsyncSocket::OnClose(nErrorCode);
 	if (nErrorCode)
 		{
 		TRACE( _T( "OnClose failed\n" ) );

@@ -17,6 +17,8 @@ public:
 	int m_nPam;		// which PAM
 	int m_nLastPam;
 	int m_nInst;
+	int m_nPAP;
+	int m_nSeq;
 	int m_nLastInst;
 	void Save_Pos(void);
 
@@ -48,4 +50,6 @@ public:
 	CSpinButtonCtrl m_spInst;
 	CSpinButtonCtrl m_spPap;
 	afx_msg void OnVScroll( UINT nSBCode, UINT nPos, CScrollBar* pScrollBar );
+	CSpinButtonCtrl m_spSeq;
+	afx_msg void OnDeltaposSpSeq( NMHDR *pNMHDR, LRESULT *pResult );
 	};

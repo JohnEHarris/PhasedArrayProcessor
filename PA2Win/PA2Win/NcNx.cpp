@@ -57,9 +57,10 @@ CNcNx::~CNcNx()
 
 void CNcNx::DoDataExchange(CDataExchange* pDX)
 {
-	CDialogEx::DoDataExchange( pDX );
-	DDX_Control( pDX, IDC_SP_INST, m_spInst );
-	DDX_Control( pDX, IDC_SP_PAP, m_spPap );
+CDialogEx::DoDataExchange( pDX );
+DDX_Control( pDX, IDC_SP_INST, m_spInst );
+DDX_Control( pDX, IDC_SP_PAP, m_spPap );
+DDX_Control( pDX, IDC_SP_SEQ, m_spSeq );
 	}
 
 
@@ -67,6 +68,7 @@ BEGIN_MESSAGE_MAP(CNcNx, CDialogEx)
 	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_INST, &CNcNx::OnDeltaposSpInst )
 	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_PAP, &CNcNx::OnDeltaposSpPap )
 	ON_WM_VSCROLL()
+	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_SEQ, &CNcNx::OnDeltaposSpSeq )
 END_MESSAGE_MAP()
 
 
@@ -88,6 +90,9 @@ BOOL CNcNx::OnInitDialog()
 
 	// TODO:  Add extra initialization here
 	PositionWindow();
+	m_spPap.SetRange( 0, 3 );
+	m_spInst.SetRange( 0, 12 );
+	m_spSeq.SetRange( 0, 7 );
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // EXCEPTION: OCX Property Pages should return FALSE
@@ -136,6 +141,7 @@ void CNcNx::OnDeltaposSpInst( NMHDR *pNMHDR, LRESULT *pResult )
 	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
 	// TODO: Add your control notification handler code here
 	*pResult = 0;
+	m_nInst = pNMUpDown->iPos + pNMUpDown->iDelta;
 	}
 
 
@@ -145,8 +151,7 @@ void CNcNx::OnDeltaposSpPap( NMHDR *pNMHDR, LRESULT *pResult )
 	// TODO: Add your control notification handler code here
 	// must use vertical scroll to retrieve the new value after the button spins
 	*pResult = 0;
-	UpdateData(TRUE);	// Copy screen TO variables
-	//m_nInst = m_spInst.GetPos(); always seems to be the last value
+	m_nPAP = pNMUpDown->iPos + pNMUpDown->iDelta;
 	}
 
 
@@ -159,37 +164,35 @@ void CNcNx::OnVScroll( UINT nSBCode, UINT nPos, CScrollBar* pScrollBar )
 	int m_nNcId, m_nThldId, m_nMId;
 	int m_nNcOd, m_nThldOd, m_nMOd;
 	int m_nNx, m_nMaxWall, m_nMinWall, m_nDropCnt;
-#endif
 	switch (nCtrlId)
 		{
-	default:	break;
-	case IDC_SP_INST:			
-		m_nInst = nPos;		
-		//ChangePamOrInstrument();
-		m_spInst.SetPos(m_nInst);
-		UpdateTitle();	
-		break;
+		default:	break;
+		case IDC_SP_INST:
+			m_nInst = nPos;
+			//ChangePamOrInstrument();
+			m_spInst.SetPos( m_nInst );
+			UpdateTitle();
+			break;
 
-#if 0
-	case IDC_SP_CHNL_TYPES:		m_nChnlType = nPos;		break;
-	case IDC_SP_CHNL_REPEATS:	m_nChnlRepeat = nPos;	break;
-	case IDC_SP_CHNL:			m_nChnl = nPos;			break;
+		case IDC_SP_CHNL_TYPES:		m_nChnlType = nPos;		break;
+		case IDC_SP_CHNL_REPEATS:	m_nChnlRepeat = nPos;	break;
+		case IDC_SP_CHNL:			m_nChnl = nPos;			break;
 
-	case IDC_SP_NCID:		
-		m_nNcId = nPos;		break;
-	case IDC_SP_THLDID:		m_nThldId = nPos;	break;
-	case IDC_SP_MID:		
-		m_nMId = nPos;		break;
-	case IDC_SP_NCOD:		m_nNcOd = nPos;		break;
-	case IDC_SP_THLDOD:		m_nThldOd = nPos;	break;
-	case IDC_SP_MOD:		m_nMOd = nPos;		break;
-	
-	case IDC_SP_NX:			m_nNx = nPos;		break;
-	case IDC_SP_MAXWALL:	m_nMaxWall = nPos;	break;
-	case IDC_SP_MINWALL:	m_nMinWall = nPos;	break;
-	case IDC_SP_DROPCNT:	m_nDropCnt = nPos;	break;
+		case IDC_SP_NCID:
+			m_nNcId = nPos;		break;
+		case IDC_SP_THLDID:		m_nThldId = nPos;	break;
+		case IDC_SP_MID:
+			m_nMId = nPos;		break;
+		case IDC_SP_NCOD:		m_nNcOd = nPos;		break;
+		case IDC_SP_THLDOD:		m_nThldOd = nPos;	break;
+		case IDC_SP_MOD:		m_nMOd = nPos;		break;
+
+		case IDC_SP_NX:			m_nNx = nPos;		break;
+		case IDC_SP_MAXWALL:	m_nMaxWall = nPos;	break;
+		case IDC_SP_MINWALL:	m_nMinWall = nPos;	break;
+		case IDC_SP_DROPCNT:	m_nDropCnt = nPos;	break;
 #endif
-		}
+		//}
 
 
 	CDialogEx::OnVScroll(nSBCode, nPos, pScrollBar);
@@ -226,3 +229,11 @@ void CNcNx::PositionWindow()
 		}
 	}
 
+
+
+void CNcNx::OnDeltaposSpSeq( NMHDR *pNMHDR, LRESULT *pResult )
+	{
+	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
+	// TODO: Add your control notification handler code here
+	*pResult = 0;
+	}

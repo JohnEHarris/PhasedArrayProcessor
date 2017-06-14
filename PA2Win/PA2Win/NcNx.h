@@ -19,6 +19,9 @@ public:
 	int m_nInst;
 	int m_nPAP;
 	int m_nSeq;
+	int m_nCh;
+	int m_nGate;
+	int m_nParam;
 	int m_nLastInst;
 	void Save_Pos(void);
 
@@ -45,11 +48,18 @@ public:
 	virtual void OnOK();
 	virtual void OnCancel();
 	virtual void PostNcDestroy();
-	afx_msg void OnDeltaposSpInst( NMHDR *pNMHDR, LRESULT *pResult );
-	afx_msg void OnDeltaposSpPap( NMHDR *pNMHDR, LRESULT *pResult );
 	CSpinButtonCtrl m_spInst;
 	CSpinButtonCtrl m_spPap;
-	afx_msg void OnVScroll( UINT nSBCode, UINT nPos, CScrollBar* pScrollBar );
 	CSpinButtonCtrl m_spSeq;
+	CSpinButtonCtrl m_spCh;
+	CSpinButtonCtrl m_spGate;
+	CSpinButtonCtrl m_spParam;
+
+	//afx_msg void OnVScroll( UINT nSBCode, UINT nPos, CScrollBar* pScrollBar );
+	afx_msg void OnDeltaposSpInst( NMHDR *pNMHDR, LRESULT *pResult );
+	afx_msg void OnDeltaposSpPap( NMHDR *pNMHDR, LRESULT *pResult );
 	afx_msg void OnDeltaposSpSeq( NMHDR *pNMHDR, LRESULT *pResult );
+	afx_msg void OnDeltaposSpCh( NMHDR *pNMHDR, LRESULT *pResult );
+	afx_msg void OnDeltaposSpGate( NMHDR *pNMHDR, LRESULT *pResult );
+	afx_msg void OnDeltaposSpParam( NMHDR *pNMHDR, LRESULT *pResult );
 	};

@@ -1784,8 +1784,8 @@ void CPA2WinDlg::OnBnClickedBnShutdown()
 	// TODO: Add your control notification handler code here
 	// Kill all threads but don't exit the program
 	// Used to see if we can delete all objects created with new when the program runs.
-	int i;
-	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM;
+	int i = 0;
+	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM = 0;
 	CString s;
 
 	nShutDown = 1;

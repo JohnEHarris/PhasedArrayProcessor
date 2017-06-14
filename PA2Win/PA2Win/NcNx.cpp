@@ -61,6 +61,9 @@ CDialogEx::DoDataExchange( pDX );
 DDX_Control( pDX, IDC_SP_INST, m_spInst );
 DDX_Control( pDX, IDC_SP_PAP, m_spPap );
 DDX_Control( pDX, IDC_SP_SEQ, m_spSeq );
+DDX_Control( pDX, IDC_SP_CH, m_spCh );
+DDX_Control( pDX, IDC_SP_GATE, m_spGate );
+DDX_Control( pDX, IDC_SP_PARAM, m_spParam );
 	}
 
 
@@ -69,6 +72,9 @@ BEGIN_MESSAGE_MAP(CNcNx, CDialogEx)
 	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_PAP, &CNcNx::OnDeltaposSpPap )
 	ON_WM_VSCROLL()
 	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_SEQ, &CNcNx::OnDeltaposSpSeq )
+	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_CH, &CNcNx::OnDeltaposSpCh )
+	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_GATE, &CNcNx::OnDeltaposSpGate )
+	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_PARAM, &CNcNx::OnDeltaposSpParam )
 END_MESSAGE_MAP()
 
 
@@ -90,9 +96,23 @@ BOOL CNcNx::OnInitDialog()
 
 	// TODO:  Add extra initialization here
 	PositionWindow();
-	m_spPap.SetRange( 0, 3 );
-	m_spInst.SetRange( 0, 12 );
-	m_spSeq.SetRange( 0, 7 );
+	// if this is the PAG
+#ifdef I_AM_PAG
+	m_spPap.SetRange( 0, 0 );	// gnMaxClientsPerServer - 1 );  //how many clients do I have
+	m_spInst.SetRange( 0, 2 );	// gnMaxClients - 1 );		// how many clients does my client have
+	m_spSeq.SetRange( 0, gMaxSeqCount-1 );		// number of sequence in firing scheme
+	m_spCh.SetRange( 0, gMaxChnlsPerMainBang-1 );		// number of channel in each sequence
+	m_spGate.SetRange( 0, 3 );		// number of gates in each channel
+	m_spParam.SetRange( 0, 100 );	// depends of command selected from list box
+#else
+	// I am the PAP
+	m_spPap.SetRange( 0, 0 );  //how many clients do I have
+	m_spInst.SetRange( 0, gnMaxClients-1 );		// how many clients does my client have
+	m_spSeq.SetRange( 0, gMaxSeqCount-1 );		// number of sequence in firing scheme
+	m_spCh.SetRange( 0, gMaxChnlsPerMainBang-1 );		// number of channel in each sequence
+	m_spGate.SetRange( 0, 3 );	
+
+#endif
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // EXCEPTION: OCX Property Pages should return FALSE
@@ -155,6 +175,45 @@ void CNcNx::OnDeltaposSpPap( NMHDR *pNMHDR, LRESULT *pResult )
 	}
 
 
+void CNcNx::OnDeltaposSpSeq( NMHDR *pNMHDR, LRESULT *pResult )
+	{
+	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
+	// TODO: Add your control notification handler code here
+	*pResult = 0;
+	m_nSeq = pNMUpDown->iPos + pNMUpDown->iDelta;
+	}
+
+
+void CNcNx::OnDeltaposSpCh( NMHDR *pNMHDR, LRESULT *pResult )
+	{
+	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
+	// TODO: Add your control notification handler code here
+	*pResult = 0;
+	m_nSeq = pNMUpDown->iPos + pNMUpDown->iDelta;
+	}
+
+
+void CNcNx::OnDeltaposSpGate( NMHDR *pNMHDR, LRESULT *pResult )
+	{
+	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
+	// TODO: Add your control notification handler code here
+	*pResult = 0;
+	m_nGate = pNMUpDown->iPos + pNMUpDown->iDelta;
+	}
+
+
+//Parameter variable depends on what command is selected
+// could be gate delay, or receiver gain, or trigger level of a flaw
+void CNcNx::OnDeltaposSpParam( NMHDR *pNMHDR, LRESULT *pResult )
+	{
+	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
+	// TODO: Add your control notification handler code here
+	*pResult = 0;
+	m_nParam = pNMUpDown->iPos + pNMUpDown->iDelta;
+	}
+
+
+#if 0
 void CNcNx::OnVScroll( UINT nSBCode, UINT nPos, CScrollBar* pScrollBar )
 	{
 	// TODO: Add your message handler code here and/or call default
@@ -193,10 +252,9 @@ void CNcNx::OnVScroll( UINT nSBCode, UINT nPos, CScrollBar* pScrollBar )
 		case IDC_SP_DROPCNT:	m_nDropCnt = nPos;	break;
 #endif
 		//}
-
-
 	CDialogEx::OnVScroll(nSBCode, nPos, pScrollBar);
 	}
+#endif
 
 void CNcNx::UpdateTitle(void)
 	{
@@ -230,10 +288,3 @@ void CNcNx::PositionWindow()
 	}
 
 
-
-void CNcNx::OnDeltaposSpSeq( NMHDR *pNMHDR, LRESULT *pResult )
-	{
-	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
-	// TODO: Add your control notification handler code here
-	*pResult = 0;
-	}

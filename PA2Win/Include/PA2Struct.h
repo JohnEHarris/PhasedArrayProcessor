@@ -288,9 +288,9 @@ typedef struct
 #endif
 
 
+#include "Cmds.h"
 
-
-
+#if 0
 
 // Command format from User interface systems to the PAP
 // Command packet can be cut short by specifying a byte count less than 1056
@@ -358,6 +358,8 @@ typedef struct
 	BYTE bSpare[20];	// sequence number at beginning of stPeakData Results[] // 32 bytes to here
 	BYTE bMsg[1024];	// Max unique sets of Nc Nx data per instrument.
 	} PAM_GENERIC_MSG; // SIZEOF() = 1056
+
+#endif
 
 // legacy structure
 typedef struct

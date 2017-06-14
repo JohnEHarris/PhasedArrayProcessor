@@ -1,5 +1,0 @@
-In file included from C:/Software_Projects/EndSonic_II/Udp_cpci/TcuSlave/ThreadRxListApp/../../../include/udp_msg.h:27,
-                 from C:/Software_Projects/EndSonic_II/Udp_cpci/TcuSlave/ThreadRxListApp/ThreadRxList.h:26,
-                 from C:/Software_Projects/EndSonic_II/Udp_cpci/TcuSlave/ThreadRxListApp/ThreadRxListmain.c:62:
-C:/Software_Projects/EndSonic_II/Udp_cpci/TcuSlave/ThreadRxListApp/../../../include/instdata.h:522: warning: `REVERSE' redefined
-C:/Software_Projects/EndSonic_II/Udp_cpci/TcuSlave/ThreadRxListApp/escapecodes.h:44: warning: this is the location of the previous definition

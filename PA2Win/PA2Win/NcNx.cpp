@@ -64,6 +64,7 @@ DDX_Control( pDX, IDC_SP_SEQ, m_spSeq );
 DDX_Control( pDX, IDC_SP_CH, m_spCh );
 DDX_Control( pDX, IDC_SP_GATE, m_spGate );
 DDX_Control( pDX, IDC_SP_PARAM, m_spParam );
+DDX_Control( pDX, IDC_LB_NCNX, m_lbOutput );
 	}
 
 
@@ -75,6 +76,7 @@ BEGIN_MESSAGE_MAP(CNcNx, CDialogEx)
 	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_CH, &CNcNx::OnDeltaposSpCh )
 	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_GATE, &CNcNx::OnDeltaposSpGate )
 	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_PARAM, &CNcNx::OnDeltaposSpParam )
+	ON_BN_CLICKED( IDC_BUTTON1, &CNcNx::OnBnClickedErase )
 END_MESSAGE_MAP()
 
 
@@ -113,6 +115,7 @@ BOOL CNcNx::OnInitDialog()
 	m_spGate.SetRange( 0, 3 );	
 
 #endif
+	m_lbOutput.ResetContent();
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // EXCEPTION: OCX Property Pages should return FALSE
@@ -288,3 +291,10 @@ void CNcNx::PositionWindow()
 	}
 
 
+
+
+void CNcNx::OnBnClickedErase()
+	{
+	// TODO: Add your control notification handler code here
+	m_lbOutput.ResetContent();
+	}

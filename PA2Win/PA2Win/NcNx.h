@@ -1,6 +1,7 @@
 #pragma once
 #include "afxcmn.h"
 #include "TuboIni.h"
+#include "afxwin.h"
 
 
 // CNcNx dialog
@@ -62,4 +63,6 @@ public:
 	afx_msg void OnDeltaposSpCh( NMHDR *pNMHDR, LRESULT *pResult );
 	afx_msg void OnDeltaposSpGate( NMHDR *pNMHDR, LRESULT *pResult );
 	afx_msg void OnDeltaposSpParam( NMHDR *pNMHDR, LRESULT *pResult );
+	CListBox m_lbOutput;
+	afx_msg void OnBnClickedErase();
 	};

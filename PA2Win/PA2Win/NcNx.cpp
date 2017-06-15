@@ -65,6 +65,7 @@ DDX_Control( pDX, IDC_SP_CH, m_spCh );
 DDX_Control( pDX, IDC_SP_GATE, m_spGate );
 DDX_Control( pDX, IDC_SP_PARAM, m_spParam );
 DDX_Control( pDX, IDC_LB_NCNX, m_lbOutput );
+DDX_Control( pDX, IDC_CB_CMDS, m_cbCommand );
 	}
 
 
@@ -76,7 +77,8 @@ BEGIN_MESSAGE_MAP(CNcNx, CDialogEx)
 	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_CH, &CNcNx::OnDeltaposSpCh )
 	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_GATE, &CNcNx::OnDeltaposSpGate )
 	ON_NOTIFY( UDN_DELTAPOS, IDC_SP_PARAM, &CNcNx::OnDeltaposSpParam )
-	ON_BN_CLICKED( IDC_BUTTON1, &CNcNx::OnBnClickedErase )
+	ON_BN_CLICKED( IDC_BN_ERASE, &CNcNx::OnBnClickedBnErase )
+	ON_CBN_SELCHANGE( IDC_CB_CMDS, &CNcNx::OnCbnSelchangeCbCmds )
 END_MESSAGE_MAP()
 
 
@@ -116,6 +118,9 @@ BOOL CNcNx::OnInitDialog()
 
 #endif
 	m_lbOutput.ResetContent();
+	m_cbCommand.ResetContent();
+	PopulateCmdComboBox();
+	m_cbCommand.SetCurSel ( 2 );	// Gate Delay
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // EXCEPTION: OCX Property Pages should return FALSE
@@ -292,9 +297,55 @@ void CNcNx::PositionWindow()
 
 
 
-
-void CNcNx::OnBnClickedErase()
+void CNcNx::OnBnClickedBnErase()
 	{
 	// TODO: Add your control notification handler code here
 	m_lbOutput.ResetContent();
+	}
+
+CString CmdText[] =
+	{
+	_T( "null 0" ),
+	_T( "null 1" ),
+	_T( "Gate %n Delay %n" ),
+	_T( "Gate n Range" ),
+	_T( "Gate n Thold" )
+	};
+
+// Fill the combo box with strings whose index in the combobox matches the 
+// command ID found in Cmds.h
+// NcNx is a test command. Will likely never exist for real system
+// Short commands have cmd ID < 0x200
+void CNcNx::PopulateCmdComboBox()
+	{
+	CString s;
+	m_cbCommand.ResetContent();
+
+	s.Format( _T( "null 0" ) );				m_cbCommand.AddString( s );
+	s.Format( _T( "null 1" ) );				m_cbCommand.AddString( s );
+	s.Format( _T( "Gate n Delay" ) );		m_cbCommand.AddString( s );
+	s.Format( _T( "Gate n Range" ) );		m_cbCommand.AddString( s );
+	s.Format( _T( "Gate n Blank" ) );		m_cbCommand.AddString( s );
+	s.Format( _T( "Gate n Thold" ) );		m_cbCommand.AddString( s );
+	s.Format( _T( "Gate n Trigger" ) );		m_cbCommand.AddString( s );
+	s.Format( _T( "Gate n Polarty" ) );		m_cbCommand.AddString( s );
+	s.Format( _T( "Gate n TOF" ) );			m_cbCommand.AddString( s );
+
+	}
+
+void CNcNx::OnCbnSelchangeCbCmds()
+	{
+	CString s, t;
+	// TODO: Add your control notification handler code here
+	m_nCmdId = m_cbCommand.GetCurSel();
+	t.Format( _T( "m_nCmdId = %d" ), m_nCmdId );
+	switch (m_nCmdId)
+		{
+		case 0:
+		case 1:	s = t;	break;
+
+		default:
+			s = t;		break;
+		}
+	m_lbOutput.AddString( s );
 	}

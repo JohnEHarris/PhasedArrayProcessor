@@ -31,8 +31,9 @@ enum IdOdTypes {eId, eOd, eIf};
 #define MAX_PAM_QTY			1
 #define MAX_PAM_INSTS_QTY	8
 #define NC_NX_CMD_ID		1+0x200
-#define ASCANS_TO_AVG		10
+#define ASCANS_TO_AVG		16
 
+#define THE_APP_CLASS	CPA2WinApp
 
 // Idata message types. This is the data that comes from the PAP and is sent 
 // To the Receiver system
@@ -43,11 +44,15 @@ enum IdOdTypes {eId, eOd, eIf};
 
 
 // edit this value if more client connections to servers are needed
-// #define	MAX_SERVERS							1 do it in ServerConnection Management for which ever type of server we are using
+#define	MAX_SERVERS							1	//do it in ServerConnection Management for which ever type of server we are using
 // Likely will have at least 2 server types. 1 for inspetion data and 1 for pulsers
 // Mixing pulsers in with gate boards will make it more difficult to put dimensions on things like virtual channels. 2016-10-19
 
 #define MAX_CLIENTS_PER_SERVER				8
+
+// For the Client Communication System
+#define MAX_CLIENTS							8
+
 
 // An instrument client can have up to this many virtual channels for each UT firing or Main Bang
 // Each MAIN BANG is a "sequence" until the sequence number repeats
@@ -74,6 +79,9 @@ enum IdOdTypes {eId, eOd, eIf};
 #define CMD_FIFO_MEM_SIZE				0x4000		// must be greater than 0x1800
 #define NC_NX_STRUCT_SIZE				52
 #define MAX_CMD_PACKET_SIZE				1056
+
+#define MAX_FQDN_LENGTH						 64	// max length of a fully qualified domain name
+#define LOCAL_HOST						_T("localhost")
 
 /*****************	STRUCTURES	*********************/
 // A channel is a UT echo or reflection assigned a physical position in the transducer.
@@ -286,6 +294,9 @@ typedef struct
 
 // Command format from User interface systems to the PAP
 // Command packet can be cut short by specifying a byte count less than 1056
+// All commands now moved to the file \Iclude\Cmds.h
+//
+#if 0
 typedef struct 
 	{
 	// The generic header
@@ -335,7 +346,30 @@ typedef struct
 	WORD wCmd[8];		// 16	
 	} ST_SMALL_CMD;		// sizeof() = 32
 
+typedef struct
+	{
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 
+	BYTE bSpare[20];	// sequence number at beginning of stPeakData Results[] // 32 bytes to here
+	BYTE bMsg[1024];	// Max unique sets of Nc Nx data per instrument.
+	} PAM_GENERIC_MSG; // SIZEOF() = 1056
+#endif
+
+// legacy structure
+typedef struct
+	{
+	int nLength;		// number of bytes to send
+//	BYTE *pMsg;			// ptr to the message bytes to send.
+	BYTE Msg[1];		// ptr to the message bytes to send.
+	}	stSEND_PACKET;
 
 
 // If we want 2 out of 3 above threshold for Nc qualified, then bMod = 3. The Fifo is 3 elements deep.
@@ -411,6 +445,8 @@ typedef struct
 // If Nx = 0, the output wall value will be 10. This will decrease processing time in the PAM
 // Effectively the associated channel will be a flaw channel or nothing
 //
+
+#if 0
 // When received as a command, bSeqNumber < 0 means end of command
 typedef struct
 	{
@@ -466,6 +502,7 @@ typedef struct
 	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1056 replaces CHANNEL_CMD_1
 	
 
+// The next several command formats are for Short Commands of 32 bytes
 typedef struct
 	{
 	GenericPacketHeader Head;	// wMsgID= SET_GATE_DELAY_CMD_ID, gph is 12 bytes
@@ -677,7 +714,7 @@ typedef struct	// NOT SURE ABOUT THIS COMMAND 2017-03-16
 	} ST_CHNL_GAIN;		// 1056 bytes 
 
 
-
+#endif
 
 /*****************	STRUCTURES	END *********************/
 

@@ -39,9 +39,6 @@
     <ClInclude Include="Versions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\Global.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MainModuleGlobal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -55,9 +52,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TuboIni.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Include\PA2Struct.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ServerConnectionManagement.h">
@@ -106,6 +100,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TestThread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\Cmds.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\global.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\PA2Struct.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

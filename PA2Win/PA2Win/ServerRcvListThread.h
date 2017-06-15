@@ -4,7 +4,7 @@
 #define SERVER_RCV_LIST_THREAD_H
 
 #include "PA2WinDlg.h"
-#include "../include/pa2struct.h"
+#include "../../include/pa2struct.h"
 
 #ifdef I_AM_PAP
 #include "InspState.h"

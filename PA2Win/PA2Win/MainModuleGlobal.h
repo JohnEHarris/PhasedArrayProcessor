@@ -4,7 +4,7 @@
 
 
 #define MAIN_MODULE
-#include "..\Include\global.h"
+#include "..\..\Include\global.h"
 //#include "Lang.h"
 
 // This technique successfully passes the constant MAIN_MODULE into the global.h

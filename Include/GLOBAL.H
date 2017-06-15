@@ -1,3 +1,4 @@
+#pragma once
 /*
 Name:	Global.h
 Purpose:	Group all variable which are global to a processor into
@@ -24,71 +25,29 @@ Revised:
 #define PubExt	extern
 /* Global variables are external in the including module */
 #endif
-#include "CFG100.H"
 
-#define UTRON_MACHINE		0x3a43
-/* 	0x3a43 = C:	*/
-
-#define TRUSCOPE_MACHINE		0x3a54
-/* 	0x3a54 = T:	*/
-
-
-/* Number of radial segments in image map.  Max is 60	*/
-
-#define N_SEG				30
-
-/* Max number of protocols to search for ipx and udp */
-
-#define MAX_PROTOCOLS		80
-
-
-/* Inch Limits for od and wall */
-/* floating point and integer values in 1/1000th inch */
-#define FWALL_MIN			0.09
-#define NWALL_MIN			90
-/* BEFORE 5-2-02  FWALL_MAX			2.1	*/
-#define FWALL_MAX			4.095
-#define NWALL_MAX			4095
-#define FOD_MIN				2.25
-#define FOD_MAX				16.0
-
-#define VELOCITY_DX_FACTOR		200000
-/* Assumes measuring over 4 inch = 8 motion pulses and computing fpm */
-/* Assumes scope demux ckt using 10 khz clock to measure dt */
-
-
-
-/**************************************************************/
-/** Global parameters maintained in each element of Truscope **/
-/**************************************************************/
-#ifdef THIS_IS_SERVICE_APP
-extern int gChannel,  gGate;
-#else
-PubExt int gChannel,  gGate;
-
-#endif
-
-PubExt int gCopyTo, gPrf, gSysInitFlag;
-/*PubExt WORD wXdcrType[4][10];	/* by shoe and channel */
-
-/*PubExt UT_OFFSET UtOffset;		/* defined in instdata.h */
-PubExt BYTE bFwd;				/* x direction of travel  1 = fwd*/
-PubExt CHANNEL_CONFIG2 ChannelCfg;
-
-PubExt	int NCtolerance;
-PubExt	int nShoeXOffset;	/* correct flaw loc by this amount */
 class CTuboIni;
+class CPA2WinDlg;
+class CPA2WinApp;
+class CTuboIni;
+class CNcNx;
 
 typedef struct 
 	{
-//	CInstSimulatorDlg *pUIDlg;		// the user interface dialog
+	CPA2WinDlg *pUIDlg;		// the user interface dialog
 //	CDoNothingDlg *pDoNothingDlg;
-//	CInstSimulatorApp *ptheApp;
-	CTuboIni *pTuboIni;
+	CPA2WinApp *ptheApp;
+	CTuboIni *pTuboIni;		// not actually a dialog, but no harm, no foul
+	CNcNx *pNcNx;			// Nc Nx test dialog
 	}	GLOBAL_DLG_PTRS;
 
 PubExt	GLOBAL_DLG_PTRS gDlg;
 PubExt int gMaxChnlsPerMainBang;
 PubExt int gMaxSeqCount;
+PubExt int gnMaxServers, gnMaxClientsPerServer;		// Server Connection Management
+PubExt int gnMaxClients;							// Client Connection Management
+PubExt int gnFifoCnt, gnAsyncSocketCnt;
+PubExt int nLoc; // simulate location of pipe
+PubExt HANDLE g_hTimerTick;
 
-#endif		/* include global_h */
+#endif

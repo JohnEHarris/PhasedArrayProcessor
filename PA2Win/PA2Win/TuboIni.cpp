@@ -10,7 +10,7 @@ Article Link:
 
 #include "stdafx.h"
 #include "TuboIni.h"
-#include "..\Include\global.h"
+#include "..\..\Include\global.h"
 #include "fcntl.h"
 #include "io.h"
 #include "inifile_mb_wide_mfc_vs.h"

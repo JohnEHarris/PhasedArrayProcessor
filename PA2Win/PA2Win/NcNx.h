@@ -64,5 +64,9 @@ public:
 	afx_msg void OnDeltaposSpGate( NMHDR *pNMHDR, LRESULT *pResult );
 	afx_msg void OnDeltaposSpParam( NMHDR *pNMHDR, LRESULT *pResult );
 	CListBox m_lbOutput;
-	afx_msg void OnBnClickedErase();
+	afx_msg void OnBnClickedBnErase();
+	afx_msg void OnCbnSelchangeCbCmds();
+	CComboBox m_cbCommand;
+	int m_nCmdId;
+	void PopulateCmdComboBox();
 	};

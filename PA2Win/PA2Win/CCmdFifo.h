@@ -8,7 +8,7 @@ Purpose:TCP/IP Can fragment messages and can combine them. In order to extract j
 
 #ifndef CMD_FIFO_H
 #define CMD_FIFO_H
-#include "../Include/PA2Struct.h"
+#include "../../Include/PA2Struct.h"
 
 
 class CCmdFifo

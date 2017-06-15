@@ -303,15 +303,6 @@ void CNcNx::OnBnClickedBnErase()
 	m_lbOutput.ResetContent();
 	}
 
-CString CmdText[] =
-	{
-	_T( "null 0" ),
-	_T( "null 1" ),
-	_T( "Gate %n Delay %n" ),
-	_T( "Gate n Range" ),
-	_T( "Gate n Thold" )
-	};
-
 // Fill the combo box with strings whose index in the combobox matches the 
 // command ID found in Cmds.h
 // NcNx is a test command. Will likely never exist for real system
@@ -342,10 +333,15 @@ void CNcNx::OnCbnSelchangeCbCmds()
 	switch (m_nCmdId)
 		{
 		case 0:
-		case 1:	s = t;	break;
-
-		default:
-			s = t;		break;
+		case 1:	s.Format( _T( "null %d" ), m_nCmdId );	break;
+		case 2: s.Format(_T("Gate %d Delay %d"), m_nGate, m_nParam); break;
+		case 3: s.Format(_T("Gate %d Range %d"), m_nGate, m_nParam); break;
+		case 4: s.Format(_T("Gate %d Blank %d"), m_nGate, m_nParam); break;
+		case 5: s.Format(_T("Gate %d Thold %d"), m_nGate, m_nParam); break;
+		case 6: s.Format(_T("Gate %d Trigger %d"), m_nGate, m_nParam); break;
+		case 7: s.Format(_T("Gate %d Polarity %d"), m_nGate, m_nParam); break;
+		case 8: s.Format(_T("Gate %d TOF %d"), m_nGate, m_nParam); break;
+		default:	s = t;		break;
 		}
 	m_lbOutput.AddString( s );
 	}

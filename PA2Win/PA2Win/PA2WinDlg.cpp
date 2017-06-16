@@ -1824,3 +1824,122 @@ void CPA2WinDlg::OnBnClickedBnShutdown()
 		}
 #endif
 	}
+
+void CPA2WinDlg::DebugToNcNxDlg( CString s )
+	{
+	if (gDlg.pNcNx)
+		gDlg.pNcNx->DebugOut(s);
+	}
+
+#if 1
+// Code to send messages from windows test dialog to the boards via the PAP.
+// Adapted from PhasedArrayMMI CTscanDlg code. In PhasdArrayMMI, the server to the
+// inspection machinery was called PAM - Phased Array Master. Here it is called
+// PhasedArrayProcessor - PAP
+// nClientNumber is the targer PAP that will receive the message. Internally the 
+// message specifies which board will receive the message. The PAP uses that information
+// to route the message to the correct board.
+//
+BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
+	{
+	CString s;
+	int nLen;		// how long will the returned message be?
+	int rc;
+	GenericPacketHeader *pHeader;
+
+	pHeader = (GenericPacketHeader*)pMsg;
+	nLen = pHeader->wByteCount;
+
+	if ( (nClientNumber < 0) || (nClientNumber >= MAX_CLIENTS))
+		{
+		s.Format(_T("CPA2WinDlg::SendMsgToPAM FAIL, n = %d\n"),nClientNumber );
+		TRACE(s);
+		if (gDlg.pNcNx)
+			gDlg.pNcNx->DebugOut(s);		delete pMsg;	// clean up the mess
+		return FALSE;
+		}
+
+		// assuming server # 0 = ePAM_Server is the PAM server
+	if (NULL == stSCM[ePAM_Server].pClientConnection[nClientNumber])
+		{
+		s.Format(_T("CPA2WinDlg::SendMsgToPAM No Valid ClientConnection for client = %d\n"),nClientNumber );
+		TRACE(s);
+		if (gDlg.pNcNx)
+			gDlg.pNcNx->DebugOut(s);
+		delete pMsg;	// clean up the mess
+		return FALSE;
+		}
+	if (0 == stSCM[ePAM_Server].pClientConnection[nClientNumber]->bConnected)
+		{
+		s.Format(_T("CPA2WinDlg::SendMsgToPAM Client = %d is not connected\n"),nClientNumber );
+		TRACE(s);
+		if (gDlg.pNcNx)
+			gDlg.pNcNx->DebugOut(s);
+
+#if 0
+
+		delete pMsg;	// clean up the mess
+		return FALSE;
+#endif
+		}
+
+	// allow for more than one type of message. As of June 2016 only NcNx msg
+	if (nMsgID > 0)	// && (nMsgID <= LAST_MSG_ID))
+		{
+
+		// int CServerConnectionManagement::SendPacketToPAM
+		// posts a thread message to a ServerSocketOwnerThread to empty the linked list and send all packets
+		// Message activates CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
+
+		s = _T("rc = stSCM[ePAM_Server].pSCM->SendPacketToPAM\n");
+//		if (gDlg.pNcNx)
+//			gDlg.pNcNx->DebugOut(s);
+
+		rc = stSCM[ePAM_Server].pSCM->SendPacketToPAM(nClientNumber, (BYTE *)pMsg, nLen, 1);
+		if (rc < 0)
+			{
+			s.Format(_T("PA2WinDlg::SendMsgToPAM Failed to send pkt, err num  = %d\n"), rc);
+			TRACE(s);
+			if (gDlg.pNcNx)
+				gDlg.pNcNx->DebugOut(s);
+
+			delete pMsg;	// clean up the mess
+			return FALSE;
+			}
+
+		// Instrument can only take 5 commands at a time.
+		// Check feedback info in Idata to see how deep Instruments fifo is
+		// temporary fix??
+		Sleep(50);
+		return TRUE;
+		}
+
+	else
+		{
+
+		s.Format(_T("PA2WinDlg::SendMsgToPAM FAIL, Unknown know msg ID = %d\n"), nMsgID);
+		TRACE(s);
+		if (gDlg.pNcNx)
+			gDlg.pNcNx->DebugOut(s);
+
+		delete pMsg;	// clean up the mess
+		return FALSE;
+		}
+
+	
+
+
+#if 0
+	pBuf = BuildPAM_Message(nClientNumber, nMsg, &nLen, pv);	// allocates and returns memory with message in it.
+	if (pBuf == NULL)
+		{
+		s.Format(_T("PA2WinDlg::BuildPAM[%d] returned NULL\n"),nClientNumber );
+		TRACE(s);
+		return FALSE;		
+		}
+#endif
+
+	return FALSE;
+	}
+
+#endif

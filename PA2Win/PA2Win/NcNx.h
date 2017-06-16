@@ -33,7 +33,8 @@ public:
 	// Ini file section and key values for saving screen location of the dialog
 	CString m_DlgLocationKey;				// Include in all dialogs. Names the entry for the registry to hold location
 	CString m_DlgLocationSection;			// Section name, for dialog locations this is "Dialog Locations"
-
+	void DebugOut( CString s );
+	void SendMsg( GenericPacketHeader *pMsg );
 
 // Dialog Data
 #ifdef AFX_DESIGN_TIME

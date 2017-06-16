@@ -6,9 +6,9 @@
 // I_AM_PAP is defined in the PAP project under C++ | Preprocessor Definitions 
 
 #ifdef I_AM_PAP
-//#define MAIN_DLG_NAME	CTscanDlg
+//#define MAIN_DLG_NAME	PA2WinDlg
 #else
-//#define MAIN_DLG_NAME	CTscanDlg
+//#define MAIN_DLG_NAME	PA2WinDlg
 #endif
 
 

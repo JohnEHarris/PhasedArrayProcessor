@@ -738,8 +738,8 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 		s = _T("SCM::SendPacket - no m_pstSCM for this client\n");
 		TRACE(s);
 #ifdef	I_AM_PAG
-//		if (CNcNx::m_pDlg)
-//			CNcNx::m_pDlg->DebugOut(s);
+		if (gDlg.pNcNx)
+			gDlg.pNcNx->DebugOut(s);
 #else
 		TRACE(s);
 #endif
@@ -751,8 +751,8 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 		s = _T("SCM::SendPacket - no pClientConnection for this client\n");
 		TRACE(s);		
 #ifdef	I_AM_PAG
-//		if (CNcNx::m_pDlg)
-//			CNcNx::m_pDlg->DebugOut(s);
+		if (gDlg.pNcNx)
+			gDlg.pNcNx->DebugOut(s);
 #else
 		TRACE(s);
 #endif
@@ -765,8 +765,8 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 		{
 		s = _T("SCM::SendPacket - no pServerSocketOwnerThread for this client\n");
 		TRACE(s);		
-//		if (CNcNx::m_pDlg)
-//			CNcNx::m_pDlg->DebugOut(s);
+		if (gDlg.pNcNx)
+			gDlg.pNcNx->DebugOut(s);
 		if (nDeleteFlag)		delete pB;
 		return -4;		// we know the client number, but not the sockets controlling thread
 		}
@@ -776,8 +776,8 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 		{
 		s = _T("SCM::SendPacket - no socket for this client\n");
 		TRACE(s);		
-//		if (CNcNx::m_pDlg)
-//			CNcNx::m_pDlg->DebugOut(s);
+		if (gDlg.pNcNx)
+			gDlg.pNcNx->DebugOut(s);
 		if (nDeleteFlag)		delete pB;
 		return -5;		// the clients socket doesn't exist
 		}
@@ -786,8 +786,8 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 		{
 		s = _T("Server ShutDown in progress\n");
 		TRACE(s);	// don't queue any new packets	
-//		if (CNcNx::m_pDlg)
-//			CNcNx::m_pDlg->DebugOut(s);
+		if (gDlg.pNcNx)
+			gDlg.pNcNx->DebugOut(s);
 
 		if (nDeleteFlag)		delete pB;
 		return -6;		

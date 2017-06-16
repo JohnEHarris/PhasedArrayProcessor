@@ -85,15 +85,18 @@ END_MESSAGE_MAP()
 
 
 // CNcNx message handlers
-#if 0
+
 void CNcNx::DebugOut(CString s)
 	{
+	m_lbOutput.AddString( s );
+#if 0
 	char txt[1024];
 	CstringToChar(s,txt);
 	strcat(txt,"\r\n");
 	DebugFile.Write(txt, strlen(txt));
-	}
 #endif
+
+	}
 
 #define PAP_MAX		0
 #define BOARD_MAX	2
@@ -442,7 +445,7 @@ void CNcNx::GateCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 		m_GateCmd.bGateNumber, m_GateCmd.wDelay);
 	t = sym + s;
 	m_lbOutput.AddString(t);
-	//SendMsg((GenericPacketHeader*)&m_GateCmd);
+	SendMsg((GenericPacketHeader*)&m_GateCmd);
 	//if (m_RbGates >= 4) break;	// one command sets all gates for a chnl	
 	}
 
@@ -452,4 +455,56 @@ void CNcNx::OnBnClickedBnDonothing()
 	// TODO: Add your control notification handler code here
 	// Does nothing but take focus off of OK and Cancel
 	// In Resource view use Properties to set this as the default button
+	}
+
+
+// Message goes to one specific PAM and one specific instrument in the PAM
+// 2016-06-27 we will assume that messages will be built by the routine which configures the
+// parameters of the message. This is a departure from the way we have done this for a couple
+// of decades. Allocate memory to the message here to be put into a linked list.  Call the main
+// dialog to actually add the message to the linked list so the message sequence number can be attached.
+//
+void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
+	{
+	//int nPam, nInst, nChnl;
+	ST_LARGE_CMD *pSend;
+	PAP_INST_CHNL_NCNX * pSendNcNx;
+	if (pMsg->wMsgID >= 0x200)
+		{
+		switch (pMsg->wMsgID)
+			{
+		case 1+0x200:
+			// development code special
+			pSendNcNx = new PAP_INST_CHNL_NCNX;
+			memset((void *)pSendNcNx, 0, sizeof(PAP_INST_CHNL_NCNX));
+			memcpy((void *)pSendNcNx, (void *)pMsg, pMsg->wByteCount);	// sizeof(ST_NC_NX) * 72);
+			pSendNcNx->bPAPNumber = m_nPAP;
+			pSendNcNx->bBoardNumber = m_nBoard;
+			pSend = (ST_LARGE_CMD *)pSendNcNx;
+			gDlg.pUIDlg->SendMsgToPAP((int)pMsg->bPapNumber, pMsg->wMsgID, (void *)pSend);
+			break;
+		default:
+			TRACE(_T("Unrecognized message in NcNx\n"));
+			return;
+			}
+		}
+	else
+		{
+		if (pMsg->wByteCount == 32)
+			{	// small command format
+			ST_SMALL_CMD *pSend = new ST_SMALL_CMD;
+			memset((void*)pSend, 0, sizeof(ST_SMALL_CMD));
+			memcpy((void*)pSend, (void*)pMsg, sizeof(ST_SMALL_CMD));
+			gDlg.pUIDlg->SendMsgToPAP((int)pMsg->bPapNumber, pMsg->wMsgID, (void *)pSend);
+			}
+		else
+			{	// large command format
+			ST_LARGE_CMD *pSend = new ST_LARGE_CMD;
+			memset((void*)pSend, 0, sizeof(ST_LARGE_CMD));
+			memcpy((void*)pSend, (void*)pMsg, sizeof(ST_LARGE_CMD));
+			gDlg.pUIDlg->SendMsgToPAP((int)pMsg->bPapNumber, pMsg->wMsgID, (void *)pSend);
+			}
+		}
+
+
 	}

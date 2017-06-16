@@ -89,7 +89,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 	
 	// Infinite loop waiting on handle which never gets set
 	// Wakes every 100 ms and post msg to client threads primarily
-	// in PAG this same functionality is called CTscanDlg::TimerTickToThreads(void)
+	// in PAG this same functionality is called PA2WinDlg::TimerTickToThreads(void)
 	//
 	// waiting for ServiceApp::ShutDown to issue ::SetEvent(m_pTestThread->g_hTimerTick);
 	//

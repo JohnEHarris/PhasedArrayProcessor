@@ -179,9 +179,11 @@ void CNcNx::OnDeltaposSpBoard( NMHDR *pNMHDR, LRESULT *pResult )
 	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
 	// TODO: Add your control notification handler code here
 	*pResult = 0;
+#if 0
 	m_nBoard = pNMUpDown->iPos + pNMUpDown->iDelta;
 	if (m_nBoard < 0)	m_nBoard = 0;
 	if (m_nBoard > BOARD_MAX)	m_nBoard = BOARD_MAX;
+#endif
 	m_nBoard = GetSpinValue( pNMUpDown, &m_spBoard );
 	}
 
@@ -192,9 +194,11 @@ void CNcNx::OnDeltaposSpPap( NMHDR *pNMHDR, LRESULT *pResult )
 	// TODO: Add your control notification handler code here
 	// must use vertical scroll to retrieve the new value after the button spins
 	*pResult = 0;
+#if 0
 	m_nPAP = pNMUpDown->iPos + pNMUpDown->iDelta;
 	//if (m_nPAP < 0)	
 	m_nPAP = 0;
+#endif
 	m_nPAP = GetSpinValue( pNMUpDown, &m_spPap );
 	}
 
@@ -204,9 +208,11 @@ void CNcNx::OnDeltaposSpSeq( NMHDR *pNMHDR, LRESULT *pResult )
 	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
 	// TODO: Add your control notification handler code here
 	*pResult = 0;
+#if 0
 	m_nSeq = pNMUpDown->iPos + pNMUpDown->iDelta;
 	if (m_nSeq > gMaxSeqCount - 1)	m_nSeq = gMaxSeqCount - 1;
 	if (m_nSeq < 0)		m_nSeq = 0;
+#endif
 	m_nSeq = GetSpinValue( pNMUpDown, &m_spSeq );
 	}
 
@@ -216,9 +222,11 @@ void CNcNx::OnDeltaposSpCh( NMHDR *pNMHDR, LRESULT *pResult )
 	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
 	// TODO: Add your control notification handler code here
 	*pResult = 0;
+#if 0
 	m_nCh = pNMUpDown->iPos + pNMUpDown->iDelta;
 	if (m_nCh > gMaxChnlsPerMainBang - 1)	m_nCh =  gMaxChnlsPerMainBang - 1;
 	if (m_nCh < 0)		m_nCh = 0;
+#endif
 	m_nCh = GetSpinValue( pNMUpDown, &m_spCh );
 	}
 
@@ -228,15 +236,19 @@ void CNcNx::OnDeltaposSpGate( NMHDR *pNMHDR, LRESULT *pResult )
 	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
 	// TODO: Add your control notification handler code here
 	*pResult = 0;
+#if 0
 	m_nGate = pNMUpDown->iPos + pNMUpDown->iDelta;
 	if (m_nGate > 3)		m_nGate = 3;
 	if (m_nGate < 0)		m_nGate = 0;
+#endif
 	m_nGate = GetSpinValue( pNMUpDown, &m_spGate );
 	}
 
 // Do limit checking on spin value
 // Uses range limit normally set in OnInitDialog
 // If you don't set the range this will not work
+// Compiler warns not to pass spin control as a reference... says its a delete function
+// But this seems to work by passing a pointer.
 //
 int CNcNx::GetSpinValue( LPNMUPDOWN pNMUpDown, CSpinButtonCtrl *m_spButton )
 	{
@@ -244,7 +256,8 @@ int CNcNx::GetSpinValue( LPNMUPDOWN pNMUpDown, CSpinButtonCtrl *m_spButton )
 	DWORD nPos;
 	int min, max;
 	nValue = pNMUpDown->iPos + pNMUpDown->iDelta;
-	nPos = m_spButton->GetRange();	min = nPos >> 16;	max = nPos & 0xffff;
+	nPos = m_spButton->GetRange();	// GetRange returns a double
+	min = nPos >> 16;	max = nPos & 0xffff;
 	if (nValue < min)		nValue = min;
 	if (nValue > max)		nValue = max;
 	return nValue;
@@ -254,11 +267,12 @@ int CNcNx::GetSpinValue( LPNMUPDOWN pNMUpDown, CSpinButtonCtrl *m_spButton )
 // could be gate delay, or receiver gain, or trigger level of a flaw
 void CNcNx::OnDeltaposSpParam( NMHDR *pNMHDR, LRESULT *pResult )
 	{
-	// Copy this code for all spinners BEGIN
 	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
-#if 0
+	// Copy this code for all spinners BEGIN
 	// TODO: Add your control notification handler code here
 	*pResult = 0;
+#if 0
+
 	int nValue;
 	DWORD nPos;
 	int min, max;
@@ -270,6 +284,8 @@ void CNcNx::OnDeltaposSpParam( NMHDR *pNMHDR, LRESULT *pResult )
 	if (nValue > PARAM_MAX)	nValue = PARAM_MAX;
 	// Copy this code for all spinners END
 #endif
+	// assuming that you must set the range before first use, why
+	// couldn't microsoft do this
 	m_nParam = GetSpinValue( pNMUpDown, &m_spParam );
 	}
 

@@ -17,13 +17,13 @@ public:
 
 	int m_nPam;		// which PAM
 	int m_nLastPam;
-	int m_nInst;
+	int m_nBoard;
 	int m_nPAP;
 	int m_nSeq;
 	int m_nCh;
 	int m_nGate;
 	int m_nParam;
-	int m_nLastInst;
+	//int m_nLastInst;
 	void Save_Pos(void);
 
 	void PositionWindow();
@@ -49,16 +49,15 @@ public:
 	virtual void OnOK();
 	virtual void OnCancel();
 	virtual void PostNcDestroy();
-	CSpinButtonCtrl m_spInst;
 	CSpinButtonCtrl m_spPap;
+	CSpinButtonCtrl m_spBoard;
 	CSpinButtonCtrl m_spSeq;
 	CSpinButtonCtrl m_spCh;
 	CSpinButtonCtrl m_spGate;
 	CSpinButtonCtrl m_spParam;
 
-	//afx_msg void OnVScroll( UINT nSBCode, UINT nPos, CScrollBar* pScrollBar );
-	afx_msg void OnDeltaposSpInst( NMHDR *pNMHDR, LRESULT *pResult );
 	afx_msg void OnDeltaposSpPap( NMHDR *pNMHDR, LRESULT *pResult );
+	afx_msg void OnDeltaposSpBoard( NMHDR *pNMHDR, LRESULT *pResult );
 	afx_msg void OnDeltaposSpSeq( NMHDR *pNMHDR, LRESULT *pResult );
 	afx_msg void OnDeltaposSpCh( NMHDR *pNMHDR, LRESULT *pResult );
 	afx_msg void OnDeltaposSpGate( NMHDR *pNMHDR, LRESULT *pResult );
@@ -69,4 +68,12 @@ public:
 	CComboBox m_cbCommand;
 	int m_nCmdId;
 	void PopulateCmdComboBox();
+
+	void GateCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue);
+	// All gate commands have the same template. The Cmd ID determines which one of the
+	// 7 gate commands is actually sent.
+	ST_GATE_DELAY_CMD m_GateCmd;
+	afx_msg void OnBnClickedBnDonothing();
+	CButton m_bnDoNoting;
+	int GetSpinValue( LPNMUPDOWN pNMUpDown, CSpinButtonCtrl *m_spButton );
 	};

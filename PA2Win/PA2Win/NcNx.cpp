@@ -89,13 +89,7 @@ END_MESSAGE_MAP()
 void CNcNx::DebugOut(CString s)
 	{
 	m_lbOutput.AddString( s );
-#if 0
-	char txt[1024];
-	CstringToChar(s,txt);
-	strcat(txt,"\r\n");
-	DebugFile.Write(txt, strlen(txt));
-#endif
-
+	gDlg.pUIDlg->SaveDebugLog( s );
 	}
 
 #define PAP_MAX		0
@@ -114,19 +108,17 @@ BOOL CNcNx::OnInitDialog()
 #ifdef I_AM_PAG
 	m_spPap.SetRange( 0, PAP_MAX );	// gnMaxClientsPerServer - 1 );  //how many clients do I have
 	m_spBoard.SetRange( 0, BOARD_MAX );	// gnMaxClients - 1 );		// how many clients does my client have
-	m_spSeq.SetRange( 0, gMaxSeqCount-1 );		// number of sequence in firing scheme
-	m_spCh.SetRange( 0, gMaxChnlsPerMainBang-1 );		// number of channel in each sequence
-	m_spGate.SetRange( 0, 3 );		// number of gates in each channel
-	m_spParam.SetRange( 1, PARAM_MAX );	// depends of command selected from list box
 #else
 	// I am the PAP
 	m_spPap.SetRange( 0, 0 );  //how many clients do I have
 	m_spInst.SetRange( 0, gnMaxClients-1 );		// how many clients does my client have
+#endif
+
 	m_spSeq.SetRange( 0, gMaxSeqCount-1 );		// number of sequence in firing scheme
 	m_spCh.SetRange( 0, gMaxChnlsPerMainBang-1 );		// number of channel in each sequence
-	m_spGate.SetRange( 0, 3 );	
+	m_spGate.SetRange( 0, 3 );		// number of gates in each channel
+	m_spParam.SetRange( 1, PARAM_MAX );	// depends of command selected from list box
 
-#endif
 	m_lbOutput.ResetContent();
 	m_cbCommand.ResetContent();
 	m_nPAP = m_nBoard = m_nSeq = m_nCh = m_nGate = m_nParam	= 0;

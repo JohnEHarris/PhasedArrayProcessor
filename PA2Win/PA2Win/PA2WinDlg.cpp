@@ -323,15 +323,6 @@ Here, ClientBaseIp[16] = 192.168.10.201
 
 	GetClientConnectionManagementInfo();
 	SaveClientConnectionManagementInfo();
-	// do it on program close
-#if 0
-	if (gDlg.pTuboIni)
-		{
-		delete gDlg.pTuboIni;
-		gDlg.pTuboIni = 0;
-		}
-#endif
-
 	}
 
 CPA2WinDlg::~CPA2WinDlg()

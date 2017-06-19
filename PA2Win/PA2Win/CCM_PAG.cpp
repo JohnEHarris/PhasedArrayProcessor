@@ -160,7 +160,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 			break;
 
-		case 2:
+		case 2:	// Gate commands from PAG TO PAP then PAP to Board
 		case 3:
 		case 4:
 		case 5:
@@ -199,37 +199,6 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 
 		m_nMsgQty++;
-/***************************************************
-		s.Format(_T("[%03d]CCCM_PAG::ProcessReceivedMessage for Inst[%d], Chnl[%d]- now delete\n"),
-			m_nMsgQty, pMmiCmd->Slot, pCmd->ChnlNum);
-		TRACE(s);
-
-
-		// Instead of deleting the packet, we will add it to stSCM[0] server (server for all attached Instruments)
-		// in stSCM[0].pClientConnection[pCmd->Slot] connection structure
-		if (stSCM[0].pClientConnection[pCmd->Slot])
-			{
-			CServerSocket *pSocket				= stSCM[0].pClientConnection[pCmd->Slot]->pSocket;
-			CServerSocketOwnerThread *pThread	= stSCM[0].pClientConnection[pCmd->Slot]->pServerSocketOwnerThread;
-			if ( pSocket && pThread)
-				{
-				// create a new buffer with length + data
-				stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[sizeof(ST_LARGE_CMD)+sizeof(int)];	// resize the buffer that will actually be used
-				memcpy( (void *) &pBuf->Msg, pCmd, sizeof(ST_LARGE_CMD));	// move all data to the new buffer
-				pBuf->nLength = sizeof(ST_LARGE_CMD);
-				pB = (BYTE *) pBuf;	// debug helper			
-				// add to Send list
-				// Send thread msg TransmitPacket to socket owner
-				// delete pCmd
-				pSocket->LockSendPktList();
-				pSocket->AddTailSendPkt(pBuf);
-				pSocket->UnLockSendPktList();
-				// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
-				pThread->PostThreadMessageA(WM_USER_SERVER_SEND_PACKET,0,0L);
-				}
-			}
-***************************************************/
-
 		}	// while (m_pstCCM->pRcvPktPacketList->GetCount())
 
 	}	// ProcessReceivedMessage(void)

@@ -71,7 +71,7 @@ void CCmdProcessThread::ProcessReceivedMessage(WPARAM, LPARAM)
 	// call the ProcessReceivedMessage in the CCM class instance at this thread's priority level
 	switch (m_pMyCCM->m_nMyConnection)
 		{
-#ifdef THIS_IS_SERVICE_APP
+#ifdef I_AM_PAP
 	case 0:
 	case 2:
 		// case 0 of the client connection to PAG is the link thru which user commands come to PAM
@@ -83,9 +83,10 @@ void CCmdProcessThread::ProcessReceivedMessage(WPARAM, LPARAM)
 			pCCM_PAG->ProcessReceivedMessage();
 		break;
 #else
+	// I_AM_PAG  the GUI. The received message is data from the boards
 	case 0:
 
-		break;
+		//break;
 #endif
 	default:
 		// this is processed by CClientConnectionManagement::ProcessReceivedMessage(void)

@@ -6,7 +6,8 @@ Purpose:	Derive a specific class from the general base class ClientConnectionMan
 			to begin with children of the base CCM class
 Revised:	20-Jan-13
 			Rename to CCM_PAG to handle client connection to Phased Array Gui. Now part of 
-			Phased Array Master (PAM) code
+			Phased Array Master (PAM) code aka PAP - PhasedArrayProcessor
+			normally the GUI is the server and the PAP is a client.
 #endif
 
 #ifndef CCM_PAG_H_2013
@@ -31,7 +32,7 @@ public:
 	CCCM_PAG(int nMyConnection);		// the only constructor
 	virtual ~CCCM_PAG(void);
 	void UniqueProc(void);
-	void CCCM_PAG::ProcessReceivedMessage(void);
+	void CCCM_PAG::ProcessReceivedMessage(void);	// client got a message from the server
 
 
 

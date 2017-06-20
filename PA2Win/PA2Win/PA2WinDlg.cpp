@@ -1342,17 +1342,63 @@ void CPA2WinDlg::OnBnClickedOk()
 	{
 	// TODO: Add your control notification handler code here
 	StopTimer();
+	OnBnClickedBnShutdown();
 	CDialogEx::OnOK();
 	}
-
 
 void CPA2WinDlg::OnBnClickedCancel()
 	{
 	// TODO: Add your control notification handler code here
 	StopTimer();
+	OnBnClickedBnShutdown();
 	CDialogEx::OnCancel();
 	}
 
+void CPA2WinDlg::OnBnClickedBnShutdown()
+	{
+	// TODO: Add your control notification handler code here
+	// Kill all threads but don't exit the program
+	// Used to see if we can delete all objects created with new when the program runs.
+	int i = 0;
+	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM = 0;
+	CString s;
+
+	nShutDown = 1;
+	AfxGetThread()->SetThreadPriority( THREAD_PRIORITY_BELOW_NORMAL );
+
+	// KIll the test thread
+	if (m_pTestThread)
+		{
+		::SetEvent(g_hTimerTick);
+		Sleep(250);
+		Sleep(250);
+		}
+
+	DestroyCCM();
+	DestroySCM();
+		
+	CloseFakeData();
+	CloseDebugLog();
+	m_nFakeDataExists = m_nDebugLogExists = 0;
+	Sleep( 100 );
+	if (pCSSaveDebug)
+		delete pCSSaveDebug;
+	pCSSaveDebug = 0;
+
+
+#if 0
+	for (i = 0; i < gnMaxServers; i++)
+		{
+		if (pSCM[i])
+			{
+			pstSCM = pSCM[i]->m_pstSCM;
+			pSCM[i]->ServerShutDown( i );
+			delete pSCM[i];
+			}
+		pSCM[i] = 0;
+		}
+#endif
+	}
 
 void CPA2WinDlg::OnFileExit()
 	{
@@ -1638,9 +1684,11 @@ void CPA2WinDlg::DestroySCM( void )
 
 
 
-
+//Only open this dialog if on the PAG machine
+//
 void CPA2WinDlg::OnConfigureNcNx()
 	{
+#ifdef I_AM_PAG
 	// TODO: Add your command handler code here
 	if (gDlg.pNcNx == NULL)
 		{
@@ -1651,6 +1699,9 @@ void CPA2WinDlg::OnConfigureNcNx()
 			}
 		}
 	else gDlg.pNcNx->SetFocus();
+#else
+	MessageBox( _T( "NcNx Dialog only available from Phased Array GUI" ), _T( "eError" ), MB_OK );
+#endif
 	}
 
 void CPA2WinDlg::SaveMyWindowPosition()
@@ -1770,59 +1821,13 @@ void CPA2WinDlg::OnBnClickedBnEraseDbg()
 	}
 
 
-void CPA2WinDlg::OnBnClickedBnShutdown()
-	{
-	// TODO: Add your control notification handler code here
-	// Kill all threads but don't exit the program
-	// Used to see if we can delete all objects created with new when the program runs.
-	int i = 0;
-	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM = 0;
-	CString s;
-
-	nShutDown = 1;
-	AfxGetThread()->SetThreadPriority( THREAD_PRIORITY_BELOW_NORMAL );
-
-	// KIll the test thread
-	if (m_pTestThread)
-		{
-		::SetEvent(g_hTimerTick);
-		Sleep(250);
-		Sleep(250);
-		}
-
-	DestroyCCM();
-	DestroySCM();
-		
-	CloseFakeData();
-	CloseDebugLog();
-	m_nFakeDataExists = m_nDebugLogExists = 0;
-	Sleep( 100 );
-	if (pCSSaveDebug)
-		delete pCSSaveDebug;
-	pCSSaveDebug = 0;
-
-
-#if 0
-	for (i = 0; i < gnMaxServers; i++)
-		{
-		if (pSCM[i])
-			{
-			pstSCM = pSCM[i]->m_pstSCM;
-			pSCM[i]->ServerShutDown( i );
-			delete pSCM[i];
-			}
-		pSCM[i] = 0;
-		}
-#endif
-	}
-
 void CPA2WinDlg::DebugToNcNxDlg( CString s )
 	{
 	if (gDlg.pNcNx)
 		gDlg.pNcNx->DebugOut(s);
 	}
 
-#if 1
+#ifdef I_AM_PAG
 // Code to send messages from windows test dialog to the boards via the PAP.
 // Adapted from PhasedArrayMMI CTscanDlg code. In PhasdArrayMMI, the server to the
 // inspection machinery was called PAM - Phased Array Master. Here it is called

@@ -159,7 +159,7 @@ int CServerRcvListThread::ExitInstance()
 	int i = 0;
 	//void *pV;
 
-#if 0
+#ifdef I_AM_PAP
 	if (m_pElapseTimer)
 		{
 		delete m_pElapseTimer;

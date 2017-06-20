@@ -737,8 +737,8 @@ void CServerSocket::OnReceive(int nErrorCode)
 	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)	return;
 	if (m_pSCC == NULL)							return;
 
-	if (m_nClientIndex != 0)
-		TRACE( _T( "m_nClientIndex != 0 In OnReceive\n" ) );
+	if (m_nClientIndex == 0)
+		TRACE( _T( "m_nClientIndex == 0 In OnReceive\n" ) );
 
 	if (m_pSCC->bStopSendRcv)
 			{

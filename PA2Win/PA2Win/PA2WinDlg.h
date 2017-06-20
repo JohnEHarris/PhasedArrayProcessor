@@ -204,8 +204,9 @@ public:
 	void StructSizes( void );
 	void DlgDebugOut( CString s );
 	void DebugToNcNxDlg( CString s );
+#ifdef I_AM_PAG
 	BOOL SendMsgToPAP( int nClientNumber, int nMsgID, void *pMsg );
-
+#endif
 
 // Dialog Data
 #ifdef AFX_DESIGN_TIME

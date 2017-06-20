@@ -111,7 +111,7 @@ BOOL CNcNx::OnInitDialog()
 #else
 	// I am the PAP
 	m_spPap.SetRange( 0, 0 );  //how many clients do I have
-	m_spInst.SetRange( 0, gnMaxClients-1 );		// how many clients does my client have
+	m_spBoard.SetRange( 0, gnMaxClients-1 );		// how many clients does my client have
 #endif
 
 	m_spSeq.SetRange( 0, gMaxSeqCount-1 );		// number of sequence in firing scheme
@@ -450,7 +450,7 @@ void CNcNx::OnBnClickedBnDonothing()
 	}
 
 
-// Message goes to one specific PAM and one specific instrument in the PAM
+// Message goes to one specific PAP and one specific board in the PAP
 // 2016-06-27 we will assume that messages will be built by the routine which configures the
 // parameters of the message. This is a departure from the way we have done this for a couple
 // of decades. Allocate memory to the message here to be put into a linked list.  Call the main
@@ -458,6 +458,8 @@ void CNcNx::OnBnClickedBnDonothing()
 //
 void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 	{
+#ifdef I_AM_PAG
+
 	//int nPam, nInst, nChnl;
 	ST_LARGE_CMD *pSend;
 	PAP_INST_CHNL_NCNX * pSendNcNx;
@@ -497,6 +499,7 @@ void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 			gDlg.pUIDlg->SendMsgToPAP((int)pMsg->bPapNumber, pMsg->wMsgID, (void *)pSend);
 			}
 		}
-
+#endif
 
 	}
+

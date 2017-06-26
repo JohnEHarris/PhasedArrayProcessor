@@ -555,7 +555,7 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 				}
 			}
 
-	delete pscc->pSocket;
+	delete m_pSCC->pSocket;
 	// destructor does everything in the excluded code below
 #if 0
 	if (m_pSCC->pSocket)
@@ -705,6 +705,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			//theApp.SaveDebugLog(s);
 			pMainDlg->SaveDebugLog(s);
 			break;
+		// add other large commands here if needed
+#if 0
 		case 2:		// Gate delay cmd
 		case 3:		// Gate range cmd
 		case 4:		// Gate blank cmd
@@ -717,14 +719,25 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			nMsgSize = pCmd->wByteCount;	//sizeof(PAP_INST_CHNL_NCNX);
 
 			break;
+#endif
 
 		default:
-			s.Format(_T("Unrecognized CMD, ID= %d, seq=%2d, PktListSize= %3d\n"),
-				pCmd->wMsgID, pCmd->wMsgSeqCnt, i);
-			//theApp.SaveDebugLog(s);
-			pMainDlg->SaveDebugLog(s);
-			goto DELETE_CMD;
-			}
+			// maybe this is a small command - most valid commands are.
+
+			if (pCmd->wByteCount <= sizeof(ST_SMALL_CMD))
+				{
+				nMsgSize = pCmd->wByteCount;
+				break;
+				}
+			else
+				{
+				s.Format( _T( "Unrecognized CMD, ID= %d, seq=%2d, PktListSize= %3d\n" ),
+					pCmd->wMsgID, pCmd->wMsgSeqCnt, i );
+				//theApp.SaveDebugLog(s);
+				pMainDlg->SaveDebugLog( s );
+				goto DELETE_CMD;
+				}
+			}	// switch (pCmd->wMsgID)
 
 		// up to 50 attempts to send
 		for ( i = 0; i < 50; i++)
@@ -738,8 +751,14 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				// debug info to trace output.. losing connection when attempting to download config file
 				if ((m_pSCC->uPacketsSent))	// &0xff) == 0)
 					{
-					s.Format(_T("ServerSocketOwnerThread Pkts sent to instrument = %d, Pkts lost = %d\n"),
-					m_pSCC->uPacketsSent, m_pSCC->uUnsentPackets);
+#ifdef I_AM_PAG
+					s.Format(_T("\nServerSocketOwnerThread Pkts sent to PAP[%d] board[%d] = %d, lost = %d\n"),
+					m_pSCC->m_nClientIndex, pCmd->bBoardNumber, m_pSCC->uPacketsSent, m_pSCC->uUnsentPackets);
+#else
+					// Must be PAP, skip my client index number
+					s.Format(_T("\nServerSocketOwnerThread Pkts sent to board[%d] = %d, lost = %d\n"),
+					pCmd->bBoardNumber, m_pSCC->uPacketsSent, m_pSCC->uUnsentPackets);
+#endif
 					TRACE(s);
 					}
 
@@ -770,7 +789,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				TRACE(s);
 				}
 			// 10054L is forcibly closed by remote host
-			}	// for ( i = 0; i < 5; i++)
+			}	// for ( i = 0; i < 50; i++)
 DELETE_CMD:
 		delete pCmd;		
 		}	// while (i = m_pConnectionSocket->m_pSCC->pSendPktList->GetCount() > 0 )

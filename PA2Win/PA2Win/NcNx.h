@@ -66,7 +66,12 @@ public:
 	CListBox m_lbOutput;
 	afx_msg void OnBnClickedBnErase();
 	afx_msg void OnCbnSelchangeCbCmds();
+	afx_msg void OnBnClickedBnDonothing();
 	CComboBox m_cbCommand;
+	CButton m_bnDoNoting;
+	int GetSpinValue( LPNMUPDOWN pNMUpDown, CSpinButtonCtrl *m_spButton );
+
+
 	int m_nCmdId;
 	void PopulateCmdComboBox();
 
@@ -74,7 +79,7 @@ public:
 	// All gate commands have the same template. The Cmd ID determines which one of the
 	// 7 gate commands is actually sent.
 	ST_GATE_DELAY_CMD m_GateCmd;
-	afx_msg void OnBnClickedBnDonothing();
-	CButton m_bnDoNoting;
-	int GetSpinValue( LPNMUPDOWN pNMUpDown, CSpinButtonCtrl *m_spButton );
+	void TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue );
+	// TCG commands have the same gain template
+	ST_SET_TCG_DELAY_CMD m_TcgCmd;
 	};

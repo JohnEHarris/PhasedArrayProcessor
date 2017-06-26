@@ -123,6 +123,25 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 			
 		MsgId = pMmiCmd->wMsgID;
+			
+		if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber] == nullptr)
+			{
+			delete pMmiCmd;
+			return;
+			}
+
+		CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
+		CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
+		if ((pSocket == 0) || (pThread == 0))
+			{
+			delete pMmiCmd;
+			return;
+			}
+
+		pSocket->LockSendPktList();
+		pSocket->AddTailSendPkt(pMmiCmd);
+		pSocket->UnLockSendPktList();
+
 
 		// big case statement adapted from ServiceApp.cpp 'c' routine ProcessMmiMsg()
 		switch(MsgId)
@@ -133,68 +152,37 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			// Does not get sent to instruments, sets Nc and Nx parameters for the PAM to use
 			i = sizeof(PAP_INST_CHNL_NCNX);
 			pPamChnlInfo = (PAP_INST_CHNL_NCNX *)pMmiCmd;
-			TRACE(_T("Received NC_NX_CMD_ID for Instrument %d from Phased Array GUI - now deleting\n"),pMmiCmd->bBoardNumber);
+			s.Format(_T("Received NC_NX_CMD_ID for Instrument %d from Phased Array GUI - now deleting\n"),pMmiCmd->bBoardNumber);
+			TRACE( s );
 			SetChannelInfo(pPamChnlInfo);
 			// For debugging instrument commands, send Hello message to the connected instrument
 			// Echo this message to the simulator to test commands which must go to the instrument
 			// In this case, we will let the thread which forwards the message to the instrument delete this 
 			// memory segment.
 			// delete pMmiCmd;
-			if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber])
-				{
-				CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
-				CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
-				if (pSocket && pThread)
-					{
-					pSocket->LockSendPktList();
-					pSocket->AddTailSendPkt(pMmiCmd);
-					pSocket->UnLockSendPktList();
-					// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
-					pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
-					}
-				else
-					delete pMmiCmd;
-				}
-			else
-				delete pMmiCmd;
+			// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
+			pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
+
 
 			break;
 
-		case 2:	// Gate commands from PAG TO PAP then PAP to Board
-		case 3:
-		case 4:
-		case 5:
-		case 6:
-		case 7:
-		case 8:
-
-			if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber])
-				{
-				CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
-				CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
-				if (pSocket && pThread)
-					{
-					pSocket->LockSendPktList();
-					pSocket->AddTailSendPkt(pMmiCmd);
-					pSocket->UnLockSendPktList();
-					// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
-					// ON_THREAD_MESSAGE(WM_USER_SERVER_SEND_PACKET, TransmitPackets)
-					// which sends the message to the gate boards of the instrument
-					pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
-					}
-				else
-					delete pMmiCmd;
-				}
-			else
-				delete pMmiCmd;
-
-			break;
-
-
+		//case 2-8:	// Gate commands from PAG TO PAP then PAP to Board
 
 		default:
-			TRACE(_T("No command recognized\nDeleting command from Phased Array GUI\n"));
-			delete pMmiCmd;
+			if (MsgId < 13)
+				{
+				s.Format(_T("Received Cmd %d for Instrument %d from Phased Array GUI - now deleting\n"),
+					MsgId, pMmiCmd->bBoardNumber);
+				TRACE( s );
+				// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
+				pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
+				}
+
+			else
+				{
+				TRACE( _T( "No command recognized\nDeleting command from Phased Array GUI\n" ) );
+				delete pMmiCmd;
+				}
 			}	// end switch(MsgId)			delete pMmiCmd;
 
 
@@ -218,6 +206,7 @@ int CCCM_PAG::FindWhichSlave(int nChannel)
 	{
 	// UNTIL WE HAVE A GOOD FIX, RETURN 0
 	return 0;
+#if 0
 	int sum=0, nSlave=0, i;
 
 	for (i=0; i<10; i++)
@@ -229,8 +218,9 @@ int CCCM_PAG::FindWhichSlave(int nChannel)
 			break;
 			}
 		}
+#endif
 
-	return nSlave;
+	return 0;
 	}
 
 int CCCM_PAG::FindSlaveChannel(int nChannel)
@@ -347,10 +337,13 @@ BOOL CCCM_PAG::SendSlaveMsgToAll(ST_LARGE_CMD *pCmd)
 
 // These functions copied from ServiceApp.cpp -- originally  'c' function
 // A command received from PAG AND FORWARDED to an Instrument
+//
 BOOL CCCM_PAG::SendSlaveMsg(int nWhichInstrument, ST_LARGE_CMD *pCmd)
 	{
 	BYTE *pB;
 	CString s;
+	stSEND_PACKET *pBuf;
+
 	if (pCmd->bBoardNumber !=nWhichInstrument)
 		{
 		ASSERT(0);
@@ -376,10 +369,20 @@ BOOL CCCM_PAG::SendSlaveMsg(int nWhichInstrument, ST_LARGE_CMD *pCmd)
 		CServerSocketOwnerThread *pThread	= stSCM[0].pClientConnection[pCmd->bBoardNumber]->pServerSocketOwnerThread;
 		if ( pSocket && pThread)
 			{
-			// create a new buffer with length + data
-			stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[sizeof(ST_LARGE_CMD)+sizeof(int)];	// resize the buffer that will actually be used
-			memcpy( (void *) &pBuf->Msg, pCmd, sizeof(ST_LARGE_CMD));	// move all data to the new buffer
-			pBuf->nLength = sizeof(ST_LARGE_CMD);
+			// differentiate between large and small commands
+			if (pCmd->wByteCount <= sizeof( ST_SMALL_CMD ))
+				{
+				pBuf = (stSEND_PACKET *) new BYTE[sizeof( ST_SMALL_CMD ) + sizeof( int )];	// resize the buffer that will actually be used
+				memcpy( (void *)&pBuf->Msg, pCmd, sizeof( ST_SMALL_CMD ) );	// move all data to the new buffer
+				pBuf->nLength = sizeof( ST_SMALL_CMD );
+				}
+			else
+				{
+				// create a new buffer with length + data
+				pBuf = (stSEND_PACKET *) new BYTE[sizeof( ST_LARGE_CMD ) + sizeof( int )];	// resize the buffer that will actually be used
+				memcpy( (void *)&pBuf->Msg, pCmd, sizeof( ST_LARGE_CMD ) );	// move all data to the new buffer
+				pBuf->nLength = sizeof( ST_LARGE_CMD );
+				}
 			pB = (BYTE *) pBuf;	// debug helper			
 			// add to Send list
 			// Send thread msg TransmitPacket to socket owner

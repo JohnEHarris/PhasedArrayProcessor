@@ -335,13 +335,17 @@ void CNcNx::PopulateCmdComboBox()
 
 	s.Format( _T( "null 0" ) );				m_cbCommand.AddString( s );
 	s.Format( _T( "null 1" ) );				m_cbCommand.AddString( s );
-	s.Format( _T( "Gate n Delay" ) );		m_cbCommand.AddString( s );
-	s.Format( _T( "Gate n Range" ) );		m_cbCommand.AddString( s );
-	s.Format( _T( "Gate n Blank" ) );		m_cbCommand.AddString( s );
-	s.Format( _T( "Gate n Thold" ) );		m_cbCommand.AddString( s );
-	s.Format( _T( "Gate n Trigger" ) );		m_cbCommand.AddString( s );
-	s.Format( _T( "Gate n Polarty" ) );		m_cbCommand.AddString( s );
-	s.Format( _T( "Gate n TOF" ) );			m_cbCommand.AddString( s );
+	s.Format( _T( "Gate n Delay" ) );		m_cbCommand.AddString( s );	//2
+	s.Format( _T( "Gate n Range" ) );		m_cbCommand.AddString( s );	//3
+	s.Format( _T( "Gate n Blank" ) );		m_cbCommand.AddString( s );	//4
+	s.Format( _T( "Gate n Thold" ) );		m_cbCommand.AddString( s );	//5
+	s.Format( _T( "Gate n Trigger" ) );		m_cbCommand.AddString( s );	//6
+	s.Format( _T( "Gate n Polarty" ) );		m_cbCommand.AddString( s );	//7
+	s.Format( _T( "Gate n TOF" ) );			m_cbCommand.AddString( s );	//8
+	s.Format( _T( "TCGStepSize" ) );		m_cbCommand.AddString( s );	//9
+	s.Format( _T( "TCGGainDelay" ) );		m_cbCommand.AddString( s );	//10
+	s.Format( _T( "ChnlGainStep" ) );		m_cbCommand.AddString( s );	//11
+	s.Format( _T( "ChnlGainDelay" ) );		m_cbCommand.AddString( s );	//12
 
 	}
 
@@ -381,66 +385,17 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		case 8: 
 			GateCmd( m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam );
 			break;
+		// TCG commands
+		case 9:
+		case 10:
+		case 11:
+		case 12:
+			TcgCmd( m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam );
+			break;
 		default:	
 			break;
 		}	
 	}
-
-// All inputs are integers, but transmitted value to instrument may not be.
-// Cmds are Delay=2, Range=3, Blank=4, Thold=5, Trigger=6 Polarity=7 TOF=8
-// All commands use the gate delay structure.
-// Unlike the Enet2 boards of Truscope, no command settings are retained in the
-// PAP
-//
-void CNcNx::GateCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue)
-	{
-	CString s, t, sym;
-	switch (nCmd)
-		{
-	case 2:
-		sym = _T("Delay: ");		break;
-	case 3:
-		sym = _T("Rng: ");			break;
-	case 4:
-		sym = _T("Blk: ");			break;
-	case 5:
-		sym = _T("Thl: ");			break;
-	
-	case 6:		// gate trigger source for all 4 gates
-		sym = _T("Trg:"); 	
-		// high nibble sets triger for all 4 gates, low nibble is enable/disable	
-		// bit7,6,5,4:  trigger select (0:mbs, 1:threshold) for all gate 4-1
-		// bit 3-0: gate enable
-		break;
-	case 7:		// gate data mode ie signal polarity
-		sym = _T("Pol:"); 		break;
-	case 8:		// gate data mode ie tof
-		sym = _T("Tof:"); 		break;
-	default:
-		sym = _T( "???" );		return;
-		}
-
-	memset(&m_GateCmd, 0, sizeof(ST_GATE_DELAY_CMD));
-	m_GateCmd.Head.wMsgID = nCmd;
-	m_GateCmd.Head.wByteCount = 32;
-	m_GateCmd.Head.uSync = SYNC;
-//		m_GateCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
-	m_GateCmd.Head.bPapNumber = nPap;
-	m_GateCmd.Head.bBoardNumber = nBoard;
-	m_GateCmd.bSeq = nSeq;
-	m_GateCmd.bChnl = nCh;
-	m_GateCmd.bGateNumber = nGate;
-	m_GateCmd.wDelay = nValue;	// called delay but now can be one of many
-	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d, Ch=%d, Gate=%d, Value=%5d\n"),
-		m_GateCmd.Head.wMsgID, m_GateCmd.Head.wByteCount, m_GateCmd.Head.bPapNumber,
-		m_GateCmd.Head.bBoardNumber, m_GateCmd.bSeq, m_GateCmd.bChnl,
-		m_GateCmd.bGateNumber, m_GateCmd.wDelay);
-	t = sym + s;
-	m_lbOutput.AddString(t);
-	SendMsg((GenericPacketHeader*)&m_GateCmd);
-	//if (m_RbGates >= 4) break;	// one command sets all gates for a chnl	
-	}
-
 
 void CNcNx::OnBnClickedBnDonothing()
 	{
@@ -503,3 +458,83 @@ void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 
 	}
 
+
+// All inputs are integers, but transmitted value to instrument may not be.
+// Cmds are Delay=2, Range=3, Blank=4, Thold=5, Trigger=6 Polarity=7 TOF=8
+// All commands use the gate delay structure.
+// Unlike the Enet2 boards of Truscope, no command settings are retained in the
+// PAP
+//
+void CNcNx::GateCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue)
+	{
+	CString s, t, sym;
+	switch (nCmd)
+		{
+	case 2:		sym = _T("Delay: ");		break;
+	case 3:		sym = _T("Rng: ");			break;
+	case 4:		sym = _T("Blk: ");			break;
+	case 5:		sym = _T("Thl: ");			break;
+	
+	case 6:		// gate trigger source for all 4 gates
+		sym = _T("Trg:"); 	
+		// high nibble sets triger for all 4 gates, low nibble is enable/disable	
+		// bit7,6,5,4:  trigger select (0:mbs, 1:threshold) for all gate 4-1
+		// bit 3-0: gate enable
+		break;
+	case 7:		sym = _T("Pol:"); 		break;	// gate data mode ie signal polarity
+	case 8:		sym = _T("Tof:"); 		break;	// gate data mode ie tof
+	default:	sym = _T( "???" );		return;
+		}
+
+	memset(&m_GateCmd, 0, sizeof(ST_GATE_DELAY_CMD));
+	m_GateCmd.Head.wMsgID = nCmd;
+	m_GateCmd.Head.wByteCount = 32;
+	m_GateCmd.Head.uSync = SYNC;
+//		m_GateCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
+	m_GateCmd.Head.bPapNumber = nPap;
+	m_GateCmd.Head.bBoardNumber = nBoard;
+	m_GateCmd.bSeq = nSeq;
+	m_GateCmd.bChnl = nCh;
+	m_GateCmd.bGateNumber = nGate;
+	m_GateCmd.wDelay = nValue;	// called delay but now can be one of many
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d, Ch=%d, Gate=%d, Value=%5d\n"),
+		m_GateCmd.Head.wMsgID, m_GateCmd.Head.wByteCount, m_GateCmd.Head.bPapNumber,
+		m_GateCmd.Head.bBoardNumber, m_GateCmd.bSeq, m_GateCmd.bChnl,
+		m_GateCmd.bGateNumber, m_GateCmd.wDelay);
+	t = sym + s;
+	m_lbOutput.AddString(t);
+	SendMsg((GenericPacketHeader*)&m_GateCmd);
+	//if (m_RbGates >= 4) break;	// one command sets all gates for a chnl	
+	}
+
+void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue )
+	{
+	CString s, t, sym;
+	switch (nCmd)
+		{
+	default:		sym = _T( "???" );		return;
+	case 9:		sym = _T("TCG seq-gain: "); 		break;
+	case 10:	sym = _T("TCG seq-delay: "); 		break;
+	case 11:	sym = _T("TCG chnl-gain: "); 		break;
+	case 12:	sym = _T("TCG chnl-delay: "); 	break;
+		}
+
+	memset(&m_TcgCmd, 0, sizeof(ST_SET_TCG_DELAY_CMD));
+	m_TcgCmd.Head.wMsgID = nCmd;
+	m_TcgCmd.Head.wByteCount = 32;
+	m_TcgCmd.Head.uSync = SYNC;
+//		m_TcgCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
+	m_TcgCmd.Head.bPapNumber = nPap;
+	m_TcgCmd.Head.bBoardNumber = nBoard;
+	m_TcgCmd.bSeq = nSeq;
+	m_TcgCmd.bChnl = nCh;
+	m_TcgCmd.bGateNumber = nGate;
+	m_TcgCmd.wDelay = nValue;	// called delay but now can be one of many
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d, Ch=%d, Gate=%d, Value=%5d\n"),
+		m_TcgCmd.Head.wMsgID, m_TcgCmd.Head.wByteCount, m_TcgCmd.Head.bPapNumber,
+		m_TcgCmd.Head.bBoardNumber, m_TcgCmd.bSeq, m_TcgCmd.bChnl,
+		m_TcgCmd.bGateNumber, m_TcgCmd.wDelay);
+	t = sym + s;
+	m_lbOutput.AddString(t);
+	SendMsg((GenericPacketHeader*)&m_TcgCmd);
+	}

@@ -1,12 +1,16 @@
 
 // PA2WinDlg.cpp : implementation file
+// Author:		jeh -- spring 2017
+// Purpose:	Windows MFC based dialog to run both PAP and	PAG code
+//			Customization for either PAP or PAG is done with configuration file
+//			called Hardware.ini
 //
 
 #include "stdafx.h"
 #include "PA2Win.h"
 #include "PA2WinDlg.h"
 #include "afxdialogex.h"
-#include "Versions.h"
+#include "Versions.h"		// DEFINITIONS FOR VERSION NUMBERS
 #include <fcntl.h>
 #include <io.h>
 #include <string.h>
@@ -15,6 +19,7 @@
 #include "..\..\Include\Global.h"
 #include "..\..\Include\PA2Struct.h"
 #include "TuboIni.h"
+
 
 
 #ifdef _DEBUG
@@ -393,14 +398,17 @@ END_MESSAGE_MAP()
 
 BOOL CPA2WinDlg::OnInitDialog()
 	{
-	CString sDlgName;
+	CString sDlgName, s;
 	CDialogEx::OnInitDialog();
 	int i;
+	s.Format( PA2_VERSION );
 #ifdef I_AM_PAG
-	sDlgName = _T( "PA2Win -- Phase Array GUI Version -- PAG" );
-#else
-	sDlgName = _T( "PA2Win -- Phase Array Processor Version -- PAP" );
+	sDlgName = _T( "PA2Win -- Phase Array GUI Version -- PAG " );
+	#else
+	sDlgName = _T( "PA2Win -- Phase Array Processor Version -- PAP " );
 #endif
+
+	sDlgName += s;
 	SetWindowText(sDlgName);
 	// Add "About..." menu item to system menu.
 

@@ -632,6 +632,7 @@ winsock2.h
 			// pThread->m_pSCC->pSocket = (CServerSocket *) FromHandle(Asocket.Detach()); doesn't work
 			pThread->m_pSCC->pSocket->m_nOwningThreadType = eServerConnection;
 			pThread->m_pSCC->pSocket->m_pSCC = pThread->m_pSCC;
+			pThread->m_pSCC->bConnected = 1;
 			pThread->m_pSCC->pSocket->m_pSCM = pThread->m_pSCM;
 			pThread->m_pSCC->pSocket->m_pstSCM = pThread->m_pstSCM;
 			pThread->m_pSCC->pSocket->m_nClientIndex = m_nClientIndex;
@@ -688,6 +689,7 @@ winsock2.h
 		m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread->m_hConnectionSocket = hSocket;
 		m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread->m_pSCC->pSocket = pscc->pSocket;
 		m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread->m_pSCC->pSocket->Attach( hSocket );
+		m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->bConnected = 1;
 		Sleep(10);
 		//Sleep(10);
 		}

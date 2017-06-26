@@ -64,10 +64,10 @@ extern ST_LARGE_CMD *pCmdGlobal;
 #define SET_GATES_TRIGGER_CMD_ID	6    
 #define SET_GATES_POLARITY_CMD_ID   7
 #define SET_GATES_TOF_CMD_ID		8
-#define SET_SEQ_GAIN_STEP_CMD_ID	9
-#define SET_SEQ_GAIN_DELAY_CMD_ID	10
-#define SET_CHNL_GAIN_STEP_CMD_ID	11
-#define SET_CHNL_GAIN_DELAY_CMD_ID	12
+#define SET_SEQ_GAIN_STEP_CMD_ID	9		// tcg gain delta for the seq
+#define SET_SEQ_GAIN_DELAY_CMD_ID	10		// tcg step delay for the seq
+#define SET_CHNL_GAIN_STEP_CMD_ID	11		// tcg gain delta for the chnl
+#define SET_CHNL_GAIN_DELAY_CMD_ID	12		// tcg step delay for the chnl
 
 
 // LARGE

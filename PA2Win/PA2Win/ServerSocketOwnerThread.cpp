@@ -541,11 +541,13 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 			{
 			i = m_pSCC->pSocket->ShutDown( 2 );
 			nError = GetLastError();
+			s.Format( _T( "Shutdown = %d\n" ), i );
+			TRACE( s );
+#if 0
+
 			if (i > 0)
 				{
-				s.Format( _T( "Shutdown = %d\n" ), i );
-				TRACE( s );
-#if 0
+
 				2017-06-26 jeh crashed PAP on shutdown
 				try
 					{
@@ -554,8 +556,9 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 				catch (...)
 					{
 					}
-#endif
 				}
+#endif
+
 			}
 
 	delete m_pSCC->pSocket;

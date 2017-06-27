@@ -244,6 +244,7 @@ CServerSocket::~CServerSocket()
 			if (i > 0)
 				{
 				i = m_pSCC->pSocket->ShutDown();
+#if 0
 				if (i > 0)
 					{
 					try
@@ -255,6 +256,7 @@ CServerSocket::~CServerSocket()
 						{
 						}
 					}
+#endif
 				Sleep( 10 );
 				}
 			}

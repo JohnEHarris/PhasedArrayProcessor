@@ -927,7 +927,7 @@ void CServerSocket::OnClose(int nErrorCode)
 		{
 		s.Format( _T( "Shutdown of client socket was successful status = %d\n" ), i );
 		TRACE( s );
-		this->Close();
+		//this->Close();	// this sometimes causes a break in CAsyncSocket::Close line 261
 		}
 	else
 		{

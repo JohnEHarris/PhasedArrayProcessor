@@ -545,6 +545,8 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 				{
 				s.Format( _T( "Shutdown = %d\n" ), i );
 				TRACE( s );
+#if 0
+				2017-06-26 jeh crashed PAP on shutdown
 				try
 					{
 					m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
@@ -552,6 +554,7 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 				catch (...)
 					{
 					}
+#endif
 				}
 			}
 

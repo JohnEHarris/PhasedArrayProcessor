@@ -93,7 +93,7 @@ void CNcNx::DebugOut(CString s)
 	}
 
 #define PAP_MAX		0
-#define BOARD_MAX	2
+#define BOARD_MAX	8
 #define GATE_MAX	3
 #define PARAM_MAX	5000
 
@@ -107,7 +107,7 @@ BOOL CNcNx::OnInitDialog()
 	// if this is the PAG
 #ifdef I_AM_PAG
 	m_spPap.SetRange( 0, PAP_MAX );	// gnMaxClientsPerServer - 1 );  //how many clients do I have
-	m_spBoard.SetRange( 0, BOARD_MAX );	// gnMaxClients - 1 );		// how many clients does my client have
+	m_spBoard.SetRange( 0, BOARD_MAX-1 );	// gnMaxClients - 1 );		// how many clients does my client have
 #else
 	// I am the PAP
 	m_spPap.SetRange( 0, 0 );  //how many clients do I have

@@ -865,9 +865,10 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 
 	TRACE1("\nPAG CLIENT CONNECTION MANAGEMENT has completed for MAX_CLIENTS = %d \n", MAX_CLIENTS);
 	}
-#endif
 
-#ifdef I_AM_PAP
+#else
+
+
 void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	{
 	int i, j;
@@ -1454,9 +1455,11 @@ CServerRcvListThread* CPA2WinDlg::CreateServerReceiverThread(int nServerNumber, 
 	return pThread;
 	}
 
+#define DEBUGIT
+
 void CPA2WinDlg::SaveDebugLog(CString& s)
 	{
-#ifdef _DEBUG
+#ifdef DEBUGIT
 	char ch[4000];
 	CstringToChar(s,ch,4000);
 	if (0 == m_nDebugLogExists)
@@ -1813,6 +1816,9 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof( CIniSectionW );	// 44
 	i = sizeof( CIniKeyW );	// 60
 	i = sizeof( CShellManager );	// 12
+	i = sizeof( IDATA_PACKET );	// 1460
+	i = sizeof( InputRawDataPacket );	// 944
+	i = sizeof( stRawSeqPacket );	// 130
 
 	}
 

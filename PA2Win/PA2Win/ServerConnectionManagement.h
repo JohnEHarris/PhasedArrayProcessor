@@ -101,7 +101,8 @@ extern THE_APP_CLASS theApp;
 // the IP address of our server, the port number for that server, and 
 // the packet size it expects to receive from the client that connects.
 
-SRV_SOCKET_INFO gServerArray[MAX_SERVERS] =	
+SRV_SOCKET_INFO gServerArray[MAX_SERVERS];	// =
+#if 0
 #ifdef I_AM_PAP
 	{
 		// listening address, listening port, size of packet from client, expected client address
@@ -119,6 +120,7 @@ SRV_SOCKET_INFO gServerArray[MAX_SERVERS] =
 //		,{"192.168.10.10", 9998, 1040, ""}		// dummy, 
 //		,{"192.168.10.10", 9999, 1040, ""}		// dummy, 
 	};
+#endif
 #endif
 
 #else
@@ -357,7 +359,7 @@ public:
 	int KillServerRcvListThread( int nMyServer, int nClientIndex );
 	// in shutdown, the socket kill will also kill the socket owner
 	int KillServerSocket( int nMyServer, int nClientIndex, int nWait);
-	int KillServerSocketOwnerThread( int nMyServer, int nClientIndex, int nWait);
+	//int KillServerSocketOwnerThread( int nMyServer, int nClientIndex, int nWait);
 	int KillCmdProcessThread( int nMyServer, int nClientIndex );
 	void DoNothing(void);
 	

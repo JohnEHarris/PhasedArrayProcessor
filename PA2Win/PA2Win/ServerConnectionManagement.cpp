@@ -316,6 +316,7 @@ int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientInd
 	// post message causes CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam) to run
 	if (pThread == NULL)	
 		return 0;
+	
 	pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET,nClientIndex,(LPARAM)pscc);
 	// set this thread priority to low
 	for (i = 0; i < nWait; i++)
@@ -332,19 +333,10 @@ int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientInd
 
 	if (m_pstSCM->pClientConnection[nClientIndex] == NULL)				return 1;
 	if (m_pstSCM->pClientConnection[nClientIndex]->pSocket == NULL)		return 1;
-#if 0
-	// done internally by socket destructor if shutdown is true
-	for (i = 0; i < 5; i++)
-		Sleep( 10 );	// code to kill Owner thread may already be running. So
-						// don't request another thread kill righ away. There is a 
-						// race going on here
 
-	// If we didn't kill the socket and then the thread, try killing the thread
-	return KillServerSocketOwnerThread( nMyServer, nClientIndex, nWait );
-#endif
 	return 0;
 	}
-
+#if 0
 int CServerConnectionManagement::KillServerSocketOwnerThread( int nMyServer, int nClientIndex, int nWait )
 	{
 	CWinThread *pThread;
@@ -375,7 +367,7 @@ int CServerConnectionManagement::KillServerSocketOwnerThread( int nMyServer, int
 		}
 	return 0;
 	}
-
+#endif
 
 
 int CServerConnectionManagement::KillServerRcvListThread( int nMyServer, int nClientIndex )
@@ -481,15 +473,16 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 			s.Format( _T( "Timed out w/o killing ServerSocket[i]\n" ), i );
 			TRACE(s);
 			}
-		Sleep( 50 );
 #if 0
-		if (0 == KillServerSocketOwnerThread( nMyServer, i, 100 ))
+
+		if (m_pstSCM->pClientConnection[i]->pSocket)
 			{
-			s.Format( _T( "Timed out w/o killing ServerSocketOwnerThread[i]\n" ), i );
-			TRACE(s);
+			m_pstSCM->pClientConnection[i]->pSocket->OnClose(0);
 			}
-		Sleep( 50 );
 #endif
+
+		Sleep( 50 );
+
 		if (0 == KillServerRcvListThread( nMyServer, i ))
 			{
 			s.Format( _T( "Timed out w/o killing ServerRcvListThread[i]\n" ), i );

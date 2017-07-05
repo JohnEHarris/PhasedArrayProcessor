@@ -150,12 +150,12 @@ typedef struct
 	} stDataHead;		// 2 bytes
 
 
-
+// The data for one sequence from one inspection array
 typedef struct
 	{
 	stDataHead DataHead;	// 2 bytes
 	stRawData RawData[MAX_CHNLS_PER_MAIN_BANG];	// sizeof = 32*6 = 192: Clive, 128: Sam
-	} stRawPacket;	// sizeof = 194 Clive, 130 Sam
+	} stRawSeqPacket;	// sizeof = 194 Clive, 130 Sam
 
 // Match Sam's data header .. 32 bytes long
 
@@ -197,7 +197,7 @@ typedef struct
 						// NIOS has limited memory. Q likely to be [8][1460] = 11,680 bytes
 	BYTE bSpare[12];	// 32 bytes to here
 						// 194 per packet for clive, 130 per packet for sam
-	stRawPacket stSeqPkt[7];	// Raw data for  sequence points = 32 + 7*130 = 942 sam
+	stRawSeqPacket stSeqPkt[7];	// Raw data for  sequence points = 32 + 7*130 = 942 sam
 	} InputRawDataPacket;		//sizeof = 194*5 + 32 = 1002 bytes clive
 
 #define SET_DROPOUT		 ( 1 << 5)
@@ -228,11 +228,11 @@ typedef struct
 */
 #if 1
 // Based on processing rate of PAP,	 may have to have one PAP for each instrument.
-// Idata is the peak held data from the Instrument boards sent after 16 ascans
+// Idata is the peak held data from the Instrument boards and sent after 16 ascans
 // Idata is the input to the down stream system
 typedef struct
 	{
-	WORD wMsgID;		// commands are identified by their ID
+	WORD wMsgID;		// commands and data are identified by their ID
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	

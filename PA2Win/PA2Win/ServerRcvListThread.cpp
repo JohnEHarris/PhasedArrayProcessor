@@ -240,8 +240,11 @@ afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
 				pV = m_pSCC->pRcvPktList->RemoveHead();
 				m_pSCC->pSocket->UnLockRcvPktList();
 				pIdata = (IDATA_PACKET *)pV;	// examine contents with debugger
+#ifdef I_AM_PAG
 				ProcessPAM_Data(pV);
-
+#else
+				delete pV;
+#endif
 				
 				m_pSCC->pSocket->LockRcvPktList();
 				}

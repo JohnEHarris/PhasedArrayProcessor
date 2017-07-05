@@ -227,29 +227,22 @@ typedef struct
 	}	ST_SOCKET_NAMES;
 #endif
 
-	ST_SOCKET_NAMES stSocketNames[MAX_CLIENTS] =
+ST_SOCKET_NAMES stSocketNames[MAX_CLIENTS];	// =
 
+#if 0
 #ifdef I_AM_PAP
-	{
-	//"PAM", "192.168.10.40", "PAG", "192.168.10.20", 7501,1460,0		// PAM attempt to connect to PAG on port 7501
+		{
+		//"PAM", "192.168.10.40", "PAG", "192.168.10.20", 7501,1460,0		// PAM attempt to connect to PAG on port 7501
+		}
 
 #endif
 
 #ifdef I_AM_PAG
-	{ 
-	_T("localhost"), _T(""), _T("mc-scp"), _T("")	,(short)0XFFF0,1260,7			// Syscp, conn #0
-
+	{
+	_T( "localhost" ), _T( "" ), _T( "mc-scp" ), _T( "" ), (short)0XFFF0, 1260, 7			// Syscp, conn #0
+	}
 #endif
-
-#if 0
-	  ,"","","","",0, 1024,0									// connection #1
-	  ,"","","","",0, 1024,0									// connection #2
-	  ,"","","","",0, 1024,0									// connection #3
-	  ,"","","","",0, 1024,0									// connection #4
-	  ,"","","","",0, 1024,0									// connection #5
 #endif
-	};
-//	int gnMaxClients;
 
 #else
 

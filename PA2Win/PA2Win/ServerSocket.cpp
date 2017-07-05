@@ -143,6 +143,7 @@ CServerSocket::~CServerSocket()
 		s = _T( "Listener Socket Destructor called\n" );	// called when Asocket on stack disappears in OnAccept
 		t += s;
 		TRACE( t );
+		pMainDlg->SaveDebugLog(t);
 		s.Format( _T( " Socket# =%d, CreateThread = %d\n" ),
 			m_nAsyncSocketCnt, nId );
 		TRACE( s );
@@ -168,6 +169,7 @@ CServerSocket::~CServerSocket()
 				strcat( m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n" );
 				s = m_pElapseTimer->tag;
 				TRACE( s );
+				pMainDlg->SaveDebugLog(s);
 				delete m_pElapseTimer;
 				m_pElapseTimer = NULL;
 				}
@@ -181,6 +183,7 @@ CServerSocket::~CServerSocket()
 				strcat( m_pFifo->tag, "Kill fifo SrvSkt\n" );
 				s = m_pFifo->tag;
 				TRACE( s );
+				pMainDlg->SaveDebugLog(s);
 				delete m_pFifo;
 				m_pFifo = 0;
 				}
@@ -214,6 +217,7 @@ CServerSocket::~CServerSocket()
 			strcat( m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n" );
 			s = m_pElapseTimer->tag;
 			TRACE( s );
+			pMainDlg->SaveDebugLog(s);
 			delete m_pElapseTimer;
 			m_pElapseTimer = NULL;
 			}
@@ -227,6 +231,7 @@ CServerSocket::~CServerSocket()
 			strcat( m_pFifo->tag, "Kill fifo SrvSkt\n" );
 			s = m_pFifo->tag;
 			TRACE( s );
+			pMainDlg->SaveDebugLog(s);
 			delete m_pFifo;
 			m_pFifo = 0;
 			}		
@@ -244,7 +249,6 @@ CServerSocket::~CServerSocket()
 			if (i > 0)
 				{
 				i = m_pSCC->pSocket->ShutDown();
-#if 0
 				if (i > 0)
 					{
 					try
@@ -256,7 +260,6 @@ CServerSocket::~CServerSocket()
 						{
 						}
 					}
-#endif
 				Sleep( 10 );
 				}
 			}
@@ -286,15 +289,24 @@ CServerSocket::~CServerSocket()
 		{
 
 		if (0 == KillLinkedList( m_pSCC->pCSRcvPkt, m_pSCC->pRcvPktList ))
-			TRACE( _T( "Failed to kill Receive List\n" ) );
+			{
+			s = _T( "Failed to kill Receive List\n" );
+			TRACE( s );
+			pMainDlg->SaveDebugLog( s );
+			}
 		else { m_pSCC->pCSRcvPkt = 0;  m_pSCC->pRcvPktList  = 0; }
 
 		if (0 == KillLinkedList( m_pSCC->pCSSendPkt, m_pSCC->pSendPktList ))
-			TRACE( _T( "Failed to kill Receive List\n" ) );
+			{
+			s = _T( "Failed to kill Receive List\n" );
+			TRACE(s );
+			pMainDlg->SaveDebugLog(s);
+			}
 		else { m_pSCC->pCSSendPkt = 0;  m_pSCC->pSendPktList  = 0; }
 
 #if 1
 		m_pSCC->pServerSocketOwnerThread->KillServerSocketOwner( m_nClientIndex, (LPARAM)m_pSCC );
+		TRACE( _T( "KillServerSocketOwner called from ServerSocketDestructor\n" ) );
 		for (i = 0; i < 100; i++)
 			{
 			if (m_pSCC->pServerSocketOwnerThread == 0)
@@ -305,7 +317,9 @@ CServerSocket::~CServerSocket()
 			}
 		if (i >= 100)
 			{
-			TRACE( _T( "OnClose timed out w/o closing OwnerThread\n" ) );
+			s = _T( "OnClose timed out w/o closing OwnerThread\n" );
+			TRACE( s );
+			pMainDlg->SaveDebugLog(s);
 			}
 #endif
 
@@ -364,6 +378,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 #endif
 	// a better way to id which server I am
 	// Only works for case of OnAccept. Does not always work for other cases such as OnClose
+
 
 	for (nMyServer = 0; nMyServer < MAX_SERVERS; nMyServer++)
 		{
@@ -659,6 +674,7 @@ winsock2.h
 		s.Format(_T("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n"), 
 			m_nClientIndex,Ip4, uPort, sOut);
 		TRACE(s);
+		pMainDlg->SaveDebugLog(s);
 		Sleep(10);
 			
 		// Asocket.Close();	not necessary. Since Asocket on stack, when this routine ends, Asocket deletes
@@ -741,8 +757,10 @@ void CServerSocket::OnReceive(int nErrorCode)
 	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)	return;
 	if (m_pSCC == NULL)							return;
 
-	if (m_nClientIndex == 0)
-		TRACE( _T( "m_nClientIndex == 0 In OnReceive\n" ) );
+//	if (m_nClientIndex == 0)
+//		TRACE( _T( "m_nClientIndex == 0 In OnReceive\n" ) );
+//	s.Format( _T( "m_nClientIndex == %d In OnReceive\n" ), m_nClientIndex );
+//	TRACE( s );
 
 	if (m_pSCC->bStopSendRcv)
 			{
@@ -862,6 +880,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 							m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nClientIndex, 
 							pIdataPacket->wMsgSeqCnt, fPksPerSec);
 						TRACE(s);
+						pMainDlg->SaveDebugLog(s);
 						}
 					}
 				}	// if (m_pSCC)
@@ -903,7 +922,9 @@ void CServerSocket::OnReceive(int nErrorCode)
 	else	
 		{	// if ( n < 0)
 		n = GetLastError();
-		TRACE(_T("OnReceive caused error %d\n"), n);
+		s.Format( _T( "OnReceive caused error %d\n" ), n );
+		TRACE(s);
+		pMainDlg->SaveDebugLog(s);
 		}
 
 
@@ -929,15 +950,19 @@ void CServerSocket::OnClose(int nErrorCode)
 		{
 		s.Format( _T( "Shutdown of client socket was successful status = %d\n" ), i );
 		TRACE( s );
-		//this->Close();	// this sometimes causes a break in CAsyncSocket::Close line 261
+		this->Close();
+		pMainDlg->SaveDebugLog(s);
 		}
 	else
 		{
 		s = _T( "Shutdown of client socket failed\n" );
 		TRACE( s );
+		pMainDlg->SaveDebugLog(s);
 		}
 	Sleep( 10 );
 	CAsyncSocket::OnClose(nErrorCode);
+
+	TRACE( _T( "CAsyncSocket::OnClose(nErrorCode) called\n" ) );
 	if (nErrorCode)
 		{
 		TRACE( _T( "OnClose failed\n" ) );

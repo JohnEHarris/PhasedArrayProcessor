@@ -561,7 +561,7 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 
 			}
 
-	delete m_pSCC->pSocket;
+	delete pscc->pSocket;
 	// destructor does everything in the excluded code below
 #if 0
 	if (m_pSCC->pSocket)
@@ -628,9 +628,9 @@ afx_msg void CServerSocketOwnerThread::KillServerSocketOwner( WPARAM w, LPARAM l
 
 	if (m_pSCC)
 		{
-		if (m_pSCC->pSocket)
+		//if (m_pSCC->pSocket);
 			//delete m_pSCC->pSocket; infinite loop back to socket destructor
-			m_pSCC->pSocket = 0;
+			//m_pSCC->pSocket = 0;
 
 		PostQuitMessage( 0 );	// causes ExitInstance() to run 
 		// and then CServerSocketOwnerThread destructor
@@ -640,7 +640,7 @@ afx_msg void CServerSocketOwnerThread::KillServerSocketOwner( WPARAM w, LPARAM l
 		TRACE( _T( "m_pSCC in null\n" ) );
 		ASSERT( 0 );
 		}
-	//PostQuitMessage( 0 );
+	PostQuitMessage( 0 );
 	}
 
 afx_msg void Hello( WPARAM w, LPARAM lParam )
@@ -793,6 +793,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 					nSent, m_pSCC->pSendPktList->GetCount(), m_pSCC->uPacketsSent,
 					m_pSCC->uUnsentPackets, pCmd->wMsgSeqCnt, nError);
 				TRACE(s);
+				pMainDlg->SaveDebugLog(s);
 				}
 			// 10054L is forcibly closed by remote host
 			}	// for ( i = 0; i < 50; i++)

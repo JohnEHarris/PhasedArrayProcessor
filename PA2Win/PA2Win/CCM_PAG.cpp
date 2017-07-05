@@ -174,6 +174,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				s.Format(_T("Received Cmd %d for Instrument %d from Phased Array GUI - now deleting\n"),
 					MsgId, pMmiCmd->bBoardNumber);
 				TRACE( s );
+				pMainDlg->SaveDebugLog(s);
 				// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
 				pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
 				}

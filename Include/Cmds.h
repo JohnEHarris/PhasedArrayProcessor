@@ -155,16 +155,16 @@ typedef struct
 	BYTE bChnlNumber;	// channel number in the above sequence for this channel
 	// Flaw Nc for ID
 	BYTE bNcID;		// how many flaw values required at or above threshold
-	BYTE bTholdID;	// Threshold value 0-127
+	BYTE bTholdID;	// Threshold value 0-255
 	BYTE bModID;	// active depth of FIFO. This is the 'm' in Nc out of m. eg., 2 out of 3 above thold
 					// bModID must be >= bNcID. If not the PAM will make bModID=bNcID
 	// Nc for OD
 	BYTE bNcOD;		// how many flaw values required at or above threshold
-	BYTE bTholdOD;	// Threshold value 0-127
+	BYTE bTholdOD;	// Threshold value 0-255
 	BYTE bModOD;	// active depth of FIFO. This is the 'm' in Nc out of m. eg., 2 out of 3 above thold
 	// Interface gate
 	BYTE bNcIf;		// how many flaw values required at or above threshold
-	BYTE bTholdIf;	// Threshold value 0-127
+	BYTE bTholdIf;	// Threshold value 0-255
 	BYTE bModIf;	// active depth of FIFO. This is the 'm' in Nc out of m. eg., 2 out of 3 above thold
 	BYTE bSpare;
 	// Wall Nx portion

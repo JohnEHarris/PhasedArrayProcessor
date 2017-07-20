@@ -596,6 +596,8 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 			if (pPacket == NULL)
 				{
 				//CAsyncSocket::OnReceive(nErrorCode);
+				// Note error
+				//BYTE error = pSocket->m_pFifo->GetError();
 				return;
 				}
 

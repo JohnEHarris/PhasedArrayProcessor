@@ -56,11 +56,11 @@ public:
 	void SetpSCC( ST_SERVERS_CLIENT_CONNECTION* p ) { m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  p; }
 	void NullpSCC(void)								{m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  0;}
 
-	void ProcessInstrumentData(InputRawDataPacket *pIData);
+	void ProcessInstrumentData(IDATA_FROM_HW *pIData);
 	
-	void MakeFakeDataHead(InputRawDataPacket *pData);
-	void MakeFakeData(InputRawDataPacket *pData);
-	//void BuildOutputPacket(InputRawDataPacket *pInput);
+	void MakeFakeDataHead(IDATA_FROM_HW *pData);
+	void MakeFakeData(IDATA_FROM_HW *pData);
+	//void BuildOutputPacket(IDATA_FROM_HW *pInput);
 	void SaveFakeData(CString& s);
 
 	void AddToIdataPacket(CvChannel *pChannel, int nCh, int nSeq, int nSendFlag);
@@ -110,7 +110,7 @@ public:
 	// after 16 input packets have been received. Effectively compressing the input by a factor of 16
 	// InputRawDataPacket comes from the instrument
 	// InputRawDataPacket *m_pOutputRawDataPacket;		// our class ptr to the packet to send
-	IDATA_PACKET *m_pIdataPacket;
+	IDATA_PAP *m_pIdataPacket;
 	int m_IdataInPt;			// insertion point in stPeakData Results
 	int GetIdataPacketIndex(void);
 	void SendIdataToPag(GenericPacketHeader *pIdata);

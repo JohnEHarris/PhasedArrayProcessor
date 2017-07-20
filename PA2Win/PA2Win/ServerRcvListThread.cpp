@@ -199,7 +199,7 @@ afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
 	{
 	void *pV;
 	int i;
-	InputRawDataPacket *pIdata;
+	IDATA_FROM_HW *pIdata;
 
 	//m_pSCC = GetpSCC(); receive list does not have to know about the rest of the structures
 	if (m_pSCC)
@@ -211,7 +211,7 @@ afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
 			{
 			pV = m_pSCC->pRcvPktList->RemoveHead();
 			m_pSCC->pSocket->UnLockRcvPktList();
-			pIdata = (InputRawDataPacket *)pV;
+			pIdata = (IDATA_FROM_HW *)pV;
 			ProcessInstrumentData(pIdata);	// local call to this class memeber
 			m_pSCC->pSocket->LockRcvPktList();
 			}
@@ -227,7 +227,7 @@ afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
 	void *pV;
 	int i;
 
-	IDATA_PACKET *pIdata;	// output data from PAP/PAM-- debugging
+	IDATA_PAP *pIdata;	// output data from PAP/PAM-- debugging
 	//m_pSCC = GetpSCC(); receive list does not have to know about the rest of the structures
 	if (m_pSCC)
 		{
@@ -239,7 +239,7 @@ afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
 				{
 				pV = m_pSCC->pRcvPktList->RemoveHead();
 				m_pSCC->pSocket->UnLockRcvPktList();
-				pIdata = (IDATA_PACKET *)pV;	// examine contents with debugger
+				pIdata = (IDATA_PAP *)pV;	// examine contents with debugger
 #ifdef I_AM_PAG
 				ProcessPAM_Data(pV);
 #else
@@ -257,7 +257,7 @@ afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
 
 
 #if 0
-void CServerRcvListThread::MakeFakeDataHead(InputRawDataPacket *pData)
+void CServerRcvListThread::MakeFakeDataHead(IDATA_FROM_HW *pData)
 //void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
 	{
 	pData->DataHead.bMsgID	= eRawInsp;	// raw data=10
@@ -305,13 +305,13 @@ void CServerRcvListThread::IncFDstartSeq(void)
 	}
 
 // Make fake data to test Nc and Nx operations
-// change input data type to InputRawDataPacket
+// change input data type to InputRawDataPacket  IDATA_FROM_HW
 //void CServerRcvListThread::MakeFakeData(SRawDataPacketOld *pData)
 // ADD state variable to keep track of start sequence and start channel number
 // Can be different start location on every call.
 // Loop here until we get MAX_RESULTS and then return fake data to caller.
 //
-void CServerRcvListThread::MakeFakeData(InputRawDataPacket *pData)
+void CServerRcvListThread::MakeFakeData(IDATA_FROM_HW *pData)
 	{
 	int i, jSeq, k, n, iSeqPkt;
 	CString s,t;
@@ -417,8 +417,8 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int n
 	{
 	if (m_pIdataPacket == NULL)
 		{
-		m_pIdataPacket = new (IDATA_PACKET);	// sizeof = 1460 179 RESULTS
-		memset((void *) m_pIdataPacket,0, sizeof(IDATA_PACKET));
+		m_pIdataPacket = new (IDATA_PAP);	// sizeof = 1460 179 RESULTS
+		memset((void *) m_pIdataPacket,0, sizeof(IDATA_PAP));
 		m_pIdataPacket->bPAPNumber	= (BYTE) pMainDlg->GetMy_PAM_Number();
 		m_pIdataPacket->bBoardNumber	= m_pSCC->m_nClientIndex;
 
@@ -536,7 +536,7 @@ void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata)
 #endif
 	}	//SendIdataToPag
 
-void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
+void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 	{
 
 	// see ServicApp.cpp the procedure tInstMsgProcess() for legacy operation
@@ -555,19 +555,19 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 
 
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
-	i = sizeof(InputRawDataPacket);
+	i = sizeof(IDATA_FROM_HW);
 	if (pIData->wByteCount >= INSTRUMENT_PACKET_SIZE -132)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
 		{
 		/******************************************************************/
 #if 0
 		//  2016-10-20 start to migrate to new input data structures
-		// throw away simulator data or current Sam data and make a new InputRawDataPacket
+		// throw away simulator data or current Sam data and make a new InputRawDataPacket  IDATA_FROM_HW
 		//delete pIData;
 
 		if (m_pOutputRawDataPacket == NULL)
 			{
-			m_pOutputRawDataPacket = new InputRawDataPacket;
-			memset(m_pOutputRawDataPacket, 0, sizeof (InputRawDataPacket));
+			m_pOutputRawDataPacket = new IDATA_FROM_HW;
+			memset(m_pOutputRawDataPacket, 0, sizeof (IDATA_FROM_HW));
 			}
 #endif
 
@@ -575,7 +575,7 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 #ifdef MAKE_FAKE_DATA
 	// Basically Yqing's simulator gave us some bytes. Generate test data in place of those bytes.
 	// Run the fake data through the Nc Nx operations and keep the Max, Min values
-		//pIData = pFakeData = new InputRawDataPacket;
+		//pIData = pFakeData = new IDATA_FROM_HW;
 		// 1 Ascan reading for every virtual channel. For now assuming this is 5 sequence points.
 		MakeFakeData(pIData);
 		// Now that we have fake data, process it
@@ -626,8 +626,8 @@ void CServerRcvListThread::ProcessInstrumentData(InputRawDataPacket *pIData)
 						//m_pIdataPacket = NULL;
 						// SendIdataToPag crashes when attempting to delete the input packet. Make a copy here
 						// that is not a class member
-						IDATA_PACKET *pIdataPacket = new (IDATA_PACKET);
-						memcpy((void*)pIdataPacket, (void *)m_pIdataPacket, sizeof(IDATA_PACKET));
+						IDATA_PAP *pIdataPacket = new (IDATA_PAP);
+						memcpy((void*)pIdataPacket, (void *)m_pIdataPacket, sizeof(IDATA_PAP));
 						//
 						//pIdataPacket->wMsgID = NC_NX_IDATA_ID; //already 1 before break
 						SendIdataToPag( (GenericPacketHeader *) pIdataPacket);
@@ -675,7 +675,7 @@ void CServerRcvListThread::ProcessPAM_Data(void *pData)
 	{
 	CString s;
 	int i;
-	IDATA_PACKET *pIdata = (IDATA_PACKET *)pData;
+	IDATA_PAP *pIdata = (IDATA_PAP *)pData;
 
 	if (pIdata->wMsgID == NC_NX_IDATA_ID)
 		{

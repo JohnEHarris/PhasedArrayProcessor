@@ -1034,7 +1034,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 	m_nDebugEmptyList = 0;
 
 	// Since we got here we know the list is not empty
-	IDATA_PACKET *pSendPkt;	// ptr to the packet info in the linked list of send packets
+	IDATA_PAP *pSendPkt;	// ptr to the packet info in the linked list of send packets
 
 	if (!m_pstCCM->pSocket)
 		{
@@ -1043,7 +1043,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		m_pMyCCM->LockSendPktList();
 		while (m_pstCCM->pSendPktList->GetCount() > 0)
 			{
-			pSendPkt = (IDATA_PACKET *)m_pstCCM->pSendPktList->RemoveHead();
+			pSendPkt = (IDATA_PAP *)m_pstCCM->pSendPktList->RemoveHead();
 			delete pSendPkt;
 			}
 		m_pMyCCM->UnLockSendPktList();	// give a higher priority thread a chance to add packets
@@ -1063,7 +1063,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 	while (m_pstCCM->pSendPktList->GetCount() > 0)
 		{
 		m_pMyCCM->LockSendPktList();
-		pSendPkt = (IDATA_PACKET *) m_pstCCM->pSendPktList->RemoveHead();
+		pSendPkt = (IDATA_PAP *) m_pstCCM->pSendPktList->RemoveHead();
 		m_pMyCCM->UnLockSendPktList();	// give a higher priority thread a chance to add packets
 		// examine the MsgId of the extracted packet to see what type message it really is
 		// As of 2017-01-24 the only message back to PAG is Idata
@@ -1114,7 +1114,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				m_pMyCCM->LockSendPktList();
 				while (m_pstCCM->pSendPktList->GetCount() > 0)
 					{
-					pSendPkt = (IDATA_PACKET *)m_pstCCM->pSendPktList->RemoveHead();
+					pSendPkt = (IDATA_PAP *)m_pstCCM->pSendPktList->RemoveHead();
 					delete pSendPkt;
 					}
 				m_pMyCCM->UnLockSendPktList();

@@ -75,12 +75,17 @@ void  CCmdFifo::Shift(void)
 	}
 
 BYTE * CCmdFifo::GetInLoc(void)
-	{ 
+	{
+	CString s;
 	BYTE *pMem;
 	if (m_In < 0)
 		{
 		m_In = m_Out = m_Size = 0;
+		m_bError = 1;
 		// SET buffer overflow bit
+		s = _T( "CCmdFifo: m_In < 0\n" );
+		pMainDlg->SaveDebugLog(s);
+
 		}
 	if (m_In >= CMD_FIFO_MEM_SIZE - 1500)
 		{	// getting close to end of FIFO
@@ -93,6 +98,10 @@ BYTE * CCmdFifo::GetInLoc(void)
 		else
 			{	// flush the buffer and set error bit in Idata
 			m_In = m_Out = m_Size = 0;
+			m_bError = 1;	// overflow
+			s = _T( "CCmdFifo: Buffer Overflow\n" );
+			pMainDlg->SaveDebugLog(s);
+
 			}
 		}
 	pMem = (BYTE *)&m_Mem[m_In];
@@ -116,24 +125,32 @@ int CCmdFifo::GetPacketSize(void)
 	WORD wMsgID;		// commands are identified by their ID
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD
-	*/	int i;
+	*/	
+	int i;
+	CString s;
 	WORD *pW = (WORD *)&m_Mem[m_Out];// debugging
 	GenericPacketHeader *pHeader;
-	InputRawDataPacket *pIdata;
+	IDATA_FROM_HW *pIdata;
 	pHeader = (GenericPacketHeader *)pW;		// &m_Mem[m_Out];
-	pIdata = (InputRawDataPacket *)pW;			// pHeader;
+	pIdata = (IDATA_FROM_HW *)pW;			// pHeader;
 	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > 1460) )
 		{	// we are lost in the data, reset the FIFO and set an error bit
 		m_In = 0;
 		m_Out = 0;
 		m_Size = 0;
-
+		m_bError = 2;	// lost sync
+		s = _T( "Lost Sync\n" );
+		pMainDlg->SaveDebugLog(s);
 		return 0;
 		}
 	m_PacketSize = pHeader->wByteCount;
 	// debugging
 	if ((m_PacketSize < 24) || (m_PacketSize > 1460))
 		{
+		m_bError = 4;	// wrong packet size
+		s = _T( "Wrong Packet Size\n" );
+		pMainDlg->SaveDebugLog(s);
+
 		return 0;
 		}
 			// See if we are losing a real packet
@@ -141,6 +158,8 @@ int CCmdFifo::GetPacketSize(void)
 		{
 		i = pIdata->wMsgSeqCnt - m_wMsgSeqCnt;	// debugging
 		// set error bit for lost msg
+		s.Format( _T( "MsgCnt = %d, expected = %d\n" ),pIdata->wMsgSeqCnt, m_wMsgSeqCnt + 1 );
+		pMainDlg->SaveDebugLog(s);
 		}
 	m_wMsgSeqCnt = pIdata->wMsgSeqCnt;
 	return m_PacketSize;
@@ -168,6 +187,9 @@ BYTE *CCmdFifo::GetNextPacket(void)
 		m_In = 0;
 		m_Out = 0;
 		m_Size = 0;
+		s = _T( "Lost Sync or wrong packet size\n" );
+		pMainDlg->SaveDebugLog(s);
+
 		return NULL;
 		}
 	m_PacketSize = pHeader->wByteCount;
@@ -178,6 +200,9 @@ BYTE *CCmdFifo::GetNextPacket(void)
 		m_In = 0;
 		m_Out = 0;
 		m_Size = 0;
+		s = _T( "CCmdFifo: m_Size < 0\n" );
+		pMainDlg->SaveDebugLog(s);
+
 		return NULL;
 		}
 	if ((m_Size > 0) && (m_Size < 16))
@@ -194,4 +219,14 @@ BYTE *CCmdFifo::GetNextPacket(void)
 	TRACE(s);
 #endif
 	return pStart;
+	}
+
+// Return the error status of the fifo and reset the error flag
+// bit 0= overflow, 1=Lost Sync
+BYTE CCmdFifo::GetError( void )
+	{
+	BYTE tmp;
+	tmp = m_bError;
+	m_bError = 0;
+	return tmp;
 	}

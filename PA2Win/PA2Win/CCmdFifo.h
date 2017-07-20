@@ -19,6 +19,7 @@ class CCmdFifo
 		int m_Out;		// index in m_Mem where next output from FIFO will start
 		int m_Size;		// number of bytes unread in FIFO
 		int m_PacketSize;	// FIFO holds bytes but bytes should only be made available in PacketSize chunks
+		BYTE m_bError;	// bit 0= overflow, bit 1=Lost Sync, bit 2=wrong size
 	public:
 		CCmdFifo(int PacketSize);
 		virtual ~CCmdFifo();
@@ -31,6 +32,7 @@ class CCmdFifo
 		//void SetPacketSize(int n) { m_PacketSize = n; }
 		WORD m_wMsgSeqCnt;
 		void Shift(void);
+		BYTE GetError( void );	// return error to caller and reset error byte
 
 		int m_nFifoCnt;
 		int m_nOwningThreadId;			// debugging

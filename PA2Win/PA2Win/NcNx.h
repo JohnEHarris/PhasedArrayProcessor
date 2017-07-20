@@ -23,6 +23,7 @@ public:
 	int m_nCh;
 	int m_nGate;
 	int m_nParam;
+	int m_nPopulated;
 	//int m_nLastInst;
 	void Save_Pos(void);
 
@@ -82,4 +83,6 @@ public:
 	void TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue );
 	// TCG commands have the same gain template
 	ST_SET_TCG_DELAY_CMD m_TcgCmd;
+	afx_msg void OnChangeEdParam();
+	CEdit m_edParam;
 	};

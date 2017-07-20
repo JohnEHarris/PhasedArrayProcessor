@@ -709,7 +709,7 @@ int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int
 	int nReturn = 0;
 	CString s;
 //	int nChannelInPam = pCTscanDlg->ComputeChannelNumberInPAMClient();
-	PAM_GENERIC_MSG *pCmd =( PAM_GENERIC_MSG *) pB;
+	PAP_GENERIC_MSG *pCmd =( PAP_GENERIC_MSG *) pB;
 
 
 //	pCmd->bPapNumber = nClientIndex;

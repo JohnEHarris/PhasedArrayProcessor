@@ -670,7 +670,7 @@ winsock2.h
 		CstringToChar(Ip4, txt);
 		printf("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n", 
 			m_nClientIndex, txt, uPort, buffer);
-		sOut = txt;
+		sOut = buffer;
 		s.Format(_T("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n"), 
 			m_nClientIndex,Ip4, uPort, sOut);
 		TRACE(s);
@@ -839,7 +839,9 @@ void CServerSocket::OnReceive(int nErrorCode)
 			m_nLastSeqCnt = pHeader->wMsgSeqCnt;
 			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
 			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
-			InputRawDataPacket *pIdataPacket = (InputRawDataPacket *) pB;
+			//InputRawDataPacket *pIdataPacket = (InputRawDataPacket *) pB;
+			IDATA_FROM_HW *pIdataPacket = (IDATA_FROM_HW *) pB;
+			
 			m_nSeqCntDbg[m_nSeqIndx++] = pIdataPacket->wMsgSeqCnt;
 			m_nSeqIndx &= 0x3ff;
 
@@ -873,7 +875,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 					if ((m_pSCC->uPacketsReceived & 0x7ff) == 0)	m_pElapseTimer->Start();
 					if ((m_pSCC->uPacketsReceived & 0x7ff) == 0x7ff)
 						{
-						m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
+						m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 2048 packets
 						float fPksPerSec = 2048000000.0f/( (float) m_nElapseTime);
 						m_pSCC->uPacketsPerSecond = (UINT)fPksPerSec;
 						s.Format(_T("[%5d]Server[%d]Socket[%d]::OnReceive - [SeqCnt=%5d] Packets/sec = %6.1f\n"), 

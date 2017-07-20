@@ -47,6 +47,7 @@ CNcNx::CNcNx(CWnd* pParent /*=NULL*/)
 	{
 	m_DlgLocationKey = _T("NC_NX_PA2");
 	m_DlgLocationSection = _T("Dialog Locations");	// Section is always this string for all dlgs
+	m_nPopulated = 0;
 	}
 
 CNcNx::~CNcNx()
@@ -67,6 +68,7 @@ DDX_Control( pDX, IDC_LB_NCNX, m_lbOutput );
 DDX_Control( pDX, IDC_CB_CMDS, m_cbCommand );
 DDX_Control( pDX, IDC_SP_BOARD, m_spBoard );
 DDX_Control( pDX, IDC_BN_DONOTHING, m_bnDoNoting );
+DDX_Control( pDX, IDC_ED_PARAM, m_edParam );
 	}
 
 
@@ -81,6 +83,7 @@ BEGIN_MESSAGE_MAP(CNcNx, CDialogEx)
 	ON_CBN_SELCHANGE( IDC_CB_CMDS, &CNcNx::OnCbnSelchangeCbCmds )
 	//ON_WM_VSCROLL()
 	ON_BN_CLICKED( IDC_BN_DONOTHING, &CNcNx::OnBnClickedBnDonothing )
+	ON_EN_CHANGE( IDC_ED_PARAM, &CNcNx::OnChangeEdParam )
 END_MESSAGE_MAP()
 
 
@@ -342,11 +345,12 @@ void CNcNx::PopulateCmdComboBox()
 	s.Format( _T( "Gate n Trigger" ) );		m_cbCommand.AddString( s );	//6
 	s.Format( _T( "Gate n Polarty" ) );		m_cbCommand.AddString( s );	//7
 	s.Format( _T( "Gate n TOF" ) );			m_cbCommand.AddString( s );	//8
-	s.Format( _T( "TCGStepSize" ) );		m_cbCommand.AddString( s );	//9
-	s.Format( _T( "TCGGainDelay" ) );		m_cbCommand.AddString( s );	//10
-	s.Format( _T( "ChnlGainStep" ) );		m_cbCommand.AddString( s );	//11
-	s.Format( _T( "ChnlGainDelay" ) );		m_cbCommand.AddString( s );	//12
-
+	s.Format( _T( "SetTcgClockRate" ) );	m_cbCommand.AddString( s );	//9
+	s.Format( _T( "TCGTriggerDelay" ) );	m_cbCommand.AddString( s );	//10
+	s.Format( _T( "TCGGainClock" ) );		m_cbCommand.AddString( s );	//11
+	s.Format( _T( "TCGChnlGainDelay" ) );	m_cbCommand.AddString( s );	//12
+	s.Format( _T( "SetPRF" ) );				m_cbCommand.AddString( s );	//13
+	m_nPopulated = 1;
 	}
 
 void CNcNx::OnCbnSelchangeCbCmds()
@@ -390,6 +394,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		case 10:
 		case 11:
 		case 12:
+		case 13:
 			TcgCmd( m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam );
 			break;
 		default:	
@@ -512,11 +517,12 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	CString s, t, sym;
 	switch (nCmd)
 		{
-	default:		sym = _T( "???" );		return;
-	case 9:		sym = _T("TCG seq-gain: "); 		break;
-	case 10:	sym = _T("TCG seq-delay: "); 		break;
-	case 11:	sym = _T("TCG chnl-gain: "); 		break;
-	case 12:	sym = _T("TCG chnl-delay: "); 	break;
+	default:		sym = _T( "???" );				return;
+	case 9:		sym = _T("TcgClockRate: "); 		break;
+	case 10:	sym = _T("TCGTriggerDelay: "); 		break;
+	case 11:	sym = _T("TCGGainClock: "); 		break;
+	case 12:	sym = _T("TCGChnlGainDelay: "); 	break;
+	case 13:	sym = _T("SetPRF: "); 				break;
 		}
 
 	memset(&m_TcgCmd, 0, sizeof(ST_SET_TCG_DELAY_CMD));
@@ -537,4 +543,16 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	t = sym + s;
 	m_lbOutput.AddString(t);
 	SendMsg((GenericPacketHeader*)&m_TcgCmd);
+	}
+
+void CNcNx::OnChangeEdParam()
+	{
+	// TODO:  If this is a RICHEDIT control, the control will not
+	// send this notification unless you override the CDialogEx::OnInitDialog()
+	// function and call CRichEditCtrl().SetEventMask()
+	// with the ENM_CHANGE flag ORed into the mask.
+
+	// TODO:  Add your control notification handler code here
+	if (m_nPopulated)
+		m_nParam = m_spParam.GetPos();
 	}

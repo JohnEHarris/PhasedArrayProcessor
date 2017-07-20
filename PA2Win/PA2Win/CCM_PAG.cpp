@@ -87,7 +87,7 @@ CCCM_PAG::~CCCM_PAG( void )
 
 
 // For this class , the received message comes from the PAG
-// All commands from PAG are message type PAM_GENERIC_MSG
+// All commands from PAG are message type PAP_GENERIC_MSG
 // Over rides base class ProcessReceivedMessage()
 // PAG messages are variable length - must handle each as it arrives and assume
 // the whole message arrives in one packet - assumption is that it works like UDP
@@ -104,7 +104,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 	// 2016-06-27 ditch legacy command structure and use PA2 structure
 
 	//ST_LARGE_CMD *pMmiCmd;
-	PAM_GENERIC_MSG *pMmiCmd;
+	PAP_GENERIC_MSG *pMmiCmd;
 	PAP_INST_CHNL_NCNX *pPamChnlInfo;
 	WORD MsgId;
 
@@ -113,7 +113,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 	while (i = m_pstCCM->pRcvPktPacketList->GetCount())
 		{
 		LockRcvPktList();
-		pMmiCmd = (PAM_GENERIC_MSG *) m_pstCCM->pRcvPktPacketList->RemoveHead();
+		pMmiCmd = (PAP_GENERIC_MSG *) m_pstCCM->pRcvPktPacketList->RemoveHead();
 		UnLockRcvPktList();
 
 		// use pMmiCmd->Slot to identify PAM's pClientConnection to know which instrument to send to
@@ -169,7 +169,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		//case 2-8:	// Gate commands from PAG TO PAP then PAP to Board
 
 		default:
-			if (MsgId < 13)
+			if (MsgId < LAST_SMALL_COMMAND)
 				{
 				s.Format(_T("Received Cmd %d for Instrument %d from Phased Array GUI - now deleting\n"),
 					MsgId, pMmiCmd->bBoardNumber);

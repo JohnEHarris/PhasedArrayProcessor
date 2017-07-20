@@ -997,7 +997,7 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 
 
 #ifdef I_AM_PAP
-void CServerRcvListThread::MakeFakeDataHead(InputRawDataPacket *pData)
+void CServerRcvListThread::MakeFakeDataHead(IDATA_FROM_HW *pData)
 //void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
 	{
 		//pData->wMsgID	= eRawInsp;	// raw data=10
@@ -1794,31 +1794,34 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(CHwTimer);	// 496
 	i = sizeof( CIniFile );	// 12
 	i = sizeof( CInspState ); // 12
-	i = sizeof(CNcNx);	// 488
+	i = sizeof(CNcNx);	// 488 -> 1608
 	i = sizeof(CServerConnectionManagement);	// 12
 	i = sizeof(CServerListenThread);	// 80
 	i = sizeof(CServerRcvListThread);	// 140
 	i = sizeof(CServerSocket);	// 4280
-	i = sizeof(CServerSocketOwnerThread);	// 108
+	i = sizeof(CServerSocketOwnerThread);	// 108 -> 104
 	i = sizeof(CvChannel);	// 160
 	i = sizeof(CTestThread); // 72
 	i = sizeof(CTuboIni); // 12
-	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 2168
+	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 2168 -> 1144
 	i = sizeof( ST_SERVER_CONNECTION_MANAGEMENT ); // 148
 	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 160
 	i = sizeof( CPA2WinApp );	// 204
 	i = sizeof( CPA2WinDlg );	// 592
 	i = sizeof( Nc_FIFO );	// 24 but 3 copies
-	i = sizeof( Nx_FIFO );	// 538
+	i = sizeof( Nx_FIFO );	// 538 -> 52
 	i = sizeof( PAP_INST_CHNL_NCNX );	// 1056
 	i = sizeof( CIniSectionA );	// 44
 	i = sizeof( CIniKeyA );	// 60
 	i = sizeof( CIniSectionW );	// 44
 	i = sizeof( CIniKeyW );	// 60
 	i = sizeof( CShellManager );	// 12
-	i = sizeof( IDATA_PACKET );	// 1460
-	i = sizeof( InputRawDataPacket );	// 944
-	i = sizeof( stRawSeqPacket );	// 130
+	i = sizeof( IDATA_PAP );	// 1460 ->1448
+//	i = sizeof( InputRawDataPacket );	// 944 ->272 replaced by IDATA_FROM_HW
+//	i = sizeof( stRawSeqPacket );	// 130 ->34 
+	i = sizeof( IDATA_FROM_HW );	// 1056
+	i = sizeof( SEQ_DATA );	// 32
+
 
 	}
 

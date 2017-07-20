@@ -8,6 +8,7 @@ This project began in 2013. Originally the server to the instruments was called 
 in 2016 it was redesignated as PAP - Phased Array Processor.  PAP = PAM
 In this scheme, anything that communicates with the PAP via an Ethernet connection as a client is called an Instrument.
 This includes pulser boards and phased array processor boards built by Tuboscope.
+2017 Instrument is now called Board. Assumes that the Board has an Ethernet part.
 
 */
 
@@ -27,10 +28,11 @@ typedef unsigned int	UINT;
 
 enum IdataTypes {eRawInsp=10, eAscan=12, eKeepAlive=0xff};
 enum IdOdTypes {eId, eOd, eIf};
+enum CallSource {eMain, eInterrupt};
 
 #define MAX_PAM_QTY			1
 #define MAX_PAM_INSTS_QTY	8
-#define NC_NX_CMD_ID		1+0x200
+#define NC_NX_CMD_ID		1+0x200		// also known as NC_NX_TEST
 #define ASCANS_TO_AVG		16
 
 #define THE_APP_CLASS	CPA2WinApp
@@ -56,32 +58,37 @@ enum IdOdTypes {eId, eOd, eIf};
 
 // An instrument client can have up to this many virtual channels for each UT firing or Main Bang
 // Each MAIN BANG is a "sequence" until the sequence number repeats
-// 64 until 11-08-16 then 32
-#define MAX_CHNLS_PER_MAIN_BANG			32
+// 64 until 11-08-16 then 32 == FOR Sam board, 8
+#define MAX_CHNLS_PER_MAIN_BANG			8
 
 // Channels may be redefined on each main bang. The counter which counts main bangs is called the sequence counter
-// the maximum value the sequence counter can have is =
-#define MAX_SEQ_COUNT					16
+// the maximum value the sequence counter can have was 16, now (2017/07/20) =
+#define MAX_SEQ_COUNT					32
 // choose 5 for seq length while doing simulated input data so that one packet has all the virtual channels in it
 
 // The number of virtual channels is finite. Channels repeat after MAX_SEQ_COUNT number of main bangs.
 // On any given main bang (sequence count) there can only be a max number of channels define by 
 // MAX_CHNLS_PER_MAIN_BANG. The max the number of channels in a transducer array is 
-// [MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG] = 16*32 = 512
+// [MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG] = 8*32 = 256
 
 // How many peak held data Results can we get in the max size tcpip packet.
-// stPeakData Results[179]
-#define MAX_RESULTS						179
+// stPeakData Results[176]
+#define MAX_RESULTS						176
 
 #define INSTRUMENT_PACKET_SIZE			1056		//old 1040.. 1460 is max TCPIP size
-#define MASTER_PACKET_SIZE				1260
+#define MASTER_PACKET_SIZE				1056		// 1260
 #define SYNC							0x5CEBDAAD
 #define CMD_FIFO_MEM_SIZE				0x4000		// must be greater than 0x1800
 #define NC_NX_STRUCT_SIZE				52
 #define MAX_CMD_PACKET_SIZE				1056
 
-#define MAX_FQDN_LENGTH						 64	// max length of a fully qualified domain name
+#define IDATA_MSG_ID					1
+#define ASCAN_MSG_ID					2
+
+
+#define MAX_FQDN_LENGTH					64	// max length of a fully qualified domain name
 #define LOCAL_HOST						_T("localhost")
+
 
 /*****************	STRUCTURES	*********************/
 // A channel is a UT echo or reflection assigned a physical position in the transducer.
@@ -143,6 +150,7 @@ typedef struct
 	} stRawData;		//4 bytes
 #endif
 // NEW stDataHead  .. compare to old
+#if 0
 typedef struct 
 	{
 	BYTE bSeqNumber;	// sequence number of the first element in stRawData
@@ -172,14 +180,66 @@ typedef struct
     WORD wClock;		//unit in .2048ms - ticks from TOP OF PIPE
     WORD wPeriod;		//unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
+	BYTE bStartSeq;		// Starting sequence number of these sequences.
+						// NIOS has limited memory. Q likely to be [8][1460] = 11,680 bytes
 	BYTE bSpare[12];	// 32 bytes to here
-	} InputRawDataPacketHeader;		//sizeof = 194*7 + 102 = 1460 bytes
+						// 194 per packet for clive, 130 per packet for sam
+	stRawSeqPacket stSeqPkt[7];	// Raw data for  sequence points = 32 + 7*130 = 942 sam
+	} InputRawDataPacket;		//sizeof = 194*5 + 32 = 1002 bytes clive
+#endif
+// this structure replace by IDATA_FROM_HW
 
-// Raw data packet is built by the instrument over 7 main bang periods
-// at 7k prf this is 1 packet every millisecond or 1k packets per second.
-// This is the packet which is sent to the PAP
-//
-// Match Sams header for now
+/* ++++++++++++++++++++++++++++++++++++++  */
+
+
+// 2017-07-18 Back to the real world -- how this hardware really works
+// Sam's hardware supports this only.
+typedef struct 
+	{
+    WORD wTof;		//time of flight of Gate 4
+    BYTE bAmp3;		//Gate 3 amplitude (0-255)
+    BYTE bAmp2;		//Gate 2 amplitude (0-255)
+	} CHNL_DATA;	// sizeof = 4
+
+// The current Sam designed PA machine has 8 channels, each formed from 16 elements
+// The elements overlap to produce 8 chnls from 64 elements.
+// virtual channels are made from 16 contiguous elements.
+// this would seem to give 7 virtual channels, but somehow we have 8
+// 1111111111111111  2222222222222222  3333333333333333  4444444444444444
+//       5555555555  5555556666666666  6666667777777777  7777778888888888  (6 short on #8)
+//(or maybe)                 88888888  88888888
+typedef struct 
+	{
+	CHNL_DATA vChnl[8];		// 8 virtual channels each formed from 16 beams = 1 sequence
+	} SEQ_DATA;				// sizeof = 32
+
+// This is the structure format of data transmitted from the hardware front end
+typedef struct 
+	{
+	WORD wMsgID;		// commands are identified by their ID. 0 == ChnlData, 1= AScan
+	WORD wByteCount;	// Number of bytes in this packet. = 1056
+	UINT uSync;			// 0x5CEBDAAD
+    WORD wMsgSeqCnt;	// 0-65535
+
+	BYTE bSeqStart;		// sequence number of the first SEQ_DATA in this packet, 0-31
+	BYTE bCmdQDepthS;	// How deep is the Small command queue in the instrument NIOS processor
+	BYTE bCmdQDepthL;	// How deep is the Large command queue in the instrument NIOS processor
+    BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+    WORD wLocation;		// x location in motion pulses
+    WORD wClock;		// unit in .2048ms - ticks from TOP OF PIPE
+    WORD wPeriod;		// unit in .2048ms
+	WORD wRotationCnt;	// Number of rotations since pipe present signal
+
+						// NIOS has limited memory. Msg Q likely to be 
+						// Large, [8][1056] = 8448 bytes, Small [64][32] = 2048
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
+	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info		
+	// 32 bytes to here
+
+	SEQ_DATA Seq[32];	// 32 sequences each of 8 virtual channels. 32*32 = 1024
+	} IDATA_FROM_HW;	// sizeof = 1024 + 32 byte header = 1056
+
+// Estimated 13 uSec to copy header into Wiznet
 typedef struct 
 	{
 	WORD wMsgID;		// commands are identified by their ID
@@ -187,18 +247,19 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD
     WORD wMsgSeqCnt;
 
-    BYTE bDin;			//digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
-	BYTE bCmdQDepth;	// How deep is the command queue in the instrument NIOS processor
+	BYTE bSeqStart;		// sequence number of the first SEQ_DATA, 0-31
+	BYTE bCmdQDepthS;	// How deep is the Small command queue in the instrument NIOS processor
+	BYTE bCmdQDepthL;	// How deep is the Large command queue in the instrument NIOS processor
+    BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
     WORD wLocation;		//x location in motion pulses
     WORD wClock;		//unit in .2048ms - ticks from TOP OF PIPE
     WORD wPeriod;		//unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id. A message within a message
+	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info		
+	} IDATA_FROM_HW_HDR;		//sizeof = 32 bytes
 
-						// NIOS has limited memory. Q likely to be [8][1460] = 11,680 bytes
-	BYTE bSpare[12];	// 32 bytes to here
-						// 194 per packet for clive, 130 per packet for sam
-	stRawSeqPacket stSeqPkt[7];	// Raw data for  sequence points = 32 + 7*130 = 942 sam
-	} InputRawDataPacket;		//sizeof = 194*5 + 32 = 1002 bytes clive
+
 
 #define SET_DROPOUT		 ( 1 << 5)
 #define CLR_DROPOUT		~( 1 << 5)
@@ -213,23 +274,36 @@ typedef struct
 
 // peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure
 // Processed data sent from the PAP. One stPeakData structure for every virtual channel
+// Nc_Nx processing receives 1 wall reading per AScan but produces a max and min readging 
+// after 16 AScans.
+//
 typedef struct
 	{
 	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
 					// ie, PAP did not service PeakData fast enough
-	BYTE bG1;		// Gate 1 interface gate
+	BYTE bG1;		// Gate 1 interface gate -- FUTURE FEATURE. place holder in 2017 version
 	BYTE bId2;		// Gate 2 peak held data 0-255
 	BYTE bOd3;		// Gate 3 peak held data 0-255
 	WORD wTofMin;	// gate 4 min
 	WORD wTofMax;	// gate 4 max
 	} stPeakData;	// sizeof = 8
+
+// legacy structure
+typedef struct
+	{
+	int nLength;		// number of bytes to send
+//	BYTE *pMsg;			// ptr to the message bytes to send.
+	BYTE Msg[1];		// ptr to the message bytes to send.
+	}	stSEND_PACKET;
+
 /*
 2016-09-08 New definition of Idata Packet
 */
 #if 1
 // Based on processing rate of PAP,	 may have to have one PAP for each instrument.
-// Idata is the peak held data from the Instrument boards and sent after 16 ascans
-// Idata is the input to the down stream system
+// IDATA_PAP is the peak held data from the PAP and sent after 16 ascans
+// IDATA_PAP is the input to the down stream system, ie goes to the GUI
+// PAP receives 4 bytes for every channel, but puts out 8 bytes peak held for every channel
 typedef struct
 	{
 	WORD wMsgID;		// commands and data are identified by their ID
@@ -252,15 +326,18 @@ typedef struct
 	WORD wPeriod;		// period of rotation in 0.2048 ms
 	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
 	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
-	stPeakData Results[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 179*8=1432
+	WORD wRotationCnt;	// Number of rotations since pipe present signal
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id. A message within a message
+	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info		
+	stPeakData Results[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 176*8=1408
 	// need to add commmand queue depth in adc boards since they can only take 5 commands at a time 2017-02-22
-	} IDATA_PACKET;	// sizeof = 1460 - the maximum TCPIP packet size for data
+	} IDATA_PAP;	// sizeof = 1448
 
 // https://blog.apnic.net/2014/12/15/ip-mtu-and-tcp-mss-missmatch-an-evil-for-network-performance/
 // 1460 is max 
 
 /***** Preliminary assignments - taken from Truscope4 definitions
-IDATA_PACKET.wStatus
+IDATA_PAP.wStatus
 Bit		Meaning when bit is set
 0		PAP cmd buffer full
 1
@@ -283,93 +360,11 @@ typedef struct
 	UINT uMsgSeqCnt;	// counter to uniquely identify each packet
 	UINT uSync;			// 0x5CEBDAAD ... 18 bytes to here
 	RESULTS Results[32];	// Some "channels" at the end may be channel type NONE
-	} IDATA_PACKET;	// sizeof = 210
+	} IDATA_PAP;	// sizeof = 210
 
 #endif
 
 
-
-
-
-
-// Command format from User interface systems to the PAP
-// Command packet can be cut short by specifying a byte count less than 1056
-// All commands now moved to the file \Iclude\Cmds.h
-//
-#if 0
-typedef struct 
-	{
-	// The generic header
-	WORD wMsgID;		// commands are identified by their ID
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
-	BYTE bPapNumber;	// which PAP is the command for
-	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
-						// this is the last 2 digits of the IP4 address of the board 
-						// 192.168.10.200+boardNumber  range is .200-.215
-
-	// Commands can have any format past this point based on MsgId
-
-	BYTE bSeqNumber;	// when relevant, which sequence of virtual probes the command affects
-	BYTE bSpare[19];	// 32 bytes to here
-    WORD wCmd[512];		// 512 words or 1024 bytes
-	} ST_LARGE_CMD;		// 1056 bytes 
-
-// 2016-12-12 ALLOW for variable size data and command packets. Data packet will always be the max
-// allowed by TCPIP. Command packets may vary in size.
-
-typedef struct
-	{
-	WORD wMsgID;		// commands are identified by their ID
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
-	BYTE bPapNumber;	// which PAP is the command for
-	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
-	}	GenericPacketHeader;	// 12 bytes
-
-
-typedef struct
-	{
-	WORD wMsgID;		// commands are identified by their ID
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
-
-	BYTE bSpare[4];		// 16
-	WORD wCmd[8];		// 16	
-	} ST_SMALL_CMD;		// sizeof() = 32
-
-typedef struct
-	{
-	WORD wMsgID;		// commands are identified by their ID
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
-
-	BYTE bSpare[20];	// sequence number at beginning of stPeakData Results[] // 32 bytes to here
-	BYTE bMsg[1024];	// Max unique sets of Nc Nx data per instrument.
-	} PAM_GENERIC_MSG; // SIZEOF() = 1056
-#endif
-
-// legacy structure
-typedef struct
-	{
-	int nLength;		// number of bytes to send
-//	BYTE *pMsg;			// ptr to the message bytes to send.
-	BYTE Msg[1];		// ptr to the message bytes to send.
-	}	stSEND_PACKET;
 
 
 // If we want 2 out of 3 above threshold for Nc qualified, then bMod = 3. The Fifo is 3 elements deep.
@@ -445,276 +440,6 @@ typedef struct
 // If Nx = 0, the output wall value will be 10. This will decrease processing time in the PAM
 // Effectively the associated channel will be a flaw channel or nothing
 //
-
-#if 0
-// When received as a command, bSeqNumber < 0 means end of command
-typedef struct
-	{
-	BYTE bSeqNumber;	// Sequence number of this channel
-	BYTE bChnlNumber;	// channel number in the above sequence for this channel
-	// Flaw Nc for ID
-	BYTE bNcID;		// how many flaw values required at or above threshold
-	BYTE bTholdID;	// Threshold value 0-255
-	BYTE bModID;	// active depth of FIFO. This is the 'm' in Nc out of m. eg., 2 out of 3 above thold
-					// bModID must be >= bNcID. If not the PAM will make bModID=bNcID
-	// Nc for OD
-	BYTE bNcOD;		// how many flaw values required at or above threshold
-	BYTE bTholdOD;	// Threshold value 0-255
-	BYTE bModOD;	// active depth of FIFO. This is the 'm' in Nc out of m. eg., 2 out of 3 above thold
-	// Interface gate
-	BYTE bNcIf;		// how many flaw values required at or above threshold
-	BYTE bTholdIf;	// Threshold value 0-255
-	BYTE bModIf;	// active depth of FIFO. This is the 'm' in Nc out of m. eg., 2 out of 3 above thold
-	BYTE bSpare;
-	// Wall Nx portion
-	WORD wNx;		// Number of wall readings to average. Typically not more than 8
-	WORD wWallMax;	// maximum allowed hardware wall reading. 2.000" -> 1377 typically
-	WORD wWallMin;	// minimum allowed hardware wall reading. 0.040" -> 27
-	WORD wDropOut;	// number of bad readings before drop out occurs
-	} ST_NC_NX;		// sizeof(ST_NC_NX) = 20
-
-// Since the Receiver/PAM used for this initial systems knows nothing about the type signals it processes,
-// this command sets the Nc and Nx variables for all virtual channels.
-// In this original system there are up to 32 channels per instrument but only a few channel types
-// with the types being repeated. It is the same channel type but at a different physical location, 
-// much like the fixed channel types in Truscope where every channel type (for example Long) is replicated
-// in each of the 4 shoes.
-//
-
-// Assume 64 chnl types per sequence per instrument.
-// Doubtful that we will have more than 64 channels in a sequence.
-// The easy way to do this is to send messages which terminate at the end
-// of a sequence in which case the start channel number is always 0
-typedef struct
-	{
-	WORD wMsgID;		// commands are identified by their ID
-	WORD wByteCount;	// Number of bytes in this packet. Make even number
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
-
-	BYTE bSpare[4];		// 16
-	ST_NC_NX stNcNx[52];		// 1040	
-	} PAP_INST_CHNL_NCNX; // SIZEOF() = 1056 replaces CHANNEL_CMD_1
-	
-
-// The next several command formats are for Short Commands of 32 bytes
-typedef struct
-	{
-	GenericPacketHeader Head;	// wMsgID= SET_GATE_DELAY_CMD_ID, gph is 12 bytes
-	BYTE bSeq;			// 
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
-	BYTE bSpare;	// 16 bytes to here
-	WORD wDelay;	// in 80 Mhz clocks
-	WORD wFill[7];	// all 0
-	} ST_GATE_DELAY_CMD;	// sizeof() = 32
-
-typedef struct
-	{
-	GenericPacketHeader Head;	// wMsgID= SET_GATE_RANGE_CMD_ID, gph is 12 bytes
-	BYTE bSeq;		// 
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
-	BYTE bSpare;	// 16 bytes to here
-	WORD wRange;	// in 80 Mhz clocks
-	WORD wFill[7];	// all 0
-	}	ST_GATE_RANGE_CMD;
-
-typedef struct
-	{
-	GenericPacketHeader Head;	// wMsgID= SET_GATE_BLANK_CMD_ID, gph is 12 bytes
-	BYTE bSeq;		// 
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
-	BYTE bSpare;	// 16 bytes to here
-	WORD wBlank;	// in 80 Mhz clocks
-	WORD wFill[7];	// all 0
-	}	ST_GATE_BLANK_CMD;
-
-typedef struct
-	{
-	GenericPacketHeader Head;	// wMsgID= SET_GATE_THRESHOLD_CMD_ID, gph is 12 bytes
-	BYTE bSeq;		// 
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
-	BYTE bSpare;	// 16 bytes to here
-	WORD wThold;	// in 80 Mhz clocks
-	WORD wFill[7];	// all 0
-	}	ST_GATE_THRESHOLD_CMD;
-
-
-// the trigger word sets the values for all 4 gates, hence bGateNumber has no value
-// this originally was called gate_control_cmd
-/*
-The high nibble of wTrigger sets the trigger agent for each gate. 
-A bit value of 1 means trigger on threshold, 0 means trigger on main bang strobe. 
-Bit7=gate3, bit6=gate2, bit5=gate1, bit4= gate0.
-
-The low nibble of wTrigger is an enable/disable switch for each gate. 
-A bit value of 1 means enabled, 0 means disabled.
-Bit3=gate3, bit2=gate2, bit1=gate1, bit0= gate0.
-
-*/
-typedef struct
-	{
-	GenericPacketHeader Head;	// wMsgID= SET_GATES_TRIGGER_CMD_ID, gph is 12 bytes
-	BYTE bSeq;		// 
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
-	BYTE bSpare;	// 16 bytes to here
-	WORD wTrigger;	//
-	WORD wFill[7];	// all 0
-	}	ST_GATES_TRIGGER_CMD;
-
-// the polarity word sets the values for all 4 gates, hence bGateNumber has no value
-// this originally was called gate_data_mode_cmd
-/*
-The following gate command sets all 4 gates with one single command. 
-This is done by using bit fields. Only the low byte of wPolarity is used. 
-“Rf+” means radio frequency, a bipolar wave. “Rf-“ means an inverted bipolar wave. 
-“Fw” means full wave, a rectified or unipolar wave.
-Bits 7-6 for gate3 	   | 5-4 for gate2	       | 3-2 for gate1	        | 1-0 for gate0
-00=rf+, 01=rf-, 1x=fw  | 00=rf+, 01=rf-, 1x=fw | 00=rf+, 01=rf-, 1x=fw	| 00=rf+, 01=rf-, 1x=fw
-
-*/
-typedef struct
-	{
-	GenericPacketHeader Head;	// wMsgID= SET_GATES_POLARITY_CMD_ID, gph is 12 bytes
-	BYTE bSeq;		// 
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
-	BYTE bSpare;	// 16 bytes to here
-	WORD wPolarity;	//
-	WORD wFill[7];	// all 0
-	}	ST_GATES_POLARITY_CMD;
-
-// the TOF word sets the values for 3 gates, hence bGateNumber has no value
-// this originally was called gate_TOF_mode_cmd
-/*
-The following gate command sets the time of flight characteristics for gates 1-3 with one command. 
-This is done by using bit fields. Bits 7-6 select which one of the gates will be used 
-for time of flight output. Gate 0 is not available. 
-
-
-Bits 7-6         | Bit 5 start gate3, 0=Main bang, 1= Pk detect | Bit 2 stop gate3, 0=Thld detect, 1= Pk detect
-11= gate3        | Bit 4 start gate2, 0=Main bang, 1= Pk detect | Bit 1 stop gate2, 0=Thld detect, 1= Pk detect
-10= gate2        | Bit 3 start gate1, 0=Main bang, 1= Pk detect | Bit 0 stop gate1, 0=Thld detect, 1= Pk detect
-01=gate1          
-00 not allowed     
-
-*/
-typedef struct
-	{
-	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
-	BYTE bSeq;		// 
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
-	BYTE bSpare;	// 16 bytes to here
-	WORD wTOF;		// only the low byte is used
-	WORD wFill[7];	// all 0
-	}	ST_GATES_TOF_CMD;
-
-
-/*
-TCG runs at 80 Mhz clock - too fast for TCG steps. This command divides down the TCG clock from 80 Mhz
-into the gain time step interval desired.
-*/
-typedef struct
-	{
-	GenericPacketHeader Head;	// wMsgID= 
-	BYTE bSeq;		// 
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
-	BYTE bSpare;	// 16 bytes to here
-	WORD wStep;		//
-	WORD wFill[7];	// all 0
-	}	ST_SET_TCG_STEP_SIZE_CMD;
-
-/*
-After the TCG trigger we can have a delay before TCG starts to run
-This command sets the delay time in 80 Mhz clock counts.
-*/
-typedef struct
-	{
-	GenericPacketHeader Head;	// wMsgID= 
-	BYTE bSeq;		// 
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
-	BYTE bSpare;	// 16 bytes to here
-	WORD wDelay;	//
-	WORD wFill[7];	// all 0
-	}	ST_SET_TCG_DELAY_CMD;
-
-typedef struct
-	{
-	GenericPacketHeader Head;	// wMsgID= 
-	BYTE bSeq;		// 
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
-	BYTE bSpare;	// 16 bytes to here
-	WORD wStep;	//
-	WORD wFill[7];	// all 0
-	}	ST_TCG_GAIN_DELAY_CMD;
-
-typedef struct
-	{
-	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
-	BYTE bSeq;		// 
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
-	BYTE bSpare;	// 16 bytes to here
-	WORD wDelay;	//
-	WORD wFill[7];	// all 0
-	}	ST_CHNL_GAIN_DELAY_CMD;
-
-//
-//=================================================
-// LARGE COMMNAD STRUCTURES
-
-typedef struct
-	{
-	WORD wMsgID;		// commands are identified by their ID
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
-
-	BYTE bSpare[4];		// 16
-	ST_NC_NX stNcNx[52];		// 1040	
-	} CANNED_GATES; // SIZEOF() = 1056 replaces CHANNEL_CMD_1
-
-
-typedef struct 
-	{
-	// The generic header
-	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
-	BYTE bSeqNumber;	// when relevant, which sequence of virtual probes the command affects
-	BYTE bSpare[19];	// 32 bytes to here
-    WORD wGain[512];	// 512 words or 1024 bytes .. ony first 128 used. wGain[128] to wGain[511= = 0
-	} ST_ELEMENT_GAIN;		// 1056 bytes 
-
-
-typedef struct	// NOT SURE ABOUT THIS COMMAND 2017-03-16
-	{
-	// The generic header
-	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
-	BYTE bSeqNumber;	// when relevant, which sequence of virtual probes the command affects
-	BYTE bChnl;
-	BYTE bSpare[18];	// 32 bytes to here
-    WORD wGain[512];	// 512 words or 1024 bytes .. ony first 128 used. wGain[128] to wGain[511= = 0
-	} ST_CHNL_GAIN;		// 1056 bytes 
-
-
-#endif
 
 /*****************	STRUCTURES	END *********************/
 

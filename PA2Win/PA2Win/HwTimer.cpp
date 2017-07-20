@@ -23,7 +23,7 @@ static char THIS_FILE[] = __FILE__;
 CHwTimer :: CHwTimer()	// constructor
 	{
 	// Init timing variables for r/t metrics
-	QueryPerformanceFrequency((LARGE_INTEGER *)&HiResClksPerMilliSecond);
+	QueryPerformanceFrequency((LARGE_INTEGER *)&HiResClksPerMilliSecond); // actually clock/sec
 	if (HiResClksPerMilliSecond)
 		m_fScaleToMicroseconds = 1000000.0f/(float)HiResClksPerMilliSecond;
 	else

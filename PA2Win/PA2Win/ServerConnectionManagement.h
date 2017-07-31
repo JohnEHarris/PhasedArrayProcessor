@@ -182,7 +182,7 @@ typedef struct
 	BYTE bStopSendRcv;				// have socket throw away all input/output data
 
 	BYTE bConnected;				// eNotConnected, eNotConfigured, eConfigured .. detected in receive thread.
-	WORD wMsgSeqCnt;				// sequential number of sent message
+	WORD wMsgSeqCnt;				// sequential number of sent message to this client
 	UINT uPacketsReceived;
 	UINT uBytesReceived;
 	UINT uPacketsPerSecond;			// received packets

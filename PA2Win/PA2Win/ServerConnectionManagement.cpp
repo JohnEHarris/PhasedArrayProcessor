@@ -565,14 +565,16 @@ void CServerConnectionManagement::KillClientConnection(int nMyServer, int nClien
 	for ( i = 0; i < MAX_SEQ_COUNT; i++)
 		for (j = 0; j < MAX_CHNLS_PER_MAIN_BANG; j++)
 			{
-			if (pscc->pvChannel[i][j])
-				{
-				delete pscc->pvChannel[i][j];
-				m_pstSCM->pClientConnection[nClient]->pvChannel[i][j] = 0;
-				}
+			if (m_pstSCM->pClientConnection[nClient])
+				if (m_pstSCM->pClientConnection[nClient]->pvChannel[i][j])
+					{
+					delete m_pstSCM->pClientConnection[nClient]->pvChannel[i][j];
+					m_pstSCM->pClientConnection[nClient]->pvChannel[i][j] = 0;
+					}
 			}
-		
-	delete pscc;
+	
+	if (m_pstSCM->pClientConnection[nClient])
+		delete m_pstSCM->pClientConnection[nClient];
 	m_pstSCM->pClientConnection[nClient] = 0;
 
 	}

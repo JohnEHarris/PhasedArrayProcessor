@@ -337,7 +337,7 @@ void CNcNx::PopulateCmdComboBox()
 	m_cbCommand.ResetContent();
 
 	s.Format( _T( "null 0" ) );				m_cbCommand.AddString( s );
-	s.Format( _T( "null 1" ) );				m_cbCommand.AddString( s );
+	s.Format( _T( "FakeData" ) );			m_cbCommand.AddString( s );
 	s.Format( _T( "Gate n Delay" ) );		m_cbCommand.AddString( s );	//2
 	s.Format( _T( "Gate n Range" ) );		m_cbCommand.AddString( s );	//3
 	s.Format( _T( "Gate n Blank" ) );		m_cbCommand.AddString( s );	//4
@@ -361,8 +361,8 @@ void CNcNx::OnCbnSelchangeCbCmds()
 	t.Format( _T( "m_nCmdId = %d" ), m_nCmdId );
 	switch (m_nCmdId)
 		{
-		case 0:
-		case 1:	s.Format( _T( "null %d" ), m_nCmdId );	break;
+		case 0:	s.Format( _T( "null %d" ), m_nCmdId );	break;
+		case 1:	s =_T( "Fake Data" );					break;
 		case 2: s.Format(_T("Gate %d Delay %d"), m_nGate, m_nParam); break;
 		case 3: s.Format(_T("Gate %d Range %d"), m_nGate, m_nParam); break;
 		case 4: s.Format(_T("Gate %d Blank %d"), m_nGate, m_nParam); break;
@@ -377,8 +377,9 @@ void CNcNx::OnCbnSelchangeCbCmds()
 
 	switch (m_nCmdId)
 		{
-		case 0:
+		case 0:			break;
 		case 1:	
+			FakeData( m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam );
 			break;
 		case 2: 
 		case 3: 
@@ -543,6 +544,37 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	t = sym + s;
 	m_lbOutput.AddString(t);
 	SendMsg((GenericPacketHeader*)&m_TcgCmd);
+	}
+
+// Command ID = 1 generates a request for the NIOS instrument to create fake data and
+// send to PAP
+
+// For fake data, the sequence number will set the starting sequence point for fake data.
+// if sequence == 0 Fake data will continue from where it was.
+// Use m_Gate as only the cmd ID and the Seq number matter for fake data.
+// Of course the Pap/Board steering variables determine where the command will go.
+void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue )
+	{
+	CString s, t, sym;
+	sym = _T("Generate Fake Data: ");
+	memset(&m_GateCmd, 0, sizeof(ST_GATE_DELAY_CMD));
+	m_GateCmd.Head.wMsgID = 1;	// nCmd;	// 1 is assigned to Fake data
+	m_GateCmd.Head.wByteCount = 32;
+	m_GateCmd.Head.uSync = SYNC;
+//		m_GateCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
+	m_GateCmd.Head.bPapNumber = nPap;
+	m_GateCmd.Head.bBoardNumber = nBoard;
+	m_GateCmd.bSeq = nSeq;
+	m_GateCmd.bChnl = nCh;	// does not matter
+	m_GateCmd.bGateNumber = nGate;	// does not matter
+	m_GateCmd.wDelay = nValue;	// does not matter
+
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d\n"),
+		m_GateCmd.Head.wMsgID, m_GateCmd.Head.wByteCount, m_GateCmd.Head.bPapNumber,
+		m_GateCmd.Head.bBoardNumber, m_GateCmd.bSeq);
+	t = sym + s;
+	m_lbOutput.AddString(t);
+	SendMsg((GenericPacketHeader*)&m_GateCmd);
 	}
 
 void CNcNx::OnChangeEdParam()

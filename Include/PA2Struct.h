@@ -26,7 +26,7 @@ typedef unsigned short	WORD;
 typedef unsigned int	UINT;
 #endif
 
-enum IdataTypes {eRawInsp=10, eAscan=12, eKeepAlive=0xff};
+enum IdataTypes {eRawInspID=1, eAscanID=2, eKeepAliveID=0xff};
 enum IdOdTypes {eId, eOd, eIf};
 enum CallSource {eMain, eInterrupt};
 

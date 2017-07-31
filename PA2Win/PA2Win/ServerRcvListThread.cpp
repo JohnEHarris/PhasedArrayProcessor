@@ -327,12 +327,10 @@ void CServerRcvListThread::MakeFakeData(IDATA_FROM_HW *pData)
 	// Every 16 frames, generate the max and min wall reading and the max Nc qualified flaw reading for
 	// every channel. 
 
-	// Assuming only 7 sequences to fit the data size. Need to do something different if not 7 sequences in packet
-	// Doing something different
-	for (iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
+	for (iSeqPkt = 0; iSeqPkt < 32; iSeqPkt++)
 		{
-		pData->stSeqPkt[iSeqPkt].DataHead.bSeqNumber = GetFDstartSeq();
-		pData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber = GetFDstartCh();
+		pData->bSeqStart = GetFDstartSeq();
+		//pData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber = GetFDstartCh();
 		n = 0;	// channel counter. Will create gMaxChnlsPerMainBang*gMaxSeqCount channels
 		jSeq = GetFDstartSeq();
 
@@ -349,11 +347,11 @@ void CServerRcvListThread::MakeFakeData(IDATA_FROM_HW *pData)
 				k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp1 = 1 + (GetRand() / 2);	// 1-51 amplitude
 				t.Format(_T("%3d  "), (k)); s += t;
 #endif
-				k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp2 = 5 + (GetRand() / 2);	// 5-55 amplitude
+				k = pData->Seq[jSeq].vChnl[i].bAmp2  = 5 + (GetRand() / 2);	// 5-55 amplitude
 				t.Format(_T("%3d  "), (k)); s += t;
-				k = pData->stSeqPkt[iSeqPkt].RawData[i].bAmp3 = 10 + (GetRand() / 2);	// 10-60 amplitude
+				k = pData->Seq[jSeq].vChnl[i].bAmp3 = 10 + (GetRand() / 2);	// 10-60 amplitude
 				t.Format(_T("%3d  "), (k)); s += t;
-				k = pData->stSeqPkt[iSeqPkt].RawData[i].wTof = 300 + GetRand();
+				k = pData->Seq[jSeq].vChnl[i].wTof = 300 + GetRand();
 				t.Format(_T("%4d    "), (k)); s += t;
 				SaveFakeData(s);
 				}
@@ -362,9 +360,9 @@ void CServerRcvListThread::MakeFakeData(IDATA_FROM_HW *pData)
 #ifdef CLIVE_RAW_DATA
 				pData->stSeqPkt[iSeqPkt].RawData[i].bAmp1 = 1 + (GetRand() / 2);
 #endif
-				pData->stSeqPkt[iSeqPkt].RawData[i].bAmp2 = 5 + (GetRand() / 2);	// 5-55 amplitude
-				pData->stSeqPkt[iSeqPkt].RawData[i].bAmp3 = 10 + (GetRand() / 2);	// 10-60 amplitude
-				pData->stSeqPkt[iSeqPkt].RawData[i].wTof = 300 + GetRand();
+				pData->Seq[jSeq].vChnl[i].bAmp2  = 5 + (GetRand() / 2);	// 5-55 amplitude
+				pData->Seq[jSeq].vChnl[i].bAmp3 = 10 + (GetRand() / 2);	// 10-60 amplitude
+				pData->Seq[jSeq].vChnl[i].wTof = 300 + GetRand();
 				}
 
 			IncFDstartCh();		// move to the next channel... maybe in the next sequence
@@ -587,11 +585,11 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 		if (m_pElapseTimer)
 			m_pElapseTimer->Start();
 		//for ( i = 0; i < nSeqQty; i++)
-		for ( iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
+		for ( iSeqPkt = 0; iSeqPkt < 32; iSeqPkt++)
 			{
 			// get the starting sequence number and channel from the instument data
-			m_Seq = pIData->stSeqPkt[iSeqPkt].DataHead.bSeqNumber;	// only used to find which pChannel
-			m_Ch  = pIData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber;
+			m_Seq = pIData->bSeqStart;	// only used to find which pChannel
+			m_Ch  = 0;	// pIData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber;
 
 			for ( j = 0; j < gMaxChnlsPerMainBang; j++)	// Assumes the data packet contains whole frames
 				{
@@ -604,12 +602,12 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 				// Not defined what to do with status ???????
 #ifdef CLIVE_RAW_DATA
 				bGateTmp = pChannel->InputFifo(eIf, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp1);
-#endif
-				bGateTmp = pChannel->InputFifo(eId, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp2);	// output of the Nc peak holder
-				bGateTmp = pChannel->InputFifo(eOd, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp3);
+#endif		// pData->Seq[jSeq].vChnl[i].bAmp2
+				bGateTmp = pChannel->InputFifo(eId, pIData->Seq[iSeqPkt].vChnl[j].bAmp2);	// output of the Nc peak holder
+				bGateTmp = pChannel->InputFifo(eOd, pIData->Seq[iSeqPkt].vChnl[j].bAmp3);
 
 				// Get Max and min tof for this channel
-				wTOFSum = pChannel->InputWFifo(pIData->stSeqPkt[iSeqPkt].RawData[j].wTof);
+				wTOFSum = pChannel->InputWFifo(pIData->Seq[iSeqPkt].vChnl[j].wTof);
 				if (pChannel->AscanInputDone())
 					{// time to move peak data into ouput structure
 					// AddToIdataPacket will create the IdataPacket if it does not already exist.

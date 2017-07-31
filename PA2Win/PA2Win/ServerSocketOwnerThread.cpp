@@ -349,19 +349,7 @@ int CServerSocketOwnerThread::ExitInstance()
 			//
 			//m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread = NULL;
 			// Created in ServiceApp -- must be killed there on shutdown
-#if 0
-			// done in CServerConnectionManagement::KillClientConnection
-			for ( i = 0; i < MAX_SEQ_COUNT; i++)
-				for (j = 0; j < MAX_CHNLS_PER_MAIN_BANG; j++)
-					{
-					if (m_pSCC->pvChannel[i][j])
-						{
-						delete m_pSCC->pvChannel[i][j];
-						m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[i][j] = 0;
-						}
-					}
-#endif
-	
+
 			m_pstSCM->nComThreadExited[m_nClientIndex] = 1;	
 			//delete m_pstSCM->pClientConnection[m_nClientIndex];
 			//m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread = NULL;
@@ -392,110 +380,7 @@ END_MESSAGE_MAP()
 //
 // See ServerSocket::int CServerSocket::BuildClientConnectionStructure(ST_SERVERS_CLIENT_CONNECTION *pscc, int nMyServer, int nClientPortIndex)
 // The SocketOwner Thread will undo what the BuildClientConnection routine buit in the class ServerSocket
-#if 0
-afx_msg void CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam)
-	{
-	int nReturn;
-	CString t, s = _T("CServerSocketOwnerThread::Exit2(WPARAM w, LPARAM lParam) s running\n");
-	TRACE(s);
-	ST_SERVERS_CLIENT_CONNECTION *pscc;
-	void *pV;
-	int i;
-	// Close the socket and delete
-	// Kill the ServerRcvList thread
-	// delete linked lists and critical sections
-	pscc = (ST_SERVERS_CLIENT_CONNECTION *)lParam;
-	//Undo what BuildClientConnectionStructure created
-	if (pscc != NULL) 
-		{
-		if (pscc->pSocket)
-			{
-			if (pscc->pSocket->m_pElapseTimer)
-				{
-				strcat(pscc->pSocket->m_pElapseTimer->tag, "KIll HWTimer SrvSktOwnerThrd421\n");
-				s = pscc->pSocket->m_pElapseTimer->tag;
-				TRACE(s);
-				delete pscc->pSocket->m_pElapseTimer;
-				pscc->pSocket->m_pElapseTimer = 0;
-				}
 
-			i = sizeof(CServerSocket);
-			if (i = pscc->pSocket->ShutDown(2))
-				{
-				s.Format(_T("Shutdown of client socket was successful status = %d\n"), i);
-				TRACE(s);
-				//pscc->pSocket->Close();
-				}
-			else
-				{
-				s += _T(" servers client socket failed to shut down\n");
-				TRACE(s);
-				}
-
-			}
-
-		pscc->bConnected = (BYTE) eNotConnected;
-		if (pscc->pCSRcvPkt) 
-			EnterCriticalSection(pscc->pCSRcvPkt);
-		while ( pscc->pRcvPktList->GetCount() > 0)
-			{
-			pV = (void *) pscc->pRcvPktList->RemoveHead();
-			delete pV;
-			}
-		LeaveCriticalSection(pscc->pCSRcvPkt);
-		// These now global objects controlled by ServiceApp
-#if 0
-		delete	pscc->pRcvPktList;		
-				pscc->pRcvPktList	= NULL;
-		delete	pscc->pCSRcvPkt;			
-				pscc->pCSRcvPkt		= NULL;
-#endif
-
-		EnterCriticalSection(pscc->pCSSendPkt);
-		while ( pscc->pSendPktList->GetCount() > 0)
-			{
-			pV = (void *) pscc->pSendPktList->RemoveHead();
-			delete pV;
-			}
-		LeaveCriticalSection(pscc->pCSSendPkt);
-#if 0
-		delete	pscc->pSendPktList;		
-				pscc->pSendPktList	= NULL;
-		delete	pscc->pCSSendPkt;		
-				pscc->pCSSendPkt	= NULL;
-#endif
-		}
-	// typically if the socket doesn't exist, the handle = -1 or 0xffffffff
-	// and typically on this machine the socket handle is somewhere between 1 and 1000 with 8xx being common.
-	if ((int)pscc->pSocket->m_hSocket > 0)	//&& ((int)pscc->pSocket->m_hSocket < 32000))
-		{
-		delete pscc->pSocket;
-		pscc->pSocket = NULL;
-		}
-
-	pscc->bStopSendRcv = 1;
-#if 0
-	By ServiceApp
-	for ( j = 0; j < MAX_SEQ_COUNT; j++)
-	for ( i = 0; i < gMaxChnlsPerMainBang; i++)
-		{
-		if (pscc->pvChannel[j][i])
-			{
-			delete pscc->pvChannel[j][i];
-			pscc->pvChannel[j][i] = 0;
-			}
-		}
-#endif
-	// kill ServerSocket instance
-	KillServerSocket(m_nClientIndex, (LPARAM)pscc);
-	nReturn = ExitInstance();	//thread message does not allow return of anything but void
-	t.Format(_T("%d\n"), nReturn);
-	s += t;
-	TRACE(s);
-	//delete m_pSCC->pServerSocketOwnerThread;
-	// Maybe use AfxEndThread (0) instead of ExitInstance
-	}
-#endif
 
 // ON shutdown, kill the server socket associated with the client connection.
 // Then this thread call will kill the serversocket owner itself.
@@ -706,7 +591,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			pNc = (PAP_INST_CHNL_NCNX *)pCmd;
 			s.Format(_T("NC_NX_CMD_ID Msg seq cnt =%d, seq=%2d, chnl=%3d, PktListSize= %3d\n"), 
 				pCmd->wMsgSeqCnt, pNc->stNcNx->bSeqNumber, pNc->stNcNx->bChnlNumber, i);
-			pCmd->wMsgSeqCnt = m_pSCC->wMsgSeqCnt++;
+			//pCmd->wMsgSeqCnt = m_pSCC->wMsgSeqCnt++; -- see below
 			nMsgSize = pNc->wByteCount;
 			//theApp.SaveDebugLog(s);
 			pMainDlg->SaveDebugLog(s);
@@ -744,6 +629,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				goto DELETE_CMD;
 				}
 			}	// switch (pCmd->wMsgID)
+
+		pCmd->wMsgSeqCnt = m_pSCC->wMsgSeqCnt++;
 
 		// up to 50 attempts to send
 		for ( i = 0; i < 50; i++)

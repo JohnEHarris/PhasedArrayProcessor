@@ -1103,10 +1103,12 @@ void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTI
 
 // Only in PAP - done on individual connection for every sequence and channel
 #ifdef I_AM_PAP
-	for ( j = 0; j < MAX_SEQ_COUNT; j++)
-	for ( i = 0; i < MAX_CHNLS_PER_INSTRUMENT; i++)
+	for (j = 0; j < MAX_SEQ_COUNT; j++)
 		{
-		pscc->pvChannel[j][i] = new CvChannel(j,i);
+		for (i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
+			{
+			pscc->pvChannel[j][i] = new CvChannel( j, i );
+			}
 		}
 #endif
 	}

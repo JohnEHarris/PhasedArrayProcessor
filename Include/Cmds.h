@@ -61,7 +61,7 @@ extern ST_LARGE_CMD *pCmdGlobal;
 
 // SMALL
 #define NULL_0						0
-#define NULL_1						1
+#define FAKE_DATA_CMD_ID			1
 #define SET_GATE_DELAY_CMD_ID		2
 #define SET_GATE_RANGE_CMD_ID       3
 #define SET_GATE_BLANK_CMD_ID       4
@@ -156,6 +156,20 @@ typedef struct
 	} PAP_GENERIC_MSG; // SIZEOF() = 1056
 
 /*************** Command Structures **************/
+
+
+// bSeq and bSeqModulo work together. bSeq on subsequent fake data is derived for existing
+// data in NIOS memory if bSeq > 31 and bSeqModulo <= 32
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= FAKE_DATA_CMD_ID, gph is 12 bytes
+	BYTE bSeq;		// starting sequence number for this data packet. If > 31, ignore
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
+	BYTE bSeqModulo;	// when does the seq counter wrap (4,8,16,32??)
+	WORD wFake[8];	// dummy argument. Msg ID is all that is required to service this command
+	} ST_FAKE_DATA_CMD;	// sizeof() = 32
+
 
 /*
 The user interface program will have to convert the user’s specified time units 
@@ -464,6 +478,8 @@ void ZeroLargeCmdProcessed( void );
 
 void ProcNull( void );
 void NcNx_Test_Cmd( void );
+
+void FakeData( void );
 /*   GATE COMMANDS */
 void GateDelay( void );
 void GateRange( void );

@@ -169,14 +169,24 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		//case 2-8:	// Gate commands from PAG TO PAP then PAP to Board
 
 		default:
+			if (MsgId > 0x200)
+				{
+				// Large message.. forward to NIOS boards
+				if (MsgId < LAST_LARGE_COMMAND + 0X200)
+					pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
+				else
+					delete pMmiCmd;
+				break;
+				}
 			if (MsgId < LAST_SMALL_COMMAND)
 				{
-				s.Format(_T("Received Cmd %d for Instrument %d from Phased Array GUI - now deleting\n"),
+				s.Format(_T("Received Cmd %d for Instrument %d from Phased Array GUI\n"),
 					MsgId, pMmiCmd->bBoardNumber);
 				TRACE( s );
 				pMainDlg->SaveDebugLog(s);
 				// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
 				pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
+				break;
 				}
 
 			else

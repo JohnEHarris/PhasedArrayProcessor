@@ -82,6 +82,7 @@ typedef struct
 PubExt	GLOBAL_DLG_PTRS gDlg;
 PubExt int gMaxChnlsPerMainBang;
 PubExt int gMaxChnls;	// chanels per main bang * MaxSeqCount = 8*32 =256
+PubExt int gSeqModulo;	// last seq number before reset to 0
 PubExt int gMaxSeqCount;
 PubExt int gnMaxServers, gnMaxClientsPerServer;		// Server Connection Management
 PubExt int gnMaxClients;							// Client Connection Management
@@ -90,12 +91,12 @@ PubExt WORD gwMsgSeqCnt;
 PubExt BYTE gbSeqStart;	// starting sequence number for next Idata packet
 PubExt int nLoc; // simulate location of pipe
 PubExt BYTE bLastFakeSeq;	// assuming fake data can reset before 32 ascans.
-PubExt HANDLE g_hTimerTick;
+//PubExt ELAPSE64 TRecvCmd;
 // for NIOS compiler
 //#ifndef HANDLE
 //#define HANDLE int
 //#endif
-//PubExt ELAPSE64 TRecvCmd;
+PubExt HANDLE g_hTimerTick;
 
 #endif /* NIOS_CODE */
 

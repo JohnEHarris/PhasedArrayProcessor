@@ -64,15 +64,14 @@ enum CallSource {eMain, eInterrupt};
 // Channels may be redefined on each main bang. The counter which counts main bangs is called the sequence counter
 // the maximum value the sequence counter can have was 16, now (2017/07/20) =
 #define MAX_SEQ_COUNT					32
-// choose 5 for seq length while doing simulated input data so that one packet has all the virtual channels in it
 
 // The number of virtual channels is finite. Channels repeat after MAX_SEQ_COUNT number of main bangs.
 // On any given main bang (sequence count) there can only be a max number of channels define by 
 // MAX_CHNLS_PER_MAIN_BANG. The max the number of channels in a transducer array is 
-// [MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG] = 8*32 = 256
+// [MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG] = 32*8 = 256
 
 // How many peak held data Results can we get in the max size tcpip packet.
-// stPeakData Results[176]
+// stPeakData Results[176] -> 8*176 = 1408
 #define MAX_RESULTS						176
 
 #define INSTRUMENT_PACKET_SIZE			1056		//old 1040.. 1460 is max TCPIP size
@@ -224,16 +223,16 @@ typedef struct
 	BYTE bSeqStart;		// sequence number of the first SEQ_DATA in this packet, 0-31
 	BYTE bCmdQDepthS;	// How deep is the Small command queue in the instrument NIOS processor
 	BYTE bCmdQDepthL;	// How deep is the Large command queue in the instrument NIOS processor
+						// NIOS has limited memory. Msg Q likely to be 
+						// Large, [8][1056] = 8448 bytes, Small [64][32] = 2048
     BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
     WORD wLocation;		// x location in motion pulses
     WORD wClock;		// unit in .2048ms - ticks from TOP OF PIPE
     WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-
-						// NIOS has limited memory. Msg Q likely to be 
-						// Large, [8][1056] = 8448 bytes, Small [64][32] = 2048
+	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
-	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info		
+	BYTE bNiosFeedback[8];// eg. FPGA version, C version, self-test info		
 	// 32 bytes to here
 
 	SEQ_DATA Seq[32];	// 32 sequences each of 8 virtual channels. 32*32 = 1024
@@ -250,13 +249,16 @@ typedef struct
 	BYTE bSeqStart;		// sequence number of the first SEQ_DATA, 0-31
 	BYTE bCmdQDepthS;	// How deep is the Small command queue in the instrument NIOS processor
 	BYTE bCmdQDepthL;	// How deep is the Large command queue in the instrument NIOS processor
+						// NIOS has limited memory. Msg Q likely to be 
+						// Large, [8][1056] = 8448 bytes, Small [64][32] = 2048
     BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
     WORD wLocation;		//x location in motion pulses
     WORD wClock;		//unit in .2048ms - ticks from TOP OF PIPE
     WORD wPeriod;		//unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id. A message within a message
-	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info		
+	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
+	BYTE bNiosFeedback[8];// eg. FPGA version, C version, self-test info		
 	} IDATA_FROM_HW_HDR;		//sizeof = 32 bytes
 
 
@@ -315,8 +317,9 @@ typedef struct
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
-	BYTE bStartSeqNumber;	// sequence number at beginning of stPeakData Results[]
-	BYTE bSequenceLength;	// how many main bangs before repeating the virtual channels
+	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. Results[0] -> seq 0
+							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
+	BYTE bSpare;	
 	BYTE bStartChannel;		// First virtual channel in peak data Results
 	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.
 								// Some sequence points may have channel type NOTHING
@@ -327,8 +330,9 @@ typedef struct
 	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
 	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id. A message within a message
-	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info		
+	BYTE bSeqModulo;	// modulo of the sequence number. Also total number of different sequences
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
+	BYTE bNiosFeedback[8];// eg. FPGA version, C version, self-test info		
 	stPeakData Results[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 176*8=1408
 	// need to add commmand queue depth in adc boards since they can only take 5 commands at a time 2017-02-22
 	} IDATA_PAP;	// sizeof = 1448

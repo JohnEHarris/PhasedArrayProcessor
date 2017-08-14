@@ -25,6 +25,10 @@ NotInProject/
 OtherFolders/
 Tmp/
 Include/Hide/
+MMI_VS10*/
+PAMaster/
+PA_GUI/
+PA_MASTER*/
 
 # Visual Studio 2015 cache/options directory
 .vs/

@@ -193,7 +193,26 @@ WORD CvChannel::InputWFifo(WORD wWall)
 	WORD wOldWall;
 	Nx_FIFO *pFifo = &NxFifo;
 
-	if (pFifo->bNx ==0) return 10;	// not considered a wall channel
+	// not a wall channel
+	if (pFifo->bNx == 0)
+		{
+		++m_bInputCnt;
+		if (m_bInputCnt >= ASCANS_TO_AVG)
+			{
+			if ((m_wStatus & SET_READ) == 0)	// previous peak data has not been read yet
+				SetOverRun();
+			else ClearOverRun();
+			ClrRead();
+			m_bInputCnt = 0;	// how we know we have enough data
+			m_PeakData.bId2 = NcFifo[0].bMaxFinal;
+			m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
+			//m_PeakData.bG1 = NcFifo[2].bMaxFinal;
+			m_PeakData.wTofMin = 10;
+			//m_PeakData.wTofMax = 10;
+			//ResetGatesAndWalls(); -- done after CServerRcvListThread::AddToIdataPacket() 
+			}		
+		return 10;	// not considered a wall channel
+		}
 
 
 
@@ -250,12 +269,14 @@ COUNT_INPUTS:
 			SetOverRun();
 		else ClearOverRun();
 		ClrRead();
-		m_bInputCnt = 0;
+		/****************************************/
+		m_bInputCnt = 0;	// how we know we have enough data
+		/****************************************/
 		m_PeakData.bId2 = NcFifo[0].bMaxFinal;
 		m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
-		m_PeakData.bG1  = NcFifo[2].bMaxFinal;
+		//m_PeakData.bG1  = NcFifo[2].bMaxFinal;
 		m_PeakData.wTofMin =	m_wTOFMinSum;
-		m_PeakData.wTofMax =	m_wTOFMaxSum;
+		//m_PeakData.wTofMax =	m_wTOFMaxSum;
 		//ResetGatesAndWalls(); -- done after CServerRcvListThread::AddToIdataPacket() 
 		}
 
@@ -319,6 +340,6 @@ void CvChannel::GetPeakData(void)
 	m_PeakData.bId2 = NcFifo[0].bMaxFinal;
 	m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
 	m_PeakData.wTofMin = m_wTOFMinSum;
-	m_PeakData.wTofMax = m_wTOFMaxSum;
+	//m_PeakData.wTofMax = m_wTOFMaxSum;
 	}
 #endif

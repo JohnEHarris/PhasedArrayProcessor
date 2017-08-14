@@ -553,6 +553,8 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 // if sequence == 0 Fake data will continue from where it was.
 // Use m_Gate as only the cmd ID and the Seq number matter for fake data.
 // Of course the Pap/Board steering variables determine where the command will go.
+// nValue will specify the last sequence number before starting over
+// 0-> 1 seq, 1-> 2 seqs, 2-> 3 seq[0,1,2], 3->[0,1,2,3]
 void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue )
 	{
 	CString s, t, sym;
@@ -564,14 +566,14 @@ void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 //		m_GateCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
 	m_GateCmd.Head.bPapNumber = nPap;
 	m_GateCmd.Head.bBoardNumber = nBoard;
-	m_GateCmd.bSeq = nSeq;
+	m_GateCmd.bSeq = nSeq & 0x1f;	// starting seq number
 	m_GateCmd.bChnl = nCh;	// does not matter
 	m_GateCmd.bGateNumber = nGate;	// does not matter
-	m_GateCmd.wDelay = nValue;	// does not matter
-
-	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d\n"),
+	if (nValue > 32)	nValue = 32;
+	m_GateCmd.bSpare = nValue; // the last valid seq number before restart + 1.. the mdodulo
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Start_Seq#=%d, (Param)SeqModulo = %d\n"),
 		m_GateCmd.Head.wMsgID, m_GateCmd.Head.wByteCount, m_GateCmd.Head.bPapNumber,
-		m_GateCmd.Head.bBoardNumber, m_GateCmd.bSeq);
+		m_GateCmd.Head.bBoardNumber, m_GateCmd.bSeq, m_GateCmd.bSpare);
 	t = sym + s;
 	m_lbOutput.AddString(t);
 	SendMsg((GenericPacketHeader*)&m_GateCmd);

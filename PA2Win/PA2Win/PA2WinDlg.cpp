@@ -1000,8 +1000,8 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 void CServerRcvListThread::MakeFakeDataHead(IDATA_FROM_HW *pData)
 //void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
 	{
-		//pData->wMsgID	= eRawInsp;	// raw data=10
-	//pData->wByteCount = 1460;
+	//pData->wMsgID	= eRawInsp;	// raw data=10
+	//pData->wByteCount = 1064;
 //	pData->bDin		= FORWARD | PIPE_PRESENT;
 	//pData->wMsgSeqCnt++;
 	pData->wLocation = nLoc++;
@@ -1800,7 +1800,7 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(CServerRcvListThread);	// 140
 	i = sizeof(CServerSocket);	// 4280
 	i = sizeof(CServerSocketOwnerThread);	// 108 -> 104
-	i = sizeof(CvChannel);	// 160
+	i = sizeof(CvChannel);	// 156
 	i = sizeof(CTestThread); // 72
 	i = sizeof(CTuboIni); // 12
 	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 2168 -> 1144
@@ -1816,7 +1816,7 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof( CIniSectionW );	// 44
 	i = sizeof( CIniKeyW );	// 60
 	i = sizeof( CShellManager );	// 12
-	i = sizeof( IDATA_PAP );	// 1460 ->1448
+	i = sizeof( IDATA_PAP );	// 1460 ->1448->1064
 //	i = sizeof( InputRawDataPacket );	// 944 ->272 replaced by IDATA_FROM_HW
 //	i = sizeof( stRawSeqPacket );	// 130 ->34 
 	i = sizeof( IDATA_FROM_HW );	// 1056

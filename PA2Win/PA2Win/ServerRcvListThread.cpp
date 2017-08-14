@@ -298,7 +298,7 @@ void CServerRcvListThread::IncFDstartCh(void)
 void CServerRcvListThread::IncFDstartSeq(void)
 	{
 	m_FDstartSeq++;
-	if (m_FDstartSeq >= gMaxSeqCount)
+	if (m_FDstartSeq >= gnSeqModulo	)
 		{
 		m_FDstartSeq = 0;
 		}
@@ -410,8 +410,10 @@ int CServerRcvListThread::GetSequenceModulo(SRawDataPacketOld *pData)
 // Build Output packet as individual channel peak held data becomes available
 // could return the index in Idata
 // If SendFlag is non zero, send the packet as is
+// CHANNEL order is the received packet order from NIOS. Accomplished by assigning
+// start channel from NIOS to the beginning fo the Idata Packet
 
-void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int nSeq, int nSendFlag)
+void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nSendFlag)
 	{
 	if (m_pIdataPacket == NULL)
 		{
@@ -423,19 +425,20 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int n
 		m_pIdataPacket->uSync		= SYNC;
 		m_pIdataPacket->wMsgSeqCnt = 0;	// m_uMsgSeqCnt++;
 		m_pIdataPacket->wMsgID		= 1;
-		m_pIdataPacket->bStartSeqNumber = nSeq;	// Come from gate board in header with gates and wall
-		m_pIdataPacket->bStartChannel	= nCh;
-		m_pIdataPacket->bSequenceLength	= gMaxChnlsPerMainBang;	// Come from gate board in header with gates and wall reading
+		m_pIdataPacket->bStartSeqNumber = pChannel->m_bSeq;	// Come from gate board in header with gates and wall
+		m_pIdataPacket->bStartChannel = pChannel->m_bChnl;
+		//m_pIdataPacket->bSpare	= gMaxChnlsPerMainBang;	// Come from gate board in header with gates and wall reading
 		m_pIdataPacket->bMaxVChnlsPerSequence	= gMaxChnlsPerMainBang;
 		m_pIdataPacket->wStatus		= 0x1234;
 		m_pIdataPacket->wLoc		= m_pSCC->InstrumentStatus.wLoc;
 		m_pIdataPacket->wAngle		= m_pSCC->InstrumentStatus.wAngle;
 		m_pIdataPacket->wPeriod		= m_pSCC->InstrumentStatus.wPeriod;
 		m_pIdataPacket->wStatus		= m_pSCC->InstrumentStatus.wStatus;
+		m_pIdataPacket->bSeqModulo	= gnSeqModulo;
 		m_IdataInPt					= 0;	// insertion index in output data structrure
 		}
 
-	pChannel->CopyPeakData(&m_pIdataPacket->Results[m_IdataInPt++]);
+	pChannel->CopyPeakData(&m_pIdataPacket->Results[m_IdataInPt++]); // notice increment of m_IdataInPt 
 	pChannel->ClearDropOut();
 	pChannel->ClearOverRun();
 	pChannel->SetRead();
@@ -446,7 +449,8 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nCh, int n
 int CServerRcvListThread::GetIdataPacketIndex(void)
 	{
 	if (m_pIdataPacket == NULL)	return -1;
-	return m_IdataInPt;	// how may Result buffers are full. Limit is 179
+	return m_IdataInPt;	// how many Result buffers are full. Limit is 176
+	// 176 is for 32 sequences of 8 channels each
 	}
 
 #endif
@@ -486,7 +490,7 @@ void CServerRcvListThread::IncStartCh(void)
 void CServerRcvListThread::IncStartSeq(void)
 	{
 	m_Seq++;
-	if (m_Seq >= gMaxSeqCount)
+	if (m_Seq >= gnSeqModulo)
 		{
 		m_Seq = 0;
 		}
@@ -544,7 +548,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 	//SRawDataPacketOld *pOutput; before 2016-10-20
 	//InputRawDataPacket *pFakeData;
 	//InputRawDataPacket *pIData;
-	int i, j;
+	int i, j, k;
 	int iSeqPkt;
 	BYTE bGateTmp;
 	WORD wTOFSum;
@@ -585,17 +589,20 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 		if (m_pElapseTimer)
 			m_pElapseTimer->Start();
 		//for ( i = 0; i < nSeqQty; i++)
+
+		// get the starting sequence number and channel from the instument data
+		m_Seq = pIData->bSeqStart;	// only used to find which pChannel
+		m_Ch  = 0;	// pIData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber;
+		gnSeqModulo = pIData->bSeqModulo;
+		i = (m_Seq + 32) % gnSeqModulo;
+		s.Format( _T( "Fake Data Initial Seq Number = %d, Last Seq = %d\n" ), m_Seq, i);
+		pMainDlg->SaveFakeData( s );
 		for ( iSeqPkt = 0; iSeqPkt < 32; iSeqPkt++)
 			{
-			// get the starting sequence number and channel from the instument data
-			m_Seq = pIData->bSeqStart;	// only used to find which pChannel
-			m_Ch  = 0;	// pIData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber;
 
 			for ( j = 0; j < gMaxChnlsPerMainBang; j++)	// Assumes the data packet contains whole frames
-				{
+				{	// channel loop
 				pChannel = m_pSCC->pvChannel[m_Seq][m_Ch];
-				//pChannel->m_GateID = pChannel->m_GateOD = 0;
-
 				if ( NULL == pChannel)
 					continue;
 				// Get flaw Nc qualified Max values for this channel
@@ -603,22 +610,36 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 #ifdef CLIVE_RAW_DATA
 				bGateTmp = pChannel->InputFifo(eIf, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp1);
 #endif		// pData->Seq[jSeq].vChnl[i].bAmp2
+				//k = iSeqPkt % gnSeqModulo;
 				bGateTmp = pChannel->InputFifo(eId, pIData->Seq[iSeqPkt].vChnl[j].bAmp2);	// output of the Nc peak holder
 				bGateTmp = pChannel->InputFifo(eOd, pIData->Seq[iSeqPkt].vChnl[j].bAmp3);
 
 				// Get Max and min tof for this channel
+				// Also advances input ptr for all fifo's this channel.
 				wTOFSum = pChannel->InputWFifo(pIData->Seq[iSeqPkt].vChnl[j].wTof);
+				// testing for unique channel
+				if ((m_Seq == 2) && (m_Ch == 5))
+						{
+						if ((pIData->Seq[iSeqPkt].vChnl[j].bAmp2 == 99) &&
+							(pIData->Seq[iSeqPkt].vChnl[j].bAmp3 == 99) &&
+							(pIData->Seq[iSeqPkt].vChnl[j].wTof == 999))
+							k = j;	//break point
+						else
+							TRACE(_T("Seq2, Ch5 data error\n"));
+						}
+
+				// is FIFO input ptr back to 0?
 				if (pChannel->AscanInputDone())
 					{// time to move peak data into ouput structure
 					// AddToIdataPacket will create the IdataPacket if it does not already exist.
-					AddToIdataPacket(pChannel, j, iSeqPkt, 0);
+					AddToIdataPacket(pChannel, 0);
 					pChannel->ResetGatesAndWalls();
 					if (MAX_RESULTS == GetIdataPacketIndex())
 						{
-						// create an Idata packet with New. copy m_pIdataPacket to IdataPacketOut linked list
+						// create an Idata packet with New. Copy m_pIdataPacket to IdataPacketOut linked list
 						// send a thread message to theApp or a new sender thread to empty the linked list.
 						// or better yet signal the ccm_pag thread to empty alist  directed to PAG
-						m_pIdataPacket->wByteCount = pIData->wByteCount;
+						m_pIdataPacket->wByteCount = sizeof(IDATA_PAP);
 						//theApp.PamSendToPag(m_pIdataPacket, pIData->wByteCount); // get len from data packet
 						//delete m_pIdataPacket;
 						//m_pIdataPacket = NULL;
@@ -640,7 +661,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 
 				m_Seq = GetStartSeq();
 				m_Ch = GetStartCh(); // used only to select which pChannel
-				}	// for ( j = 0; j < gMaxChnlsPerMainBang; j++)	
+				}	// for ( j = 0; j < gMaxChnlsPerMainBang; j++)		// channel loop
 			}	// for ( iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
 
 
@@ -672,7 +693,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 void CServerRcvListThread::ProcessPAM_Data(void *pData)
 	{
 	CString s;
-	int i;
+	int i, mod, nSeqStart,j;
 	IDATA_PAP *pIdata = (IDATA_PAP *)pData;
 
 	if (pIdata->wMsgID == NC_NX_IDATA_ID)
@@ -681,12 +702,32 @@ void CServerRcvListThread::ProcessPAM_Data(void *pData)
 			pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->bPAPNumber, pIdata->bBoardNumber, pIdata->bStartSeqNumber);
 		// use debugger to view
 		TRACE(s);
-		s.Format(_T("bSequenceLength=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
-			pIdata->bSequenceLength, pIdata->bStartChannel, pIdata->bMaxVChnlsPerSequence);
+		s.Format(_T("bSeqModulo=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
+			pIdata->bSeqModulo, pIdata->bStartChannel, pIdata->bMaxVChnlsPerSequence);
 		TRACE(s);
 		s.Format(_T("Results[0].Id2=%d, Od3=%d TOFmin=%d, TOFmax=%d\n"),
-			pIdata->Results[0].bId2, pIdata->Results[0].bOd3, pIdata->Results[0].wTofMin, pIdata->Results[0].wTofMax );
-		TRACE(s);
+			pIdata->Results[0].bId2, pIdata->Results[0].bOd3, pIdata->Results[0].wTofMin);// , pIdata->Results[0].wTofMax );
+		//TRACE(s);
+		// check NIOS data to see if seq 2, ch 5 wall = 999. All other fake data wall in range of 300
+		// this system always has 8 channels per sequence
+		mod = pIdata->bSeqModulo;
+		nSeqStart = pIdata->bStartSeqNumber;
+		// MAX_RESULTS is the number of channel in the packet
+		// every 8 channels is a sequence. The sequence may not start at 0
+		// look at every channel. Derive its sequence number
+		for (i = 0; i < MAX_RESULTS; i++)
+			{
+			j = (i/8 + nSeqStart) % mod;
+			if (j == 2)
+				{
+				if ( (i % 8) == 5 )
+					if (pIdata->Results[i].wTofMin != 999)
+						TRACE(_T("Must be wrong channel"));
+				}
+
+			}
+
+		
 		}
 	else
 		{

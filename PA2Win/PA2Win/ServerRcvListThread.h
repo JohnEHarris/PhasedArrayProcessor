@@ -63,7 +63,7 @@ public:
 	//void BuildOutputPacket(IDATA_FROM_HW *pInput);
 	void SaveFakeData(CString& s);
 
-	void AddToIdataPacket(CvChannel *pChannel, int nCh, int nSeq, int nSendFlag);
+	void AddToIdataPacket(CvChannel *pChannel, int nSendFlag);
 	// create a processing class instance for each wall channel
 		
 	int m_nInspectMode;

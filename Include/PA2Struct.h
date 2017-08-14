@@ -72,7 +72,7 @@ enum CallSource {eMain, eInterrupt};
 
 // How many peak held data Results can we get in the max size tcpip packet.
 // stPeakData Results[176] -> 8*176 = 1408
-#define MAX_RESULTS						176
+#define MAX_RESULTS						256			// before 8/14/17 was 176
 
 #define INSTRUMENT_PACKET_SIZE			1056		//old 1040.. 1460 is max TCPIP size
 #define MASTER_PACKET_SIZE				1056		// 1260
@@ -213,6 +213,8 @@ typedef struct
 	} SEQ_DATA;				// sizeof = 32
 
 // This is the structure format of data transmitted from the hardware front end
+// If Wiznet is reset, this causes a glitch in serial stream. Must flush PAP process and start anew to 
+// keep data synchronized with location information
 typedef struct 
 	{
 	WORD wMsgID;		// commands are identified by their ID. 0 == ChnlData, 1= AScan
@@ -231,6 +233,7 @@ typedef struct
     WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
+	BYTE bNiosGlitchCnt;// glitch in NIOS. Flush PAP NcNx process to resynchronize. In NIOS probably Wiznet reset
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
 	BYTE bNiosFeedback[8];// eg. FPGA version, C version, self-test info		
 	// 32 bytes to here
@@ -278,17 +281,17 @@ typedef struct
 // Processed data sent from the PAP. One stPeakData structure for every virtual channel
 // Nc_Nx processing receives 1 wall reading per AScan but produces a max and min readging 
 // after 16 AScans.
-//
+// 2017-08-14 reduce size of PeakData to match input data from NIOS front end
 typedef struct
 	{
-	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
+//	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
 					// ie, PAP did not service PeakData fast enough
-	BYTE bG1;		// Gate 1 interface gate -- FUTURE FEATURE. place holder in 2017 version
+//	BYTE bG1;		// Gate 1 interface gate -- FUTURE FEATURE. place holder in 2017 version
 	BYTE bId2;		// Gate 2 peak held data 0-255
 	BYTE bOd3;		// Gate 3 peak held data 0-255
 	WORD wTofMin;	// gate 4 min
-	WORD wTofMax;	// gate 4 max
-	} stPeakData;	// sizeof = 8
+//	WORD wTofMax;	// gate 4 max
+	} stPeakData;	// sizeof = 8  -- 2014-08-14 REDUCE TO 4 bytes. Same as input dat
 
 // legacy structure
 typedef struct
@@ -333,9 +336,9 @@ typedef struct
 	BYTE bSeqModulo;	// modulo of the sequence number. Also total number of different sequences
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
 	BYTE bNiosFeedback[8];// eg. FPGA version, C version, self-test info		
-	stPeakData Results[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 176*8=1408
+	stPeakData Results[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE xx176*8=1408 256*4=1024+40
 	// need to add commmand queue depth in adc boards since they can only take 5 commands at a time 2017-02-22
-	} IDATA_PAP;	// sizeof = 1448
+	} IDATA_PAP;	// sizeof = 1448->1064
 
 // https://blog.apnic.net/2014/12/15/ip-mtu-and-tcp-mss-missmatch-an-evil-for-network-performance/
 // 1460 is max 

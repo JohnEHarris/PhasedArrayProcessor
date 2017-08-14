@@ -280,7 +280,7 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		switch(nErrorCode)
 			{
 		case	WSAEWOULDBLOCK:
-			MyMessageBox(_T("Socket would block.\n"));
+			MyMessageBox(_T("Socket would block. Line 283\n"));
 			break;
 		case WSAEADDRINUSE: 
 			MyMessageBox(_T("The specified address is already in use.\n"));

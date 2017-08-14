@@ -733,7 +733,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 	switch (nLastConnectError)
 		{
 		case	WSAEWOULDBLOCK:
-			MyMessageBox(_T("Socket would block.\n"));
+			MyMessageBox(_T("Socket would block. Line 736\n"));
 			ConnectSocket( eReceiver, (LPARAM) m_pstCCM );
 			return;
 		case WSAEADDRINUSE: 

@@ -133,7 +133,7 @@ int CCmdFifo::GetPacketSize(void)
 	IDATA_FROM_HW *pIdata;
 	pHeader = (GenericPacketHeader *)pW;		// &m_Mem[m_Out];
 	pIdata = (IDATA_FROM_HW *)pW;			// pHeader;
-	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > 1460) )
+	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > sizeof(IDATA_PAP)) )	// 1064
 		{	// we are lost in the data, reset the FIFO and set an error bit
 		m_In = 0;
 		m_Out = 0;
@@ -182,7 +182,7 @@ BYTE *CCmdFifo::GetNextPacket(void)
 	int i = 10;	//debug
 	BYTE *pStart = &m_Mem[m_Out];		// beginning of NEXT whole packet(s) memory
 	GenericPacketHeader *pHeader = (GenericPacketHeader *)pStart;
-	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > 1460) )
+	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > sizeof(IDATA_PAP) ) )
 		{	// we are lost in the data, reset the FIFO and set an error bit
 		m_In = 0;
 		m_Out = 0;

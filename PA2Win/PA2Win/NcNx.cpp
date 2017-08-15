@@ -570,7 +570,7 @@ void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	m_GateCmd.bChnl = nCh;	// does not matter
 	m_GateCmd.bGateNumber = nGate;	// does not matter
 	if (nValue > 32)	nValue = 32;
-	m_GateCmd.bSpare = nValue; // the last valid seq number before restart + 1.. the mdodulo
+	m_GateCmd.bSpare = nValue; // the last valid seq number before restart + 1.. the modulo
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Start_Seq#=%d, (Param)SeqModulo = %d\n"),
 		m_GateCmd.Head.wMsgID, m_GateCmd.Head.wByteCount, m_GateCmd.Head.bPapNumber,
 		m_GateCmd.Head.bBoardNumber, m_GateCmd.bSeq, m_GateCmd.bSpare);

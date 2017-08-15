@@ -726,14 +726,15 @@ void CServerRcvListThread::ProcessPAM_Data(void *pData)
 				}
 
 			}
-
+		delete pIdata;
 		
 		}
 	else
 		{
 		i = pIdata->wMsgID;
+		delete pIdata;
 		}
-	delete pData;
+	
 	}	// ProcessPAM_Data(void *pData)
 
 #endif

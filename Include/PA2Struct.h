@@ -235,7 +235,7 @@ typedef struct
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
 	BYTE bNiosGlitchCnt;// glitch in NIOS. Flush PAP NcNx process to resynchronize. In NIOS probably Wiznet reset
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
-	BYTE bNiosFeedback[8];// eg. FPGA version, C version, self-test info		
+	BYTE bNiosFeedback[7];// eg. FPGA version, C version, self-test info		
 	// 32 bytes to here
 
 	SEQ_DATA Seq[32];	// 32 sequences each of 8 virtual channels. 32*32 = 1024

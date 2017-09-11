@@ -130,9 +130,9 @@ int CCmdFifo::GetPacketSize(void)
 	CString s;
 	WORD *pW = (WORD *)&m_Mem[m_Out];// debugging
 	GenericPacketHeader *pHeader;
-	IDATA_FROM_HW *pIdata;
+	IDATA_PAP *pIdata;
 	pHeader = (GenericPacketHeader *)pW;		// &m_Mem[m_Out];
-	pIdata = (IDATA_FROM_HW *)pW;			// pHeader;
+	pIdata = (IDATA_PAP *)pW;			// pHeader;
 	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > sizeof(IDATA_PAP)) )	// 1064
 		{	// we are lost in the data, reset the FIFO and set an error bit
 		m_In = 0;

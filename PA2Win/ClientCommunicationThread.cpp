@@ -718,7 +718,8 @@ void CClientCommunicationThread::StartTCPCommunication()
 		CreateSocket( eReceiver, (LPARAM) m_pstCCM );
 		if (m_pstCCM->pSocket == nullptr)
 			ASSERT( 0 );
-		//ConnectSocket( eReceiver, (LPARAM) m_pstCCM ); next time
+		Sleep(50);
+		ConnectSocket( eReceiver, (LPARAM) m_pstCCM ); // next time
 		return;	//one step at a time
 		}
 

@@ -1816,10 +1816,10 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof( CIniSectionW );	// 44
 	i = sizeof( CIniKeyW );	// 60
 	i = sizeof( CShellManager );	// 12
-	i = sizeof( IDATA_PAP );	// 1460 ->1448->1064
+	i = sizeof( IDATA_PAP );	// 1088
 //	i = sizeof( InputRawDataPacket );	// 944 ->272 replaced by IDATA_FROM_HW
 //	i = sizeof( stRawSeqPacket );	// 130 ->34 
-	i = sizeof( IDATA_FROM_HW );	// 1056
+	i = sizeof( IDATA_FROM_HW );	// 1088
 	i = sizeof( SEQ_DATA );	// 32
 
 
@@ -1882,6 +1882,17 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		delete pMsg;	// clean up the mess
 		return FALSE;
 		}
+
+	if (NULL == stSCM[ePAM_Server].pClientConnection[nClientNumber]->pSocket)
+		{
+		s.Format(_T("CPA2WinDlg::SendMsgToPAM pSocket is NULL for client = %d\n"), nClientNumber);
+		TRACE(s);
+		if (gDlg.pNcNx)
+			gDlg.pNcNx->DebugOut(s);
+		delete pMsg;	// clean up the mess
+		return FALSE;
+		}
+
 	if (0 == stSCM[ePAM_Server].pClientConnection[nClientNumber]->bConnected)
 		{
 		s.Format(_T("CPA2WinDlg::SendMsgToPAM Client = %d is not connected\n"),nClientNumber );

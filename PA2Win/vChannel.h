@@ -102,7 +102,7 @@ public:
 	// 10-27-16 change bStatus to wStatus
 	// 11-10-16 wStatus becomes m_wStatus and bStatus joins Peak Data
 	WORD m_wStatus;
-	stPeakData m_PeakData;
+	stPeakChnl m_PeakData;
 
 	void SetBadWall(BYTE badWall);
 	void SetDropOut(void)			{ m_wStatus |= SET_DROPOUT;	}
@@ -116,7 +116,7 @@ public:
 	void GetPeakData(void);
 	//void PeakDataClear(void);		// Once PAP copies data into Ethernet Packet, clear PeakData
 	// pOut is a slot in the ethernet packet to be sent
-	void CopyPeakData(stPeakData *pOut);
+	void CopyPeakData(stPeakChnl *pOut);
 	//BYTE GetAscanCounter(void)		{ return m_bInputCnt;				}
 	BYTE AscanInputDone(void)		{ return (m_bInputCnt == 0);		}	// 0 if all 16 Ascans
 
@@ -132,8 +132,8 @@ public:
 										// then reset max min sum values
 	WORD m_wBadInARow;					// consecutive bad wall reading. Carries over 16 sample boundaries. Cleared
 										// with one reading within upper/lower limits.
-	BYTE m_bChnl;
-	BYTE m_bSeq;
+	BYTE m_bChnl;						// chnl within the seqence [0,7]
+	BYTE m_bSeq;						// sequence [0,31]
 	WORD w_DefaultConfig;				// NcNx using default parameters
 	// A reset/disconnect/reconnect should not impact the NcNx values held in PAP since they are maintained 
 	// in the ServiceApp along with the linked lists. Layers below ServiceApp are destroyed/recreated on a disconnect.

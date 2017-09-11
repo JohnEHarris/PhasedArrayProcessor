@@ -91,7 +91,7 @@ typedef struct
 	{
 	WORD wMsgID;		// commands are identified by their ID
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
 	BYTE bPapNumber;	// which PAP is the command for
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
@@ -105,7 +105,7 @@ typedef struct
 	// The generic header
 	WORD wMsgID;		// commands are identified by their ID
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
 	BYTE bPapNumber;	// which PAP is the command for
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
@@ -127,7 +127,7 @@ typedef struct
 	{
 	WORD wMsgID;		// commands are identified by their ID
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
@@ -143,7 +143,7 @@ typedef struct
 	{
 	WORD wMsgID;		// commands are identified by their ID
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
@@ -151,7 +151,7 @@ typedef struct
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 
-	BYTE bSpare[20];	// sequence number at beginning of stPeakData Results[] // 32 bytes to here
+	BYTE bSpare[20];	// sequence number at beginning of stPeakChnl PeakChnl[] // 32 bytes to here
 	BYTE bMsg[1024];	// Max unique sets of Nc Nx data per instrument.
 	} PAP_GENERIC_MSG; // SIZEOF() = 1056
 
@@ -402,7 +402,7 @@ typedef struct
 	{
 	WORD wMsgID;		// commands are identified by their ID
 	WORD wByteCount;	// Number of bytes in this packet. Make even number
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
@@ -418,7 +418,7 @@ typedef struct
 	{
 	WORD wMsgID;		// commands are identified by their ID
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
-	UINT uSync;			// 0x5CEBDAAD ... 22 bytes before Results
+	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
@@ -480,6 +480,8 @@ void ProcNull( void );
 void NcNx_Test_Cmd( void );
 
 void FakeData( void );
+void MakeFakeAscanData(void);
+void FakeAscanData(void);
 /*   GATE COMMANDS */
 void GateDelay( void );
 void GateRange( void );

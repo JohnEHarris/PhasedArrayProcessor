@@ -88,7 +88,7 @@ PubExt int gnMaxServers, gnMaxClientsPerServer;		// Server Connection Management
 PubExt int gnMaxClients;							// Client Connection Management
 PubExt int gnFifoCnt, gnAsyncSocketCnt;
 PubExt WORD gwMsgSeqCnt;
-PubExt BYTE gbSeqStart;	// starting sequence number for next Idata packet
+PubExt BYTE gbStartSeqNumber;	// starting sequence number for next Idata packet
 PubExt int nLoc; // simulate location of pipe
 PubExt BYTE bLastFakeSeq;	// assuming fake data can reset before 32 ascans.
 //PubExt ELAPSE64 TRecvCmd;

@@ -45,9 +45,10 @@ CvChannel::CvChannel(int nSeq, int nChnl)
 	//if (nChnl > 39) return;
 	// counter of how many time constructor runs for each chnl/instrument
 	//uVchannelConstructor[nSeq][nChnl]++;
-	memset(&m_PeakData,0, sizeof (stPeakData));
+	memset(&m_PeakData,0, sizeof (stPeakChnl));
 	m_bChnl = nChnl;
 	m_bSeq  = nSeq;
+	m_PeakData.bChNum = 8*nSeq + nChnl;	//specific to Sam's hardware design
 	w_DefaultConfig = DEFAULT_CFG;
 #endif
 
@@ -326,7 +327,7 @@ void CvChannel::SetBadWall(BYTE badWall)
 	}
 
 // Once ServerRcvListThread has read the data, clear the structure for the next 16 Ascans
-void CvChannel::CopyPeakData(stPeakData *pOut)
+void CvChannel::CopyPeakData(stPeakChnl *pOut)
 	{
 	// Check for default constructor before copying data
 	if (w_DefaultConfig)	m_wStatus |= DEFAULT_CFG;	// Still using default values
@@ -341,5 +342,6 @@ void CvChannel::GetPeakData(void)
 	m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
 	m_PeakData.wTofMin = m_wTOFMinSum;
 	//m_PeakData.wTofMax = m_wTOFMaxSum;
+	
 	}
 #endif

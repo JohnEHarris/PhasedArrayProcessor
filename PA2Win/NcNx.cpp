@@ -44,6 +44,7 @@ IMPLEMENT_DYNAMIC(CNcNx, CDialogEx)
 
 CNcNx::CNcNx(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_NCNX_PA, pParent)
+	, m_nAscanCnt(0)
 	{
 	m_DlgLocationKey = _T("NC_NX_PA2");
 	m_DlgLocationSection = _T("Dialog Locations");	// Section is always this string for all dlgs
@@ -325,6 +326,7 @@ void CNcNx::OnBnClickedBnErase()
 	{
 	// TODO: Add your control notification handler code here
 	m_lbOutput.ResetContent();
+	m_nAscanCnt = 0;
 	}
 
 // Fill the combo box with strings whose index in the combobox matches the 
@@ -408,6 +410,8 @@ void CNcNx::OnBnClickedBnDonothing()
 	// TODO: Add your control notification handler code here
 	// Does nothing but take focus off of OK and Cancel
 	// In Resource view use Properties to set this as the default button
+	int i;
+	i = m_nParam;
 	}
 
 
@@ -589,4 +593,11 @@ void CNcNx::OnChangeEdParam()
 	// TODO:  Add your control notification handler code here
 	if (m_nPopulated)
 		m_nParam = m_spParam.GetPos();
+	}
+
+
+void CNcNx::IncrementAscanCnt(void)
+	{
+	m_nAscanCnt++;
+	SetDlgItemInt(IDC_EN_ASCANCNT, m_nAscanCnt, 0);
 	}

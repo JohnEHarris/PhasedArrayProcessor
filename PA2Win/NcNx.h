@@ -86,4 +86,6 @@ public:
 	void FakeData( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue );
 	afx_msg void OnChangeEdParam();
 	CEdit m_edParam;
+	int m_nAscanCnt;
+	void IncrementAscanCnt(void);
 	};

@@ -111,7 +111,7 @@ public:
 	// InputRawDataPacket comes from the instrument
 	// InputRawDataPacket *m_pOutputRawDataPacket;		// our class ptr to the packet to send
 	IDATA_PAP *m_pIdataPacket;
-	int m_IdataInPt;			// insertion point in stPeakData Results
+	int m_IdataInPt;			// insertion point in stPeakChnl PeakChnl
 	int GetIdataPacketIndex(void);
 	void SendIdataToPag(GenericPacketHeader *pIdata);
 

@@ -329,7 +329,7 @@ void CServerRcvListThread::MakeFakeData(IDATA_FROM_HW *pData)
 
 	for (iSeqPkt = 0; iSeqPkt < 32; iSeqPkt++)
 		{
-		pData->bSeqStart = GetFDstartSeq();
+		pData->bStartSeqNumber = GetFDstartSeq();
 		//pData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber = GetFDstartCh();
 		n = 0;	// channel counter. Will create gMaxChnlsPerMainBang*gMaxSeqCount channels
 		jSeq = GetFDstartSeq();
@@ -417,7 +417,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nSendFlag)
 	{
 	if (m_pIdataPacket == NULL)
 		{
-		m_pIdataPacket = new (IDATA_PAP);	// sizeof = 1460 179 RESULTS
+		m_pIdataPacket = new (IDATA_PAP);	// sizeof = 1344 or 256 PeakChnls
 		memset((void *) m_pIdataPacket,0, sizeof(IDATA_PAP));
 		m_pIdataPacket->bPAPNumber	= (BYTE) pMainDlg->GetMy_PAM_Number();
 		m_pIdataPacket->bBoardNumber	= m_pSCC->m_nClientIndex;
@@ -435,10 +435,13 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nSendFlag)
 		m_pIdataPacket->wPeriod		= m_pSCC->InstrumentStatus.wPeriod;
 		m_pIdataPacket->wStatus		= m_pSCC->InstrumentStatus.wStatus;
 		m_pIdataPacket->bSeqModulo	= gnSeqModulo;
-		m_IdataInPt					= 0;	// insertion index in output data structrure
+		m_IdataInPt					= 0;	// insertion index in output data structrure-- not after 2017-08-22
+		//
 		}
 
-	pChannel->CopyPeakData(&m_pIdataPacket->Results[m_IdataInPt++]); // notice increment of m_IdataInPt 
+	//pChannel->CopyPeakData(&m_pIdataPacket->PeakChnl[m_IdataInPt++]); // notice increment of m_IdataInPt 
+	pChannel->CopyPeakData(&m_pIdataPacket->PeakChnl[pChannel->m_PeakData.bChNum ]); // notice increment of m_IdataInPt 
+	m_IdataInPt++;
 	pChannel->ClearDropOut();
 	pChannel->ClearOverRun();
 	pChannel->SetRead();
@@ -449,8 +452,8 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, int nSendFlag)
 int CServerRcvListThread::GetIdataPacketIndex(void)
 	{
 	if (m_pIdataPacket == NULL)	return -1;
-	return m_IdataInPt;	// how many Result buffers are full. Limit is 176
-	// 176 is for 32 sequences of 8 channels each
+	return m_IdataInPt;	// how many Result buffers are full. Limit is 256
+	// 256 is for 32 sequences of 8 channels each
 	}
 
 #endif
@@ -557,68 +560,47 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 
 
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
+	//After AUG 2017 Only ID, OD, MinWall sent to PAG
 	i = sizeof(IDATA_FROM_HW);
 	if (pIData->wByteCount >= INSTRUMENT_PACKET_SIZE -132)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
 		{
-		/******************************************************************/
-#if 0
-		//  2016-10-20 start to migrate to new input data structures
-		// throw away simulator data or current Sam data and make a new InputRawDataPacket  IDATA_FROM_HW
-		//delete pIData;
 
-		if (m_pOutputRawDataPacket == NULL)
+		if (pIData->wMsgID == eRawInspID)
 			{
-			m_pOutputRawDataPacket = new IDATA_FROM_HW;
-			memset(m_pOutputRawDataPacket, 0, sizeof (IDATA_FROM_HW));
-			}
-#endif
+			/***************** The peak hold opertion on all channels by PAP ********************/
+			if (m_pElapseTimer)
+				m_pElapseTimer->Start();
+			//for ( i = 0; i < nSeqQty; i++)
 
+			// get the starting sequence number and channel from the instument data
+			m_Seq = pIData->bStartSeqNumber;	// only used to find which pChannel
+			m_Ch = 0;	// pIData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber;
+			gnSeqModulo = pIData->bSeqModulo;
+			i = (m_Seq + 32) % gnSeqModulo;
+			s.Format(_T("Fake Data Initial Seq Number = %d, Last Seq = %d\n"), m_Seq, i);
+			pMainDlg->SaveFakeData(s);
+			for (iSeqPkt = 0; iSeqPkt < 32; iSeqPkt++)
+				{
 
-#ifdef MAKE_FAKE_DATA
-	// Basically Yqing's simulator gave us some bytes. Generate test data in place of those bytes.
-	// Run the fake data through the Nc Nx operations and keep the Max, Min values
-		//pIData = pFakeData = new IDATA_FROM_HW;
-		// 1 Ascan reading for every virtual channel. For now assuming this is 5 sequence points.
-		MakeFakeData(pIData);
-		// Now that we have fake data, process it
-		// How many vChannels?
-#endif
-		// debugging
-
-		/***************** The peak hold opertion on all channels by PAP ********************/
-		if (m_pElapseTimer)
-			m_pElapseTimer->Start();
-		//for ( i = 0; i < nSeqQty; i++)
-
-		// get the starting sequence number and channel from the instument data
-		m_Seq = pIData->bSeqStart;	// only used to find which pChannel
-		m_Ch  = 0;	// pIData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber;
-		gnSeqModulo = pIData->bSeqModulo;
-		i = (m_Seq + 32) % gnSeqModulo;
-		s.Format( _T( "Fake Data Initial Seq Number = %d, Last Seq = %d\n" ), m_Seq, i);
-		pMainDlg->SaveFakeData( s );
-		for ( iSeqPkt = 0; iSeqPkt < 32; iSeqPkt++)
-			{
-
-			for ( j = 0; j < gMaxChnlsPerMainBang; j++)	// Assumes the data packet contains whole frames
-				{	// channel loop
-				pChannel = m_pSCC->pvChannel[m_Seq][m_Ch];
-				if ( NULL == pChannel)
-					continue;
-				// Get flaw Nc qualified Max values for this channel
-				// Not defined what to do with status ???????
+				for (j = 0; j < gMaxChnlsPerMainBang; j++)	// Assumes the data packet contains whole frames
+					{	// channel loop
+					pChannel = m_pSCC->pvChannel[m_Seq][m_Ch];
+					if (NULL == pChannel)
+						continue;
+					// Get flaw Nc qualified Max values for this channel
+					// Not defined what to do with status ???????
 #ifdef CLIVE_RAW_DATA
-				bGateTmp = pChannel->InputFifo(eIf, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp1);
+					bGateTmp = pChannel->InputFifo(eIf, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp1);
 #endif		// pData->Seq[jSeq].vChnl[i].bAmp2
-				//k = iSeqPkt % gnSeqModulo;
-				bGateTmp = pChannel->InputFifo(eId, pIData->Seq[iSeqPkt].vChnl[j].bAmp2);	// output of the Nc peak holder
-				bGateTmp = pChannel->InputFifo(eOd, pIData->Seq[iSeqPkt].vChnl[j].bAmp3);
+					//k = iSeqPkt % gnSeqModulo;
+					bGateTmp = pChannel->InputFifo(eId, pIData->Seq[iSeqPkt].vChnl[j].bAmp2);	// output of the Nc peak holder
+					bGateTmp = pChannel->InputFifo(eOd, pIData->Seq[iSeqPkt].vChnl[j].bAmp3);
 
-				// Get Max and min tof for this channel
-				// Also advances input ptr for all fifo's this channel.
-				wTOFSum = pChannel->InputWFifo(pIData->Seq[iSeqPkt].vChnl[j].wTof);
-				// testing for unique channel
-				if ((m_Seq == 2) && (m_Ch == 5))
+					// Get Max and min tof for this channel
+					// Also advances input ptr for all fifo's this channel.
+					wTOFSum = pChannel->InputWFifo(pIData->Seq[iSeqPkt].vChnl[j].wTof);
+					// testing for unique channel
+					if ((m_Seq == 2) && (m_Ch == 5))
 						{
 						if ((pIData->Seq[iSeqPkt].vChnl[j].bAmp2 == 99) &&
 							(pIData->Seq[iSeqPkt].vChnl[j].bAmp3 == 99) &&
@@ -628,50 +610,62 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 							TRACE(_T("Seq2, Ch5 data error\n"));
 						}
 
-				// is FIFO input ptr back to 0?
-				if (pChannel->AscanInputDone())
-					{// time to move peak data into ouput structure
-					// AddToIdataPacket will create the IdataPacket if it does not already exist.
-					AddToIdataPacket(pChannel, 0);
-					pChannel->ResetGatesAndWalls();
-					if (MAX_RESULTS == GetIdataPacketIndex())
-						{
-						// create an Idata packet with New. Copy m_pIdataPacket to IdataPacketOut linked list
-						// send a thread message to theApp or a new sender thread to empty the linked list.
-						// or better yet signal the ccm_pag thread to empty alist  directed to PAG
-						m_pIdataPacket->wByteCount = sizeof(IDATA_PAP);
-						//theApp.PamSendToPag(m_pIdataPacket, pIData->wByteCount); // get len from data packet
-						//delete m_pIdataPacket;
-						//m_pIdataPacket = NULL;
-						// SendIdataToPag crashes when attempting to delete the input packet. Make a copy here
-						// that is not a class member
-						IDATA_PAP *pIdataPacket = new (IDATA_PAP);
-						memcpy((void*)pIdataPacket, (void *)m_pIdataPacket, sizeof(IDATA_PAP));
-						//
-						//pIdataPacket->wMsgID = NC_NX_IDATA_ID; //already 1 before break
-						SendIdataToPag( (GenericPacketHeader *) pIdataPacket);
-						delete m_pIdataPacket;
-						m_pIdataPacket = NULL;
+					// is FIFO input ptr back to 0?
+					if (pChannel->AscanInputDone())
+						{// time to move peak data into ouput structure
+						// AddToIdataPacket will create the IdataPacket if it does not already exist.
+						AddToIdataPacket(pChannel, 0);
+						pChannel->ResetGatesAndWalls();
+						if (MAX_RESULTS == GetIdataPacketIndex())
+							{
+							// create an Idata packet with New. Copy m_pIdataPacket to IdataPacketOut linked list
+							// send a thread message to theApp or a new sender thread to empty the linked list.
+							// or better yet signal the ccm_pag thread to empty alist  directed to PAG
+							m_pIdataPacket->wByteCount = sizeof(IDATA_PAP);
+							//theApp.PamSendToPag(m_pIdataPacket, pIData->wByteCount); // get len from data packet
+							//delete m_pIdataPacket;
+							//m_pIdataPacket = NULL;
+							// SendIdataToPag crashes when attempting to delete the input packet. Make a copy here
+							// that is not a class member
+							IDATA_PAP *pIdataPacket = new (IDATA_PAP);
+							memcpy((void*)pIdataPacket, (void *)m_pIdataPacket, sizeof(IDATA_PAP));
+							//
+							//pIdataPacket->wMsgID = NC_NX_IDATA_ID; //already 1 before break
+							SendIdataToPag((GenericPacketHeader *)pIdataPacket);
+							delete m_pIdataPacket;
+							m_pIdataPacket = NULL;
+							}
+						// move the result into the output message
+						// If message is complete, signal to send it
+						// and create a new buffer to hold the next output message
 						}
-					// move the result into the output message
-					// If message is complete, signal to send it
-					// and create a new buffer to hold the next output message
-					}
-				IncStartCh();
+					IncStartCh();
 
-				m_Seq = GetStartSeq();
-				m_Ch = GetStartCh(); // used only to select which pChannel
-				}	// for ( j = 0; j < gMaxChnlsPerMainBang; j++)		// channel loop
-			}	// for ( iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
+					m_Seq = GetStartSeq();
+					m_Ch = GetStartCh(); // used only to select which pChannel
+					}	// for ( j = 0; j < gMaxChnlsPerMainBang; j++)		// channel loop
+				}	// for 32 SEQUENCES
 
 
-		m_nElapseTime = m_pElapseTimer->Stop();		// elapse time in uSec for 128 AScans
-#if 0
-		s.Format(_T("Nc Nx processing for %d VChnls in %d uSec\n"), 
-			7*gMaxChnlsPerMainBang, m_nElapseTime);
-		TRACE(s);
-		pMainDlg->SaveDebugLog(s);
+			m_nElapseTime = m_pElapseTimer->Stop();		// elapse time in uSec for 128 AScans
+#if 1
+			s.Format(_T("Nc Nx processing for 256 VChnls in %d uSec\n"), m_nElapseTime);
+			TRACE(s);
+			pMainDlg->SaveDebugLog(s);
 #endif
+			/***************** The peak hold opertion on all channels by PAP ********************/
+			}
+
+
+		else if ((pIData->wMsgID == eAscanID))	//AScan data... pass thru to PAP
+			{
+			IDATA_PAP *pIdataPacket = new (IDATA_PAP);
+			memcpy((void*)pIdataPacket, (void *)pIData, sizeof(IDATA_PAP));
+			SendIdataToPag((GenericPacketHeader *)pIdataPacket);
+			delete m_pIdataPacket;
+			m_pIdataPacket = NULL;
+			}
+
 		delete pIData;	// info in pOutput was put into a new structure and sent to the PAG
 		}	// if (pBuf->nLength == 1040)
 
@@ -693,7 +687,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 void CServerRcvListThread::ProcessPAM_Data(void *pData)
 	{
 	CString s;
-	int i, mod, nSeqStart,j;
+	int i;
 	IDATA_PAP *pIdata = (IDATA_PAP *)pData;
 
 	if (pIdata->wMsgID == NC_NX_IDATA_ID)
@@ -705,36 +699,16 @@ void CServerRcvListThread::ProcessPAM_Data(void *pData)
 		s.Format(_T("bSeqModulo=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
 			pIdata->bSeqModulo, pIdata->bStartChannel, pIdata->bMaxVChnlsPerSequence);
 		TRACE(s);
-		s.Format(_T("Results[0].Id2=%d, Od3=%d TOFmin=%d, TOFmax=%d\n"),
-			pIdata->Results[0].bId2, pIdata->Results[0].bOd3, pIdata->Results[0].wTofMin);// , pIdata->Results[0].wTofMax );
-		//TRACE(s);
-		// check NIOS data to see if seq 2, ch 5 wall = 999. All other fake data wall in range of 300
-		// this system always has 8 channels per sequence
-		mod = pIdata->bSeqModulo;
-		nSeqStart = pIdata->bStartSeqNumber;
-		// MAX_RESULTS is the number of channel in the packet
-		// every 8 channels is a sequence. The sequence may not start at 0
-		// look at every channel. Derive its sequence number
-		for (i = 0; i < MAX_RESULTS; i++)
-			{
-			j = (i/8 + nSeqStart) % mod;
-			if (j == 2)
-				{
-				if ( (i % 8) == 5 )
-					if (pIdata->Results[i].wTofMin != 999)
-						TRACE(_T("Must be wrong channel"));
-				}
-
-			}
-		delete pIdata;
-		
+		s.Format(_T("PeakChnl[0].Id2=%d, Od3=%d TOFmin=%d\n"),
+			pIdata->PeakChnl[0].bId2, pIdata->PeakChnl[0].bOd3, pIdata->PeakChnl[0].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
+		TRACE(s);
+		memcpy((void *)&gLastIdataPap, (void *) pIdata, sizeof(IDATA_PAP));
 		}
 	else
 		{
 		i = pIdata->wMsgID;
-		delete pIdata;
 		}
-	
+	delete pData;
 	}	// ProcessPAM_Data(void *pData)
 
 #endif

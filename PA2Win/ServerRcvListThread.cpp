@@ -704,9 +704,10 @@ void CServerRcvListThread::ProcessPAM_Data(void *pData)
 		TRACE(s);
 		memcpy((void *)&gLastIdataPap, (void *) pIdata, sizeof(IDATA_PAP));
 		}
-	else
+	else if (pIdata->wMsgID == ASCAN_DATA_ID)
 		{
 		i = pIdata->wMsgID;
+		guAscanMsgCnt++;
 		}
 	delete pData;
 	}	// ProcessPAM_Data(void *pData)

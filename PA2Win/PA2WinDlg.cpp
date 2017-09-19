@@ -669,6 +669,7 @@ void CPA2WinDlg::StartTimer()
 	m_uStatTimer = SetTimer(IDT_TIMER, 1000, NULL);
 	if (!m_uStatTimer) MessageBox(_T("Failed to start timer"));
 	m_nTimerCount = 0;
+
 	}
 
 void CPA2WinDlg::StopTimer()
@@ -1554,6 +1555,9 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 	m_nTimerCount++;
 	time(&m_tTimeNow);
 	UpdateTimeDate( &m_tTimeNow );
+	// update ascan for scope output on NcNx screen if it is open
+	if (gDlg.pNcNx)
+		gDlg.pNcNx->IncrementAscanCnt();
 	CDialogEx::OnTimer( nIDEvent );
 	}
 
@@ -1809,19 +1813,19 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof( CPA2WinApp );	// 204
 	i = sizeof( CPA2WinDlg );	// 592
 	i = sizeof( Nc_FIFO );	// 24 but 3 copies
-	i = sizeof( Nx_FIFO );	// 538 -> 52
+	i = sizeof( Nx_FIFO );	// 48
 	i = sizeof( PAP_INST_CHNL_NCNX );	// 1056
 	i = sizeof( CIniSectionA );	// 44
 	i = sizeof( CIniKeyA );	// 60
 	i = sizeof( CIniSectionW );	// 44
 	i = sizeof( CIniKeyW );	// 60
 	i = sizeof( CShellManager );	// 12
-	i = sizeof( IDATA_PAP );	// 1088
+	i = sizeof( IDATA_PAP );	// 1344
 //	i = sizeof( InputRawDataPacket );	// 944 ->272 replaced by IDATA_FROM_HW
 //	i = sizeof( stRawSeqPacket );	// 130 ->34 
 	i = sizeof( IDATA_FROM_HW );	// 1088
-	i = sizeof( SEQ_DATA );	// 32
-
+	i = sizeof(SEQ_DATA);	// 32
+	i = sizeof(ASCAN_DATA);	// 1088
 
 	}
 

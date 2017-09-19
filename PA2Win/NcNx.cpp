@@ -108,6 +108,7 @@ BOOL CNcNx::OnInitDialog()
 	// TODO:  Add extra initialization here
 	PositionWindow();
 	m_nPAP = m_nBoard = m_nSeq = m_nCh = m_nGate = m_nParam	= 0;
+	guAscanMsgCnt = 0;
 	// if this is the PAG
 #ifdef I_AM_PAG
 	m_spPap.SetRange( 0, PAP_MAX );	// gnMaxClientsPerServer - 1 );  //how many clients do I have
@@ -326,7 +327,7 @@ void CNcNx::OnBnClickedBnErase()
 	{
 	// TODO: Add your control notification handler code here
 	m_lbOutput.ResetContent();
-	m_nAscanCnt = 0;
+	guAscanMsgCnt = 0;
 	}
 
 // Fill the combo box with strings whose index in the combobox matches the 
@@ -598,6 +599,6 @@ void CNcNx::OnChangeEdParam()
 
 void CNcNx::IncrementAscanCnt(void)
 	{
-	m_nAscanCnt++;
-	SetDlgItemInt(IDC_EN_ASCANCNT, m_nAscanCnt, 0);
+	SetDlgItemInt(IDC_EN_ASCANCNT, guAscanMsgCnt, 0);
 	}
+

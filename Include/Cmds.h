@@ -76,8 +76,10 @@ extern ST_LARGE_CMD *pCmdGlobal;
 #define TCG_GAIN_CLOCK_CMD_ID		11
 //#define SET_CHNL_GAIN_STEP_CMD_ID	11
 #define TCG_CHNL_GAIN_DELAY_CMD_ID	12
-//#define SET_CHNL_GAIN_DELAY_CMD_ID	12
+//#define SET_CHNL_GAIN_DELAY_CMD_ID12
 #define SET_PRF_CMD_ID				13
+#define SET_ASCAN_SCOPE_ID			14
+#define SET_ASCAN_SCOPE_DELAY_ID	15
 
 
 // LARGE
@@ -356,6 +358,17 @@ typedef struct
 	WORD wFill[7];	// all 0
 	}	ST_PRF_CMD;
 
+// A generic command using a WORD argument
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
+	BYTE bSeq;		// used here only as a place holder
+	BYTE bChnl;		// which virtual probe.. used here only as a place holder
+	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
+	BYTE bSpare;	// 16 bytes to here
+	WORD wCmd;	//
+	WORD wFill[7];	// all 0
+	}	ST_A_WORD;
 //
 //=================================================
 // LARGE COMMNAD STRUCTURES
@@ -517,6 +530,8 @@ void TCGBeamGain( void );			// set_beam_gain
 void TCGGainClock( void );			// set_beam_gain_step
 void TCGChnlGainDelay( void );		// set_beam_gain_delay
 void SetPrf( void );
+void SetAscanScope( void );			// set_ascan_scope
+void SetAscanDelay( void );			// set_ascan_delay 
 
 void set_rcvr_TCG_gain( int seq, unsigned short value[128] );
 void set_TCG_step_size( int value );
@@ -524,6 +539,8 @@ void set_TCG_delay( int value );
 void set_beam_gain( int beam, int seq, unsigned short value[128] );	// beam is a virtual channel
 void set_beam_gain_step( int value );
 void set_beam_gain_delay( int value );
+void set_ascan_scope( short value );
+void set_ascan_delay(short value);
 
 void set_PRF( WORD wPrf );	// Set prf in Hertz. Range 10-10,000
 /*	SMALL TCG commands	*/

@@ -352,7 +352,9 @@ void CNcNx::PopulateCmdComboBox()
 	s.Format( _T( "TCGTriggerDelay" ) );	m_cbCommand.AddString( s );	//10
 	s.Format( _T( "TCGGainClock" ) );		m_cbCommand.AddString( s );	//11
 	s.Format( _T( "TCGChnlGainDelay" ) );	m_cbCommand.AddString( s );	//12
-	s.Format( _T( "SetPRF" ) );				m_cbCommand.AddString( s );	//13
+	s.Format(_T("SetPRF"));					m_cbCommand.AddString(s);	//13
+	s.Format(_T("ASCAN_SCOPE"));			m_cbCommand.AddString(s);	//14
+	s.Format(_T("ASCAN_SCOPE_DELAY"));		m_cbCommand.AddString(s);	//15
 	m_nPopulated = 1;
 	}
 
@@ -400,6 +402,11 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		case 12:
 		case 13:
 			TcgCmd( m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam );
+			break;
+			//AScan control commands
+		case 14:
+		case 15:
+			WordCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 			break;
 		default:	
 			break;
@@ -582,6 +589,35 @@ void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	t = sym + s;
 	m_lbOutput.AddString(t);
 	SendMsg((GenericPacketHeader*)&m_GateCmd);
+	}
+
+// WordCmd, use nValue to assign to hardware functions
+void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue)
+	{
+	CString s, t, sym;
+	sym = _T("WORD Cmd: ");
+	memset(&m_WordCmd, 0, sizeof(ST_WORD_CMD));
+	m_WordCmd.Head.wMsgID = nCmd;
+	switch (nCmd)
+		{
+	case SET_ASCAN_SCOPE_ID:	sym = _T("SET_ASCAN_SCOPE ");	break;
+	case SET_ASCAN_SCOPE_DELAY_ID:	sym = _T("SET_ASCAN_SCOPE_DELAY ");	break;
+		}
+	m_WordCmd.Head.wByteCount = 32;
+	m_WordCmd.Head.uSync = SYNC;
+	//		m_WordCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
+	m_WordCmd.Head.bPapNumber = nPap;
+	m_WordCmd.Head.bBoardNumber = nBoard;
+	m_WordCmd.bSeq = nSeq & 0x1f;	// starting seq number
+	m_WordCmd.bChnl = nCh;	// does not matter
+	m_WordCmd.bGateNumber = nGate;	// does not matter
+	m_WordCmd.wCmd = nValue;
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Start_Seq#=%d, (Param)WordCmd = %d\n"),
+		m_WordCmd.Head.wMsgID, m_WordCmd.Head.wByteCount, m_WordCmd.Head.bPapNumber,
+		m_WordCmd.Head.bBoardNumber, m_WordCmd.bSeq, m_WordCmd.wCmd);
+	t = sym + s;
+	m_lbOutput.AddString(t);
+	SendMsg((GenericPacketHeader*)&m_WordCmd);
 	}
 
 void CNcNx::OnChangeEdParam()

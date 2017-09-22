@@ -34,7 +34,7 @@ CvChannel::CvChannel(int nSeq, int nChnl)
 #if 1
 	// id/od, Nc, Thold, bMod
 	FifoInit(0,1,20,1);	// id default 0,1,20,1
-	FifoInit(1,1,20,1);	// od default 0,1,20,1
+	FifoInit(1,1,20,1);	// od default 1,1,20,1
 	FifoInit(2,1,20,1);	// interface gate1
 	
 	m_bInputCnt = 0; 

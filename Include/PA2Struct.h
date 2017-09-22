@@ -15,6 +15,8 @@ This includes pulser boards and phased array processor boards built by Tuboscope
 #ifndef PA2_STRUCTS_H
 #define PA2_STRUCTS_H
 
+#undef VARIABLE_LENGTH_IDATA
+
 #ifndef BYTE
 typedef unsigned char	BYTE;
 #endif
@@ -26,19 +28,19 @@ typedef unsigned short	WORD;
 typedef unsigned int	UINT;
 #endif
 
-enum IdataTypes {eRawInspID=1, eAscanID=2, eKeepAliveID=0xff};
 enum IdOdTypes {eId, eOd, eIf};
 enum CallSource {eMain, eInterrupt};
 
 #define MAX_PAM_QTY			1
 #define MAX_PAM_INSTS_QTY	8
 #define NC_NX_CMD_ID		1+0x200		// also known as NC_NX_TEST
-#define ASCANS_TO_AVG		16
+#define ASCANS_TO_AVG		2
 
 #define THE_APP_CLASS	CPA2WinApp
 
 // Idata message types. This is the data that comes from the PAP and is sent 
 // To the Receiver system
+enum IdataTypes { eRawInspID = 1, eAscanID = 2, eKeepAliveID = 0xff };
 #define NC_NX_IDATA_ID				1		// PAP processed inspection data sent to PAG/Receiver system
 #define ASCAN_DATA_ID				2
 
@@ -179,7 +181,7 @@ typedef struct
 // keep data synchronized with location information
 typedef struct 
 	{
-	WORD wMsgID;		// commands and data are identified by their ID					2
+	WORD wMsgID;		// commands and data are identified by their ID	= eRawInspID	2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
@@ -260,7 +262,38 @@ typedef struct
 
 	} IDATA_FROM_HW_HDR;		//sizeof = 64 bytes
 
+// Ascan data has same basid structure as Idata 
+typedef struct
+	{
+	WORD wMsgID;		// commands and data are identified by their ID	= eAscanID		2
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
+	UINT uSync;			// 0x5CEBDAAD													8
+	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count	10
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address. 13
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		14
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bSeqNumber;
+	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
+	BYTE bNiosFeedback[7];// eg. FPGA version, C version, self-test info	  30	
 
+	WORD wScopeSetting;	// inform about trigger, thold, other scope settings
+	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
+
+						// Pipe position information
+	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+	BYTE bSpare;
+	WORD wLocation;		// x location in motion pulses
+	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
+	WORD wPeriod;		// unit in .2048ms
+	WORD wRotationCnt;	// Number of rotations since pipe present signal
+	WORD wStatus;		// see below
+	WORD wSpare[13];	// 64 bytes to here
+	char ascan[1024];	// 1024 8-bit scope amplitude samples
+
+	} ASCAN_DATA;		// sizeof() = 1088
 
 #define SET_DROPOUT		 ( 1 << 5)
 #define CLR_DROPOUT		~( 1 << 5)

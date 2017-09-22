@@ -57,13 +57,14 @@ public:
 	void NullpSCC(void)								{m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  0;}
 
 	void ProcessInstrumentData(IDATA_FROM_HW *pIData);
+	void CheckSequences(IDATA_PAP *pIdataPacket);
 	
 	void MakeFakeDataHead(IDATA_FROM_HW *pData);
 	void MakeFakeData(IDATA_FROM_HW *pData);
 	//void BuildOutputPacket(IDATA_FROM_HW *pInput);
 	void SaveFakeData(CString& s);
 
-	void AddToIdataPacket(CvChannel *pChannel, int nSendFlag);
+	void AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW *pIData, int nSendFlag);
 	// create a processing class instance for each wall channel
 		
 	int m_nInspectMode;
@@ -89,6 +90,8 @@ public:
 	// Instrument data can be in process while fake data is in process during simulation
 	// Once testing has ended, fake data will go away.
 	int m_Seq, m_Ch;
+	int m_nSendSeqQty;	// nominally 32 sequences
+	int m_nResultantChannels;	// SendSeqQty * 8 channels per sequenct
 	int GetStartSeq(void) 	{ return m_Seq;	}
 	int GetStartCh(void)	{ return m_Ch;		}
 	void IncStartCh(void);
@@ -112,6 +115,8 @@ public:
 	// InputRawDataPacket *m_pOutputRawDataPacket;		// our class ptr to the packet to send
 	IDATA_PAP *m_pIdataPacket;
 	int m_IdataInPt;			// insertion point in stPeakChnl PeakChnl
+	int m_nFullPacketChnls;		// All the channels of a complete set of unique sequences
+	BYTE m_bNiosGlitchCnt;
 	int GetIdataPacketIndex(void);
 	void SendIdataToPag(GenericPacketHeader *pIdata);
 

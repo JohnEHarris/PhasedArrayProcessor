@@ -669,7 +669,6 @@ void CPA2WinDlg::StartTimer()
 	m_uStatTimer = SetTimer(IDT_TIMER, 1000, NULL);
 	if (!m_uStatTimer) MessageBox(_T("Failed to start timer"));
 	m_nTimerCount = 0;
-
 	}
 
 void CPA2WinDlg::StopTimer()
@@ -1008,7 +1007,7 @@ void CServerRcvListThread::MakeFakeDataHead(IDATA_FROM_HW *pData)
 	pData->wLocation = nLoc++;
 	if (nLoc > 500) 
 		nLoc = 20;
-	pData->wClock	= nLoc % 12;
+	pData->wAngle	= nLoc % 12;
 	pData->wPeriod	= 1465;	// 300 ms = 200 rpm
 
 	}

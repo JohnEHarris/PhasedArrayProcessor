@@ -1036,6 +1036,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 
 	// Since we got here we know the list is not empty
 	IDATA_PAP *pSendPkt;	// ptr to the packet info in the linked list of send packets
+	//ASCAN_DATA *pAscan;
 
 	if (!m_pstCCM->pSocket)
 		{
@@ -1070,6 +1071,9 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		// As of 2017-01-24 the only message back to PAG is Idata
 		// do the socket send
 		pSendPkt->wMsgSeqCnt = m_wMsgSeqCount++;
+		// debug look at Ascan data 
+		if (pSendPkt->wMsgID == eAscanID)
+			j = 3;
 
 		if ((m_pstCCM->uPacketsSent & 0x7ff) == 0)		m_pElapseTimer->Start();
 		if ((m_pstCCM->uPacketsSent & 0x7ff) == 0x7ff)	// originally 0xff

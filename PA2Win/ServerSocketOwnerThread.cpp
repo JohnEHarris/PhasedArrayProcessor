@@ -596,6 +596,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			//theApp.SaveDebugLog(s);
 			pMainDlg->SaveDebugLog(s);
 			break;
+
+
 		// add other large commands here if needed
 #if 0
 		case 2:		// Gate delay cmd

@@ -84,6 +84,9 @@ public:
 	// TCG commands have the same gain template
 	ST_SET_TCG_DELAY_CMD m_TcgCmd;
 	void FakeData( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue );
+	// WordCmd, use nValue to assign to hardware functions
+	void WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue);
+	ST_WORD_CMD m_WordCmd;
 	afx_msg void OnChangeEdParam();
 	CEdit m_edParam;
 	int m_nAscanCnt;

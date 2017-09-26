@@ -44,7 +44,7 @@ IMPLEMENT_DYNAMIC(CNcNx, CDialogEx)
 
 CNcNx::CNcNx(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_NCNX_PA, pParent)
-	, m_nAscanCnt(0)
+//	, m_nAscanCnt(0)
 	{
 	m_DlgLocationKey = _T("NC_NX_PA2");
 	m_DlgLocationSection = _T("Dialog Locations");	// Section is always this string for all dlgs
@@ -85,6 +85,8 @@ BEGIN_MESSAGE_MAP(CNcNx, CDialogEx)
 	//ON_WM_VSCROLL()
 	ON_BN_CLICKED( IDC_BN_DONOTHING, &CNcNx::OnBnClickedBnDonothing )
 	ON_EN_CHANGE( IDC_ED_PARAM, &CNcNx::OnChangeEdParam )
+	ON_BN_CLICKED(IDC_RB_SMALLCMD, &CNcNx::OnBnClickedRbSmallcmd)
+	ON_BN_CLICKED(IDC_RB_LARGECMDS, &CNcNx::OnBnClickedRbLargecmds)
 END_MESSAGE_MAP()
 
 
@@ -127,8 +129,8 @@ BOOL CNcNx::OnInitDialog()
 	m_lbOutput.ResetContent();
 	m_cbCommand.ResetContent();
 	m_nPAP = m_nBoard = m_nSeq = m_nCh = m_nGate = m_nParam	= 0;
+	OnBnClickedRbSmallcmd();	// calls 	PopulateCmdComboBox();
 
-	PopulateCmdComboBox();
 	m_cbCommand.SetCurSel ( 2 );	// Gate Delay
 
 	return TRUE;  // return TRUE unless you set the focus to a control
@@ -338,33 +340,51 @@ void CNcNx::PopulateCmdComboBox()
 	{
 	CString s;
 	m_cbCommand.ResetContent();
-
-	s.Format( _T( "null 0" ) );				m_cbCommand.AddString( s );
-	s.Format( _T( "FakeData" ) );			m_cbCommand.AddString( s );
-	s.Format( _T( "Gate n Delay" ) );		m_cbCommand.AddString( s );	//2
-	s.Format( _T( "Gate n Range" ) );		m_cbCommand.AddString( s );	//3
-	s.Format( _T( "Gate n Blank" ) );		m_cbCommand.AddString( s );	//4
-	s.Format( _T( "Gate n Thold" ) );		m_cbCommand.AddString( s );	//5
-	s.Format( _T( "Gate n Trigger" ) );		m_cbCommand.AddString( s );	//6
-	s.Format( _T( "Gate n Polarty" ) );		m_cbCommand.AddString( s );	//7
-	s.Format( _T( "Gate n TOF" ) );			m_cbCommand.AddString( s );	//8
-	s.Format( _T( "SetTcgClockRate" ) );	m_cbCommand.AddString( s );	//9
-	s.Format( _T( "TCGTriggerDelay" ) );	m_cbCommand.AddString( s );	//10
-	s.Format( _T( "TCGGainClock" ) );		m_cbCommand.AddString( s );	//11
-	s.Format( _T( "TCGChnlGainDelay" ) );	m_cbCommand.AddString( s );	//12
-	s.Format(_T("SetPRF"));					m_cbCommand.AddString(s);	//13
-	s.Format(_T("ASCAN_SCOPE"));			m_cbCommand.AddString(s);	//14
-	s.Format(_T("ASCAN_SCOPE_DELAY"));		m_cbCommand.AddString(s);	//15
+	if (m_nShowSmallCmds)
+		{
+		s.Format(_T("null 0"));				m_cbCommand.AddString(s);
+		s.Format(_T("FakeData"));			m_cbCommand.AddString(s);	//1
+		s.Format(_T("Gate n Delay"));		m_cbCommand.AddString(s);	//2
+		s.Format(_T("Gate n Range"));		m_cbCommand.AddString(s);	//3
+		s.Format(_T("Gate n Blank"));		m_cbCommand.AddString(s);	//4
+		s.Format(_T("Gate n Thold"));		m_cbCommand.AddString(s);	//5
+		s.Format(_T("Gate n Trigger"));		m_cbCommand.AddString(s);	//6
+		s.Format(_T("Gate n Polarty"));		m_cbCommand.AddString(s);	//7
+		s.Format(_T("Gate n TOF"));			m_cbCommand.AddString(s);	//8
+		s.Format(_T("SetTcgClockRate"));	m_cbCommand.AddString(s);	//9
+		s.Format(_T("TCGTriggerDelay"));	m_cbCommand.AddString(s);	//10
+		s.Format(_T("TCGGainClock"));		m_cbCommand.AddString(s);	//11
+		s.Format(_T("TCGChnlGainDelay"));	m_cbCommand.AddString(s);	//12
+		s.Format(_T("SetPRF"));					m_cbCommand.AddString(s);	//13
+		s.Format(_T("ASCAN_SCOPE"));			m_cbCommand.AddString(s);	//14
+		s.Format(_T("ASCAN_SCOPE_DELAY"));		m_cbCommand.AddString(s);	//15
+		s.Format(_T("SET_ASCAN_PEAK_MODE"));	m_cbCommand.AddString(s);	//16
+		s.Format(_T("ASCAN_RF_BEAM"));			m_cbCommand.AddString(s);	//17--check case statements below
+		}
+	else
+		{
+		// show large commands
+		s.Format(_T("=="));		m_cbCommand.AddString(s);	m_cbCommand.AddString(s);	//1st 2 blank
+		s.Format(_T("SEQ_TCG_GAIN"));			m_cbCommand.AddString(s);	//0x200 +2
+		s.Format(_T("TCG_GAIN_CMD"));			m_cbCommand.AddString(s);	//0x200 +3
+		s.Format(_T("ASCAN_BEAMFORM_DELAY"));	m_cbCommand.AddString(s);	//0x200 +4
+		}
+	m_cbCommand.SetCurSel(2);
 	m_nPopulated = 1;
 	}
 
 void CNcNx::OnCbnSelchangeCbCmds()
 	{
 	CString s, t;
+	int nCmdOffset;
 	// TODO: Add your control notification handler code here
 	m_nCmdId = m_cbCommand.GetCurSel();
-	t.Format( _T( "m_nCmdId = %d" ), m_nCmdId );
-	switch (m_nCmdId)
+	if (m_nShowSmallCmds)	nCmdOffset = 0;
+	else					nCmdOffset = 0x200;
+	t.Format(_T("m_nCmdId = %d"), m_nCmdId + nCmdOffset);
+
+				
+	switch (m_nCmdId + nCmdOffset)
 		{
 		case 0:	s.Format( _T( "null %d" ), m_nCmdId );	break;
 		case 1:	s =_T( "Fake Data" );					break;
@@ -375,6 +395,8 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		case 6: s.Format(_T("Gate %d Trigger %d"), m_nGate, m_nParam); break;
 		case 7: s.Format(_T("Gate %d Polarity %d"), m_nGate, m_nParam); break;
 		case 8: s.Format(_T("Gate %d TOF %d"), m_nGate, m_nParam); break;
+
+		case 0x202: s = _T("SEQ_TCG_GAIN");					break;
 		default:	s = t;		break;
 		}
 	//m_lbOutput.AddString( s );
@@ -406,7 +428,13 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			//AScan control commands
 		case 14:
 		case 15:
+		case 16:
+		case 17:
 			WordCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
+			break;
+
+		case 2+0x200:
+			// build command here
 			break;
 		default:	
 			break;
@@ -432,37 +460,51 @@ void CNcNx::OnBnClickedBnDonothing()
 void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 	{
 #ifdef I_AM_PAG
-
+	CString s;
 	//int nPam, nInst, nChnl;
-	ST_LARGE_CMD *pSend;
-	PAP_INST_CHNL_NCNX * pSendNcNx;
+	//PAP_INST_CHNL_NCNX * pSendNcNx;
 	if (pMsg->wMsgID >= 0x200)
 		{
+		ST_LARGE_CMD *pSend = new (ST_LARGE_CMD);
+		memcpy((void*)pSend, (void*)pMsg, sizeof(ST_LARGE_CMD));
+		pSend->bPAPNumber = m_nPAP;
+		pSend->bBoardNumber = m_nBoard;
+
 		switch (pMsg->wMsgID)
 			{
 		case 1+0x200:
 			// development code special
-			pSendNcNx = new PAP_INST_CHNL_NCNX;
-			memset((void *)pSendNcNx, 0, sizeof(PAP_INST_CHNL_NCNX));
-			memcpy((void *)pSendNcNx, (void *)pMsg, pMsg->wByteCount);	// sizeof(ST_NC_NX) * 72);
-			pSendNcNx->bPAPNumber = m_nPAP;
-			pSendNcNx->bBoardNumber = m_nBoard;
-			pSend = (ST_LARGE_CMD *)pSendNcNx;
-			gDlg.pUIDlg->SendMsgToPAP((int)pMsg->bPapNumber, pMsg->wMsgID, (void *)pSend);
+			//pSendNcNx = (PAP_INST_CHNL_NCNX*)pSend;
+			//memset((void *)pSendNcNx, 0, sizeof(PAP_INST_CHNL_NCNX));
+			//memcpy((void *)pSendNcNx, (void *)pMsg, pMsg->wByteCount);	// sizeof(ST_NC_NX) * 72);
+			break;
+		case SEQ_TCG_GAIN_CMD_ID:
+			s.Format(_T("SEQ_TCG_GAIN_CMD PAP=%d, Board=%d\n"), pSend->bPAPNumber, pSend->bBoardNumber);
+			TRACE(s);
+			break;
+		case TCG_GAIN_CMD_ID:
+			break;
+		case SET_ASCAN_BEAMFORM_DELAY_ID:
 			break;
 		default:
-			TRACE(_T("Unrecognized message in NcNx\n"));
+			TRACE(_T("Unrecognized message .. delete pSend\n"));
+			delete pSend;
 			return;
 			}
+
+		gDlg.pUIDlg->SendMsgToPAP((int)pSend->bPAPNumber, pSend->wMsgID, (void *)pSend);
+		//delete pSend;
 		}
 	else
 		{
 		if (pMsg->wByteCount == 32)
 			{	// small command format
+			ST_SMALL_CMD *pSmall = (ST_SMALL_CMD *)pMsg;
 			ST_SMALL_CMD *pSend = new ST_SMALL_CMD;
 			memset((void*)pSend, 0, sizeof(ST_SMALL_CMD));
-			memcpy((void*)pSend, (void*)pMsg, sizeof(ST_SMALL_CMD));
-			gDlg.pUIDlg->SendMsgToPAP((int)pMsg->bPapNumber, pMsg->wMsgID, (void *)pSend);
+			memcpy((void*)pSend, (void*)pSmall, sizeof(ST_SMALL_CMD));
+			gDlg.pUIDlg->SendMsgToPAP((int)pSend->bPAPNumber, pSend->wMsgID, (void *)pSend);
+			//delete pSend; auto deleted in sending function
 			}
 		else
 			{	// large command format
@@ -470,6 +512,7 @@ void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 			memset((void*)pSend, 0, sizeof(ST_LARGE_CMD));
 			memcpy((void*)pSend, (void*)pMsg, sizeof(ST_LARGE_CMD));
 			gDlg.pUIDlg->SendMsgToPAP((int)pMsg->bPapNumber, pMsg->wMsgID, (void *)pSend);
+			//delete pSend;
 			}
 		}
 #endif
@@ -600,8 +643,10 @@ void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	m_WordCmd.Head.wMsgID = nCmd;
 	switch (nCmd)
 		{
-	case SET_ASCAN_SCOPE_ID:	sym = _T("SET_ASCAN_SCOPE ");	break;
-	case SET_ASCAN_SCOPE_DELAY_ID:	sym = _T("SET_ASCAN_SCOPE_DELAY ");	break;
+	case SET_ASCAN_SCOPE_ID:		sym = _T("SET_ASCAN_SCOPE ");		break;	//14
+	case SET_ASCAN_SCOPE_DELAY_ID:	sym = _T("SET_ASCAN_SCOPE_DELAY ");	break;	//15
+	case SET_ASCAN_PEAK_MODE_ID:	sym = _T("SET_ASCAN_PEAK_MODE ");	break;	//16
+	case SET_ASCAN_RF_BEAM_ID:		sym = _T("SET_ASCAN_RF_BEAM ");		break;	//17
 		}
 	m_WordCmd.Head.wByteCount = 32;
 	m_WordCmd.Head.uSync = SYNC;
@@ -618,6 +663,39 @@ void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	t = sym + s;
 	m_lbOutput.AddString(t);
 	SendMsg((GenericPacketHeader*)&m_WordCmd);
+	}
+
+void CNcNx::LargeCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue)
+	{
+	CString s, t, sym;
+	int i;
+	sym = _T("LARGE Cmd: ");
+	memset(&m_wLargeCmd, 0, sizeof(ST_LARGE_CMD));
+	m_wLargeCmd.wMsgID = nCmd;
+	switch (nCmd)
+		{
+		case SEQ_TCG_GAIN_CMD_ID:			
+			sym = _T("SEQ_TCG_GAIN_CMD ");			break;	//0x202
+		case TCG_GAIN_CMD_ID:				
+			sym = _T("TCG_GAIN_CMD ");				break;	//0x203
+		case SET_ASCAN_BEAMFORM_DELAY_ID:	
+			sym = _T("SET_ASCAN_BEAMFORM_DELAY ");	break;	//0x204
+		}
+	m_wLargeCmd.wByteCount = sizeof(ST_LARGE_CMD);
+	m_wLargeCmd.uSync = SYNC;
+	//		m_wLargeCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
+	m_wLargeCmd.bPAPNumber = nPap;
+	m_wLargeCmd.bBoardNumber = nBoard;
+	m_wLargeCmd.bSeqNumber = nSeq & 0x1f;	// starting seq number
+	for ( i = 0; i < 512; i++)
+		m_wLargeCmd.wCmd[i] = wValue;
+
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, (Param)WordCmd[0] = %d\n"),
+		m_wLargeCmd.wMsgID, m_wLargeCmd.wByteCount, m_wLargeCmd.bPAPNumber,
+		m_wLargeCmd.bBoardNumber, m_wLargeCmd.wCmd[0]);
+	t = sym + s;
+	m_lbOutput.AddString(t);
+	SendMsg((GenericPacketHeader*)&m_wLargeCmd);
 	}
 
 void CNcNx::OnChangeEdParam()
@@ -638,3 +716,20 @@ void CNcNx::IncrementAscanCnt(void)
 	SetDlgItemInt(IDC_EN_ASCANCNT, guAscanMsgCnt, 0);
 	}
 
+
+
+void CNcNx::OnBnClickedRbSmallcmd()
+	{
+	// TODO: Add your control notification handler code here
+	// fILL COMBO box with small commands-- 32 byte commands
+	m_nShowSmallCmds = 1;
+	PopulateCmdComboBox();
+	}
+
+
+void CNcNx::OnBnClickedRbLargecmds()
+	{
+	// Fill COMBO box with large commands-- 1056 byte commands
+	m_nShowSmallCmds = 0;
+	PopulateCmdComboBox();
+	}

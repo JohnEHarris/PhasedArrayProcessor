@@ -178,7 +178,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 					delete pMmiCmd;
 				break;
 				}
-			if (MsgId < LAST_SMALL_COMMAND)
+			if (MsgId <= LAST_SMALL_COMMAND)
 				{
 
 				s.Format(_T("Received Cmd %d for Instrument %d from Phased Array GUI\n"),

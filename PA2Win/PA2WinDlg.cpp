@@ -1922,6 +1922,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 //		if (gDlg.pNcNx)
 //			gDlg.pNcNx->DebugOut(s);
 
+		// auto delete
 		rc = stSCM[ePAM_Server].pSCM->SendPacketToPAM(nClientNumber, (BYTE *)pMsg, nLen, 1);
 		if (rc < 0)
 			{

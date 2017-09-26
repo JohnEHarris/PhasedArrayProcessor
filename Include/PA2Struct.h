@@ -217,8 +217,11 @@ typedef struct
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
 	WORD wStatus;		// see below
 	WORD wSpare[10];
-
+#ifdef VARIABLE_LENGTH_IDATA
+	SEQ_DATA Seq[40];	// 32*40 = 1280, 1280+64 = 1344
+#else
 	SEQ_DATA Seq[32];	// 32 sequences each of 8 virtual channels. 32*32 = 1024
+#endif
 	} IDATA_FROM_HW;	// sizeof = 1024 + 64 byte header = 1088
 
 // Estimated 13 uSec to copy header into Wiznet
@@ -378,6 +381,49 @@ typedef struct
 
 	stPeakChnl PeakChnl[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 
 	} IDATA_PAP;	// sizeof = 1280 + 64 =1344
+
+
+typedef struct
+	{
+	WORD wMsgID;		// commands and data are identified by their ID					2
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
+	UINT uSync;			// 0x5CEBDAAD													8
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address. 11
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		12
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. PeakChnl[0] -> seq 0
+							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
+	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
+	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		16
+								// Some sequence points may have channel type NOTHING
+	BYTE bStartChannel;	// First virtual channel in peak data PeakChnl--always 0 for this hardware
+	BYTE bNiosGlitchCnt;// glitch in NIOS. Flush PAP NcNx process to resynchronize. In NIOS probably Wiznet reset
+	BYTE bCmdQDepthS;	// How deep is the Small command queue in the board NIOS processor
+	BYTE bCmdQDepthL;	// How deep is the Large command queue in the board NIOS processor
+						// NIOS has limited memory. Msg Q likely to be 
+						// Large, [8][1056] = 8448 bytes, Small [64][32] = 2048
+
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
+	BYTE bNiosFeedback[8];// eg. FPGA version, C version, self-test info	    40	
+	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
+	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
+
+	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+	BYTE bSpare;
+	WORD wLocation;		// x location in motion pulses
+	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
+	WORD wPeriod;		// unit in .2048ms
+	WORD wRotationCnt;	// Number of rotations since pipe present signal
+	WORD wStatus;		// see below
+	WORD wSpare[10];
+	} IDATA_PAP_HDR;	// sizeof = 1280 + 64 =1344
+
+
+
+
 
 // https://blog.apnic.net/2014/12/15/ip-mtu-and-tcp-mss-missmatch-an-evil-for-network-performance/
 // 1460 is max 

@@ -87,8 +87,13 @@ public:
 	// WordCmd, use nValue to assign to hardware functions
 	void WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue);
 	ST_WORD_CMD m_WordCmd;
+	void LargeCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue);
+	ST_LARGE_CMD m_wLargeCmd;
 	afx_msg void OnChangeEdParam();
 	CEdit m_edParam;
-	int m_nAscanCnt;
+	//int m_nAscanCnt;
 	void IncrementAscanCnt(void);
+	afx_msg void OnBnClickedRbSmallcmd();
+	afx_msg void OnBnClickedRbLargecmds();
+	int m_nShowSmallCmds;
 	};

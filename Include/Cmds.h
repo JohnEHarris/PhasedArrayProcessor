@@ -54,12 +54,17 @@ extern ST_LARGE_CMD *pCmdGlobal;
 
 /*****************	COMMANDS *********************/
 #define TOTAL_COMMANDS				20
-#define LAST_SMALL_COMMAND			14
+#define LAST_SMALL_COMMAND			17
 
 #define TOTAL_LARGE_COMMANDS		5
 #define LAST_LARGE_COMMAND			3
 
 // SMALL
+// modify Cmds.h and Cmds.cpp in the NIOS code file
+// also add the command name to: void ( *ProcPtrArray[TOTAL_COMMANDS])() =
+// found in the NIOS file Cmds.cpp. Add the 'define' name to PopulateCmdComboBox()
+// in NcNx.cpp
+//
 #define NULL_0						0
 #define FAKE_DATA_CMD_ID			1
 #define SET_GATE_DELAY_CMD_ID		2
@@ -80,6 +85,8 @@ extern ST_LARGE_CMD *pCmdGlobal;
 #define SET_PRF_CMD_ID				13
 #define SET_ASCAN_SCOPE_ID			14
 #define SET_ASCAN_SCOPE_DELAY_ID	15
+#define SET_ASCAN_PEAK_MODE_ID		16
+#define SET_ASCAN_RF_BEAM_ID		17
 
 
 // LARGE
@@ -368,7 +375,7 @@ typedef struct
 	BYTE bSpare;	// 16 bytes to here
 	WORD wCmd;	//
 	WORD wFill[7];	// all 0
-	}	ST_A_WORD;
+	}	ST_WORD_CMD;
 //
 //=================================================
 // LARGE COMMNAD STRUCTURES
@@ -530,8 +537,9 @@ void TCGBeamGain( void );			// set_beam_gain
 void TCGGainClock( void );			// set_beam_gain_step
 void TCGChnlGainDelay( void );		// set_beam_gain_delay
 void SetPrf( void );
-void SetAscanScope( void );			// set_ascan_scope
+void SetAscanScope( void );			// set_ascan_scope also add in NcNx.cpp and 
 void SetAscanDelay( void );			// set_ascan_delay 
+void SetAscanPeakMode(void);
 
 void set_rcvr_TCG_gain( int seq, unsigned short value[128] );
 void set_TCG_step_size( int value );

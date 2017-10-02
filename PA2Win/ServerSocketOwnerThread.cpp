@@ -562,27 +562,12 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		m_pSCC->pSocket->LockSendPktList();
 		pCmd = (ST_LARGE_CMD *) m_pSCC->pSendPktList->RemoveHead();
 		m_pSCC->pSocket->UnLockSendPktList();
-			
+		nMsgSize = pCmd->wByteCount;
+
 		int nElapse = 0;
 		switch (pCmd->wMsgID)
 			{
-#if 0
-		case SYSINIT:
-			m_pHwTimer->Start();
-			m_nConfigMsgQty = 0;
-			break;
-		case SYSINIT_COMPLETE:
-			char buf[128];
-			nElapse = m_pHwTimer->Stop();
-			s.Format(_T("Config file download time in uSec = %d for %d cmds\n"), 
-				nElapse, m_nConfigMsgQty );
-			CstringToChar(s,buf);
-			puts(buf);
-			s += _T("\n");
-			TRACE(s);
 
-			break;
-#endif
 			// Normally would not send Nc Nx info to instrument. Used here to debug command interaction
 			// with the instrument and check
 			// for lost packets.
@@ -592,7 +577,6 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			s.Format(_T("NC_NX_CMD_ID Msg seq cnt =%d, seq=%2d, chnl=%3d, PktListSize= %3d\n"), 
 				pCmd->wMsgSeqCnt, pNc->stNcNx->bSeqNumber, pNc->stNcNx->bChnlNumber, i);
 			//pCmd->wMsgSeqCnt = m_pSCC->wMsgSeqCnt++; -- see below
-			nMsgSize = pNc->wByteCount;
 			//theApp.SaveDebugLog(s);
 			pMainDlg->SaveDebugLog(s);
 			break;
@@ -613,6 +597,11 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 
 			break;
 #endif
+
+		case SEQ_TCG_GAIN_CMD_ID:
+		case TCG_GAIN_CMD_ID:
+		case SET_ASCAN_BEAMFORM_DELAY_ID:
+			break;
 
 		default:
 			// maybe this is a small command - most valid commands are.

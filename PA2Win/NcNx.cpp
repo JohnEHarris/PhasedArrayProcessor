@@ -130,6 +130,8 @@ BOOL CNcNx::OnInitDialog()
 	m_cbCommand.ResetContent();
 	m_nPAP = m_nBoard = m_nSeq = m_nCh = m_nGate = m_nParam	= 0;
 	OnBnClickedRbSmallcmd();	// calls 	PopulateCmdComboBox();
+	CButton* pButton = (CButton*)GetDlgItem(IDC_RB_SMALLCMD);
+	pButton->SetCheck(true);
 
 	m_cbCommand.SetCurSel ( 2 );	// Gate Delay
 
@@ -377,10 +379,15 @@ void CNcNx::OnCbnSelchangeCbCmds()
 	{
 	CString s, t;
 	int nCmdOffset;
+	int nCmdLarge = 0;
 	// TODO: Add your control notification handler code here
 	m_nCmdId = m_cbCommand.GetCurSel();
 	if (m_nShowSmallCmds)	nCmdOffset = 0;
-	else					nCmdOffset = 0x200;
+	else
+		{
+		nCmdOffset = 0x200;
+		nCmdLarge = m_nCmdId + nCmdOffset;
+		}
 	t.Format(_T("m_nCmdId = %d"), m_nCmdId + nCmdOffset);
 
 				
@@ -402,7 +409,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 	//m_lbOutput.AddString( s );
 
 
-	switch (m_nCmdId)
+	switch (m_nCmdId + nCmdOffset)
 		{
 		case 0:			break;
 		case 1:	
@@ -433,8 +440,12 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			WordCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 			break;
 
-		case 2+0x200:
+		case 2 + 0x200:
+		case 3 + 0x200:
+		case 4 + 0x200:
 			// build command here
+			LargeCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, nCmdLarge, (WORD) m_nParam);
+			t = _T("Large Command");
 			break;
 		default:	
 			break;
@@ -483,8 +494,10 @@ void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 			TRACE(s);
 			break;
 		case TCG_GAIN_CMD_ID:
+			s.Format(_T("TCG_GAIN_CMD PAP=%d, Board=%d\n"), pSend->bPAPNumber, pSend->bBoardNumber);
 			break;
 		case SET_ASCAN_BEAMFORM_DELAY_ID:
+			s.Format(_T("SET_ASCAN_BEAMFORM_DELAY PAP=%d, Board=%d\n"), pSend->bPAPNumber, pSend->bBoardNumber);
 			break;
 		default:
 			TRACE(_T("Unrecognized message .. delete pSend\n"));
@@ -665,6 +678,7 @@ void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	SendMsg((GenericPacketHeader*)&m_WordCmd);
 	}
 
+// Putw wValue into all 512 large command  words wCmd[]
 void CNcNx::LargeCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue)
 	{
 	CString s, t, sym;

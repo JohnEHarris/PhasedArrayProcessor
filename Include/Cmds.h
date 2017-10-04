@@ -57,7 +57,7 @@ extern ST_LARGE_CMD *pCmdGlobal;
 #define LAST_SMALL_COMMAND			17
 
 #define TOTAL_LARGE_COMMANDS		5
-#define LAST_LARGE_COMMAND			3
+#define LAST_LARGE_COMMAND			4
 
 // SMALL
 // modify Cmds.h and Cmds.cpp in the NIOS code file
@@ -91,8 +91,9 @@ extern ST_LARGE_CMD *pCmdGlobal;
 
 // LARGE
 #define NC_NX_TEST					1+0x200
-#define SEQ_TCG_GAIN_CMD_ID			2+0X200
-#define TCG_GAIN_CMD_ID				3+0X200
+#define SEQ_TCG_GAIN_CMD_ID			2+0x200
+#define TCG_GAIN_CMD_ID				3+0x200
+#define SET_ASCAN_BEAMFORM_DELAY_ID	4+0x200
 
 /*************** Command Structures **************/
 
@@ -127,6 +128,27 @@ typedef struct
 	BYTE bSpare[19];	// 32 bytes to here
     WORD wCmd[512];		// 512 words or 1024 bytes
 	} ST_LARGE_CMD;		// 1056 bytes 
+
+typedef struct
+	{
+	// The generic header
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD 
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
+	BYTE bPapNumber;	// which PAP is the command for
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
+
+						// Commands can have any format past this point based on MsgId
+
+	BYTE bSeqNumber;	// when relevant, which sequence of virtual probes the command affects
+	BYTE bChnl;			// Chnl number in bSeqNumber above
+	BYTE bSpare[18];	// 32 bytes to here
+	WORD wDelay[16];
+	WORD wCmd[496];		// 512 words or 1024 bytes
+	} ST_BEAM_FORM_CMD;		// 1056 bytes 
 
 // 2016-12-12 ALLOW for variable size data and command packets. Data packets will always be 1056
 // bytes from NIOS hardware. Command packets may vary in size.
@@ -540,6 +562,8 @@ void SetPrf( void );
 void SetAscanScope( void );			// set_ascan_scope also add in NcNx.cpp and 
 void SetAscanDelay( void );			// set_ascan_delay 
 void SetAscanPeakMode(void);
+void SetAscanRfBeam( void );
+void SetAscanBeamFormDelay( void );
 
 void set_rcvr_TCG_gain( int seq, unsigned short value[128] );
 void set_TCG_step_size( int value );
@@ -549,6 +573,8 @@ void set_beam_gain_step( int value );
 void set_beam_gain_delay( int value );
 void set_ascan_scope( short value );
 void set_ascan_delay(short value);
+void set_ascan_rf_beam_sel_reg( short value );
+
 
 void set_PRF( WORD wPrf );	// Set prf in Hertz. Range 10-10,000
 /*	SMALL TCG commands	*/
@@ -561,6 +587,7 @@ void set_rcvr_TCG_gain( int seq, unsigned short value[128] );
 
 void TCGBeamGain( void );			// set_beam_gain
 void set_beam_gain( int beam, int seq, unsigned short value[128] );	// beam is a virtual channel
+void set_beam_seq_delay_register( int beam, int seq, /*int delay, */ short value[16] );
 
 /*   GAIN COMMANDS */
 

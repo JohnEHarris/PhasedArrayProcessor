@@ -16,6 +16,8 @@ Revised:
 #ifndef GLOBAL_H_
 #define GLOBAL_H_
 
+#include "PA2Struct.h"
+
 // The MAC and IP addresses of the instrument are modified by board switch setting or
 // by backplane board slot address when implemented.
 //
@@ -98,6 +100,8 @@ PubExt BYTE gbNiosGlitchCnt;	// usually Wiznet rest count. Must reset PAP data f
 //#define HANDLE int
 //#endif
 PubExt HANDLE g_hTimerTick;
+PubExt IDATA_PAP gLastIdataPap;
+PubExt UINT guAscanMsgCnt;
 
 #endif /* NIOS_CODE */
 

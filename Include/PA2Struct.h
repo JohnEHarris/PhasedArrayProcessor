@@ -15,8 +15,6 @@ This includes pulser boards and phased array processor boards built by Tuboscope
 #ifndef PA2_STRUCTS_H
 #define PA2_STRUCTS_H
 
-#undef VARIABLE_LENGTH_IDATA
-
 #ifndef BYTE
 typedef unsigned char	BYTE;
 #endif
@@ -217,11 +215,8 @@ typedef struct
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
 	WORD wStatus;		// see below
 	WORD wSpare[10];
-#ifdef VARIABLE_LENGTH_IDATA
-	SEQ_DATA Seq[40];	// 32*40 = 1280, 1280+64 = 1344
-#else
+
 	SEQ_DATA Seq[32];	// 32 sequences each of 8 virtual channels. 32*32 = 1024
-#endif
 	} IDATA_FROM_HW;	// sizeof = 1024 + 64 byte header = 1088
 
 // Estimated 13 uSec to copy header into Wiznet

@@ -17,7 +17,7 @@
 #include "ServerConnectionManagement.h"
 #include "CCmdFifo.h"
 #endif
-#include "../../Include/Cmds.h"
+#include "../Include/Cmds.h"
 #include "CCmdFifo.h"
 #include "HwTimer.h"
 

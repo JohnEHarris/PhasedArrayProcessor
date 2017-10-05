@@ -102,13 +102,13 @@
     <ClInclude Include="TestThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Include\Cmds.h">
+    <ClInclude Include="..\Include\PA2Struct.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Include\global.h">
+    <ClInclude Include="..\Include\Cmds.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Include\PA2Struct.h">
+    <ClInclude Include="..\Include\global.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

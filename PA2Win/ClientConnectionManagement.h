@@ -29,7 +29,7 @@ Revised:	12-Jun-12 Abandon 'C' worker threads in favor of using a class method f
 #pragma once
 
 //#include "..\Include\MC_SysCp_constants.h"
-#include "../../Include/Global.h"
+#include "../Include/Global.h"
 #include "PA2WinDlg.h"
 
 #if 0

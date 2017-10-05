@@ -193,9 +193,9 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Include\Cmds.h" />
-    <ClInclude Include="..\..\Include\global.h" />
-    <ClInclude Include="..\..\Include\PA2Struct.h" />
+    <ClInclude Include="..\Include\Cmds.h" />
+    <ClInclude Include="..\Include\global.h" />
+    <ClInclude Include="..\Include\PA2Struct.h" />
     <ClInclude Include="CCmdFifo.h" />
     <ClInclude Include="CCM_PAG.h" />
     <ClInclude Include="ClientCommunicationThread.h" />

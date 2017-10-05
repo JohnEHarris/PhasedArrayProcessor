@@ -23,7 +23,7 @@ Purpose:Simulate hardware processing of wall and flaw channels. One class instan
 
 #ifndef V_CHANNEL_H
 #define V_CHANNEL_H
-#include "../../Include/PA2Struct.h"
+#include "../Include/PA2Struct.h"
 
 
 class CvChannel

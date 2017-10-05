@@ -7,9 +7,9 @@ using namespace std;
 
 #include "afxwin.h"
 #include <iostream>
-#include "..\..\Include\Global.h"
-#include "..\..\Include\PA2Struct.h"
-#include "..\..\Include\Cmds.h"
+#include "..\Include\Global.h"
+#include "..\Include\PA2Struct.h"
+#include "..\Include\Cmds.h"
 #include "ServerConnectionManagement.h"
 #include "ServerSocket.h"
 #include "ServerSocketOwnerThread.h"	// 8-14-12 jeh

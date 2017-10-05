@@ -16,8 +16,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <share.h>
-#include "..\..\Include\Global.h"
-#include "..\..\Include\PA2Struct.h"
+#include "..\Include\Global.h"
+#include "..\Include\PA2Struct.h"
 #include "TuboIni.h"
 
 

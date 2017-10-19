@@ -372,7 +372,7 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		CstringToChar(s1, txt);
 		printf("PAM client %s:%d connected to PAG server at %s\n",txt,uCPort, buffer);
 		s2 = buffer;
-		s.Format(_T("PAM client %s:%d connected to PAG server at %s\n"), s1, uCPort, s2);
+		s.Format(_T("PAM client %s:%d connected to PAG server at %s  ***********************\n"), s1, uCPort, s2);
 		DebugOutMessage(s);
 #endif
 		int nSize;

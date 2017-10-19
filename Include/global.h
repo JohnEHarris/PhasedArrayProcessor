@@ -15,6 +15,8 @@ Revised:
 
 #ifndef GLOBAL_H_
 #define GLOBAL_H_
+#undef I_AM_THE_INSTURMENT
+
 
 #include "PA2Struct.h"
 
@@ -42,7 +44,6 @@ Revised:
 
 #define MS_500		500000		// 500,000 uSec
 
-//#include "Timer64.h"
 
 #ifdef MAIN_MODULE
 /* Global variables are public in the including module */
@@ -62,9 +63,19 @@ typedef unsigned short WORD;
 typedef unsigned int UINT;
 #endif
 
-#ifdef NIOS_CODE
-/* nothing for Nios code now */
-#else
+#ifdef I_AM_THE_INSTURMENT
+#include "Timer64.h"
+PubExt ELAPSE64 TRecvCmd;
+#ifndef HANDLE
+#define HANDLE int
+#endif
+
+PubExt IDATA_FROM_HW FakeDATA;
+PubExt ASCAN_DATA FakeASCAN;
+PubExt BYTE gbFakeDataCmd;		// change operation of Xmit interrupt when fake data
+PubExt BYTE gbMakeAscanFlag;
+
+#else	// not the instrument
 
 class CTuboIni;
 class CPA2WinDlg;
@@ -82,11 +93,17 @@ typedef struct
 	}	GLOBAL_DLG_PTRS;
 
 PubExt	GLOBAL_DLG_PTRS gDlg;
+PubExt IDATA_PAP gLastIdataPap;
+PubExt ASCAN_DATA gLastAscanPap;
+
+#endif
+
 PubExt int gMaxChnlsPerMainBang;
 PubExt int gMaxChnls;	// chanels per main bang * MaxSeqCount = 8*32 =256
 PubExt int gnSeqModulo;	// last seq number before reset to 0
+PubExt int gnMaxSeqCount;
+PubExt BYTE gbSeqPerPacket;	// up to 32 seq in packet to PAG. May be less
 PubExt int gMaxSeqCount;
-PubExt BYTE gbSeqPerPacket;	// up to 32 main bangs per packet. 
 PubExt int gnMaxServers, gnMaxClientsPerServer;		// Server Connection Management
 PubExt int gnMaxClients;							// Client Connection Management
 PubExt int gnFifoCnt, gnAsyncSocketCnt;
@@ -94,16 +111,9 @@ PubExt WORD gwMsgSeqCnt;
 PubExt BYTE gbStartSeqNumber;	// starting sequence number for next Idata packet
 PubExt int nLoc; // simulate location of pipe
 PubExt BYTE bLastFakeSeq;	// assuming fake data can reset before 32 ascans.
-//PubExt ELAPSE64 TRecvCmd;
 PubExt BYTE gbNiosGlitchCnt;	// usually Wiznet rest count. Must reset PAP data fifo processing on change of cnt
-// for NIOS compiler
-//#ifndef HANDLE
-//#define HANDLE int
-//#endif
 PubExt HANDLE g_hTimerTick;
-PubExt IDATA_PAP gLastIdataPap;
-PubExt UINT guAscanMsgCnt;
 
-#endif /* NIOS_CODE */
+PubExt UINT guAscanMsgCnt;
 
 #endif /* GLOBAL_H_ */

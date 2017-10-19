@@ -63,8 +63,6 @@ class CPA2WinDlg;
 
 //class CServiceApp;
 
-#define INSTRUMENT_PACKET_SIZE				1056		//old 1040
-//#define MASTER_PACKET_SIZE					1260
 
 
 
@@ -90,8 +88,6 @@ class CPA2WinDlg;
 extern THE_APP_CLASS theApp;
 
 
-//#define INSTRUMENT_PACKET_SIZE				1460		//old 1040
-//#define MASTER_PACKET_SIZE					1260
 #define PAG_CMD_PACKET_SIZE					1040
 
 #endif

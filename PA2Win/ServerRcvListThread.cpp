@@ -435,6 +435,8 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->bSeqModulo = gnSeqModulo = pIData->bSeqModulo;
 		m_pIdataPacket->bMaxVChnlsPerSequence = pIData->bMaxVChnlsPerSequence;
 		m_pIdataPacket->bStartChannel = pChannel->m_bChnl;
+		m_pIdataPacket->bSeqPerPacket = gbSeqPerPacket = (32 / gnSeqModulo) * gnSeqModulo;
+
 		m_pIdataPacket->bNiosGlitchCnt = pIData->bNiosGlitchCnt;
 		m_pIdataPacket->bCmdQDepthS = pIData->bCmdQDepthS;
 		m_pIdataPacket->bCmdQDepthL = pIData->bCmdQDepthL;
@@ -559,14 +561,15 @@ void CServerRcvListThread::CheckSequences(IDATA_PAP *pIdataPacket)
 	{
 	int nStartSeq, nSeqModulo, nChnl;	// test vars
 	int nChnlModulo;
-	int i, nError;
+	int i, nError, nLastChnl;
 	CString s;
 	nStartSeq = pIdataPacket->bStartSeqNumber;
 	nSeqModulo = pIdataPacket->bSeqModulo;
 	nChnl = nStartSeq * 8;	
 	nChnlModulo = nSeqModulo * 8;	// 8 chnls per sequence
 	nError = 0;
-	for (i = 0; i < 256; i++)
+	nLastChnl = gbSeqPerPacket * 8;
+	for (i = 0; i < nLastChnl; i++)
 		{
 		if ((nChnl % nChnlModulo) != (pIdataPacket->PeakChnl[i].bChNum % nChnlModulo))
 			{
@@ -663,28 +666,19 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 				gnSeqModulo = pIData->bSeqModulo;
 				}
 
+			gnMaxSeqCount = MAX_SEQ_COUNT;
+
 			// get the starting sequence number and channel from the instument data
 			m_Seq = nStartSeq = pIData->bStartSeqNumber;	// only used to find which pChannel
 			m_Ch = 0;	// pIData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber;
+			gnSeqModulo = pIData->bSeqModulo;
 			// For example, if 3 unique sequences, then 30 Ascans is 10 whole sets of sequences
 			// Send to PAG these 30 Ascans = 240 channels instead of 256
 			// If 8 unique sequences:  32/8 = 4, 4*8 = 32, 32*8chnls = 256 chnls
 			m_nFullPacketChnls = (32 / gnSeqModulo) * gnSeqModulo * 8;
+			gbSeqPerPacket = (32 / gnSeqModulo) * gnSeqModulo;
 
-			gnSeqModulo = pIData->bSeqModulo;
-#ifdef VARIABLE_LENGTH_IDATA
-			// get size of packet to hold whole number of unique sequences
-			// maximum packet size is 40 sequences = 1280 bytes +64 = 1344
-			int nOptimalSize = (32/gnSeqModulo);
-			if ( ((nOptimalSize +1) * gnSeqModulo) <= 40)
-				m_nSendSeqQty = (nOptimalSize + 1) * gnSeqModulo;
-			else
-				m_nSendSeqQty = nOptimalSize * gnSeqModulo;
-			nLastSeq = (m_Seq + m_nSendSeqQty - 1) % gnSeqModulo;
-			m_nResultantChannels = m_nSendSeqQty * 8;	// number of received channels
-#else
-			nLastSeq = (m_Seq + 31) % gnSeqModulo;
-#endif
+			nLastSeq = (m_Seq + gnSeqModulo -1 ) % gnSeqModulo;
 			s.Format(_T("Fake Data Initial m_Seq Number = %d, Last Seq = %d\n"), m_Seq, nLastSeq);
 			pMainDlg->SaveFakeData(s);
 
@@ -692,12 +686,9 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 				m_pElapseTimer->Start();
 
 			iSeqPkt = pIData->bStartSeqNumber;
-#ifdef VARIABLE_LENGTH_IDATA
-			for (nPkt = 0; nPkt < m_nSendSeqQty; nPkt++)
-#else
-			// loop thru 32 sequences.
-			for (nPkt = 0; nPkt < 32; nPkt++)
-#endif
+
+			// loop thru up to 32 sequences.
+			for (nPkt = 0; nPkt < gbSeqPerPacket; nPkt++)
 				{
 
 				for (j = 0; j < gMaxChnlsPerMainBang; j++)	// Assumes the data packet contains whole frames
@@ -719,6 +710,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					wTOFSum = pChannel->InputWFifo(pIData->Seq[nPkt].vChnl[j].wTof);
 					// testing for unique channel
 					k = iSeqPkt % gnSeqModulo;
+#if 0
 					if ((k == 2) && (m_Ch == 5))
 						{
 						if ((pIData->Seq[nPkt].vChnl[j].bAmp2 == 99) &&
@@ -728,6 +720,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 						else
 							TRACE(_T("Seq2, Ch5 data error\n"));
 						}
+#endif
 
 					// for debugging seq len = 8
 					if ((k == 7) && (m_Ch == 7))
@@ -739,18 +732,15 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 						// AddToIdataPacket will create the IdataPacket if it does not already exist.
 						AddToIdataPacket(pChannel, pIData, 0);
 						pChannel->ResetGatesAndWalls();
-						// MAX_RESULTS is the number of uniques channels in the inspection machine = SeqLen*Chns/main_bang
-#ifdef VARIABLE_LENGTH_IDATA
-						if (m_nResultantChannels == GetIdataPacketIndex())
-#else
-						// if unique seq length = 3, then after 16*3 main bangs (48 main bangs)
+						
+						// MAX_RESULTS is the number of uniques channels in the inspection machine = SeqLen*(Chns/main_bang)
+
+						// if unique seq length = 3, then after 10*3 main bangs (30 main bangs)
 						// we will have collected all 3*8 = 24 channels
 						// Send these 24 channel to PAG/ Display & processing system
 						// packet length will be 24*5 + header = 120+64 = 184 bytes
 						// Repeat this 10 times and we have 240 output channels
 						if (m_nFullPacketChnls == GetIdataPacketIndex())	// Send as soon as last input of unique channels
-						//if (MAX_RESULTS == GetIdataPacketIndex())
-#endif
 							{
 							// create an Idata packet with New. Copy m_pIdataPacket to IdataPacketOut linked list
 							// send a thread message to theApp or a new sender thread to empty the linked list.
@@ -769,7 +759,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 							CheckSequences(pIdataPacket);
 							//pIdataPacket->wMsgID = NC_NX_IDATA_ID; //already 1 before break
 							SendIdataToPag((GenericPacketHeader *)pIdataPacket);
-							m_Seq = (pIData->bStartSeqNumber + 32) % gnSeqModulo;
+							m_Seq = (pIData->bStartSeqNumber + gnSeqModulo) % gnSeqModulo;
 							delete m_pIdataPacket;
 							m_pIdataPacket = NULL;
 							}
@@ -783,11 +773,8 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					m_Ch = GetStartCh(); // used only to select which pChannel
 					}	// for ( j = 0; j < gMaxChnlsPerMainBang; j++)		// channel loop
 				iSeqPkt++;
-#ifdef VARIABLE_LENGTH_IDATA
-				iSeqPkt = iSeqPkt % m_nSendSeqQty;
-#else
-				iSeqPkt = iSeqPkt % 32;
-#endif
+
+				iSeqPkt = iSeqPkt % gnMaxSeqCount;
 				}	// for 32 SEQUENCES
 
 			// Now that finished, is m_Seq == nLastSeq???
@@ -860,6 +847,7 @@ void CServerRcvListThread::ProcessPAM_Data(void *pData)
 	else if (pIdata->wMsgID == ASCAN_DATA_ID)
 		{
 		i = pIdata->wMsgID;
+		memcpy((void *)&gLastAscanPap, (void *)pIdata, sizeof(ASCAN_DATA));
 		guAscanMsgCnt++;
 		}
 	delete pData;

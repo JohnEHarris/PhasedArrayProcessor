@@ -1119,7 +1119,7 @@ int CPA2WinDlg::FindServerSideIP(int nWhichConnection)
 		{	TRACE(_T("Could not resolve SysCP server IP."));		return nReturn;		} 
 	else 
 		{    
-		TRACE(_T("Resolved SysCP server IP - ") + stmp);
+		TRACE(_T("Resolved SysCP server IP - \n") + stmp);
 		stCCM[nWhichConnection].sServerIP4 = stmp;
 		return (nReturn = 1);
 		}
@@ -1137,7 +1137,7 @@ int CPA2WinDlg::FindServerSideIP(int nWhichConnection)
 			}		
 		//stmp = GetIPv4(MC_DBS_HOSTNAME);
 		if (stmp.IsEmpty())
-			{	TRACE(_T("Could not resolve GDP server IP."));		return nReturn;		} 
+			{	TRACE(_T("Could not resolve GDP server IP.\n"));		return nReturn;		} 
 		else 
 			{    
 			TRACE(_T("Resolved GDP server IP - ") + stmp);
@@ -1823,8 +1823,10 @@ void CPA2WinDlg::StructSizes( void )
 //	i = sizeof( InputRawDataPacket );	// 944 ->272 replaced by IDATA_FROM_HW
 //	i = sizeof( stRawSeqPacket );	// 130 ->34 
 	i = sizeof( IDATA_FROM_HW );	// 1088
+	i = sizeof( ASCAN_DATA_HDR );	// 64
 	i = sizeof(SEQ_DATA);	// 32
 	i = sizeof(ASCAN_DATA);	// 1088
+	i = sizeof(ST_CHNL_GAIN_DELAY_CMD);	// 32
 
 	}
 

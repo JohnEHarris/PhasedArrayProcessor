@@ -9,13 +9,11 @@ in 2016 it was redesignated as PAP - Phased Array Processor.  PAP = PAM
 In this scheme, anything that communicates with the PAP via an Ethernet connection as a client is called an Instrument.
 This includes pulser boards and phased array processor boards built by Tuboscope.
 2017 Instrument is now called Board. Assumes that the Board has an Ethernet part.
-xxx
+
 */
 
 #ifndef PA2_STRUCTS_H
 #define PA2_STRUCTS_H
-
-#undef VARIABLE_LENGTH_IDATA
 
 #ifndef BYTE
 typedef unsigned char	BYTE;
@@ -41,6 +39,7 @@ enum CallSource {eMain, eInterrupt};
 // Idata message types. This is the data that comes from the PAP and is sent 
 // To the Receiver system
 enum IdataTypes { eRawInspID = 1, eAscanID = 2, eKeepAliveID = 0xff };
+enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define NC_NX_IDATA_ID				1		// PAP processed inspection data sent to PAG/Receiver system
 #define ASCAN_DATA_ID				2
 
@@ -90,6 +89,7 @@ enum IdataTypes { eRawInspID = 1, eAscanID = 2, eKeepAliveID = 0xff };
 #define MAX_FQDN_LENGTH					64	// max length of a fully qualified domain name
 #define LOCAL_HOST						_T("localhost")
 #define MSec50							50000
+#define MSec40							40000
 
 
 /*****************	STRUCTURES	*********************/
@@ -267,7 +267,7 @@ typedef struct
 
 	} IDATA_FROM_HW_HDR;		//sizeof = 64 bytes
 
-// Ascan data has same basid structure as Idata 
+// Ascan data has same basic structure as Idata 
 typedef struct
 	{
 	WORD wMsgID;		// commands and data are identified by their ID	= eAscanID		2
@@ -294,11 +294,45 @@ typedef struct
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
+	WORD wTemp;			// temperature of something in system???
 	WORD wStatus;		// see below
-	WORD wSpare[13];	// 64 bytes to here
+	WORD wSpare[12];	// 64 bytes to here
 	char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA;		// sizeof() = 1088
+
+typedef struct
+	{
+	WORD wMsgID;		// commands and data are identified by their ID	= eAscanID		2
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
+	UINT uSync;			// 0x5CEBDAAD													8
+	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count	10
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address. 
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bSeqNumber;	//for this vChnl
+	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
+	BYTE bNiosFeedback[7];// eg. FPGA version, C version, self-test info	  30	
+
+	WORD wScopeSetting;	// inform about trigger, thold, other scope settings
+	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
+
+						// Pipe position information
+	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+	BYTE bSpare;
+	WORD wLocation;		// x location in motion pulses
+	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
+	WORD wPeriod;		// unit in .2048ms
+	WORD wRotationCnt;	// Number of rotations since pipe present signal
+	WORD wTemp;			// temperature of something in system???
+	WORD wStatus;		// see below
+	WORD wSpare[12];	// 64 bytes to here
+	//char ascan[1024];	// 1024 8-bit scope amplitude samples
+
+	} ASCAN_DATA_HDR;		
 
 #define SET_DROPOUT		 ( 1 << 5)
 #define CLR_DROPOUT		~( 1 << 5)

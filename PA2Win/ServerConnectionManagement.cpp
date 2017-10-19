@@ -264,7 +264,7 @@ int CServerConnectionManagement::StartListenerThread(int nMyServer)
 										0,	// stack size
 										CREATE_SUSPENDED,	// create flag, 0=run on start//CREATE_SUSPENDED,	// runstate
 										NULL);	// security ptr
-	TRACE3("ServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", pThread, pThread->m_hThread, pThread->m_nThreadID);
+	TRACE3("\nServerListenThread = 0x%04x, handle= 0x%04x, ID=0x%04x\n", pThread, pThread->m_hThread, pThread->m_nThreadID);
 
 	//m_pstSCM->pServerListenThread->m_bAutoDelete = 0;
 	SetListenThreadID(pThread->m_nThreadID);	// necessary later for OnAccept to work

@@ -31,13 +31,12 @@ the PAP and PAG
 //#include "../GlobalHeaders/Global.h"
 #include "../GlobalHeaders/PA2Struct.h"
 
-#include "process.h"
+#include "../AdcApp/process.h"
 
-#include "wiznet5300_wc3s.h"
-#include "Main.h"
+#include "../AdcApp/wiznet5300_wc3s.h"
+#include "../AdcApp/Main.h"
 
-extern ST_LARGE_CMD *pCmdGlobal;
-#endif
+#endif /* I_AM_THE_INSTRUMENT */
 
 #if 0
 #ifndef WORD
@@ -54,10 +53,10 @@ extern ST_LARGE_CMD *pCmdGlobal;
 
 /*****************	COMMANDS *********************/
 #define TOTAL_COMMANDS				20
-#define LAST_SMALL_COMMAND			17
+#define LAST_SMALL_COMMAND			19
 
-#define TOTAL_LARGE_COMMANDS		5
-#define LAST_LARGE_COMMAND			4
+#define TOTAL_LARGE_COMMANDS		11
+#define LAST_LARGE_COMMAND			10
 
 // SMALL
 // modify Cmds.h and Cmds.cpp in the NIOS code file
@@ -551,11 +550,8 @@ void set_gates_tof(WORD nTOF, WORD nSeq, WORD vChn3 );
 /*   GATE COMMANDS */
 
 /*   GAIN COMMANDS */
-// Utilize Large Cmd structure
-void SetSeqTCGGain( void );		// void set_rcvr_TCG_gain
 void SetTcgClockRate( void );		// set_TCG_step_size
 void TCGTriggerDelay( void );		// set_TCG_delay
-void TCGBeamGain( void );			// set_beam_gain
 void TCGGainClock( void );			// set_beam_gain_step
 void TCGChnlGainDelay( void );		// set_beam_gain_delay
 void SetPrf( void );
@@ -563,12 +559,9 @@ void SetAscanScope( void );			// set_ascan_scope also add in NcNx.cpp and
 void SetAscanDelay( void );			// set_ascan_delay 
 void SetAscanPeakMode(void);
 void SetAscanRfBeam( void );
-void SetAscanBeamFormDelay( void );
 
-void set_rcvr_TCG_gain( int seq, unsigned short value[128] );
 void set_TCG_step_size( int value );
 void set_TCG_delay( int value );
-void set_beam_gain( int beam, int seq, unsigned short value[128] );	// beam is a virtual channel
 void set_beam_gain_step( int value );
 void set_beam_gain_delay( int value );
 void set_ascan_scope( short value );
@@ -582,14 +575,17 @@ void set_PRF( WORD wPrf );	// Set prf in Hertz. Range 10-10,000
 
 /*   GAIN COMMANDS */
 // Utilize Large Cmd structure
-void SetSeqTCGGain( void );		// void set_rcvr_TCG_gain
 void set_rcvr_TCG_gain( int seq, unsigned short value[128] );
+void SetSeqTCGGain( void );
 
-void TCGBeamGain( void );			// set_beam_gain
 void set_beam_gain( int beam, int seq, unsigned short value[128] );	// beam is a virtual channel
-void set_beam_seq_delay_register( int beam, int seq, /*int delay, */ short value[16] );
-
+void TCGBeamGain( void );			// set_beam_gain
 /*   GAIN COMMANDS */
+
+void set_beam_seq_delay_register( int beam, int seq, /*int delay, */ short value[16] );
+void SetAscanBeamFormDelay( void );
+
+
 
 #endif
 

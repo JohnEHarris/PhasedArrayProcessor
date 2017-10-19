@@ -162,7 +162,7 @@ void CTestThread::TestNx(void)
 	BYTE bOut;
 	pCh->FifoInit(0,2,30,3);	// id, nc=2, thld=30, m=3
 	
-	TRACE("Nx = 3, Max=1377, Min=110 , Drop=4  ---   ");
+	TRACE("Nx = 3, Max=1377, Min=110 , Drop=4  ---  \n");
 	TRACE("ID Nc = 2, Thld=30, M = 3 \n");
 	
 	for ( i = 0; i < sizeof(Wall)/2; i++)
@@ -176,7 +176,7 @@ void CTestThread::TestNx(void)
 		//	pCh->ClearBadWallCount();	// reset bad wall counter after several good walls. 
 		wBadWall = pCh->wGetBadWallCount();
 		wGoodWall = pCh->wGetGoodWallCount();
-		s.Format(_T("[%2d] In=%3d, Max=%4d, Min=%5d, Good=%2d, Bad=%2d -- "), i, Wall[i],wMax, wMin, wGoodWall,wBadWall);
+		s.Format(_T("[%2d] In=%3d, Max=%4d, Min=%5d, Good=%2d, Bad=%2d -- \n"), i, Wall[i],wMax, wMin, wGoodWall,wBadWall);
 		TRACE(s);
 		TRACE2("In=%2d, Out=%2d\n",bAmp[i], bOut);
 		//j = pCh->bGetAscansInFifo();

@@ -126,7 +126,7 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	m_pSCC->pSocket->m_nOwningThreadType = eServerConnection;
 
 #ifdef _DEBUG
-		s.Format(_T("Client socket at %s : %d connected to server\n"), Ip4, uPort);
+		s.Format(_T("\n**********  Client socket at %s : %d connected to server ***********\n"), Ip4, uPort);
 		TRACE(s);
 		s = m_pSCC->szSocketName;
 		s += _T("\n");
@@ -577,6 +577,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			s.Format(_T("NC_NX_CMD_ID Msg seq cnt =%d, seq=%2d, chnl=%3d, PktListSize= %3d\n"), 
 				pCmd->wMsgSeqCnt, pNc->stNcNx->bSeqNumber, pNc->stNcNx->bChnlNumber, i);
 			//pCmd->wMsgSeqCnt = m_pSCC->wMsgSeqCnt++; -- see below
+			nMsgSize = pNc->wByteCount;
 			//theApp.SaveDebugLog(s);
 			pMainDlg->SaveDebugLog(s);
 			break;
@@ -601,6 +602,11 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		case SEQ_TCG_GAIN_CMD_ID:
 		case TCG_GAIN_CMD_ID:
 		case SET_ASCAN_BEAMFORM_DELAY_ID:
+			s.Format( _T( "Valid Large CMD, ID= %3d, seq=%2d, PktListSize= %4d\n" ),
+					pCmd->wMsgID, pCmd->wMsgSeqCnt, pCmd->wByteCount );
+			//theApp.SaveDebugLog(s);
+			pMainDlg->SaveDebugLog( s );
+			nMsgSize = pCmd->wByteCount;
 			break;
 
 		default:

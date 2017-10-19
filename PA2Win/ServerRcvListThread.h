@@ -90,7 +90,7 @@ public:
 	// Instrument data can be in process while fake data is in process during simulation
 	// Once testing has ended, fake data will go away.
 	int m_Seq, m_Ch;
-	int m_nSendSeqQty;	// nominally 32 sequences
+	//int m_nSendSeqQty;	// nominally 32 sequences
 	int m_nResultantChannels;	// SendSeqQty * 8 channels per sequenct
 	int GetStartSeq(void) 	{ return m_Seq;	}
 	int GetStartCh(void)	{ return m_Ch;		}

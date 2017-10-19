@@ -172,16 +172,24 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			if (MsgId > 0x200)
 				{
 				// Large message.. forward to NIOS boards
-				if (MsgId < LAST_LARGE_COMMAND + 0X200)
-					pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
+				if (MsgId <= LAST_LARGE_COMMAND + 0X200)
+					{
+					pThread->PostThreadMessage( WM_USER_SERVER_SEND_PACKET, 0, 0L );
+					s.Format(_T("Received Large Cmd %d for board %d from Phased Array GUI\n"),
+						MsgId, pMmiCmd->bBoardNumber);
+					TRACE( s );
+					pMainDlg->SaveDebugLog(s);
+					}
+
 				else
 					delete pMmiCmd;
 				break;
 				}
+
 			if (MsgId <= LAST_SMALL_COMMAND)
 				{
 
-				s.Format(_T("Received Cmd %d for Instrument %d from Phased Array GUI\n"),
+				s.Format(_T("Received Cmd %d for board %d from Phased Array GUI\n"),
 					MsgId, pMmiCmd->bBoardNumber);
 				TRACE( s );
 				pMainDlg->SaveDebugLog(s);

@@ -253,8 +253,11 @@ CServerSocket::~CServerSocket()
 					{
 					try
 						{
-						m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
-						CAsyncSocket::Close();
+						//if (m_pSCC->pSocket->m_pThread)	// added 2017-10-10 jeh
+							{
+							m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
+							CAsyncSocket::Close();
+							}
 						}
 					catch (...)
 						{
@@ -671,7 +674,7 @@ winsock2.h
 		printf("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n", 
 			m_nClientIndex, txt, uPort, buffer);
 		sOut = buffer;
-		s.Format(_T("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n"), 
+		s.Format(_T("\nInstrument Client[%d]  on socket %s : %d accepted by server at %s\n"), 
 			m_nClientIndex,Ip4, uPort, sOut);
 		TRACE(s);
 		pMainDlg->SaveDebugLog(s);

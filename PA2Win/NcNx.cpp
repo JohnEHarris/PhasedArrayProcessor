@@ -129,9 +129,11 @@ BOOL CNcNx::OnInitDialog()
 	m_lbOutput.ResetContent();
 	m_cbCommand.ResetContent();
 	m_nPAP = m_nBoard = m_nSeq = m_nCh = m_nGate = m_nParam	= 0;
+#ifdef I_AM_PAG
 	OnBnClickedRbSmallcmd();	// calls 	PopulateCmdComboBox();
 	CButton* pButton = (CButton*)GetDlgItem(IDC_RB_SMALLCMD);
 	pButton->SetCheck(true);
+#endif
 
 	m_cbCommand.SetCurSel ( 2 );	// Gate Delay
 

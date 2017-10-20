@@ -38,17 +38,6 @@ the PAP and PAG
 
 #endif /* I_AM_THE_INSTRUMENT */
 
-#if 0
-#ifndef WORD
-#define WORD unsigned short
-#endif
-#ifndef BYTE
-#define BYTE unsigned char
-#endif
-#ifndef UINT
-#define UINT unsigned int
-#endif
-#endif
 
 
 /*****************	COMMANDS *********************/

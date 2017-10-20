@@ -294,9 +294,10 @@ typedef struct
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	WORD wTemp;			// temperature of something in system???
+	WORD wFPGATemp;
+	WORD wBoardTemp;
 	WORD wStatus;		// see below
-	WORD wSpare[12];	// 64 bytes to here
+	WORD wSpare[11];	// 64 bytes to here
 	char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA;		// sizeof() = 1088
@@ -327,9 +328,10 @@ typedef struct
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	WORD wTemp;			// temperature of something in system???
+	WORD wFPGATemp;
+	WORD wBoardTemp;
 	WORD wStatus;		// see below
-	WORD wSpare[12];	// 64 bytes to here
+	WORD wSpare[11];	// 64 bytes to here
 	//char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA_HDR;		
@@ -373,7 +375,7 @@ typedef struct
 /*
 2016-09-08 New definition of Idata Packet
 */
-#if 1
+
 // Based on processing rate of PAP,	 may have to have one PAP for each instrument.
 // IDATA_PAP is the peak held data from the PAP and sent after 16 ascans
 // IDATA_PAP is the input to the down stream system, ie goes to the GUI
@@ -466,10 +468,6 @@ typedef struct
 
 	} IDATA_PAP_HDR;	// sizeof = 1280 + 64 =1344
 
-
-
-
-
 // https://blog.apnic.net/2014/12/15/ip-mtu-and-tcp-mss-missmatch-an-evil-for-network-performance/
 // 1460 is max 
 
@@ -484,25 +482,6 @@ Bit		Meaning when bit is set
 5		Array is down (on the pipe)
 
 */
-
-#else
-typedef struct
-	{
-	BYTE bvChannelQty;	// How many channels in this packet.
-	BYTE instNumber;	// 0-255. Inst 0 -> base ip address of instruments
-	WORD wStatus;		// tbd
-	WORD wLoc;			// x location in motion pulses relative to 1 packet from instrument
-	WORD wAngle;		// angle in degrees from TOP relative to 1 packet from instrument
-	WORD wPeriod;		// period of rotation in 0.2048 ms
-	UINT uMsgSeqCnt;	// counter to uniquely identify each packet
-	UINT uSync;			// 0x5CEBDAAD ... 18 bytes to here
-	RESULTS PeakChnl[32];	// Some "channels" at the end may be channel type NONE
-	} IDATA_PAP;	// sizeof = 210
-
-#endif
-
-
-
 
 // If we want 2 out of 3 above threshold for Nc qualified, then bMod = 3. The Fifo is 3 elements deep.
 // Each flaw reading goes into the fifo at location bInPt and overwrites the oldest element in the fifo.
@@ -552,17 +531,6 @@ typedef struct
 	WORD wWallMin;	// minimum allowed hardware wall reading
 	WORD wDropOut;	// number of bad readings before drop out occurs
 	} Nx_FIFO;
-
-// Data structures returned to Robert/PT
-// replaced by stPeakChnl
-#if 0
-typedef struct
-	{
-	BYTE bFlaw[2];		// id = gate 2 /od = gate 3 0-255  
-	WORD wTOFsum[2];	// divide by Nx and multiply by scaling factor for this vChannel
-	}	RESULTS;		// sizeof = 6
-#endif
-
 
 typedef struct
 	{

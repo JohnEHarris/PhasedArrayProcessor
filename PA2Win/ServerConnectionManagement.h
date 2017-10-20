@@ -131,7 +131,7 @@ class CServerListenThread;			// Thread to listen for connection on a given serve
 class CServerSocket;				// our specific implementation of an ASync socket
 class CServerSocketOwnerThread;		// a thread to control the resource of the management class and the dialog
 class CAsyncSocket;
-//class CServerRcvListThreadBase;		// a thread to read the linked list filled from the data received from the client
+//class CServerRcvListThreadBase;	// a thread to read the linked list filled from the data received from the client
 class CServerRcvListThread;			// a thread to read the linked list filled from the data received from the client
 class CvChannel;					// array of ptrs of this type to logically connect channels to instruments
 
@@ -206,7 +206,7 @@ typedef struct
 
 // A structure to define the operation of a single server. A single server may have multiple clients connected.
 // MAX_CLIENTS_PER_SERVER defines how many clients can be connected to a server.
-// Each connecte client has a structure (ST_SERVERS_CLIENT_CONNECTION) of regulate the sending and receiving
+// Each connected client has a structure (ST_SERVERS_CLIENT_CONNECTION) of regulate the sending and receiving
 // of packet with that client.
 //
 // The application populates and controls each SCM structure. Each SCM structure is static memory indexed by stSCM[]
@@ -264,7 +264,7 @@ typedef struct
 
 /** =============================================================================**/
 
-// when this file is included by it partner cpp file, I_AM_SCM is defined
+// when this file is included by its partner cpp file, I_AM_SCM is defined
 // All other cpp files which include this one should not define I_AM_SCM
 
 
@@ -288,7 +288,7 @@ extern ST_SERVER_CONNECTION_MANAGEMENT * GetPAM_SCM(void);	//	{	return &stSCM[0]
 
 
 // Rather than having to set pointer to important information in every instance of the various classes, the information
-// can be shared in a global static array when a piece (class or thread or socket) knows which items to the static array belong to it.
+// can be shared in a global static array when a piece (class or thread or socket) knows which items in the static array belong to it.
 // Also IMHO makes debugging easier to see at a glance.
 
 // enum {eMasterNotPresent, eMasterNotConnected, eMasterConnected };

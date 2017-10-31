@@ -64,7 +64,7 @@ public:
 	//void BuildOutputPacket(IDATA_FROM_HW *pInput);
 	void SaveFakeData(CString& s);
 
-	void AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW *pIData, int nSendFlag);
+	void AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW *pIData, int nSendFlag, int nSeq);
 	// create a processing class instance for each wall channel
 		
 	int m_nInspectMode;
@@ -92,6 +92,7 @@ public:
 	int m_Seq, m_Ch;
 	//int m_nSendSeqQty;	// nominally 32 sequences
 	int m_nResultantChannels;	// SendSeqQty * 8 channels per sequenct
+	int m_nStoredChannelCount;
 	int GetStartSeq(void) 	{ return m_Seq;	}
 	int GetStartCh(void)	{ return m_Ch;		}
 	void IncStartCh(void);

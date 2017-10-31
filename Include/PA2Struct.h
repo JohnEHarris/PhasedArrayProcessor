@@ -352,16 +352,24 @@ typedef struct
 // Nc_Nx processing receives 1 wall reading per AScan but produces a max and min readging 
 // after 16 AScans.
 // 2017-08-14 reduce size of PeakData to match input data from NIOS front end
+// 2017-10-24 in future have id/od flaw, max, min wall and seq number where found for each one.
+// Then structure size = 10
+// Will limit max seq modulo to 16 or 128 channels
 typedef struct
 	{
 //	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
 					// ie, PAP did not service PeakData fast enough
-//	BYTE bG1;		// Gate 1 interface gate -- FUTURE FEATURE. place holder in 2017 version
-	BYTE bChNum;	// 0-255. bChNum = SeqNum*8 + Chnl. SeqNum = [0,31], Chnl  = [0,7]
+//	BYTE bG1;		// Gate 1 interface gate -- FUTURE FEATURE. place holder in 201x version
+// future in 201x
+//	BYTE bIndx2;	// seq number of Id2 max
+//	BYTE bIndx3;	// seq number of Od3 max
+//	BYTE bIndxMax;	// seq number max wall reading
+//	BYTE bIndxMin;	// seq number min wall reading
+	BYTE bChNum;	// 0-255. bChNum = SeqNum*8 + Chnl. SeqNum = [0,31], Chnl  = [0,7]--goes away in future
 	BYTE bId2;		// Gate 2 peak held data 0-255
 	BYTE bOd3;		// Gate 3 peak held data 0-255
 	WORD wTofMin;	// gate 4 min
-//	WORD wTofMax;	// gate 4 max
+//	WORD wTofMax;	// gate 4 max -- joins sturcture in future-- then sizeof = 10
 	} stPeakChnl;	// sizeof = 5  -- 2014-08-22 REDUCE TO 5 bytes. Packet fron NIOS unchanged.
 
 // legacy structure

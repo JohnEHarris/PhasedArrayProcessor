@@ -94,7 +94,7 @@ CServerRcvListThread::CServerRcvListThread()
 	TRACE(s);
 #endif
 	m_Seq = 0;
-	m_IdataInPt = 0;
+	//m_IdataInPt = 0;
 	m_pIdataPacket = NULL;
 	//m_uMsgSeqCnt = 0;
 	}
@@ -414,17 +414,19 @@ int CServerRcvListThread::GetSequenceModulo(SRawDataPacketOld *pData)
 // could return the index in Idata
 // If SendFlag is non zero, send the packet as is
 // CHANNEL order is the received packet order from NIOS. Accomplished by assigning
-// start channel from NIOS to the beginning fo the Idata Packet
+// start channel from NIOS to the beginning of the Idata Packet
 
-void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW *pIData, int nSendFlag)
+void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW *pIData, int nSendFlag, int nSeq)
 	{
 	if (m_pIdataPacket == NULL)
 		{
+		//m_pIdataPacket is a member of CServerRcvListThread and is visible to all vChannels here
 		m_pIdataPacket = new (IDATA_PAP);	// sizeof = 1344 or 256 PeakChnls
 		memset((void *) m_pIdataPacket,0, sizeof(IDATA_PAP));
 
-		m_pIdataPacket->wMsgID = 1;
-		m_pIdataPacket->wByteCount = sizeof(IDATA_PAP);
+		m_pIdataPacket->wMsgID = eRawInspID;
+		//m_pIdataPacket->wByteCount = sizeof(IDATA_PAP);
+		m_pIdataPacket->wByteCount = pIData->bSeqModulo * pIData->bMaxVChnlsPerSequence * sizeof( stPeakChnl );
 		m_pIdataPacket->uSync = SYNC;
 		m_pIdataPacket->wMsgSeqCnt = 0;	// properly incremented when sent by CClientCommunicationThread::TransmitPackets
 		m_pIdataPacket->wStatus = 0x1234;
@@ -435,7 +437,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->bSeqModulo = gnSeqModulo = pIData->bSeqModulo;
 		m_pIdataPacket->bMaxVChnlsPerSequence = pIData->bMaxVChnlsPerSequence;
 		m_pIdataPacket->bStartChannel = pChannel->m_bChnl;
-		m_pIdataPacket->bSeqPerPacket = gbSeqPerPacket = (32 / gnSeqModulo) * gnSeqModulo;
+		m_pIdataPacket->bSeqPerPacket = gnSeqModulo;
 
 		m_pIdataPacket->bNiosGlitchCnt = pIData->bNiosGlitchCnt;
 		m_pIdataPacket->bCmdQDepthS = pIData->bCmdQDepthS;
@@ -449,11 +451,15 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->wPeriod = pIData->wPeriod;	// m_pSCC->InstrumentStatus.wPeriod;
 		m_pIdataPacket->wRotationCnt = pIData->wRotationCnt;
 		
-		m_IdataInPt					= 0;	// insertion index in output data structrure-- not after 2017-08-22
+		//m_IdataInPt					= 0;	// insertion index in output data structrure-- not after 2017-08-22
+		m_nStoredChannelCount = 0;
 		//
 		}
 
-	pChannel->CopyPeakData(&m_pIdataPacket->PeakChnl[m_IdataInPt++]); // notice increment of m_IdataInPt 
+	// Change operation from copying in max size Idata packet to peak holding in the front end portion
+	//pChannel->CopyPeakData(&m_pIdataPacket->PeakChnl[m_IdataInPt++]); // notice increment of m_IdataInPt
+	pChannel->CopyPeakToIdata((IDATA_PAP *)  m_pIdataPacket, nSeq );
+	m_nStoredChannelCount++;	// stored another peak held data set
 	
 	pChannel->ClearDropOut();
 	pChannel->ClearOverRun();
@@ -465,7 +471,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 int CServerRcvListThread::GetIdataPacketIndex(void)
 	{
 	if (m_pIdataPacket == NULL)	return -1;
-	return m_IdataInPt;	// how many Result buffers are full. Limit is 256
+	//return m_IdataInPt;	// how many Result buffers are full. Limit is 256
 	// 256 is for 32 sequences of 8 channels each
 	}
 
@@ -507,10 +513,6 @@ void CServerRcvListThread::IncStartSeq(void)
 	{
 	m_Seq++;
 	m_Seq = m_Seq % gnSeqModulo;
-	if (m_Seq >= gnSeqModulo)
-		{
-		m_Seq = 0;
-		}
 	}
 
 // The only way to get Idata from the PAP is to use the ClientConnectionManangement TCPIP
@@ -568,7 +570,8 @@ void CServerRcvListThread::CheckSequences(IDATA_PAP *pIdataPacket)
 	nChnl = nStartSeq * 8;	
 	nChnlModulo = nSeqModulo * 8;	// 8 chnls per sequence
 	nError = 0;
-	nLastChnl = gbSeqPerPacket * 8;
+	//nLastChnl = gbSeqPerPacket * 8;
+	nLastChnl = nSeqModulo * 8;
 	for (i = 0; i < nLastChnl; i++)
 		{
 		if ((nChnl % nChnlModulo) != (pIdataPacket->PeakChnl[i].bChNum % nChnlModulo))
@@ -628,7 +631,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					m_bNiosGlitchCnt = pIData->bNiosGlitchCnt;
 					delete m_pIdataPacket;
 					m_pIdataPacket = 0;
-					m_IdataInPt = 0;
+					//m_IdataInPt = 0;
 
 					}
 				}
@@ -643,7 +646,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					pMainDlg->SaveFakeData(s);
 					delete m_pIdataPacket;
 					m_pIdataPacket = 0; 
-					m_IdataInPt = 0;
+					//m_IdataInPt = 0;
 					pIData->bNiosGlitchCnt++;
 					}
 				m_Seq = pIData->bStartSeqNumber;
@@ -660,7 +663,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					pMainDlg->SaveFakeData(s);
 					delete m_pIdataPacket;
 					m_pIdataPacket = 0;
-					m_IdataInPt = 0;
+					//m_IdataInPt = 0;
 					pIData->bNiosGlitchCnt++;
 					}
 				gnSeqModulo = pIData->bSeqModulo;
@@ -673,9 +676,11 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			m_Ch = 0;	// pIData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber;
 			gnSeqModulo = pIData->bSeqModulo;
 			// For example, if 3 unique sequences, then 30 Ascans is 10 whole sets of sequences
-			// Send to PAG these 30 Ascans = 240 channels instead of 256
-			// If 8 unique sequences:  32/8 = 4, 4*8 = 32, 32*8chnls = 256 chnls
-			m_nFullPacketChnls = (32 / gnSeqModulo) * gnSeqModulo * 8;
+			// If 8 unique sequences:  32/8 = 4 complete sets of data but 8*8 = 64 unique channels
+			//m_nFullPacketChnls = (32 / gnSeqModulo) * gnSeqModulo * 8; - no this catches each
+			// chnl into a new value. We want peak held data over 16 ascans for only
+			m_nFullPacketChnls = gnSeqModulo*8;
+			// gnSeqModulo channels
 			gbSeqPerPacket = (32 / gnSeqModulo) * gnSeqModulo;
 
 			nLastSeq = (m_Seq + gnSeqModulo -1 ) % gnSeqModulo;
@@ -693,6 +698,8 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 
 				for (j = 0; j < gMaxChnlsPerMainBang; j++)	// Assumes the data packet contains whole frames
 					{	// channel loop
+					if (j != m_Ch)
+						s = _T( "Chnl Error" );
 					pChannel = m_pSCC->pvChannel[m_Seq][m_Ch];
 					if (NULL == pChannel)
 						continue;
@@ -708,6 +715,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					// Get Max and min tof for this channel
 					// ****  Also advances input ptr for all fifo's in this channel. ****
 					wTOFSum = pChannel->InputWFifo(pIData->Seq[nPkt].vChnl[j].wTof);
+					//pChannel->CountInputs();
 					// testing for unique channel
 					k = iSeqPkt % gnSeqModulo;
 #if 0
@@ -723,14 +731,16 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 #endif
 
 					// for debugging seq len = 8
-					if ((k == 7) && (m_Ch == 7))
+					//if ((k == 7) && (m_Ch == 7))
 					// is FIFO input ptr back to 0? This is set by wall operation above
 						l = pChannel->m_bInputCnt;	// help debugging
 					if (pChannel->AscanInputDone())
 						{
 						// time to move peak data into ouput structure
 						// AddToIdataPacket will create the IdataPacket if it does not already exist.
-						AddToIdataPacket(pChannel, pIData, 0);
+						// SEEMS THAT nPkt is one too LARGE --- CHECK THIS OUT
+						AddToIdataPacket(pChannel, pIData, 0, nPkt);
+						// nPkt could give false location info it start seq != 0
 						pChannel->ResetGatesAndWalls();
 						
 						// MAX_RESULTS is the number of uniques channels in the inspection machine = SeqLen*(Chns/main_bang)
@@ -740,7 +750,8 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 						// Send these 24 channel to PAG/ Display & processing system
 						// packet length will be 24*5 + header = 120+64 = 184 bytes
 						// Repeat this 10 times and we have 240 output channels
-						if (m_nFullPacketChnls == GetIdataPacketIndex())	// Send as soon as last input of unique channels
+						//if (m_nFullPacketChnls == GetIdataPacketIndex())	// Send as soon as last input of unique channels
+						if (m_nFullPacketChnls == m_nStoredChannelCount)	// Send as soon as last input of unique channels
 							{
 							// create an Idata packet with New. Copy m_pIdataPacket to IdataPacketOut linked list
 							// send a thread message to theApp or a new sender thread to empty the linked list.

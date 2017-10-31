@@ -114,7 +114,7 @@ PubExt BYTE gbNiosGlitchCnt;	// usually Wiznet rest count. Must reset PAP data f
 PubExt HANDLE g_hTimerTick;
 
 PubExt UINT guAscanMsgCnt;
-PubExt short gnFpagTemp;	// temp of FPGA chip
+PubExt short gnFpgaTemp;	// temp of FPGA chip
 PubExt short gnBoardTemp;	// temp of ADC board
 
 #endif /* GLOBAL_H_ */

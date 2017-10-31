@@ -114,12 +114,13 @@ public:
 	void SetRead(void)				{ m_wStatus |= SET_READ;		}
 	void ClrRead(void)				{ m_wStatus &= CLR_READ;		}
 	void GetPeakData(void);
+	void CountInputs( void );
+
 	//void PeakDataClear(void);		// Once PAP copies data into Ethernet Packet, clear PeakData
 	// pOut is a slot in the ethernet packet to be sent
 	void CopyPeakData(stPeakChnl *pOut);
-	//BYTE GetAscanCounter(void)		{ return m_bInputCnt;				}
-	BYTE AscanInputDone(void)		{ return (m_bInputCnt == 0);		}	// 0 if all 16 Ascans
-
+	BYTE AscanInputDone( void ); //{ return (m_bInputCnt == 0);		}	// 0 if all 16 Ascans
+	void CvChannel::CopyPeakToIdata(IDATA_PAP *pOut, int nSeq);		// fills entire buffer
 	
 	
 	/*********************** Result FIFO routines ***********************/

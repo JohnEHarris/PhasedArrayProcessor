@@ -11,6 +11,8 @@ Revised:	modeled somewhat like RunningAverage. The two may be merged in the futu
 
 #include "stdafx.h"
 #include "vChannel.h"
+#include "..\Include\Global.h"
+
 #ifdef I_AM_PAP
 //#include "ServiceApp.h"
 //#include "InstMsgProcess.h"
@@ -188,100 +190,117 @@ void CvChannel::WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut)
 // for minimum wall. After 16 accepted inputs, the Max and Min are reset.
 // Min wall sum is only invalid for the first 16 inputs after the process starts. After that min
 // wall sum is valid until the FIFO is reinitialized.
-WORD CvChannel::InputWFifo(WORD wWall)
+WORD CvChannel::InputWFifo( WORD wWall )
 	{
 	int i;
 	WORD wOldWall;
 	Nx_FIFO *pFifo = &NxFifo;
 
-	// not a wall channel
 	if (pFifo->bNx == 0)
-		{
-		++m_bInputCnt;
-		if (m_bInputCnt >= ASCANS_TO_AVG)
+		m_PeakData.wTofMin = 10;	// not a wall channel
+
+	/*******************************************************/
+	else
+		{	// is a wall channel
+			// prevent out of range values from entering the fifo
+		if ((wWall < pFifo->wWallMin) || (wWall > pFifo->wWallMax))
 			{
-			if ((m_wStatus & SET_READ) == 0)	// previous peak data has not been read yet
-				SetOverRun();
-			else ClearOverRun();
-			ClrRead();
-			m_bInputCnt = 0;	// how we know we have enough data
-			m_PeakData.bId2 = NcFifo[0].bMaxFinal;
-			m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
-			//m_PeakData.bG1 = NcFifo[2].bMaxFinal;
-			m_PeakData.wTofMin = 10;
-			//m_PeakData.wTofMax = 10;
-			//ResetGatesAndWalls(); -- done after CServerRcvListThread::AddToIdataPacket() 
-			}		
-		return 10;	// not considered a wall channel
-		}
+			pFifo->wBadWall++;
+			m_wBadInARow++;
+			if (m_wBadInARow <= 0xf)
+				{
+				m_wStatus &= 0xfff0;	// preserve upper 3 nibbles
+				m_wStatus |= m_wBadInARow;
+				}
+			else
+				m_wStatus |= 0xf;	// limit to bits 0..3
 
-
-
-	// prevent out of range values from entering the fifo
-	if ( (wWall < pFifo->wWallMin) || (wWall > pFifo->wWallMax))
-		{
-		pFifo->wBadWall++;
-		m_wBadInARow++;
-		if (m_wBadInARow <= 0xf)
-			{
-			m_wStatus &= 0xfff0;	// preserve upper 3 nibbles
-			m_wStatus |= m_wBadInARow;
+			if (m_wBadInARow >= NxFifo.wDropOut)
+				SetDropOut();
+			//else ClearDropOut(); done in CServerRcvListThread:: AddToIdataPacket()
+			//goto COUNT_INPUTS;
 			}
-		else						
-			m_wStatus |= 0xf;	// limit to bits 0..3
 
-		if (m_wBadInARow >= NxFifo.wDropOut)
-			SetDropOut();
-		//else ClearDropOut(); done in CServerRcvListThread:: AddToIdataPacket()
-		goto COUNT_INPUTS;
-		}
-
-	pFifo->wGoodWall++;	// good wall + bad wall should == 16
-	m_wBadInARow = 0;
+		else
+			{
+			// wall within range
 
 
-	i = pFifo->bInPt++;			// slot position in the fifo and increment to next
-	if ( i >= pFifo->bNx)
-		 i = 0;
-	if ( pFifo->bInPt >= pFifo->bNx)	
-		 pFifo->bInPt = 0;
-	wOldWall = pFifo->wCell[i];			// get oldest wall reading
-	pFifo->wCell[i] = wWall;			// replace oldest element with this one
-	pFifo->uSum += (wWall - wOldWall);	// change in sum is new - old
-	if (m_wTOFMaxSum < pFifo->uSum)
-		m_wTOFMaxSum = pFifo->uSum;
-	// Omitting the next line only results in a false min wall on the first sampling interval of 16
-	// Thereafter the min wall sum is correct.
-//	if (m_bInputCnt >= pFifo->bNx)
-		{
-		if (m_wTOFMinSum > pFifo->uSum)
-			m_wTOFMinSum = pFifo->uSum;
-		}
+			pFifo->wGoodWall++;	// good wall + bad wall should == 16
+			m_wBadInARow = 0;
 
-COUNT_INPUTS:
-	// if we jumped to here we threw away the wall data but counted the Ascan for peak holding
-	// reset peak hold of wall and flaw on every 16 Ascan NOW (10/6/16) ASCANS_TO_AVG
-	
-	++m_bInputCnt;		// %= ASCANS_TO_AVG;	// modulo 16 counter
-	// if CServerRcvListThread::ProcessInstrumentData() hasn't read data before now, it will be over run
+
+			i = pFifo->bInPt++;			// slot position in the fifo and increment to next
+			if (i >= pFifo->bNx)
+				i = 0;
+			if (pFifo->bInPt >= pFifo->bNx)
+				pFifo->bInPt = 0;
+			wOldWall = pFifo->wCell[i];			// get oldest wall reading
+			pFifo->wCell[i] = wWall;			// replace oldest element with this one
+			pFifo->uSum += (wWall - wOldWall);	// change in sum is new - old
+			if (m_wTOFMaxSum < pFifo->uSum)
+				m_wTOFMaxSum = pFifo->uSum;
+				// Omitting the next line only results in a false min wall on the first sampling interval of 16
+				// Thereafter the min wall sum is correct.
+				//	if (m_bInputCnt >= pFifo->bNx)
+			if (m_wTOFMinSum > pFifo->uSum)
+				m_wTOFMinSum = pFifo->uSum;
+			}	// wall within range
+
+		}		// is a wall channel
+	/*******************************************************/
+
+	return pFifo->uSum;
+	}
+
+// Increment an input counter until we get ASCANS_TO_AVG
+#if 0
+void CvChannel::CountInputs( void )
+	{
+	Nx_FIFO *pFifo = &NxFifo;
+	BYTE dbgCh, dbgSeq, bx;
+	dbgCh = m_bChnl;
+	dbgSeq = m_bSeq;
+	if ((dbgCh == 0) && (dbgSeq == 0))
+		bx = 2;
+	++m_bInputCnt;
 	if (m_bInputCnt >= ASCANS_TO_AVG)
 		{
-		if ( (m_wStatus & SET_READ) == 0)	// previous peak data has not been read yet
+		if ((m_wStatus & SET_READ) == 0)	// previous peak data has not been read yet
 			SetOverRun();
 		else ClearOverRun();
 		ClrRead();
-		/****************************************/
+		/********  how we know we have enough data  *********/
 		m_bInputCnt = 0;	// how we know we have enough data
-		/****************************************/
 		m_PeakData.bId2 = NcFifo[0].bMaxFinal;
 		m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
-		//m_PeakData.bG1  = NcFifo[2].bMaxFinal;
-		m_PeakData.wTofMin =	m_wTOFMinSum;
-		//m_PeakData.wTofMax =	m_wTOFMaxSum;
-		//ResetGatesAndWalls(); -- done after CServerRcvListThread::AddToIdataPacket() 
+		// not a wall channel
+		if (pFifo->bNx == 0)
+			{
+			m_PeakData.wTofMin = /*m_PeakData.wTofMan = */ 10;
+			}
+		else
+			{
+			m_PeakData.wTofMin = m_wTOFMinSum;
+			}
 		}
 
-	return pFifo->uSum;
+	}
+#endif
+
+BYTE CvChannel::AscanInputDone( void )
+	{
+	int ntmp;
+	if ((m_bSeq == 0) && (m_bChnl == 0))
+		ntmp = 2;	 // debug are we counting correctly?
+	m_bInputCnt++;
+	if (m_bInputCnt >= ASCANS_TO_AVG)
+		{
+		m_bInputCnt = 0;
+		return 1;
+		}
+
+	return 0;
 	}
 
 // the scaler is applied to the wall sum in raw counts to obtain the calibrated wall reading as a word.
@@ -329,10 +348,74 @@ void CvChannel::SetBadWall(BYTE badWall)
 // Once ServerRcvListThread has read the data, clear the structure for the next 16 Ascans
 void CvChannel::CopyPeakData(stPeakChnl *pOut)
 	{
+	CString s;
 	// Check for default constructor before copying data
 	if (w_DefaultConfig)	m_wStatus |= DEFAULT_CFG;	// Still using default values
 	else					m_wStatus &= ~DEFAULT_CFG;	// clear default bit
-	memcpy( (void *)pOut, (void *) &m_PeakData, sizeof(m_PeakData));
+	//memcpy( (void *)pOut, (void *) &m_PeakData, sizeof(m_PeakData));
+	pOut->bId2 = bGetIdGateMax();
+	pOut->bOd3 = bGetOdGateMax();
+	pOut->wTofMin = wGetMinWall();
+	pOut->bChNum = m_bChnl;
+	// debugging only
+	s.Format( _T( "CopyPeak Id=%d, Min Wall=%d, Ch=%d\n" ), pOut->bId2, pOut->wTofMin, m_bChnl );
+	TRACE( s );
+	}
+
+// this channel copies its information into the slot in output data reserved for it.
+// More than jnust copying, it does a peak hold and records the sequence number for the peaking operation
+// Sequence number will allow more precise pipe location since header applies to all sequences
+// nSeq in formal arg ranges up to 31. It is the seq number of the input data. Not the unique seq data
+// which defines the channel. If gModulo is 4, then there are 8 sets of 4 sequences(virtual channels)
+// m_bSeq is a number from 0-3. But Idata has a nSeq value from 0-7
+void CvChannel::CopyPeakToIdata(IDATA_PAP *pOut, int nSeq)
+	{
+	int nCh;
+	int nDxgate2, nDxgate3, nDxMax, nDxMin;		// will become structure elements in stPeakChnl eventually 2017-10-24
+	nCh = (nSeq % gnSeqModulo)*gMaxChnlsPerMainBang + m_bChnl;
+	nDxMax = 0;	// make compiler happy for now
+	// Check for default constructor before copying data
+	if (w_DefaultConfig)	m_wStatus |= DEFAULT_CFG;	// Still using default values
+	else					m_wStatus &= ~DEFAULT_CFG;	// clear default bit
+	//memcpy ((void*) &pOut->, &m_PeakData, sizeof(m_PeakData));
+	pOut->PeakChnl[nCh].bChNum = nCh;
+
+	if (pOut->PeakChnl[nCh].bId2 < bGetIdGateMax())
+		{
+		pOut->PeakChnl[nCh].bId2 = bGetIdGateMax();
+		nDxgate2 = nSeq;
+		}
+	if (pOut->PeakChnl[nCh].bOd3 < bGetOdGateMax())
+		{
+		pOut->PeakChnl[nCh].bOd3 = bGetOdGateMax();	//m_PeakData.bOd
+		nDxgate3 = nSeq;
+		}
+	// wall peak holding. Idata pap has only min wall for each sequence
+	if (pOut->PeakChnl[nCh].wTofMin == 0)	// initial condition when pOut created
+		{
+		//if ((m_PeakData.wTofMin == m_PeakData.wTofMAX) &&
+		//	 (m_PeakData.wTofMin == 0)
+				{
+				pOut->PeakChnl[nCh].wTofMin = wGetMinWall();
+				nDxMin = nSeq;
+				//pOut->PeakChnl[m_bChnl].wTofMax = m_PeakData.wTofMin;	// capture the max
+				//nDxMax = nSeq;
+				}
+		}
+	else
+		{
+		if (pOut->PeakChnl[nCh].wTofMin > wGetMinWall() )
+			{
+			pOut->PeakChnl[nCh].wTofMin = wGetMinWall();
+			nDxMin = nSeq;
+			}
+			
+		//if (pOut->PeakChnl[m_bChnl].wTofMax < m_PeakData.wTofMin)
+		//	{
+		//	pOut->PeakChnl[m_bChnl].wTofMax = m_PeakData.wTofMin;
+		//	nDxMax = nSeq;  
+		//	}
+		}
 	}
 
 // copy FIFO variables to PeakData structure after the peak hold is complete
@@ -342,6 +425,7 @@ void CvChannel::GetPeakData(void)
 	m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
 	m_PeakData.wTofMin = m_wTOFMinSum;
 	//m_PeakData.wTofMax = m_wTOFMaxSum;
-	
 	}
+
+
 #endif

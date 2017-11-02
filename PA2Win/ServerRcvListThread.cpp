@@ -853,7 +853,8 @@ void CServerRcvListThread::ProcessPAM_Data(void *pData)
 		s.Format(_T("PeakChnl[0].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
 			pIdata->PeakChnl[0].bId2, pIdata->PeakChnl[0].bOd3, pIdata->PeakChnl[0].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
 		TRACE(s);
-		memcpy((void *)&gLastIdataPap, (void *) pIdata, sizeof(IDATA_PAP));
+		memset((void *)&gLastIdataPap, 0, sizeof(IDATA_PAP));
+		memcpy((void *)&gLastIdataPap, (void *) pIdata, pIdata->wByteCount);
 		}
 	else if (pIdata->wMsgID == ASCAN_DATA_ID)
 		{

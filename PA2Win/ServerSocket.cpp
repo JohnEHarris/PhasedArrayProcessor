@@ -843,7 +843,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
 			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
 			//InputRawDataPacket *pIdataPacket = (InputRawDataPacket *) pB;
-			IDATA_FROM_HW *pIdataPacket = (IDATA_FROM_HW *) pB;
+			IDATA_PAP *pIdataPacket = (IDATA_PAP *) pB;
 			
 			m_nSeqCntDbg[m_nSeqIndx++] = pIdataPacket->wMsgSeqCnt;
 			m_nSeqIndx &= 0x3ff;

@@ -416,24 +416,32 @@ int CServerRcvListThread::GetSequenceModulo(SRawDataPacketOld *pData)
 // CHANNEL order is the received packet order from NIOS. Accomplished by assigning
 // start channel from NIOS to the beginning of the Idata Packet
 
-void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW *pIData, int nSendFlag, int nSeq)
+void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW *pIData, int nSeq)
 	{
+	int i, j;
+	CString s;
 	if (m_pIdataPacket == NULL)
 		{
 		//m_pIdataPacket is a member of CServerRcvListThread and is visible to all vChannels here
 		m_pIdataPacket = new (IDATA_PAP);	// sizeof = 1344 or 256 PeakChnls
 		memset((void *) m_pIdataPacket,0, sizeof(IDATA_PAP));
+		i = pChannel->m_PeakData.bChNum;	// debugging
+		j = pChannel->m_bSeq;
+		s.Format( _T( "m_pIdataPacket created by vChannel=%d in Seq=%d,  nSeq_arg = %d, Od3 = 0x%x\n" ), 
+			i, j, nSeq, pIData->Seq[nSeq].vChnl->bAmp3 );
+		TRACE( s );
 
 		m_pIdataPacket->wMsgID = eRawInspID;
 		//m_pIdataPacket->wByteCount = sizeof(IDATA_PAP);
-		m_pIdataPacket->wByteCount = pIData->bSeqModulo * pIData->bMaxVChnlsPerSequence * sizeof( stPeakChnl );
+		m_pIdataPacket->wByteCount = pIData->bSeqModulo * pIData->bMaxVChnlsPerSequence * sizeof( stPeakChnl ) + sizeof(IDATA_FROM_HW_HDR);
 		m_pIdataPacket->uSync = SYNC;
 		m_pIdataPacket->wMsgSeqCnt = 0;	// properly incremented when sent by CClientCommunicationThread::TransmitPackets
 		m_pIdataPacket->wStatus = 0x1234;
-		m_pIdataPacket->bPAPNumber = (BYTE) pMainDlg->GetMy_PAM_Number();
+		m_pIdataPacket->bPAPNumber = pIData->bPAPNumber;
 		m_pIdataPacket->bBoardNumber = pIData->bBoardNumber;
 
-		m_pIdataPacket->bStartSeqNumber = pChannel->m_bSeq;	// Come from gate board in header with gates and wall
+		//m_pIdataPacket->bStartSeqNumber = pChannel->m_bSeq;	// Come from gate board in header with gates and wall
+		m_pIdataPacket->bStartSeqNumber = pIData->bStartSeqNumber;	// Come from gate board in header with gates and wall
 		m_pIdataPacket->bSeqModulo = gnSeqModulo = pIData->bSeqModulo;
 		m_pIdataPacket->bMaxVChnlsPerSequence = pIData->bMaxVChnlsPerSequence;
 		m_pIdataPacket->bStartChannel = pChannel->m_bChnl;
@@ -458,7 +466,8 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 
 	// Change operation from copying in max size Idata packet to peak holding in the front end portion
 	//pChannel->CopyPeakData(&m_pIdataPacket->PeakChnl[m_IdataInPt++]); // notice increment of m_IdataInPt
-	pChannel->CopyPeakToIdata((IDATA_PAP *)  m_pIdataPacket, nSeq );
+	//pChannel->CopyPeakToIdata((IDATA_PAP *)  m_pIdataPacket, (nSeq + pIData->bStartSeqNumber) % gnSeqModulo);
+	pChannel->CopyPeakToIdata((IDATA_PAP *)  m_pIdataPacket, nSeq);
 	m_nStoredChannelCount++;	// stored another peak held data set
 	
 	pChannel->ClearDropOut();
@@ -468,12 +477,14 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 	}	// AddToIdataPacket
 
 
+#if 0
 int CServerRcvListThread::GetIdataPacketIndex(void)
 	{
 	if (m_pIdataPacket == NULL)	return -1;
 	//return m_IdataInPt;	// how many Result buffers are full. Limit is 256
 	// 256 is for 32 sequences of 8 channels each
 	}
+#endif
 
 #endif
 
@@ -601,7 +612,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 	int i, j, k,l;
 	int nLastSeq, nStartSeq;
 	int iSeqPkt, nPkt;
-	BYTE bGateTmp;
+	BYTE bGateTmp2, bGateTmp3;
 	WORD wTOFSum;
 	CvChannel *pChannel;
 	CString s;
@@ -669,7 +680,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 				gnSeqModulo = pIData->bSeqModulo;
 				}
 
-			gnMaxSeqCount = MAX_SEQ_COUNT;
+			gnMaxSeqCount = MAX_SEQ_COUNT;	// MAYBE THIS IS WRONG 2017-11-01 SHOULD BE gbSeqPerPacket
 
 			// get the starting sequence number and channel from the instument data
 			m_Seq = nStartSeq = pIData->bStartSeqNumber;	// only used to find which pChannel
@@ -709,8 +720,11 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					bGateTmp = pChannel->InputFifo(eIf, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp1);
 #endif		// pData->Seq[jSeq].vChnl[i].bAmp2
 					//k = iSeqPkt % gnSeqModulo;
-					bGateTmp = pChannel->InputFifo(eId, pIData->Seq[nPkt].vChnl[j].bAmp2);	// output of the Nc peak holder
-					bGateTmp = pChannel->InputFifo(eOd, pIData->Seq[nPkt].vChnl[j].bAmp3);
+					// debug helper
+					if ((m_Seq == 2) && (m_Ch == 5))
+						s = _T( "Should be 99 & 999" );
+					bGateTmp2 = pChannel->InputFifo(eId, pIData->Seq[nPkt].vChnl[j].bAmp2);	// output of the Nc peak holder
+					bGateTmp3 = pChannel->InputFifo(eOd, pIData->Seq[nPkt].vChnl[j].bAmp3);
 
 					// Get Max and min tof for this channel
 					// ****  Also advances input ptr for all fifo's in this channel. ****
@@ -739,7 +753,10 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 						// time to move peak data into ouput structure
 						// AddToIdataPacket will create the IdataPacket if it does not already exist.
 						// SEEMS THAT nPkt is one too LARGE --- CHECK THIS OUT
-						AddToIdataPacket(pChannel, pIData, 0, nPkt);
+						// should the first 'chnl' to complete the Nc fileter be 
+						// the first channel of the start sequence -- seems logical
+						// add start seq to function call
+						AddToIdataPacket(pChannel, pIData,  nPkt);
 						// nPkt could give false location info it start seq != 0
 						pChannel->ResetGatesAndWalls();
 						
@@ -770,7 +787,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 							CheckSequences(pIdataPacket);
 							//pIdataPacket->wMsgID = NC_NX_IDATA_ID; //already 1 before break
 							SendIdataToPag((GenericPacketHeader *)pIdataPacket);
-							m_Seq = (pIData->bStartSeqNumber + gnSeqModulo) % gnSeqModulo;
+							//m_Seq = (pIData->bStartSeqNumber + gnSeqModulo) % gnSeqModulo; 2017-11-02 this was the killer
 							delete m_pIdataPacket;
 							m_pIdataPacket = NULL;
 							}
@@ -785,7 +802,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					}	// for ( j = 0; j < gMaxChnlsPerMainBang; j++)		// channel loop
 				iSeqPkt++;
 
-				iSeqPkt = iSeqPkt % gnMaxSeqCount;
+				iSeqPkt = iSeqPkt %	gbSeqPerPacket;			//gnMaxSeqCount;
 				}	// for 32 SEQUENCES
 
 			// Now that finished, is m_Seq == nLastSeq???
@@ -798,7 +815,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 
 
 			m_nElapseTime = m_pElapseTimer->Stop();		// elapse time in uSec for 128 AScans
-#if 1
+#if 0
 			s.Format(_T("Nc Nx processing for 256 VChnls in %d uSec\n"), m_nElapseTime);
 			TRACE(s);
 			pMainDlg->SaveDebugLog(s);
@@ -850,8 +867,8 @@ void CServerRcvListThread::ProcessPAM_Data(void *pData)
 		s.Format(_T("bSeqModulo=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
 			pIdata->bSeqModulo, pIdata->bStartChannel, pIdata->bMaxVChnlsPerSequence);
 		TRACE(s);
-		s.Format(_T("PeakChnl[0].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
-			pIdata->PeakChnl[0].bId2, pIdata->PeakChnl[0].bOd3, pIdata->PeakChnl[0].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
+		s.Format(_T("PeakChnl[0].Id2=%d, Od3=%d TOFmin=%d, TOFmax=%d\n"),
+			pIdata->PeakChnl[0].bId2, pIdata->PeakChnl[0].bOd3, pIdata->PeakChnl[0].wTofMin, pIdata->PeakChnl[0].wTofMax );
 		TRACE(s);
 		memset((void *)&gLastIdataPap, 0, sizeof(IDATA_PAP));
 		memcpy((void *)&gLastIdataPap, (void *) pIdata, pIdata->wByteCount);

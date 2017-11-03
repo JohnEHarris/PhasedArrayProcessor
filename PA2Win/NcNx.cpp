@@ -460,6 +460,7 @@ void CNcNx::OnBnClickedBnDonothing()
 	// Does nothing but take focus off of OK and Cancel
 	// In Resource view use Properties to set this as the default button
 	int i;
+	// Break here and uses watches to view Idata and Ascan data from PAP
 	i = m_nParam;
 	}
 

@@ -139,7 +139,13 @@ BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 	else	pFifo->bMax = pFifo->bMaxTemp;
 
 	if (pFifo->bMaxFinal < pFifo->bMax)
+		{
 		pFifo->bMaxFinal = pFifo->bMax;
+		if (bIdOd == 0)
+			m_PeakData.bId2 = pFifo->bMax;
+		else if (bIdOd == 1)
+			m_PeakData.bOd3 = pFifo->bMax;
+		}
 	return pFifo->bMaxFinal;
 	};
 
@@ -239,12 +245,16 @@ WORD CvChannel::InputWFifo( WORD wWall )
 			pFifo->wCell[i] = wWall;			// replace oldest element with this one
 			pFifo->uSum += (wWall - wOldWall);	// change in sum is new - old
 			if (m_wTOFMaxSum < pFifo->uSum)
+				{
 				m_wTOFMaxSum = pFifo->uSum;
+				}
 				// Omitting the next line only results in a false min wall on the first sampling interval of 16
 				// Thereafter the min wall sum is correct.
 				//	if (m_bInputCnt >= pFifo->bNx)
 			if (m_wTOFMinSum > pFifo->uSum)
-				m_wTOFMinSum = pFifo->uSum;
+				{
+				m_wTOFMinSum = m_PeakData.wTofMin = pFifo->uSum;
+				}
 			}	// wall within range
 
 		}		// is a wall channel
@@ -356,9 +366,12 @@ void CvChannel::CopyPeakData(stPeakChnl *pOut)
 	pOut->bId2 = bGetIdGateMax();
 	pOut->bOd3 = bGetOdGateMax();
 	pOut->wTofMin = wGetMinWall();
-	pOut->bChNum = m_bChnl;
+	pOut->wTofMax = wGetMaxWall();
+	pOut->bChNum = m_bChnl; 
+	pOut->bStatus = m_wStatus & 0xff;
 	// debugging only
-	s.Format( _T( "CopyPeak Id=%d, Min Wall=%d, Ch=%d\n" ), pOut->bId2, pOut->wTofMin, m_bChnl );
+	s.Format( _T( "CopyPeak Id=%d, Min Wall=%d, Max Wall=%d, Ch=%d, Stat=%x\n" ), pOut->bId2, 
+		pOut->wTofMin, pOut->wTofMax, m_bChnl, pOut->bStatus);
 	TRACE( s );
 	}
 
@@ -372,22 +385,30 @@ void CvChannel::CopyPeakToIdata(IDATA_PAP *pOut, int nSeq)
 	{
 	int nCh;
 	int nDxgate2, nDxgate3, nDxMax, nDxMin;		// will become structure elements in stPeakChnl eventually 2017-10-24
-	nCh = (nSeq % gnSeqModulo)*gMaxChnlsPerMainBang + m_bChnl;
+	//nCh = (nSeq  % gnSeqModulo)*gMaxChnlsPerMainBang + m_bChnl;
+	nCh = m_PeakData.bChNum;
 	nDxMax = 0;	// make compiler happy for now
 	// Check for default constructor before copying data
-	if (w_DefaultConfig)	m_wStatus |= DEFAULT_CFG;	// Still using default values
-	else					m_wStatus &= ~DEFAULT_CFG;	// clear default bit
-	//memcpy ((void*) &pOut->, &m_PeakData, sizeof(m_PeakData));
+	if (w_DefaultConfig)	pOut->PeakChnl[nCh].bStatus |= DEFAULT_CFG;	// Still using default values
+	else					pOut->PeakChnl[nCh].bStatus &= ~DEFAULT_CFG;	// clear default bit
+	pOut->PeakChnl[nCh].bId2 = bGetIdGateMax();
+	pOut->PeakChnl[nCh].bOd3 = bGetOdGateMax();
+	pOut->PeakChnl[nCh].wTofMin = wGetMinWall();
+	pOut->PeakChnl[nCh].wTofMax = wGetMaxWall();
 	pOut->PeakChnl[nCh].bChNum = nCh;
 
-	if (pOut->PeakChnl[nCh].bId2 < bGetIdGateMax())
+	//memcpy ((void*) &pOut->, &m_PeakData, sizeof(m_PeakData));
+	//pOut->PeakChnl[nCh].bChNum = nCh;
+
+#if 0		// maybe later
+	if (pOut->PeakChnl[nCh].bId2 < m_PeakData.bId2)
 		{
-		pOut->PeakChnl[nCh].bId2 = bGetIdGateMax();
+		pOut->PeakChnl[nCh].bId2 = m_PeakData.bId2;
 		nDxgate2 = nSeq;
 		}
-	if (pOut->PeakChnl[nCh].bOd3 < bGetOdGateMax())
+	if (pOut->PeakChnl[nCh].bOd3 <  m_PeakData.bOd3)
 		{
-		pOut->PeakChnl[nCh].bOd3 = bGetOdGateMax();	//m_PeakData.bOd
+		pOut->PeakChnl[nCh].bOd3 = m_PeakData.bOd3;	//m_PeakData.bOd
 		nDxgate3 = nSeq;
 		}
 	// wall peak holding. Idata pap has only min wall for each sequence
@@ -396,7 +417,7 @@ void CvChannel::CopyPeakToIdata(IDATA_PAP *pOut, int nSeq)
 		//if ((m_PeakData.wTofMin == m_PeakData.wTofMAX) &&
 		//	 (m_PeakData.wTofMin == 0)
 				{
-				pOut->PeakChnl[nCh].wTofMin = wGetMinWall();
+				pOut->PeakChnl[nCh].wTofMin = m_PeakData.wTofMin;
 				nDxMin = nSeq;
 				//pOut->PeakChnl[m_bChnl].wTofMax = m_PeakData.wTofMin;	// capture the max
 				//nDxMax = nSeq;
@@ -416,6 +437,7 @@ void CvChannel::CopyPeakToIdata(IDATA_PAP *pOut, int nSeq)
 		//	nDxMax = nSeq;  
 		//	}
 		}
+#endif
 	}
 
 // copy FIFO variables to PeakData structure after the peak hold is complete

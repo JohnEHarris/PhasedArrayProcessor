@@ -73,7 +73,7 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 
 // How many peak held data PeakChnl can we get in the max size tcpip packet.
 // stPeakChnl PeakChnl[256] -> 4*256 = 1024
-#define MAX_RESULTS						256			// before 8/14/17 was 176
+#define MAX_RESULTS						128			// before 8/14/17 was 176
 
 #define INSTRUMENT_PACKET_SIZE			1088		//old 1040.. 1460 is max TCPIP size
 #define MASTER_PACKET_SIZE				1088		// 1260
@@ -344,7 +344,7 @@ typedef struct
 #define CLR_DATA_READY	~( 1 >> 7)
 #define SET_READ		 ( 1 << 4)		// PAP sets when read. If vChannel resets fifo's with this
 #define CLR_READ		~( 1 << 4)		// not set, it is overrun condition
-#define DEFAULT_CFG		 ( 1 << 8)		// Nc Nx have default constructor values
+#define DEFAULT_CFG		 ( 1 << 3)		// Nc Nx have default constructor values
 #define STATUS_CLEAR_MASK	~SET_OVERRUN
 
 // peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure
@@ -365,12 +365,13 @@ typedef struct
 //	BYTE bIndx3;	// seq number of Od3 max
 //	BYTE bIndxMax;	// seq number max wall reading
 //	BYTE bIndxMin;	// seq number min wall reading
-	BYTE bChNum;	// 0-255. bChNum = SeqNum*8 + Chnl. SeqNum = [0,31], Chnl  = [0,7]--goes away in future
+	BYTE bStatus;	// to be determined
+	BYTE bChNum;	// 0-255. bChNum = SeqNum*8 + Chnl. SeqNum = [0,15], Chnl  = [0,7]--goes away in future
 	BYTE bId2;		// Gate 2 peak held data 0-255
 	BYTE bOd3;		// Gate 3 peak held data 0-255
 	WORD wTofMin;	// gate 4 min
-//	WORD wTofMax;	// gate 4 max -- joins sturcture in future-- then sizeof = 10
-	} stPeakChnl;	// sizeof = 5  -- 2014-08-22 REDUCE TO 5 bytes. Packet fron NIOS unchanged.
+	WORD wTofMax;	// gate 4 max -- joins sturcture in future-- then sizeof = 10
+	} stPeakChnl;	// sizeof = 5  -- 2014-08-22 REDUCE TO 5 bytes. Packet fron NIOS unchanged. 8 after 2017-11-03
 
 // legacy structure
 typedef struct
@@ -430,7 +431,7 @@ typedef struct
 	WORD wSpare[9];
 
 	stPeakChnl PeakChnl[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 
-	} IDATA_PAP;	// sizeof = 1280 + 64 =1344
+	} IDATA_PAP;	// sizeof = 1024 + 64 =1088
 
 
 typedef struct
@@ -474,7 +475,7 @@ typedef struct
 	WORD wStatus;		// see below
 	WORD wSpare[9];
 
-	} IDATA_PAP_HDR;	// sizeof = 1280 + 64 =1344
+	} IDATA_PAP_HDR;	// sizeof = 64
 
 // https://blog.apnic.net/2014/12/15/ip-mtu-and-tcp-mss-missmatch-an-evil-for-network-performance/
 // 1460 is max 

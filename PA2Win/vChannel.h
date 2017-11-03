@@ -114,7 +114,7 @@ public:
 	void SetRead(void)				{ m_wStatus |= SET_READ;		}
 	void ClrRead(void)				{ m_wStatus &= CLR_READ;		}
 	void GetPeakData(void);
-	void CountInputs( void );
+	//void CountInputs( void );
 
 	//void PeakDataClear(void);		// Once PAP copies data into Ethernet Packet, clear PeakData
 	// pOut is a slot in the ethernet packet to be sent

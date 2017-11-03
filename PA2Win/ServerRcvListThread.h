@@ -64,7 +64,7 @@ public:
 	//void BuildOutputPacket(IDATA_FROM_HW *pInput);
 	void SaveFakeData(CString& s);
 
-	void AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW *pIData, int nSendFlag, int nSeq);
+	void AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW *pIData, int nSeq);
 	// create a processing class instance for each wall channel
 		
 	int m_nInspectMode;
@@ -118,7 +118,7 @@ public:
 	int m_IdataInPt;			// insertion point in stPeakChnl PeakChnl
 	int m_nFullPacketChnls;		// All the channels of a complete set of unique sequences
 	BYTE m_bNiosGlitchCnt;
-	int GetIdataPacketIndex(void);
+	//int GetIdataPacketIndex(void);
 	void SendIdataToPag(GenericPacketHeader *pIdata);
 
 

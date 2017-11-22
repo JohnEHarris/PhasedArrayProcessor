@@ -626,8 +626,6 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 // Of course the Pap/Board steering variables determine where the command will go.
 // nValue will is the modulo of the sequence count
 // nValue = 4 -> [0,1,2,3]
-// 2017-10-04  Fake data generation will send 1088 bytes but will only send
-// multiples of the modulus. If mod 3, then only 30 of the 32 Seq will be valid
 // SEQ_DATA Seq[(32 / modulus)*modulo] are valid. For modulo 3:
 // (32/3) = 10, 10*3 = 30. only 30 valid sequences in fake data packet
 // IDATA_FROM_HW.bSeqPerPacket = 30
@@ -646,7 +644,7 @@ void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	m_GateCmd.bChnl = nCh;	// does not matter
 	m_GateCmd.bGateNumber = nGate;	// does not matter
 	if (nValue > 32)	nValue = 32;
-	m_GateCmd.bSpare = nValue; // the last valid seq number before restart + 1.. the modulo
+	m_GateCmd.bSpare = nValue; //  the modulo
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Start_Seq#=%d, (Param)SeqModulo = %d\n"),
 		m_GateCmd.Head.wMsgID, m_GateCmd.Head.wByteCount, m_GateCmd.Head.bPapNumber,
 		m_GateCmd.Head.bBoardNumber, m_GateCmd.bSeq, m_GateCmd.bSpare);

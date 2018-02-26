@@ -360,10 +360,13 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("TCGGainClock"));		m_cbCommand.AddString(s);	//11
 		s.Format(_T("TCGChnlGainDelay"));	m_cbCommand.AddString(s);	//12
 		s.Format(_T("SetPRF"));					m_cbCommand.AddString(s);	//13
-		s.Format(_T("ASCAN_SCOPE"));			m_cbCommand.AddString(s);	//14
-		s.Format(_T("ASCAN_SCOPE_DELAY"));		m_cbCommand.AddString(s);	//15
-		s.Format(_T("SET_ASCAN_PEAK_MODE"));	m_cbCommand.AddString(s);	//16
-		s.Format(_T("ASCAN_RF_BEAM"));			m_cbCommand.AddString(s);	//17--check case statements below
+		s.Format(_T("ASCAN_SAMPLE_RATE"));		m_cbCommand.AddString(s);	//14 How wide the scope trace
+		s.Format(_T("ASCAN_SCOPE_DELAY"));		m_cbCommand.AddString(s);	//15 delays trigger
+		s.Format(_T("SET_ASCAN_PEAK_MODE"));	m_cbCommand.AddString(s);	//16  data [0..4]
+		s.Format(_T("ASCAN_RF_BEAM_SELECT"));	m_cbCommand.AddString(s);	//17--check case statements below
+		s.Format(_T("ASCAN_BEAM_SEQ"));			m_cbCommand.AddString(s);	//18 -- nop
+		s.Format(_T("ASCAN_GATE_OUTPUT"));		m_cbCommand.AddString(s);	//19
+		s.Format(_T("NIOS_SCOPE_CMD"));			m_cbCommand.AddString(s);	//20
 		}
 	else
 		{
@@ -395,7 +398,8 @@ void CNcNx::OnCbnSelchangeCbCmds()
 				
 	switch (m_nCmdId + nCmdOffset)
 		{
-		case 0:	s.Format( _T( "null %d" ), m_nCmdId );	break;
+		//case 0:	s.Format(_T("null %d"), m_nCmdId);	break;
+		case 0:	s.Format(_T("Debug FIFO"), m_nCmdId);	break;
 		case 1:	s =_T( "Fake Data" );					break;
 		case 2: s.Format(_T("Gate %d Delay %d"), m_nGate, m_nParam); break;
 		case 3: s.Format(_T("Gate %d Range %d"), m_nGate, m_nParam); break;
@@ -439,6 +443,9 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		case 15:
 		case 16:
 		case 17:
+		case 18:
+		case 19:
+		case 20:
 			WordCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 			break;
 
@@ -653,7 +660,50 @@ void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	SendMsg((GenericPacketHeader*)&m_GateCmd);
 	}
 
-// WordCmd, use nValue to assign to hardware functions
+
+// Debugging PAP Fifo operation when multiple commands sent in a few packets
+// Seem to repeat a command.. probably doesn't miss command
+// cmd sequence 25x8, 24, 23, 22, 21, 12*3, 0x205x3, 0x204x2  25 sent 8 times in one packet
+// from Robert, results in about 5 total TCPIP packets
+void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue)
+	{
+	ST_GATE_DELAY_CMD sml[16];
+	ST_LARGE_CMD lrg[6];
+	int i;
+	for (i = 0; i < 15; i++)
+		{
+		sml[i].Head.bPapNumber = 0;	// always for testing
+		sml[i].Head.bBoardNumber = nBoard;
+		sml[i].bSeq = nSeq;
+		sml[i].bChnl = nCh;
+		sml[i].bGateNumber = nGate;
+		sml[i].wDelay = wValue;
+		switch (i)
+			{
+		default:
+			sml[i].Head.wMsgID = 25;		break;
+			case 8:	 sml[i].Head.wMsgID = 24;	break;
+			case 9:	 sml[i].Head.wMsgID = 23;	break;
+			case 10: sml[i].Head.wMsgID = 22;	break;
+			case 11: sml[i].Head.wMsgID = 21;	break;
+			case 12:
+			case 13:
+			case 14: sml[i].Head.wMsgID = 12;	break;
+			}
+		}	// for (i = 0; i < 15; i++)
+
+	for (i = 0; i < 5; i++)
+		{
+		if (i < 3)
+			{
+
+			}
+		}
+
+	}
+
+
+// WordCmd, use nValue to assign to hardware functions,, nValue is usually m_nParam
 void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue)
 	{
 	CString s, t, sym;
@@ -662,10 +712,14 @@ void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	m_WordCmd.Head.wMsgID = nCmd;
 	switch (nCmd)
 		{
-	case SET_ASCAN_SCOPE_ID:		sym = _T("SET_ASCAN_SCOPE ");		break;	//14
+	case ASCAN_SCOPE_SAMPLE_RATE_ID: sym = _T("SET_ASCAN_SAMPLE_RATE ");	break;	//14
 	case SET_ASCAN_SCOPE_DELAY_ID:	sym = _T("SET_ASCAN_SCOPE_DELAY ");	break;	//15
 	case SET_ASCAN_PEAK_MODE_ID:	sym = _T("SET_ASCAN_PEAK_MODE ");	break;	//16
 	case SET_ASCAN_RF_BEAM_ID:		sym = _T("SET_ASCAN_RF_BEAM ");		break;	//17
+	case SET_ASCAN_BEAM_SEQ_ID:		sym = _T("SET_ASCAN_RF_BEAM ");		break;	//18
+	case SET_ASCAN_GATE_OUTPUT_ID:	sym = _T("ASCAN_GATE_OUTPUTS ");	break;	//19
+	case NIOS_SCOPE_CMD_ID:			sym = _T("NIOS_SCOPE_CMD ");		break;	//20
+		
 		}
 	m_WordCmd.Head.wByteCount = 32;
 	m_WordCmd.Head.uSync = SYNC;
@@ -681,6 +735,21 @@ void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 		m_WordCmd.Head.bBoardNumber, m_WordCmd.bSeq, m_WordCmd.wCmd);
 	t = sym + s;
 	m_lbOutput.AddString(t);
+	if (nCmd == NIOS_SCOPE_CMD_ID)
+		{
+		ST_SET_SCOPE_CMD *pCmd = (ST_SET_SCOPE_CMD *)&m_WordCmd;
+		// value in this case is the gate assignments, Ascan, gate0, gate1 .. bit defined
+		//m_WordCmd.wCmd = nValue;
+		pCmd->wTraceAssign = nValue;
+		pCmd->wStartDelay = 100;	// in system clocks
+		pCmd->wStepSize = 4;		// sampling rate in 80 Mhz clocks..Robert calls scale
+		//m_WordCmd.wFill[2] = 500;	// range in system clocks..probably redundant since always 1024 samples
+		if (m_wPacketRate == 0)			m_wPacketRate = 40;
+		else m_wPacketRate = 0;
+			
+		pCmd->wPacketRate = m_wPacketRate;		// 40 ms TCPIP packet update. 0=AScan packets off or not sent
+		// but really sent every 5 seconds to get temperature info to PAP
+		}
 	SendMsg((GenericPacketHeader*)&m_WordCmd);
 	}
 

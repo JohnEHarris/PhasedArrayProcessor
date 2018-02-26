@@ -492,7 +492,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	if (1 != InetPton(AF_INET, s, &wClientBaseAddress) )
 		{	TRACE(_T("InetPton error\n"));		return;		}
 	else
-		{	TRACE(_T("InetPton success in OnAccept\n"));
+		{	TRACE(_T("InetPton success in OnAccept ... CLIENT CONNECTED\n"));
 		ntmp = ntohl(*(u_long*)&wClientBaseAddress);		}
 
 
@@ -568,7 +568,7 @@ winsock2.h
 		int nSize;
 		int nSizeOf = sizeof(int);
 		GetSockOpt(SO_SNDBUF, &nSize, &nSizeOf, SOL_SOCKET);
-		s.Format(_T("ServerSocket NIC Transmit Buffer Size = %d"), nSize);
+		s.Format(_T("ServerSocket NIC Transmit Buffer Size = %d\n"), nSize);
 		TRACE(s);
 
 		GetSockOpt(SO_RCVBUF, &nSize, &nSizeOf, SOL_SOCKET);

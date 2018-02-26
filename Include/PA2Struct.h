@@ -38,7 +38,8 @@ enum CallSource {eMain, eInterrupt};
 
 // Idata message types. This is the data that comes from the PAP and is sent 
 // To the Receiver system
-enum IdataTypes { eRawInspID = 1, eAscanID = 2, eKeepAliveID = 0xff };
+// Read Back data replaces AScan data when read back is requested
+enum IdataTypes { eRawInspID = 1, eAscanID = 2, eReadBackID = 3, eKeepAliveID = 0xff };
 enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define NC_NX_IDATA_ID				1		// PAP processed inspection data sent to PAG/Receiver system
 #define ASCAN_DATA_ID				2
@@ -64,7 +65,7 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 
 // Channels may be redefined on each main bang. The counter which counts main bangs is called the sequence counter
 // the maximum value the sequence counter can have was 16, now (2017/07/20) =
-#define MAX_SEQ_COUNT					32
+#define MAX_SEQ_COUNT					16
 
 // The number of virtual channels is finite. Channels repeat after MAX_SEQ_COUNT number of main bangs.
 // On any given main bang (sequence count) there can only be a max number of channels define by 
@@ -274,15 +275,15 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count	10
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address. 13
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address. 
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		14
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 	BYTE bSeqNumber;
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
-	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
-	BYTE bNiosFeedback[7];// eg. FPGA version, C version, self-test info	  30	
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id  15
+	BYTE bNiosFeedback[7];// eg. FPGA version, C version, self-test info	  22	
 
 	WORD wScopeSetting;	// inform about trigger, thold, other scope settings
 	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
@@ -297,7 +298,9 @@ typedef struct
 	WORD wFPGATemp;
 	WORD wBoardTemp;
 	WORD wStatus;		// see below
-	WORD wSpare[11];	// 64 bytes to here
+	WORD wBeamType;		// 0=rf 1=fw  2=peak hold,  4 = gate out
+	WORD wGateBits;		// Bits values: 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
+	WORD wSpare[9];	// 64 bytes to here
 	char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA;		// sizeof() = 1088
@@ -331,10 +334,81 @@ typedef struct
 	WORD wFPGATemp;
 	WORD wBoardTemp;
 	WORD wStatus;		// see below
-	WORD wSpare[11];	// 64 bytes to here
+	WORD wBeamType;		// 0=rf 1=fw  2=peak hold,  4 = gate out
+	WORD wGateBits;		// Bits values: 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
+	WORD wSpare[9];	// 64 bytes to here
 	//char ascan[1024];	// 1024 8-bit scope amplitude samples
 
-	} ASCAN_DATA_HDR;		
+	} ASCAN_DATA_HDR;	
+
+// Read Back Data is loaded by NIOS and not by a dma process
+typedef struct
+	{
+	WORD wMsgID;		// commands and data are identified by their ID	= eReadBackID = 3
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
+	UINT uSync;			// 0x5CEBDAAD													
+	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		14
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bSeqNumber;
+	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
+/* Change here from format of ASCAN_DATA_HDR */
+	WORD wReadBackID;	// Read back ID for the command data requested
+
+	WORD wScopeSetting;	// inform about trigger, thold, other scope settings
+	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
+
+						// Pipe position information
+	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+	BYTE bSpare;
+	WORD wLocation;		// x location in motion pulses
+	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
+	WORD wPeriod;		// unit in .2048ms
+	WORD wRotationCnt;	// Number of rotations since pipe present signal
+	WORD wFPGATemp;
+	WORD wBoardTemp;
+	//WORD wStatus;		// see below
+	//WORD wSpare[11];	// 64 bytes to here
+	BYTE ReadBack[1048];	// 1048 byte. Info depends on what is requested to be read back
+
+	} READBACK_DATA;		// sizeof() = 1088
+
+// The settings for one gate
+typedef struct
+	{
+	WORD wDelay;
+	WORD wRange;
+	WORD wBlank;
+	WORD wThold;
+	WORD wTrigger;
+	WORD wPolarity;
+	WORD wTOF;
+	} ST_GATE_SETTINGS;	// 14 bytes
+
+typedef struct
+	{
+	ST_GATE_SETTINGS Gate[4];
+	} ST_GATEIFNO_PER_CHANNEL;	// 56 bytes
+
+typedef struct // MAX_SEQ_COUNT = 16
+	{
+	ST_GATEIFNO_PER_CHANNEL Ch[MAX_CHNLS_PER_MAIN_BANG];	// 8
+	} ST_GATECH_PER_SEQ;	// 8*56 = 448
+
+typedef struct
+	{
+	ST_GATECH_PER_SEQ Seq[MAX_SEQ_COUNT];
+	}	ST_GATE_READBACK_DATA;	// 448*16 = 7168
+
+
+
+
+/*
+**************************************************************************************************
+*/
 
 #define SET_DROPOUT		 ( 1 << 5)
 #define CLR_DROPOUT		~( 1 << 5)
@@ -348,7 +422,7 @@ typedef struct
 #define STATUS_CLEAR_MASK	~SET_OVERRUN
 
 // peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure
-// Processed data sent from the PAP. One stPeakChnl structure for every virtual channel
+// Processed data sent from the PAP. One stPeakChnlPAP structure for every virtual channel
 // Nc_Nx processing receives 1 wall reading per AScan but produces a max and min readging 
 // after 16 AScans.
 // 2017-08-14 reduce size of PeakData to match input data from NIOS front end
@@ -359,19 +433,27 @@ typedef struct
 	{
 //	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
 					// ie, PAP did not service PeakData fast enough
-//	BYTE bG1;		// Gate 1 interface gate -- FUTURE FEATURE. place holder in 201x version
-// future in 201x
-//	BYTE bIndx2;	// seq number of Id2 max
-//	BYTE bIndx3;	// seq number of Od3 max
-//	BYTE bIndxMax;	// seq number max wall reading
-//	BYTE bIndxMin;	// seq number min wall reading
+//	BYTE bG1;		// Gate 1 interface gate -- FUTURE FEATURE. place holder in 2017 version
 	BYTE bStatus;	// to be determined
 	BYTE bChNum;	// 0-255. bChNum = SeqNum*8 + Chnl. SeqNum = [0,15], Chnl  = [0,7]--goes away in future
 	BYTE bId2;		// Gate 2 peak held data 0-255
 	BYTE bOd3;		// Gate 3 peak held data 0-255
 	WORD wTofMin;	// gate 4 min
 	WORD wTofMax;	// gate 4 max -- joins sturcture in future-- then sizeof = 10
-	} stPeakChnl;	// sizeof = 5  -- 2014-08-22 REDUCE TO 5 bytes. Packet fron NIOS unchanged. 8 after 2017-11-03
+	} stPeakChnlPAP;	// sizeof = 8  -- From PAP
+
+typedef struct
+	{
+	//	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
+	// ie, PAP did not service PeakData fast enough
+	//	BYTE bG1;		// Gate 1 interface gate -- FUTURE FEATURE. place holder in 2017 version
+	//	BYTE bStatus;	// to be determined
+	BYTE bChNum;	// 0-255. bChNum = SeqNum*8 + Chnl. SeqNum = [0,15], Chnl  = [0,7]--goes away in future
+	BYTE bId2;		// Gate 2 peak held data 0-255
+	BYTE bOd3;		// Gate 3 peak held data 0-255
+	WORD wTofMin;	// gate 4 min
+	//WORD wTofMax;	// gate 4 max -- joins sturcture in future-- then sizeof = 10
+	} stPeakChnlNIOS;	// sizeof = 5  -- From ADC
 
 // legacy structure
 typedef struct
@@ -430,7 +512,7 @@ typedef struct
 	WORD wStatus;		// see below
 	WORD wSpare[9];
 
-	stPeakChnl PeakChnl[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 
+	stPeakChnlPAP PeakChnl[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 
 	} IDATA_PAP;	// sizeof = 1024 + 64 =1088
 
 
@@ -476,6 +558,9 @@ typedef struct
 	WORD wSpare[9];
 
 	} IDATA_PAP_HDR;	// sizeof = 64
+
+						
+// Gates read back data structure
 
 // https://blog.apnic.net/2014/12/15/ip-mtu-and-tcp-mss-missmatch-an-evil-for-network-performance/
 // 1460 is max 
@@ -548,6 +633,8 @@ typedef struct
 	WORD wAngle;		// angle in degrees from TOP relative to 1 packet from instrument
 	WORD wPeriod;		//unit in .2048ms
 	} RAW_INSTRUMENT_STATUS;	// status info from Instrument collected to build output msg to Receiver/PAG
+
+
 
 // If Nc = 0, the output value will be 0. This will decrease processing time in the PAM
 // Effectively the associated channel will be a wall channel or nothing

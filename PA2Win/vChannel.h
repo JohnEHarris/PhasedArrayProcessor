@@ -102,7 +102,7 @@ public:
 	// 10-27-16 change bStatus to wStatus
 	// 11-10-16 wStatus becomes m_wStatus and bStatus joins Peak Data
 	WORD m_wStatus;
-	stPeakChnl m_PeakData;
+	stPeakChnlPAP m_PeakData;
 
 	void SetBadWall(BYTE badWall);
 	void SetDropOut(void)			{ m_wStatus |= SET_DROPOUT;	}
@@ -118,7 +118,7 @@ public:
 
 	//void PeakDataClear(void);		// Once PAP copies data into Ethernet Packet, clear PeakData
 	// pOut is a slot in the ethernet packet to be sent
-	void CopyPeakData(stPeakChnl *pOut);
+	void CopyPeakData(stPeakChnlPAP *pOut);
 	BYTE AscanInputDone( void ); //{ return (m_bInputCnt == 0);		}	// 0 if all 16 Ascans
 	void CvChannel::CopyPeakToIdata(IDATA_PAP *pOut, int nSeq);		// fills entire buffer
 	

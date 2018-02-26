@@ -41,47 +41,68 @@ the PAP and PAG
 
 
 /*****************	COMMANDS *********************/
-#define TOTAL_COMMANDS				20
-#define LAST_SMALL_COMMAND			19
+#define TOTAL_COMMANDS				32		// small commands
+#define LAST_SMALL_COMMAND			TOTAL_COMMANDS - 1
 
 #define TOTAL_LARGE_COMMANDS		11
-#define LAST_LARGE_COMMAND			10
+#define LAST_LARGE_COMMAND			TOTAL_LARGE_COMMANDS - 1
+
+#define TOTAL_READ_BACK_COMMANDS	10
+#define LAST_READ_BACK_COMMAND		TOTAL_READ_BACK_COMMANDS - 1
 
 // SMALL
-// modify Cmds.h and Cmds.cpp in the NIOS code file
+// modify Cmds.h and Cmds.cpp in the NIOS code files
 // also add the command name to: void ( *ProcPtrArray[TOTAL_COMMANDS])() =
-// found in the NIOS file Cmds.cpp. Add the 'define' name to PopulateCmdComboBox()
-// in NcNx.cpp
+// found in the NIOS file Cmds.cpp. Add the 'defined' name to PopulateCmdComboBox()
+// in PAG dialog NcNx.cpp
 //
-#define NULL_0						0
-#define FAKE_DATA_CMD_ID			1
-#define SET_GATE_DELAY_CMD_ID		2
-#define SET_GATE_RANGE_CMD_ID       3
-#define SET_GATE_BLANK_CMD_ID       4
-#define SET_GATE_THRESHOLD_CMD_ID   5
-#define SET_GATES_TRIGGER_CMD_ID	6    
-#define SET_GATES_POLARITY_CMD_ID   7
-#define SET_GATES_TOF_CMD_ID		8
-#define SET_TCG_CLOCK_RATE_CMD_ID	9
+// Command names in the NcNx dialog are shown after the numerical value.
+//
+#define NULL_0						0		// ProcNull
+#define FAKE_DATA_CMD_ID			1		// FakeData
+#define SET_GATE_DELAY_CMD_ID		2		// GateDelay
+#define SET_GATE_RANGE_CMD_ID       3		// GateRange
+#define SET_GATE_BLANK_CMD_ID       4		// GateBlank
+#define SET_GATE_THRESHOLD_CMD_ID   5		// GateThreshold
+#define SET_GATES_TRIGGER_CMD_ID	6		// GatesTrigger 
+#define SET_GATES_POLARITY_CMD_ID   7		// GatesPolarity
+#define SET_GATES_TOF_CMD_ID		8		// GatesTOF
+#define SET_TCG_CLOCK_RATE_CMD_ID	9		// SetTcgClockRate
 //#define SET_SEQ_GAIN_STEP_CMD_ID	9
-#define TCG_TRIGGER_DELAY_CMD_ID	10
+#define TCG_TRIGGER_DELAY_CMD_ID	10		// TCGTriggerDelay
 //#define SET_SEQ_GAIN_DELAY_CMD_ID	10
-#define TCG_GAIN_CLOCK_CMD_ID		11
+#define TCG_GAIN_CLOCK_CMD_ID		11		// TCGGainClock
 //#define SET_CHNL_GAIN_STEP_CMD_ID	11
-#define TCG_CHNL_GAIN_DELAY_CMD_ID	12
+#define TCG_CHNL_GAIN_DELAY_CMD_ID	12		// TCGChnlGainDelay
 //#define SET_CHNL_GAIN_DELAY_CMD_ID12
-#define SET_PRF_CMD_ID				13
-#define SET_ASCAN_SCOPE_ID			14
-#define SET_ASCAN_SCOPE_DELAY_ID	15
-#define SET_ASCAN_PEAK_MODE_ID		16
-#define SET_ASCAN_RF_BEAM_ID		17
+
+#define SET_PRF_CMD_ID				13		// SetPrf  in Pulser board
+
+#define ASCAN_SCOPE_SAMPLE_RATE_ID	14		// AscanScopeSampleRate -- set_ascan_scope
+#define SET_ASCAN_SCOPE_DELAY_ID	15		// SetAscanDelay -- set_ascan_delay
+
+#define SET_ASCAN_PEAK_MODE_ID		16		// SelectAscanWaveForm -- set_ascan_peaksel
+#define SET_ASCAN_RF_BEAM_ID		17		// SetAscanRfBeamSelect -- set_ascan_rf_beam_sel_reg
+
+#define SET_ASCAN_BEAM_SEQ_ID		18		// SetAscanSeqBeamReg -- set_ascan_seq_beam_setup_reg
+#define	SET_ASCAN_GATE_OUTPUT_ID	19		// SetAscanGateOut -- set_ascan_gateout_reg
+#define SELECT_ASCAN_GATE_OUTPUT_ID	20		// SelectAscanGateOutputs calls multiple primitives
+
+#define NIOS_SCOPE_CMD_ID			21		// MakeScopeCmds -- Executes in NIOS code
+#define READBACK_CMD_ID				22		// ReadBackCmdData
 
 
+									
+									
 // LARGE
 #define NC_NX_TEST					1+0x200
-#define SEQ_TCG_GAIN_CMD_ID			2+0x200
-#define TCG_GAIN_CMD_ID				3+0x200
-#define SET_ASCAN_BEAMFORM_DELAY_ID	4+0x200
+#define SEQ_TCG_GAIN_CMD_ID			2+0x200		// SetSeqTCGGain
+#define TCG_GAIN_CMD_ID				3+0x200		// TCGBeamGain
+#define SET_ASCAN_BEAMFORM_DELAY_ID	4+0x200		// SetAscanBeamFormDelay
+
+// READ BACK CMDS
+#define NC_NX_READBACK_ID			0			// Read Back wReadBackID in SMALL command READBACK_CMD_ID 21
+#define GET_GATE_DATA_ID			1			// returns all gate data for all channels from bSeq to bSpare=bSeq_end
 
 /*************** Command Structures **************/
 
@@ -97,7 +118,7 @@ typedef struct
 
 
 // Command format from User interface systems to the PAP
-// Command packet can be cut short by specifying a byte count less than 1056
+// Command packet can be cut short by specifying a byte count less than 1088
 typedef struct 
 	{
 	// The generic header
@@ -170,7 +191,7 @@ typedef struct
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 
-	BYTE bSpare[20];	// sequence number at beginning of stPeakChnl PeakChnl[] // 32 bytes to here
+	BYTE bSpare[20];	// sequence number at beginning of stPeakChnlPAP PeakChnl[] // 32 bytes to here
 	BYTE bMsg[1024];	// Max unique sets of Nc Nx data per instrument.
 	} PAP_GENERIC_MSG; // SIZEOF() = 1056
 
@@ -293,10 +314,10 @@ This is done by using bit fields. Bits 7-6 select which one of the gates will be
 for time of flight output. Gate 0 is not available. 
 
 
-Bits 7-6         | Bit 5 start gate3, 0=Main bang, 1= Pk detect | Bit 2 stop gate3, 0=Thld detect, 1= Pk detect
-11= gate3        | Bit 4 start gate2, 0=Main bang, 1= Pk detect | Bit 1 stop gate2, 0=Thld detect, 1= Pk detect
-10= gate2        | Bit 3 start gate1, 0=Main bang, 1= Pk detect | Bit 0 stop gate1, 0=Thld detect, 1= Pk detect
-01=gate1          
+Bits 7-6 
+11= gate3        | Bit 5 start gate3, 0=Main bang, 1= Pk detect | Bit 2 stop gate3, 0=Thld detect, 1= Pk detect
+10= gate2        | Bit 4 start gate2, 0=Main bang, 1= Pk detect | Bit 1 stop gate2, 0=Thld detect, 1= Pk detect
+01= gate1        | Bit 3 start gate1, 0=Main bang, 1= Pk detect | Bit 0 stop gate1, 0=Thld detect, 1= Pk detect          
 00 not allowed     
 
 */
@@ -314,7 +335,7 @@ typedef struct
 
 /*
 TCG runs at 80 Mhz clock - too fast for TCG steps. This command divides down the TCG clock from 80 Mhz
-into the gain time step interval desired.
+into the gain time-step interval desired.
 */
 typedef struct
 	{
@@ -381,12 +402,58 @@ typedef struct
 	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
 	BYTE bSeq;		// used here only as a place holder
 	BYTE bChnl;		// which virtual probe.. used here only as a place holder
-	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
+	BYTE bGateNumber;	// normally a place holder to conform to the command format
 	BYTE bSpare;	// 16 bytes to here
 	WORD wCmd;	//
 	WORD wFill[7];	// all 0
 	}	ST_WORD_CMD;
+
+// How to select sequence and channel and gate being viewed??
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= NIOS_SCOPE_CMD_ID, gph is 12 bytes
+	BYTE bSeq;		// used here only as a place holder
+	BYTE bChnl;		// which virtual probe.. used here only as a place holder
+	BYTE bGateNumber;	// used here only as a place holder to conform to the command format
+	BYTE bAscanPolarity;// 16 bytes to here 0=rf+, 1=rf-,2=
+	WORD wTraceAssign;	// bit field.1=Ascan,2=gate0,4=gate1,8=gate2,16=gate3,32=TOF gate...
+	WORD wStartDelay;	// in system clocks..12.5 ns increments
+	WORD wStepSize;		// sys clocks between A/D samples.. typically < 16
+						// Range is redundant since there are 1024 samples at whatever the step size is
+	WORD wPacketRate;	// how often to send TCP/IP packet to PAP in ms. 
+						// wPacketRate == 0->1 ASCAN packet in data to PAP every 5 seconds
+	WORD wFill[4];		// all 0
+	}	ST_SET_SCOPE_CMD;
+
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= 
+	BYTE bSeq;		// used here only as a place holder
+	BYTE bChnl;		// which virtual probe.. used here only as a place holder
+	BYTE bGateNumber;	// normally a place holder to conform to the command format
+	BYTE bSpare;	// 16 bytes to here
+	WORD wBeamType;	//  0=rf 1=fw  2= rf peak hold 3=fw peak hold
+	WORD wMultiSeq;	// bit encoded sequence selection- possibly multiple sequences
+	WORD wFill[6];	// all 0
+	}	ST_BEAM_TYPE_CMD;
+
+
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= READBACK_CMD_ID
+	BYTE bSeq;			// 
+	BYTE bChnl;		// which virtual probe
+	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
+	BYTE bSeqEnd;	// 16 bytes to here .. cmd returns all channel values between bSeq and bSpare=bSeqEnd
+	WORD wReadBackID;	// specifies the read back sets defined elsewhere
+	WORD wFill[7];	// all 0
+	} ST_READ_BACK_CMD;	// sizeof() = 32
+
 //
+
+
+
+
 //=================================================
 // LARGE COMMNAD STRUCTURES
 
@@ -491,7 +558,10 @@ typedef struct	// NOT SURE ABOUT THIS COMMAND 2017-03-16
 // in each of the 4 shoes.
 //
 
-
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= 
+	} ST_GATE_READBACK;
 
 
 /*************** Command Structures **************/
@@ -539,42 +609,74 @@ void set_gates_tof(WORD nTOF, WORD nSeq, WORD vChn3 );
 /*   GATE COMMANDS */
 
 /*   GAIN COMMANDS */
+// Utilize Large Cmd structure
+void SetSeqTCGGain( void );		// void set_rcvr_TCG_gain
 void SetTcgClockRate( void );		// set_TCG_step_size
 void TCGTriggerDelay( void );		// set_TCG_delay
+void TCGBeamGain( void );			// set_beam_gain
 void TCGGainClock( void );			// set_beam_gain_step
 void TCGChnlGainDelay( void );		// set_beam_gain_delay
 void SetPrf( void );
-void SetAscanScope( void );			// set_ascan_scope also add in NcNx.cpp and 
-void SetAscanDelay( void );			// set_ascan_delay 
-void SetAscanPeakMode(void);
-void SetAscanRfBeam( void );
+void set_ascan_scope(short value);	// ascan sample period
+void AscanScopeSampleRate( void );	// set_ascan_scope also add in NcNx.cpp  -- 14
+
+void set_ascan_delay(short value);
+void SetAscanDelay(void);			// set_ascan_delay before trace begins --15
+
+void set_ascan_peaksel(short nBeamType); // --16
+void SelectAscanWaveForm(void);	// multiplexer, selects waveform to show, either Ascan or gates
+
+void set_ascan_rf_beam_sel_reg(short beam);
+void SetAscanRfBeamSelect(void);	// --17
+
+void set_ascan_seq_beam_setup_reg(BYTE bChnl, WORD wMultiSeq); // --18
+void SetAscanSeqBeamReg(void);	// selects the beam and seq to display
+
+void set_ascan_gateout_reg(short value);	// --19
+void SetAscanGateOut(void);
+
+void SetAscanRfBeam( void );		// executes multiple primitives
+void SelectAscanGateOutputs(void);	// executes multiple primitives
+
+void MakeScopeCmds();		// executes multiple primitives
+
+void ReadBackCmdData();
 
 void set_TCG_step_size( int value );
 void set_TCG_delay( int value );
 void set_beam_gain_step( int value );
 void set_beam_gain_delay( int value );
-void set_ascan_scope( short value );
-void set_ascan_delay(short value);
-void set_ascan_rf_beam_sel_reg( short value );
 
 
-void set_PRF( WORD wPrf );	// Set prf in Hertz. Range 10-10,000
+void ToggleAscanBuffer(short nToggleBit);
+
+void set_PRF( WORD wPrf );	// Set prf in Hertz. Range 10-10,000 -- on pulser board
 /*	SMALL TCG commands	*/
 
 
 /*   GAIN COMMANDS */
 // Utilize Large Cmd structure
 void set_rcvr_TCG_gain( int seq, unsigned short value[128] );
-void SetSeqTCGGain( void );
 
 void set_beam_gain( int beam, int seq, unsigned short value[128] );	// beam is a virtual channel
-void TCGBeamGain( void );			// set_beam_gain
 /*   GAIN COMMANDS */
 
 void set_beam_seq_delay_register( int beam, int seq, /*int delay, */ short value[16] );
 void SetAscanBeamFormDelay( void );
 
+BYTE GetbDin();
+WORD GetXLoc();
+WORD GetAngle();
+WORD GetPeriod();
+WORD GetFPGATemp();
+WORD GetBoardTemp();
+WORD GetSpinCount();
+WORD GetScopeSetting();
+int RangeChecksWordCmd(ST_WORD_CMD *pW);	// CheckS plural
 
+void MsgPrint(char *msg);
+void BuildReadBackHeader(READBACK_DATA *pHdr);
+void GetGateSettings(void);
 
 #endif
 

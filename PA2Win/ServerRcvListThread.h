@@ -115,7 +115,7 @@ public:
 	// InputRawDataPacket comes from the instrument
 	// InputRawDataPacket *m_pOutputRawDataPacket;		// our class ptr to the packet to send
 	IDATA_PAP *m_pIdataPacket;
-	int m_IdataInPt;			// insertion point in stPeakChnl PeakChnl
+	int m_IdataInPt;			// insertion point in stPeakChnlPAP PeakChnl
 	int m_nFullPacketChnls;		// All the channels of a complete set of unique sequences
 	BYTE m_bNiosGlitchCnt;
 	//int GetIdataPacketIndex(void);

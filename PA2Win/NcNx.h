@@ -24,6 +24,7 @@ public:
 	int m_nGate;
 	int m_nParam;
 	int m_nPopulated;
+	int m_wPacketRate;
 	//int m_nLastInst;
 	void Save_Pos(void);
 
@@ -96,4 +97,5 @@ public:
 	afx_msg void OnBnClickedRbSmallcmd();
 	afx_msg void OnBnClickedRbLargecmds();
 	int m_nShowSmallCmds;
+	void DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue);
 	};

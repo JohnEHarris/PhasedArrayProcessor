@@ -666,7 +666,7 @@ void CPA2WinDlg::StartTimer()
 	if (m_uStatTimer)	return;	// already running
 
 	// 70 ticks per second
-	m_uStatTimer = SetTimer(IDT_TIMER, 1000, NULL);
+	m_uStatTimer = (UINT)SetTimer(IDT_TIMER, 1000, NULL);
 	if (!m_uStatTimer) MessageBox(_T("Failed to start timer"));
 	m_nTimerCount = 0;
 	}
@@ -1473,7 +1473,7 @@ void CPA2WinDlg::SaveDebugLog(CString& s)
 	EnterCriticalSection(pCSSaveDebug);
 	try
 		{
-		m_DebugLog.Write(ch,strlen(ch));	// I want to see ASCII in the file
+		m_DebugLog.Write(ch,(int)strlen(ch));	// I want to see ASCII in the file
 		//m_DebugLog.Flush(); -- not needed. Kills Nc Nx processing time
 		}
 	catch (CFileException* e)
@@ -1517,7 +1517,7 @@ void CPA2WinDlg::SaveFakeData(CString& s)
 		}
 	try
 		{
-		m_FakeData.Write(ch,strlen(ch));	// I want to see ASCII in the file
+		m_FakeData.Write(ch,(int)strlen(ch));	// I want to see ASCII in the file
 		//m_FakeData.Flush();
 		}
 	catch (CFileException* e)

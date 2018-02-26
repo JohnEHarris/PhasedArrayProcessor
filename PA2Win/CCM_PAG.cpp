@@ -262,6 +262,7 @@ int CCCM_PAG::FindDisplayChannel(int nArray, int nArrayCh)
 // Then SetChannelInfo will set the channel types for this instrument  -- not for PA2 in 2016
 // Only sets Nc Nx parameters. Knows not what type the channel is
 //void CInstMsgProcess::SetChannelInfo(void)
+// only contains 52 NcNx structures.
 
 void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	{
@@ -300,7 +301,10 @@ void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	TRACE(s);
 #endif
 	nCh = nSeq = 0;
-	while ( (pNcNx->bSeqNumber < MAX_SEQ_COUNT) && (pNcNx->bChnlNumber < MAX_CHNLS_PER_MAIN_BANG) )
+	while ( (pNcNx->bSeqNumber < MAX_SEQ_COUNT) && 
+		  (pNcNx->bChnlNumber < MAX_CHNLS_PER_MAIN_BANG) && 
+		  (nChnlQty < 52)	// see definition PAP_INST_CHNL_NCNX
+		  )
 		{
 		nCh = pNcNx->bChnlNumber;
 		nSeq = pNcNx->bSeqNumber;

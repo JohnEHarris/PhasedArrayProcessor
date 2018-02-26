@@ -145,7 +145,7 @@ void CTestThread::TestNx(void)
 	int i,j = ASCANS_TO_AVG;
 	CString s;
 	WORD wMax, wMin, wBadWall, wGoodWall;
-	stPeakChnl LocalPeakData;
+	stPeakChnlPAP LocalPeakData;
 		
 	i = sizeof(PAP_INST_CHNL_NCNX);
 

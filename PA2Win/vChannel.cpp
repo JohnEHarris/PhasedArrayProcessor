@@ -47,7 +47,7 @@ CvChannel::CvChannel(int nSeq, int nChnl)
 	//if (nChnl > 39) return;
 	// counter of how many time constructor runs for each chnl/instrument
 	//uVchannelConstructor[nSeq][nChnl]++;
-	memset(&m_PeakData,0, sizeof (stPeakChnl));
+	memset(&m_PeakData,0, sizeof (stPeakChnlPAP));
 	m_bChnl = nChnl;
 	m_bSeq  = nSeq;
 	m_PeakData.bChNum = 8*nSeq + nChnl;	//specific to Sam's hardware design
@@ -356,7 +356,7 @@ void CvChannel::SetBadWall(BYTE badWall)
 	}
 
 // Once ServerRcvListThread has read the data, clear the structure for the next 16 Ascans
-void CvChannel::CopyPeakData(stPeakChnl *pOut)
+void CvChannel::CopyPeakData(stPeakChnlPAP *pOut)
 	{
 	CString s;
 	// Check for default constructor before copying data
@@ -384,7 +384,7 @@ void CvChannel::CopyPeakData(stPeakChnl *pOut)
 void CvChannel::CopyPeakToIdata(IDATA_PAP *pOut, int nSeq)
 	{
 	int nCh;
-	int nDxgate2, nDxgate3, nDxMax, nDxMin;		// will become structure elements in stPeakChnl eventually 2017-10-24
+	int nDxgate2, nDxgate3, nDxMax, nDxMin;		// will become structure elements in stPeakChnlPAP eventually 2017-10-24
 	//nCh = (nSeq  % gnSeqModulo)*gMaxChnlsPerMainBang + m_bChnl;
 	nCh = m_PeakData.bChNum;
 	nDxMax = 0;	// make compiler happy for now

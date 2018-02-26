@@ -978,7 +978,7 @@ afx_msg void CClientCommunicationThread::RestartTcpComDlg(WPARAM w, LPARAM lPara
 // instructing the thread to check the linked list and send all queued messages.
 // WPARAM and  LPARAM are unused at this time
 
-#define RETRY_COUNT			30
+#define RETRY_COUNT			4
 
 afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 	{
@@ -1083,7 +1083,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 			s.Format(_T("Idata Transmit Packets/sec = %6.1f\n"), fPksPerSec);
 			TRACE(s);
 			}
-		// take up to 20 attempts to deliver the packet
+		// take up to 4 attempts to deliver the packet
 		for (i = 0; i < RETRY_COUNT; i++)
 			{	// loop till good xmit
 			if (m_pstCCM->pSocket != NULL)
@@ -1097,6 +1097,11 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 						{
 						s.Format(_T("[%d]CCT::PAM sent PAG %d bytes\n"), m_pstCCM->uPacketsSent, nSent);
 						TRACE(s);
+						}
+					if (pSendPkt->wMsgID == 2)
+						{
+						memcpy((void *)&gLastAscanPap, (void *)pSendPkt, sizeof(ASCAN_DATA));
+						guAscanMsgCnt++;
 						}
 					delete pSendPkt;
 					pSendPkt = 0;

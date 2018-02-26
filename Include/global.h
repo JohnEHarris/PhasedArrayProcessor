@@ -72,8 +72,11 @@ PubExt ELAPSE64 TRecvCmd;
 
 PubExt IDATA_FROM_HW FakeDATA;
 PubExt ASCAN_DATA FakeASCAN;
+PubExt READBACK_DATA ReadBackDATA;
 PubExt BYTE gbFakeDataCmd;		// change operation of Xmit interrupt when fake data
-PubExt BYTE gbMakeAscanFlag;
+PubExt BYTE gbMakeAscanFlag; 
+PubExt ST_GATE_READBACK_DATA GateCmdData;		// a copy of every gate command setting received
+
 
 #else	// not the instrument
 
@@ -112,9 +115,15 @@ PubExt int nLoc; // simulate location of pipe
 PubExt BYTE bLastFakeSeq;	// assuming fake data can reset before 32 ascans.
 PubExt BYTE gbNiosGlitchCnt;	// usually Wiznet rest count. Must reset PAP data fifo processing on change of cnt
 PubExt HANDLE g_hTimerTick;
+PubExt UINT guAscanDelay;
 
 PubExt UINT guAscanMsgCnt;
 PubExt short gnFpgaTemp;	// temp of FPGA chip
 PubExt short gnBoardTemp;	// temp of ADC board
+//PubExt WORD gwPeakSelect;	// differentiates between gates and ut signal for Ascan display --new gwBeamType
+// probably need to lower prf before requesting read back of command data.
+PubExt BYTE gbReadBackReady;// once readback ready, skip AScan and replace with read back data
+PubExt WORD gwGateBits;		// what combination of gates are being sent in AScan data
+PubExt WORD gwBeamType;		// rf or gates
 
 #endif /* GLOBAL_H_ */

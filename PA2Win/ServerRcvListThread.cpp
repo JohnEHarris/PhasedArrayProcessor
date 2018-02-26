@@ -433,7 +433,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 
 		m_pIdataPacket->wMsgID = eRawInspID;
 		//m_pIdataPacket->wByteCount = sizeof(IDATA_PAP);
-		m_pIdataPacket->wByteCount = pIData->bSeqModulo * pIData->bMaxVChnlsPerSequence * sizeof( stPeakChnl ) + sizeof(IDATA_FROM_HW_HDR);
+		m_pIdataPacket->wByteCount = pIData->bSeqModulo * pIData->bMaxVChnlsPerSequence * sizeof( stPeakChnlPAP ) + sizeof(IDATA_FROM_HW_HDR);
 		m_pIdataPacket->uSync = SYNC;
 		m_pIdataPacket->wMsgSeqCnt = 0;	// properly incremented when sent by CClientCommunicationThread::TransmitPackets
 		m_pIdataPacket->wStatus = 0x1234;
@@ -774,7 +774,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 							// send a thread message to theApp or a new sender thread to empty the linked list.
 							// or better yet signal the ccm_pag thread to empty alist  directed to PAG
 							//m_pIdataPacket->wByteCount = sizeof(IDATA_PAP);
-							m_pIdataPacket->wByteCount = sizeof(IDATA_PAP_HDR) + m_nFullPacketChnls*sizeof(stPeakChnl);
+							m_pIdataPacket->wByteCount = sizeof(IDATA_PAP_HDR) + m_nFullPacketChnls*sizeof(stPeakChnlPAP);
 							//theApp.PamSendToPag(m_pIdataPacket, pIData->wByteCount); // get len from data packet
 							//delete m_pIdataPacket;
 							//m_pIdataPacket = NULL;

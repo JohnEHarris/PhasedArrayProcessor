@@ -98,6 +98,7 @@ typedef struct
 PubExt	GLOBAL_DLG_PTRS gDlg;
 PubExt IDATA_PAP gLastIdataPap;
 PubExt ASCAN_DATA gLastAscanPap;
+PubExt WORD gwMax0, gwMin0, gwMin1_0, gwMin2_0, gwZeroCnt, gwNot0;	// max and min of seq0, chnl 0
 #endif
 
 PubExt int gMaxChnlsPerMainBang;

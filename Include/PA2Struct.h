@@ -423,7 +423,7 @@ typedef struct
 
 // peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure
 // Processed data sent from the PAP. One stPeakChnlPAP structure for every virtual channel
-// Nc_Nx processing receives 1 wall reading per AScan but produces a max and min readging 
+// Nc_Nx processing receives 1 wall reading per AScan but produces a max and min reading 
 // after 16 AScans.
 // 2017-08-14 reduce size of PeakData to match input data from NIOS front end
 // 2017-10-24 in future have id/od flaw, max, min wall and seq number where found for each one.

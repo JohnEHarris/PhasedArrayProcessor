@@ -346,7 +346,8 @@ void CNcNx::PopulateCmdComboBox()
 	m_cbCommand.ResetContent();
 	if (m_nShowSmallCmds)
 		{
-		s.Format(_T("null 0"));				m_cbCommand.AddString(s);
+		//s.Format(_T("null 0"));				m_cbCommand.AddString(s);
+		s.Format(_T("Debug FIFO"));			m_cbCommand.AddString(s);	//0
 		s.Format(_T("FakeData"));			m_cbCommand.AddString(s);	//1
 		s.Format(_T("Gate n Delay"));		m_cbCommand.AddString(s);	//2
 		s.Format(_T("Gate n Range"));		m_cbCommand.AddString(s);	//3
@@ -355,26 +356,32 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("Gate n Trigger"));		m_cbCommand.AddString(s);	//6
 		s.Format(_T("Gate n Polarty"));		m_cbCommand.AddString(s);	//7
 		s.Format(_T("Gate n TOF"));			m_cbCommand.AddString(s);	//8
-		s.Format(_T("SetTcgClockRate"));	m_cbCommand.AddString(s);	//9
-		s.Format(_T("TCGTriggerDelay"));	m_cbCommand.AddString(s);	//10
-		s.Format(_T("TCGGainClock"));		m_cbCommand.AddString(s);	//11
-		s.Format(_T("TCGChnlGainDelay"));	m_cbCommand.AddString(s);	//12
-		s.Format(_T("SetPRF"));					m_cbCommand.AddString(s);	//13
-		s.Format(_T("ASCAN_SAMPLE_RATE"));		m_cbCommand.AddString(s);	//14 How wide the scope trace
-		s.Format(_T("ASCAN_SCOPE_DELAY"));		m_cbCommand.AddString(s);	//15 delays trigger
-		s.Format(_T("SET_ASCAN_PEAK_MODE"));	m_cbCommand.AddString(s);	//16  data [0..4]
-		s.Format(_T("ASCAN_RF_BEAM_SELECT"));	m_cbCommand.AddString(s);	//17--check case statements below
-		s.Format(_T("ASCAN_BEAM_SEQ"));			m_cbCommand.AddString(s);	//18 -- nop
-		s.Format(_T("ASCAN_GATE_OUTPUT"));		m_cbCommand.AddString(s);	//19
-		s.Format(_T("NIOS_SCOPE_CMD"));			m_cbCommand.AddString(s);	//20
+		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//9
+		s.Format(_T("TCGGainClock"));		m_cbCommand.AddString(s);	//10
+		s.Format(_T("TCGChnlGainDelay"));	m_cbCommand.AddString(s);	//11
+		s.Format(_T("TcgBeamGainAll"));		m_cbCommand.AddString(s);	//12
+		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//13
+		s.Format(_T("SetTcgClockRate"));	m_cbCommand.AddString(s);	//14
+		s.Format(_T("TCGTriggerDelay"));	m_cbCommand.AddString(s);	//15
+		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//16
+		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//17
+		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//18
+		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//19
+		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//20
+
+		s.Format(_T("ASCAN_SAMPLE_RATE"));		m_cbCommand.AddString(s);	//21 How wide the scope trace
+		s.Format(_T("ASCAN_SCOPE_DELAY"));		m_cbCommand.AddString(s);	//22 delays trigger
+		s.Format(_T("SET_ASCAN_WaveForm"));		m_cbCommand.AddString(s);	//23  data [0..4]
+		s.Format(_T("ASCAN_RF_BEAM_SELECT"));	m_cbCommand.AddString(s);	//24--check case statements below
+		s.Format(_T("ASCAN_BEAM_SEQ"));			m_cbCommand.AddString(s);	//25 -- nop
+		s.Format(_T("ASCAN_GATE_OUTPUT"));		m_cbCommand.AddString(s);	//26
+		s.Format(_T("ASCAN_REP_RATE"));			m_cbCommand.AddString(s);	//27
 		}
 	else
 		{
 		// show large commands
-		s.Format(_T("=="));		m_cbCommand.AddString(s);	m_cbCommand.AddString(s);	//1st 2 blank
-		s.Format(_T("SEQ_TCG_GAIN"));			m_cbCommand.AddString(s);	//0x200 +2
-		s.Format(_T("TCG_GAIN_CMD"));			m_cbCommand.AddString(s);	//0x200 +3
-		s.Format(_T("ASCAN_BEAMFORM_DELAY"));	m_cbCommand.AddString(s);	//0x200 +4
+		s.Format(_T("TCG_BEAM_GAIN"));			m_cbCommand.AddString(s);	//0x200 +4
+		s.Format(_T("TCG_GAIN_CMD"));			m_cbCommand.AddString(s);	//0x200 +5
 		}
 	m_cbCommand.SetCurSel(2);
 	m_nPopulated = 1;
@@ -391,7 +398,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 	else
 		{
 		nCmdOffset = 0x200;
-		nCmdLarge = m_nCmdId + nCmdOffset;
+		nCmdLarge = m_nCmdId + nCmdOffset+4;	// 1st 4 large are proc null
 		}
 	t.Format(_T("m_nCmdId = %d"), m_nCmdId + nCmdOffset);
 
@@ -399,7 +406,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 	switch (m_nCmdId + nCmdOffset)
 		{
 		//case 0:	s.Format(_T("null %d"), m_nCmdId);	break;
-		case 0:	s.Format(_T("Debug FIFO"), m_nCmdId);	break;
+		case 0:	s.Format(_T("Debug FIFO"));	break;
 		case 1:	s =_T( "Fake Data" );					break;
 		case 2: s.Format(_T("Gate %d Delay %d"), m_nGate, m_nParam); break;
 		case 3: s.Format(_T("Gate %d Range %d"), m_nGate, m_nParam); break;
@@ -409,7 +416,8 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		case 7: s.Format(_T("Gate %d Polarity %d"), m_nGate, m_nParam); break;
 		case 8: s.Format(_T("Gate %d TOF %d"), m_nGate, m_nParam); break;
 
-		case 0x202: s = _T("SEQ_TCG_GAIN");					break;
+		case 0x204: s = _T("TCG_BEAM_GAIN");					break;
+		case 0x205: s = _T("TCG_SEQ_GAIN");						break;
 		default:	s = t;		break;
 		}
 	//m_lbOutput.AddString( s );
@@ -417,7 +425,9 @@ void CNcNx::OnCbnSelchangeCbCmds()
 
 	switch (m_nCmdId + nCmdOffset)
 		{
-		case 0:			break;
+		case 0:	
+			DebugFifo(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
+			break;
 		case 1:	
 			FakeData( m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam );
 			break;
@@ -597,11 +607,11 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	switch (nCmd)
 		{
 	default:		sym = _T( "???" );				return;
-	case 9:		sym = _T("TcgClockRate: "); 		break;
-	case 10:	sym = _T("TCGTriggerDelay: "); 		break;
-	case 11:	sym = _T("TCGGainClock: "); 		break;
-	case 12:	sym = _T("TCGChnlGainDelay: "); 	break;
-	case 13:	sym = _T("SetPRF: "); 				break;
+	case 10:		sym = _T("TcgClockRate: "); 		break;
+	case 11:	sym = _T("TCGBeamGainDelay: "); 		break;
+	case 12:	sym = _T("TCGBeamGainAll: : "); 		break;
+	case 14:	sym = _T("TCGClockRate: "); 			break;
+	case 15:	sym = _T("TCGTriggerDelay: "); 				break;
 		}
 
 	memset(&m_TcgCmd, 0, sizeof(ST_SET_TCG_DELAY_CMD));
@@ -681,7 +691,7 @@ void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 		switch (i)
 			{
 		default:
-			sml[i].Head.wMsgID = 25;		break;
+			sml[i].Head.wMsgID = 25;		break;	// 1st 8 commands
 			case 8:	 sml[i].Head.wMsgID = 24;	break;
 			case 9:	 sml[i].Head.wMsgID = 23;	break;
 			case 10: sml[i].Head.wMsgID = 22;	break;
@@ -694,9 +704,19 @@ void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 
 	for (i = 0; i < 5; i++)
 		{
+		lrg[i].bPAPNumber = 0;
+		lrg[i].bBoardNumber = nBoard;
+		lrg[i].bSeqNumber = nSeq;
+
 		if (i < 3)
 			{
-
+			lrg[i].wMsgID = 0x205;
+			memset((void *)&lrg[i].wCmd, wValue, 256);	// 128 words
+			}
+		else
+			{
+			lrg[i].wMsgID = 0x204;
+			memset((void *)&lrg[i].wCmd, wValue/2, 256);	// 128 words
 			}
 		}
 

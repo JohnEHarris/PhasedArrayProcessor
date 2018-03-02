@@ -509,16 +509,14 @@ void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 			//memset((void *)pSendNcNx, 0, sizeof(PAP_INST_CHNL_NCNX));
 			//memcpy((void *)pSendNcNx, (void *)pMsg, pMsg->wByteCount);	// sizeof(ST_NC_NX) * 72);
 			break;
-		case SEQ_TCG_GAIN_CMD_ID:
-			s.Format(_T("SEQ_TCG_GAIN_CMD PAP=%d, Board=%d\n"), pSend->bPAPNumber, pSend->bBoardNumber);
+		case 0x204:	// TCGBeamGain
+			s.Format(_T("TCGBeamGain PAP=%d, Board=%d\n"), pSend->bPAPNumber, pSend->bBoardNumber);
 			TRACE(s);
 			break;
-		case TCG_GAIN_CMD_ID:
-			s.Format(_T("TCG_GAIN_CMD PAP=%d, Board=%d\n"), pSend->bPAPNumber, pSend->bBoardNumber);
+		case 0x205:	// SetSeqTCGGain
+			s.Format(_T("SetSeqTCGGain PAP=%d, Board=%d\n"), pSend->bPAPNumber, pSend->bBoardNumber);
 			break;
-		case SET_ASCAN_BEAMFORM_DELAY_ID:
-			s.Format(_T("SET_ASCAN_BEAMFORM_DELAY PAP=%d, Board=%d\n"), pSend->bPAPNumber, pSend->bBoardNumber);
-			break;
+
 		default:
 			TRACE(_T("Unrecognized message .. delete pSend\n"));
 			delete pSend;
@@ -526,7 +524,7 @@ void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 			}
 
 		gDlg.pUIDlg->SendMsgToPAP((int)pSend->bPAPNumber, pSend->wMsgID, (void *)pSend);
-		//delete pSend;
+		//delete pSend; auto deleted in sending function
 		}
 	else
 		{
@@ -545,7 +543,7 @@ void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 			memset((void*)pSend, 0, sizeof(ST_LARGE_CMD));
 			memcpy((void*)pSend, (void*)pMsg, sizeof(ST_LARGE_CMD));
 			gDlg.pUIDlg->SendMsgToPAP((int)pMsg->bPapNumber, pMsg->wMsgID, (void *)pSend);
-			//delete pSend;
+			//delete pSend; auto deleted in sending function
 			}
 		}
 #endif
@@ -679,11 +677,13 @@ void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 	{
 	ST_GATE_DELAY_CMD sml[16];
 	ST_LARGE_CMD lrg[6];
-	int i;
+	int i, j;
 	for (i = 0; i < 15; i++)
 		{
 		sml[i].Head.bPapNumber = 0;	// always for testing
 		sml[i].Head.bBoardNumber = nBoard;
+		sml[i].Head.wByteCount = 32;
+		sml[i].Head.uSync = 0x5CEBDAAD;
 		sml[i].bSeq = nSeq;
 		sml[i].bChnl = nCh;
 		sml[i].bGateNumber = nGate;
@@ -698,7 +698,7 @@ void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 			case 11: sml[i].Head.wMsgID = 21;	break;
 			case 12:
 			case 13:
-			case 14: sml[i].Head.wMsgID = 12;	break;
+			case 14: sml[i].Head.wMsgID = 12;	break;	// 3 12's
 			}
 		}	// for (i = 0; i < 15; i++)
 
@@ -707,19 +707,33 @@ void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 		lrg[i].bPAPNumber = 0;
 		lrg[i].bBoardNumber = nBoard;
 		lrg[i].bSeqNumber = nSeq;
+		lrg[i].wByteCount = sizeof(ST_LARGE_CMD);
 
 		if (i < 3)
 			{
 			lrg[i].wMsgID = 0x205;
-			memset((void *)&lrg[i].wCmd, wValue, 256);	// 128 words
-			}
+			for (j = 0; j < 128; j++)
+					lrg[i].wCmd[j] = wValue;	// 128 words
+		}
 		else
 			{
 			lrg[i].wMsgID = 0x204;
-			memset((void *)&lrg[i].wCmd, wValue/2, 256);	// 128 words
+			for (j = 0; j < 128; j++)
+				lrg[i].wCmd[j] = wValue;	// 128 words
 			}
 		}
 
+	// send small commands
+	for (i = 0; i < 15; i++)
+		{
+		SendMsg((GenericPacketHeader *)&sml[i]);
+		}
+
+	// send small commands
+	for (i = 0; i < 5; i++)
+		{
+		SendMsg((GenericPacketHeader *)&lrg[i]);
+		}
 	}
 
 
@@ -732,13 +746,14 @@ void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	m_WordCmd.Head.wMsgID = nCmd;
 	switch (nCmd)
 		{
-	case ASCAN_SCOPE_SAMPLE_RATE_ID: sym = _T("SET_ASCAN_SAMPLE_RATE ");	break;	//14
-	case SET_ASCAN_SCOPE_DELAY_ID:	sym = _T("SET_ASCAN_SCOPE_DELAY ");	break;	//15
-	case SET_ASCAN_PEAK_MODE_ID:	sym = _T("SET_ASCAN_PEAK_MODE ");	break;	//16
-	case SET_ASCAN_RF_BEAM_ID:		sym = _T("SET_ASCAN_RF_BEAM ");		break;	//17
-	case SET_ASCAN_BEAM_SEQ_ID:		sym = _T("SET_ASCAN_RF_BEAM ");		break;	//18
-	case SET_ASCAN_GATE_OUTPUT_ID:	sym = _T("ASCAN_GATE_OUTPUTS ");	break;	//19
-	case NIOS_SCOPE_CMD_ID:			sym = _T("NIOS_SCOPE_CMD ");		break;	//20
+	case 21:			sym = _T("ASCAN_SAMPLE_RATE ");			break;	//14
+	case 22:			sym = _T("ASCAN_SCOPE_DELAY ");			break;	//15
+	case 23:			sym = _T("SelectAscanWaveForm,	 ");	break;	//16
+	case 24:			sym = _T("AscanRfBeamSelect,	 ");	break;	//17
+	case 25:			sym = _T("AscanSeqBeamReg,	 ");		break;	//18
+	case 26:			sym = _T("ASCAN_GATE_OUTPUTS ");		break;	//19
+	case 27:			sym = _T("ASCAN_REP_RATE ");			break;
+	//case NIOS_SCOPE_CMD_ID:			sym = _T("NIOS_SCOPE_CMD ");		break;	//20
 		
 		}
 	m_WordCmd.Head.wByteCount = 32;

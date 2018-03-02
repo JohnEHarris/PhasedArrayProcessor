@@ -67,19 +67,12 @@ the PAP and PAG
 #define SET_GATES_TRIGGER_CMD_ID	6		// GatesTrigger 
 #define SET_GATES_POLARITY_CMD_ID   7		// GatesPolarity
 #define SET_GATES_TOF_CMD_ID		8		// GatesTOF
-#define SET_TCG_CLOCK_RATE_CMD_ID	9		// SetTcgClockRate
-//#define SET_SEQ_GAIN_STEP_CMD_ID	9
-#define TCG_TRIGGER_DELAY_CMD_ID	10		// TCGTriggerDelay
-//#define SET_SEQ_GAIN_DELAY_CMD_ID	10
-#define TCG_GAIN_CLOCK_CMD_ID		11		// TCGGainClock
-//#define SET_CHNL_GAIN_STEP_CMD_ID	11
-#define TCG_CHNL_GAIN_DELAY_CMD_ID	12		// TCGChnlGainDelay
-//#define SET_CHNL_GAIN_DELAY_CMD_ID12
+#define TCGGAIN_CLOCK_ID	10			
+#define TCGBeamGainDelay_ID			11		
+#define TCGBeamGainAll_ID			12		// TCGChnlGainDelay
 
-#define SET_PRF_CMD_ID				13		// SetPrf  in Pulser board
-
-#define ASCAN_SCOPE_SAMPLE_RATE_ID	14		// AscanScopeSampleRate -- set_ascan_scope
-#define SET_ASCAN_SCOPE_DELAY_ID	15		// SetAscanDelay -- set_ascan_delay
+#define SetTcgClockRate_ID			14		// AscanScopeSampleRate -- set_ascan_scope
+#define TCGTriggerDelay_ID			15		// SetAscanDelay -- set_ascan_delay
 
 #define SET_ASCAN_PEAK_MODE_ID		16		// SelectAscanWaveForm -- set_ascan_peaksel
 #define SET_ASCAN_RF_BEAM_ID		17		// SetAscanRfBeamSelect -- set_ascan_rf_beam_sel_reg

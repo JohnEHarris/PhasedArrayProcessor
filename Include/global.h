@@ -19,6 +19,7 @@ Revised:
 
 
 #include "PA2Struct.h"
+//#include "Cmds.h"
 
 // The MAC and IP addresses of the instrument are modified by board switch setting or
 // by backplane board slot address when implemented.
@@ -96,7 +97,7 @@ typedef struct
 	}	GLOBAL_DLG_PTRS;
 
 PubExt	GLOBAL_DLG_PTRS gDlg;
-PubExt IDATA_PAP gLastIdataPap;
+PubExt IDATA_PAP gLastIdataPap;		// data sent to down stream systems from PAP
 PubExt ASCAN_DATA gLastAscanPap;
 PubExt WORD gwMax0, gwMin0, gwMin1_0, gwMin2_0, gwZeroCnt, gwNot0;	// max and min of seq0, chnl 0
 #endif

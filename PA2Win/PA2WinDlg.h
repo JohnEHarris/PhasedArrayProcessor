@@ -146,6 +146,8 @@ public:
 	CRITICAL_SECTION *pCSSaveDebug;	// control access to debug output 
 	CFile m_FakeData;
 	CFile m_DebugLog;
+	int m_nMsgSeqCnt;
+
 	int m_nFakeDataExists;
 	int m_nDebugLogExists;
 	void SaveFakeData(CString& s);
@@ -204,9 +206,11 @@ public:
 
 	void StructSizes( void );
 	void DlgDebugOut( CString s );
+	void ShowIdata(void);
 	void DebugToNcNxDlg( CString s );
 #ifdef I_AM_PAG
 	BOOL SendMsgToPAP( int nClientNumber, int nMsgID, void *pMsg );
+	// as of 3/1/18 can send msgs to PAP dialog screen to output debug info for Yanming and Qingshan
 #endif
 
 // Dialog Data

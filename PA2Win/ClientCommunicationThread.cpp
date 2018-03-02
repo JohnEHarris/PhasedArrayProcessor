@@ -1070,7 +1070,8 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		// examine the MsgId of the extracted packet to see what type message it really is
 		// As of 2017-01-24 the only message back to PAG is Idata
 		// do the socket send
-		pSendPkt->wMsgSeqCnt = m_wMsgSeqCount++;
+		gwMsgSeqCnt = 
+			pSendPkt->wMsgSeqCnt = m_wMsgSeqCount++;
 		// debug look at Ascan data 
 		if (pSendPkt->wMsgID == eAscanID)
 			j = 3;
@@ -1091,6 +1092,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
 				if (nSent == pSendPkt->wByteCount)
 					{
+
 					m_pstCCM->uBytesSent += nSent;
 					m_pstCCM->uPacketsSent++;
 					if (m_pstCCM->uPacketsSent < 10)
@@ -1103,6 +1105,8 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 						memcpy((void *)&gLastAscanPap, (void *)pSendPkt, sizeof(ASCAN_DATA));
 						guAscanMsgCnt++;
 						}
+
+					// capture output to PAG for Yanming
 					delete pSendPkt;
 					pSendPkt = 0;
 					break;

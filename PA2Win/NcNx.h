@@ -97,5 +97,7 @@ public:
 	afx_msg void OnBnClickedRbSmallcmd();
 	afx_msg void OnBnClickedRbLargecmds();
 	int m_nShowSmallCmds;
+#ifdef I_AM_PAG
 	void DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue);
+#endif
 	};

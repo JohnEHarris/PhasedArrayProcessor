@@ -101,6 +101,7 @@ BYTE * CCmdFifo::GetInLoc(void)
 			m_bError = 1;	// overflow
 			s = _T( "CCmdFifo: Buffer Overflow\n" );
 			pMainDlg->SaveDebugLog(s);
+			TRACE(s);
 
 			}
 		}
@@ -119,6 +120,8 @@ void CCmdFifo::AddBytesToFifo(int n)
 	}
 
 // after 2016-12-13 packet size is not fixed.
+// This will flush the input buffer if the sync is bad or the
+// amount of data is larger than the memory buffer size of CMD_FIFO_MEM_SIZE = 0x4000
 int CCmdFifo::GetPacketSize(void)
 	{
 	/*
@@ -130,16 +133,18 @@ int CCmdFifo::GetPacketSize(void)
 	CString s;
 	WORD *pW = (WORD *)&m_Mem[m_Out];// debugging
 	GenericPacketHeader *pHeader;
-	IDATA_PAP *pIdata;
+	IDATA_FROM_HW *pIdata;
 	pHeader = (GenericPacketHeader *)pW;		// &m_Mem[m_Out];
-	pIdata = (IDATA_PAP *)pW;			// pHeader;
-	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > sizeof(IDATA_PAP)) )	// 1064
+	pIdata = (IDATA_FROM_HW *)pW;			// pHeader;
+	//if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > sizeof(IDATA_PAP)))	// 1064
+	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > CMD_FIFO_MEM_SIZE))	// 0x4000
 		{	// we are lost in the data, reset the FIFO and set an error bit
 		m_In = 0;
 		m_Out = 0;
 		m_Size = 0;
 		m_bError = 2;	// lost sync
 		s = _T( "Lost Sync\n" );
+		TRACE(s);
 		pMainDlg->SaveDebugLog(s);
 		return 0;
 		}
@@ -158,8 +163,9 @@ int CCmdFifo::GetPacketSize(void)
 		{
 		i = pIdata->wMsgSeqCnt - m_wMsgSeqCnt;	// debugging
 		// set error bit for lost msg
-		s.Format( _T( "MsgCnt = %d, expected = %d\n" ),pIdata->wMsgSeqCnt, m_wMsgSeqCnt + 1 );
+		s.Format( _T( "MsgCnt = %d, expected = %d \n" ),pIdata->wMsgSeqCnt, m_wMsgSeqCnt + 1 );
 		pMainDlg->SaveDebugLog(s);
+		TRACE(s);
 		}
 	m_wMsgSeqCnt = pIdata->wMsgSeqCnt;
 	return m_PacketSize;
@@ -189,6 +195,7 @@ BYTE *CCmdFifo::GetNextPacket(void)
 		m_Size = 0;
 		s = _T( "Lost Sync or wrong packet size\n" );
 		pMainDlg->SaveDebugLog(s);
+		TRACE(s);
 
 		return NULL;
 		}
@@ -202,6 +209,7 @@ BYTE *CCmdFifo::GetNextPacket(void)
 		m_Size = 0;
 		s = _T( "CCmdFifo: m_Size < 0\n" );
 		pMainDlg->SaveDebugLog(s);
+		TRACE(s);
 
 		return NULL;
 		}

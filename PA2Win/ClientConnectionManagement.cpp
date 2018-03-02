@@ -110,6 +110,7 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 	int i = 0;
 	m_pstCCM = NULL;
 	m_nMyConnection = -1;
+	
 	//memset((void *) m_RcvBuf,0,sizeof(m_RcvBuf)); THIS STUFF repalce by m_pFifo on 2016-11-03 jeh
 
 	szName			= _T("CCM-Skt ");
@@ -141,6 +142,7 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 	m_pstCCM->uBytesSent				= 0;
 	m_pstCCM->uPacketsSent				= 0;
 	m_pstCCM->nOnConnectError			= WSAECONNREFUSED;
+	m_pstCCM->wLastSeqCnt				= 0;
 
 	// create critical sections, linked lists and events
 	m_pstCCM->pCSRcvPkt = new CRITICAL_SECTION();
@@ -553,17 +555,25 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 	int nWholePacketQty = 0;
 
 	BYTE *pB;	// debug
-	void *pPacket = 0;
+	GenericPacketHeader *pPacket = 0;
 	int nPacketSize;
 	WORD wByteCnt;
 	int n;
 	CString s,t;
+	// Roberts code seems to respond too quickly when the program starts and pSocket exists but doesn't work
+	// put 100 ms sleep here before first connection as determined by m_pstCCM->uBytesReceived == 0
+
+	if (m_pstCCM)
+		{
+		if (m_pstCCM->uBytesReceived == 0)
+			Sleep(100);
+		}
 
 	// A real hardware FIFO would shift data to the output side instantly
 	pSocket->m_pFifo->Shift();
 	BYTE *pCmd = pSocket->m_pFifo->GetInLoc();
 	// Receive() receives data into fifo memory pointed to by pCmd
-	n = pSocket->Receive( (void *) pCmd, 0x2000, 0 );	// ask for 8k byte into 16k buffer
+	n = pSocket->Receive((void *)pCmd, 0x2000, 0); // ask for 8k byte into 16k buffer
 	//PAM assumes we will get partial packets and have to extract whole packets
 	if ( n > 0)
 		{
@@ -592,7 +602,8 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 				break;
 				}
 
-			pPacket = (GenericPacketHeader*) pSocket->m_pFifo->GetNextPacket();
+			pPacket = (GenericPacketHeader*)(pSocket->m_pFifo->GetNextPacket());
+
 			if (pPacket == NULL)
 				{
 				//CAsyncSocket::OnReceive(nErrorCode);
@@ -600,6 +611,18 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 				//BYTE error = pSocket->m_pFifo->GetError();
 				return;
 				}
+
+			// Code from ServerSocket::OnReceive
+			if ((pPacket->wMsgSeqCnt - (m_pstCCM->wLastSeqCnt + 1)) != 0)
+				{
+				//n = m_nSeqIndx;
+				int j = GetRcvListCount(); //numbert of packets in rcvList
+				s.Format(_T("Lost Packet, OnReceive got MsgSeqCnt %d, expected %d..RcvList Count = %5d, Total packets rcv = %d\n"),
+					pPacket->wMsgSeqCnt, (m_pstCCM->wLastSeqCnt + 1), j, m_pstCCM->uPacketsReceived);
+				TRACE(s);
+				}
+			m_pstCCM->wLastSeqCnt = pPacket->wMsgSeqCnt;
+
 
 			pB =  new BYTE[nPacketSize];
 

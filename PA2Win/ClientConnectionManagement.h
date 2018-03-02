@@ -148,6 +148,7 @@ typedef struct
 	UINT uDuplicateReceivedPackets;	// same packet received again
 	UINT uPacketsSent;
 	UINT uBytesSent;
+	WORD wLastSeqCnt;			//previous received message count
 
 	// VARIOUS other controls common to the socket	
 	//	BOOL *lpKillThread;
@@ -320,6 +321,8 @@ public:
 	void LockRcvPktList(void)		{ if (m_pstCCM->pCSRcvPkt) EnterCriticalSection(m_pstCCM->pCSRcvPkt);	}
 	void AddTailRcvPkt(void *pV)	{ if (m_pstCCM->pRcvPktPacketList) m_pstCCM->pRcvPktPacketList->AddTail(pV);		}
 	void UnLockRcvPktList(void)		{ if (m_pstCCM->pCSRcvPkt) LeaveCriticalSection(m_pstCCM->pCSRcvPkt);	}
+	int GetRcvListCount(void) { return ((m_pstCCM->pRcvPktPacketList) ? m_pstCCM->pRcvPktPacketList->GetCount() : 0); }
+
 
 	void LockSendPktList(void)		{ if (m_pstCCM->pCSSendPkt) EnterCriticalSection(m_pstCCM->pCSSendPkt);	}
 	void AddTailSendPkt(void *pV)	{ if (m_pstCCM->pSendPktList) m_pstCCM->pSendPktList->AddTail(pV);	}

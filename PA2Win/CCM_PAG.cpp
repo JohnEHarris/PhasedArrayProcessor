@@ -138,9 +138,11 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			return;
 			}
 
+#if 0
 		pSocket->LockSendPktList();
 		pSocket->AddTailSendPkt(pMmiCmd);
 		pSocket->UnLockSendPktList();
+#endif
 
 
 		// big case statement adapted from ServiceApp.cpp 'c' routine ProcessMmiMsg()
@@ -160,6 +162,10 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			// In this case, we will let the thread which forwards the message to the instrument delete this 
 			// memory segment.
 			// delete pMmiCmd;
+
+			pSocket->LockSendPktList();
+			pSocket->AddTailSendPkt(pMmiCmd);
+			pSocket->UnLockSendPktList();
 			// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
 			pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
 
@@ -174,6 +180,10 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				// Large message.. forward to NIOS boards
 				if (MsgId <= LAST_LARGE_COMMAND + 0X200)
 					{
+					pSocket->LockSendPktList();
+					pSocket->AddTailSendPkt(pMmiCmd);
+					pSocket->UnLockSendPktList();
+
 					pThread->PostThreadMessage( WM_USER_SERVER_SEND_PACKET, 0, 0L );
 					s.Format(_T("Received Large Cmd %d for board %d from Phased Array GUI\n"),
 						MsgId, pMmiCmd->bBoardNumber);
@@ -188,11 +198,17 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 			if (MsgId <= LAST_SMALL_COMMAND)
 				{
-
-				s.Format(_T("Received Cmd %d for board %d from Phased Array GUI\n"),
-					MsgId, pMmiCmd->bBoardNumber);
+				ST_WORD_CMD *pSmall;
+				pSmall = (ST_WORD_CMD *)pMmiCmd;
+				s.Format(_T("Received from GUI: Cmd= %2d board= %d Seq= %2d Ch= %d G= %d wCmd= %d\n"),
+					MsgId, pSmall->Head.bBoardNumber, pSmall->bSeq, 
+					pSmall->bChnl, pSmall->bGateNumber, pSmall->wCmd);	// 1st word in command values
 				TRACE( s );
 				pMainDlg->SaveDebugLog(s);
+
+				pSocket->LockSendPktList();
+				pSocket->AddTailSendPkt(pMmiCmd);
+				pSocket->UnLockSendPktList();
 
 				// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
 				pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
@@ -201,7 +217,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 			else
 				{
-				TRACE( _T( "No command recognized\nDeleting command from Phased Array GUI\n" ) );
+				s.Format(_T("No command recognized ID = %d\nDeleting command from Phased Array GUI\n"), MsgId);
 				delete pMmiCmd;
 				}
 			}	// end switch(MsgId)			delete pMmiCmd;
@@ -262,7 +278,6 @@ int CCCM_PAG::FindDisplayChannel(int nArray, int nArrayCh)
 // Then SetChannelInfo will set the channel types for this instrument  -- not for PA2 in 2016
 // Only sets Nc Nx parameters. Knows not what type the channel is
 //void CInstMsgProcess::SetChannelInfo(void)
-// only contains 52 NcNx structures.
 
 void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	{
@@ -301,10 +316,7 @@ void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	TRACE(s);
 #endif
 	nCh = nSeq = 0;
-	while ( (pNcNx->bSeqNumber < MAX_SEQ_COUNT) && 
-		  (pNcNx->bChnlNumber < MAX_CHNLS_PER_MAIN_BANG) && 
-		  (nChnlQty < 52)	// see definition PAP_INST_CHNL_NCNX
-		  )
+	while ( (pNcNx->bSeqNumber < MAX_SEQ_COUNT) && (pNcNx->bChnlNumber < MAX_CHNLS_PER_MAIN_BANG) )
 		{
 		nCh = pNcNx->bChnlNumber;
 		nSeq = pNcNx->bSeqNumber;

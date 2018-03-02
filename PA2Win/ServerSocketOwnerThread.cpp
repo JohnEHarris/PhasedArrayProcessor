@@ -548,6 +548,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	int i = -1;
 	int nError;
 	ST_LARGE_CMD *pCmd;
+	ST_SMALL_CMD *pCmdS;
 	//CServerSocket *pSocket = m_pConnectionSocket;
 
 
@@ -561,6 +562,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		{
 		m_pSCC->pSocket->LockSendPktList();
 		pCmd = (ST_LARGE_CMD *) m_pSCC->pSendPktList->RemoveHead();
+		pCmdS = (ST_SMALL_CMD*)pCmd;
 		m_pSCC->pSocket->UnLockSendPktList();
 		nMsgSize = pCmd->wByteCount;
 
@@ -601,7 +603,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 
 		case SEQ_TCG_GAIN_CMD_ID:
 		case TCG_GAIN_CMD_ID:
-		case SET_ASCAN_BEAMFORM_DELAY_ID:
+		case 0x204:
+		case 0x205:
 			s.Format( _T( "Valid Large CMD, ID= %3d, seq=%2d, PktListSize= %4d\n" ),
 					pCmd->wMsgID, pCmd->wMsgSeqCnt, pCmd->wByteCount );
 			//theApp.SaveDebugLog(s);

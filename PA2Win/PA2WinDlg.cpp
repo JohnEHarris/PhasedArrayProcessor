@@ -240,6 +240,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 #else
 	// Was called Service App. Now known as PAP
 	t += _T("HardwareConfig_PAP.ini");
+	TRACE(_T("Using ini file: %s\n"), t);
 #endif
 
 	// To use an INI file instead, set m_pszProfileName to the ini file path
@@ -285,6 +286,7 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	gDlg.pUIDlg = this;
 	nShutDown = 0;
+	m_nMsgSeqCnt = 0;
 
 	g_hTimerTick = ::CreateEvent(0, TRUE, FALSE, 0);
 
@@ -1557,6 +1559,13 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 	// update ascan for scope output on NcNx screen if it is open
 	if (gDlg.pNcNx)
 		gDlg.pNcNx->IncrementAscanCnt();
+
+#ifdef I_AM_PAP
+	if (gDlg.pNcNx)	return;		// don't show when NcNx dialog on screen
+	// update last Idata packet to list box.
+	ShowIdata();
+
+#endif
 	CDialogEx::OnTimer( nIDEvent );
 	}
 
@@ -1784,33 +1793,33 @@ void CPA2WinDlg::StructSizes( void )
 	{
 	int i;
 	CString s;
-	i = sizeof(CCmdFifo);	// 16544
+	i = sizeof(CCmdFifo);	// 16543
 	s.Format( _T( "sizeof(CCmdFifo) %d" ), i );
 	DlgDebugOut( s );
 	i = sizeof(CRITICAL_SECTION);		// 24
 	i = sizeof(CPtrList);					// 28
 	i = sizeof(CClientConnectionManagement);//16
-	i = sizeof(CClientCommunicationThread);//168
+	i = sizeof(CClientCommunicationThread);//164
 	i = sizeof(CClientSocket);				//36
 	i = sizeof(CCmdProcessThread);			//76
 	i = sizeof(CCCM_PAG);					//28
-	i = sizeof(CHwTimer);	// 496
+	i = sizeof(CHwTimer);	// 492
 	i = sizeof( CIniFile );	// 12
 	i = sizeof( CInspState ); // 12
-	i = sizeof(CNcNx);	// 488 -> 1608
+	i = sizeof(CNcNx);	// 488 -> 1608->2692
 	i = sizeof(CServerConnectionManagement);	// 12
 	i = sizeof(CServerListenThread);	// 80
-	i = sizeof(CServerRcvListThread);	// 140
-	i = sizeof(CServerSocket);	// 4280
+	i = sizeof(CServerRcvListThread);	// 153
+	i = sizeof(CServerSocket);	// 4278
 	i = sizeof(CServerSocketOwnerThread);	// 108 -> 104
-	i = sizeof(CvChannel);	// 156
+	i = sizeof(CvChannel);	// 153
 	i = sizeof(CTestThread); // 72
 	i = sizeof(CTuboIni); // 12
-	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 2168 -> 1144
+	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 2168 -> 1141
 	i = sizeof( ST_SERVER_CONNECTION_MANAGEMENT ); // 148
-	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 160
+	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 157
 	i = sizeof( CPA2WinApp );	// 204
-	i = sizeof( CPA2WinDlg );	// 592
+	i = sizeof( CPA2WinDlg );	// 588
 	i = sizeof( Nc_FIFO );	// 24 but 3 copies
 	i = sizeof( Nx_FIFO );	// 48
 	i = sizeof( PAP_INST_CHNL_NCNX );	// 1056
@@ -1819,7 +1828,7 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof( CIniSectionW );	// 44
 	i = sizeof( CIniKeyW );	// 60
 	i = sizeof( CShellManager );	// 12
-	i = sizeof( IDATA_PAP );	// 1344
+	i = sizeof( IDATA_PAP );	// 1088
 //	i = sizeof( InputRawDataPacket );	// 944 ->272 replaced by IDATA_FROM_HW
 //	i = sizeof( stRawSeqPacket );	// 130 ->34 
 	i = sizeof( IDATA_FROM_HW );	// 1088
@@ -1834,6 +1843,60 @@ void CPA2WinDlg::StructSizes( void )
 void CPA2WinDlg::DlgDebugOut( CString s )
 	{
 	m_lbOutput.AddString( s );
+	}
+
+// Show Idata on Pa2win dlg when running as PAP
+// CALLED FROM 1 SECOND TIMER
+void CPA2WinDlg::ShowIdata(void)
+	{
+#ifdef I_AM_PAP
+	CString s,t;
+	int i,j,mn, mx;
+	if (gLastIdataPap.wMsgID == eRawInspID)
+		{
+		//if (gwMsgSeqCnt != m_nMsgSeqCnt)
+			{
+#ifdef SHOW_CH0_ALL_SEQ
+			s.Format(_T("Idata-to-PT WMin=%d, G1=%d, G2=%d, Raw[0][0] = %4d,  Raw[1][0] = %4d, Raw[2][0] = %4d, MsgSeqCnt= %d, ZeroCnt = %3d, Not 0 = %d"),
+				gLastIdataPap.PeakChnl[0].wTofMin,
+				gLastIdataPap.PeakChnl[0].bId2, gLastIdataPap.PeakChnl[0].bOd3,
+				gwMin0, gwMin1_0, gwMin2_0, m_nMsgSeqCnt, gwZeroCnt, gwNot0);
+
+			m_lbOutput.AddString(s);
+			//gwMin0 = 0xffff;
+			gwMax0 = gwZeroCnt = gwNot0 = 0;
+			m_nMsgSeqCnt = gwMsgSeqCnt;
+#else
+			// Show the current flaw gate values for all channels going to PT. erase first so no scrolling
+			m_lbOutput.ResetContent();
+			t = _T("");
+			for (i = 0; i < 8; i++)	// label chnl on top line
+				{
+				s.Format(_T("Ch%d                                "), i);
+				t += s;
+				}
+			s.Format(_T("  MsgCnt = %d"), gwMsgSeqCnt);
+			t += s;
+			m_lbOutput.AddString(t);
+			
+			for (j = 0; j < 3; j++)
+				{
+				t = _T("");
+				for (i = 0; i < 8; i++)	// label chnl on top line
+					{
+					mn = gLastIdataPap.PeakChnl[j * 8 + i].wTofMin;
+					if (mn > 999) mn = 999;
+					mx = gLastIdataPap.PeakChnl[j * 8 + i].wTofMax;
+					s.Format(_T("Min=%03d  Max=%03d      "), 
+						mn, mx );
+					t += s;
+					}
+				m_lbOutput.AddString(t);
+				}
+#endif
+			}
+		}
+#endif
 	}
 
 void CPA2WinDlg::OnBnClickedBnEraseDbg()

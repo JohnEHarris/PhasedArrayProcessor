@@ -704,10 +704,11 @@ void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 
 	for (i = 0; i < 5; i++)
 		{
+		lrg[i].wByteCount = sizeof(ST_LARGE_CMD);
+		lrg[i].uSync = 0x5CEBDAAD;
 		lrg[i].bPAPNumber = 0;
 		lrg[i].bBoardNumber = nBoard;
 		lrg[i].bSeqNumber = nSeq;
-		lrg[i].wByteCount = sizeof(ST_LARGE_CMD);
 
 		if (i < 3)
 			{

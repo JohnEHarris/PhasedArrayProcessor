@@ -678,13 +678,15 @@ void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 // Seem to repeat a command.. probably doesn't miss command
 // cmd sequence 25x8, 24, 23, 22, 21, 12*3, 0x205x3, 0x204x2  25 sent 8 times in one packet
 // from Robert, results in about 5 total TCPIP packets
+// Add AscanRepRate to end of command
 #ifdef I_AM_PAG
 void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue)
 	{
 	ST_GATE_DELAY_CMD sml[16];
 	ST_LARGE_CMD lrg[6];
-	int i, j;
-	for (i = 0; i < 15; i++)
+	ST_ASCAN_PERIOD_CMD *pCmd;
+	int i, j, k;
+	for (i = 0; i < 16; i++)
 		{
 		sml[i].Head.bPapNumber = 0;	// always for testing
 		sml[i].Head.bBoardNumber = nBoard;
@@ -705,8 +707,13 @@ void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 			case 12:
 			case 13:
 			case 14: sml[i].Head.wMsgID = 12;	break;	// 3 12's
+			case 15: 
+				sml[i].Head.wMsgID = 27;		//AScan Rep Rate
+				pCmd = (ST_ASCAN_PERIOD_CMD *)&sml[i];
+				pCmd->wPeriod = 40;	// 40 ms
+				break;
 			}
-		}	// for (i = 0; i < 15; i++)
+		}	// for (i = 0; i < 16; i++)
 
 	for (i = 0; i < 5; i++)
 		{
@@ -726,20 +733,24 @@ void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 			{
 			lrg[i].wMsgID = 0x204;
 			for (j = 0; j < 128; j++)
-				lrg[i].wCmd[j] = wValue;	// 128 words
+				lrg[i].wCmd[j] = wValue/2;	// 128 words
 			}
 		}
 
 	// send small commands
-	for (i = 0; i < 15; i++)
+	// 03/05/18 Send th block 8 times in a row
+	for (k = 0; k < 8; k++)
 		{
-		SendMsg((GenericPacketHeader *)&sml[i]);
-		}
+		for (i = 0; i < 16; i++)
+			{
+			SendMsg((GenericPacketHeader *)&sml[i]);
+			}
 
-	// send small commands
-	for (i = 0; i < 5; i++)
-		{
-		SendMsg((GenericPacketHeader *)&lrg[i]);
+		// send small commands
+		for (i = 0; i < 5; i++)
+			{
+			SendMsg((GenericPacketHeader *)&lrg[i]);
+			}
 		}
 	}
 
@@ -779,6 +790,7 @@ void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 		m_WordCmd.Head.bBoardNumber, m_WordCmd.bSeq, m_WordCmd.wCmd);
 	t = sym + s;
 	m_lbOutput.AddString(t);
+#if 0
 	if (nCmd == NIOS_SCOPE_CMD_ID)
 		{
 		ST_SET_SCOPE_CMD *pCmd = (ST_SET_SCOPE_CMD *)&m_WordCmd;
@@ -794,6 +806,8 @@ void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 		pCmd->wPacketRate = m_wPacketRate;		// 40 ms TCPIP packet update. 0=AScan packets off or not sent
 		// but really sent every 5 seconds to get temperature info to PAP
 		}
+#endif
+
 	SendMsg((GenericPacketHeader*)&m_WordCmd);
 	}
 
@@ -808,11 +822,13 @@ void CNcNx::LargeCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	switch (nCmd)
 		{
 		case SEQ_TCG_GAIN_CMD_ID:			
-			sym = _T("SEQ_TCG_GAIN_CMD ");			break;	//0x202
+			sym = _T("SEQ_TCG_GAIN_CMD ");			break;	//0x205
 		case TCG_GAIN_CMD_ID:				
-			sym = _T("TCG_GAIN_CMD ");				break;	//0x203
+			sym = _T("TCG_GAIN_CMD ");				break;	//0x204
+#if 0
 		case SET_ASCAN_BEAMFORM_DELAY_ID:	
 			sym = _T("SET_ASCAN_BEAMFORM_DELAY ");	break;	//0x204
+#endif
 		}
 	m_wLargeCmd.wByteCount = sizeof(ST_LARGE_CMD);
 	m_wLargeCmd.uSync = SYNC;

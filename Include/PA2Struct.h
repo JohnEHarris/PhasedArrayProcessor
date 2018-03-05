@@ -391,11 +391,11 @@ typedef struct
 typedef struct
 	{
 	ST_GATE_SETTINGS Gate[4];
-	} ST_GATEIFNO_PER_CHANNEL;	// 56 bytes
+	} ST_GATEINFO_PER_CHANNEL;	// 56 bytes
 
 typedef struct // MAX_SEQ_COUNT = 16
 	{
-	ST_GATEIFNO_PER_CHANNEL Ch[MAX_CHNLS_PER_MAIN_BANG];	// 8
+	ST_GATEINFO_PER_CHANNEL Ch[MAX_CHNLS_PER_MAIN_BANG];	// 8
 	} ST_GATECH_PER_SEQ;	// 8*56 = 448
 
 typedef struct

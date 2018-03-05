@@ -27,6 +27,7 @@ the PAP and PAG
 
 #include "altera_avalon_pio_regs.h"
 #include "sys/alt_irq.h"
+#include "priv/alt_legacy_irq.h"
 #include "system.h"
 //#include "../GlobalHeaders/Global.h"
 #include "../GlobalHeaders/PA2Struct.h"
@@ -67,31 +68,34 @@ the PAP and PAG
 #define SET_GATES_TRIGGER_CMD_ID	6		// GatesTrigger 
 #define SET_GATES_POLARITY_CMD_ID   7		// GatesPolarity
 #define SET_GATES_TOF_CMD_ID		8		// GatesTOF
-#define TCGGAIN_CLOCK_ID	10			
-#define TCGBeamGainDelay_ID			11		
-#define TCGBeamGainAll_ID			12		// TCGChnlGainDelay
+#define SET_TCG_CLOCK_RATE_CMD_ID	9		// SetTcgClockRate
 
-#define SetTcgClockRate_ID			14		// AscanScopeSampleRate -- set_ascan_scope
-#define TCGTriggerDelay_ID			15		// SetAscanDelay -- set_ascan_delay
+#define TCG_TRIGGER_DELAY_CMD_ID	15		// TCGTriggerDelay
 
-#define SET_ASCAN_PEAK_MODE_ID		16		// SelectAscanWaveForm -- set_ascan_peaksel
-#define SET_ASCAN_RF_BEAM_ID		17		// SetAscanRfBeamSelect -- set_ascan_rf_beam_sel_reg
+#define TCG_GAIN_CLOCK_CMD_ID		10		// TCGGainClock
+#define TCG_BEAM_GAIN_DELAY_ID		11
+#define TCG_BEAM_GAIN_ALL_CMD_ID	12		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements 
 
-#define SET_ASCAN_BEAM_SEQ_ID		18		// SetAscanSeqBeamReg -- set_ascan_seq_beam_setup_reg
-#define	SET_ASCAN_GATE_OUTPUT_ID	19		// SetAscanGateOut -- set_ascan_gateout_reg
-#define SELECT_ASCAN_GATE_OUTPUT_ID	20		// SelectAscanGateOutputs calls multiple primitives
+#define ASCAN_SCOPE_SAMPLE_RATE_ID	21		// AscanScopeSampleRate -- set_ascan_scope
+#define SET_ASCAN_SCOPE_DELAY_ID	22		// SetAscanDelay -- set_ascan_delay
 
-#define NIOS_SCOPE_CMD_ID			21		// MakeScopeCmds -- Executes in NIOS code
-#define READBACK_CMD_ID				22		// ReadBackCmdData
+#define SET_ASCAN_PEAK_MODE_ID		23		// SelectAscanWaveForm -- set_ascan_peaksel
+#define SET_ASCAN_RF_BEAM_ID		24		// SetAscanRfBeamSelect -- set_ascan_rf_beam_sel_reg
 
+#define SET_ASCAN_BEAM_SEQ_ID		25		// SetAscanSeqBeamReg -- set_ascan_seq_beam_setup_reg
+#define	SET_ASCAN_GATE_OUTPUT_ID	26		// SetAscanGateOut -- set_ascan_gateout_reg
+#define ASCAN_REP_RATE_ID			27		// AscanRepRate
+
+//#define NIOS_SCOPE_CMD_ID			21		// MakeScopeCmds -- Executes in NIOS code
+//#define READBACK_CMD_ID			22		// ReadBackCmdData
 
 									
 									
 // LARGE
 #define NC_NX_TEST					1+0x200
-#define SEQ_TCG_GAIN_CMD_ID			2+0x200		// SetSeqTCGGain
-#define TCG_GAIN_CMD_ID				3+0x200		// TCGBeamGain
-#define SET_ASCAN_BEAMFORM_DELAY_ID	4+0x200		// SetAscanBeamFormDelay
+#define TCG_GAIN_CMD_ID				4+0x200		// TCGBeamGain
+#define SEQ_TCG_GAIN_CMD_ID			5+0x200		// SetSeqTCGGain
+//#define SET_ASCAN_BEAMFORM_DELAY_ID	4+0x200		// SetAscanBeamFormDelay
 
 // READ BACK CMDS
 #define NC_NX_READBACK_ID			0			// Read Back wReadBackID in SMALL command READBACK_CMD_ID 21
@@ -420,6 +424,19 @@ typedef struct
 
 typedef struct
 	{
+	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
+	BYTE bSeq;		// used here only as a place holder
+	BYTE bChnl;		// which virtual probe.. used here only as a place holder
+	BYTE bGateNumber;	// normally a place holder to conform to the command format
+	BYTE bSpare;	// 16 bytes to here
+	WORD wPeriod;	// how often to send TCP/IP packet to PAP in ms.
+					// wPacketRate == 0-> 1 ASCAN packet in data to PAP every 5 seconds
+	WORD wFill[7];	// all 0
+	}	ST_ASCAN_PERIOD_CMD;
+
+
+typedef struct
+	{
 	GenericPacketHeader Head;	// wMsgID= 
 	BYTE bSeq;		// used here only as a place holder
 	BYTE bChnl;		// which virtual probe.. used here only as a place holder
@@ -538,7 +555,7 @@ typedef struct	// NOT SURE ABOUT THIS COMMAND 2017-03-16
 	BYTE bSeqNumber;	// when relevant, which sequence of virtual probes the command affects
 	BYTE bChnl;
 	BYTE bSpare[18];	// 32 bytes to here
-    WORD wGain[512];	// 512 words or 1024 bytes .. ony first 128 used. wGain[128] to wGain[511= = 0
+    WORD wGain[512];	// 512 words or 1024 bytes .. ony first 128 used. wGain[128] to wGain[511]= = 0
 	} ST_TCG_BEAM_GAIN;		// 1056 bytes 
 
 
@@ -590,25 +607,27 @@ void set_gate_blank( WORD GateNumber, WORD nBlank, WORD nSeq, WORD vChnl );
 void set_gate_threshold(WORD GateNumber, WORD nThold, WORD nSeq, WORD vChnl );
 
 //bit7,6,5,4: gate 4-1 trigger select (0:mbs, 1:threshold);  bit 3-0: gate enable
-void set_gates_trigger(WORD nTrigger, WORD nSeq, WORD vChnl );
+void set_gates_trigger(WORD nTrigger, WORD nSeq, WORD vChnl );	// Sams void set_gate_control
 
 //bit10:mode1, 32:mode2, 54:mode3, 7-6:mode4 --mode: 00:+, 01:-, 1x: abs
 //0x55-d85:-, 0x00:+, 0xaa-d170:abs
 void set_gates_polarity( WORD nPolarity, WORD nSeq, WORD vChn3 );
 
-//bit7,6: tof out sel; bit5,4,3: start of gate 4,3,2; bit2,1,0: stop of gate 4,3,2-start:0-mbs,1-PkDet;--stop:0-ThDet,1-PkDet
+//bit7,6: not used; bit5,4,3: start of gate 4,3,2; 
+//bit2,1,0: stop of gate 4,3,2-start:0-mbs,1-PkDet;--stop:0-ThDet,1-PkDet
 //tof2: b00_100_111-0x27(start:4Pk 3mbs 2mbs);
 void set_gates_tof(WORD nTOF, WORD nSeq, WORD vChn3 );
 /*   GATE COMMANDS */
 
 /*   GAIN COMMANDS */
 // Utilize Large Cmd structure
-void SetSeqTCGGain( void );		// void set_rcvr_TCG_gain
+void SetSeqTCGGain( void );		// void set_TCG_gain
 void SetTcgClockRate( void );		// set_TCG_step_size
 void TCGTriggerDelay( void );		// set_TCG_delay
 void TCGBeamGain( void );			// set_beam_gain
 void TCGGainClock( void );			// set_beam_gain_step
-void TCGChnlGainDelay( void );		// set_beam_gain_delay
+void TCGBeamGainDelay(void);		// set_beam_gain_delay
+void TCGBeamGainAll(void);			// set_beam_gain_all
 void SetPrf( void );
 void set_ascan_scope(short value);	// ascan sample period
 void AscanScopeSampleRate( void );	// set_ascan_scope also add in NcNx.cpp  -- 14
@@ -631,9 +650,10 @@ void SetAscanGateOut(void);
 void SetAscanRfBeam( void );		// executes multiple primitives
 void SelectAscanGateOutputs(void);	// executes multiple primitives
 
-void MakeScopeCmds();		// executes multiple primitives
+void MakeScopeCmds(void);		// executes multiple primitives
 
-void ReadBackCmdData();
+void ReadBackCmdData(void);
+void AscanRepRate(void);
 
 void set_TCG_step_size( int value );
 void set_TCG_delay( int value );
@@ -658,7 +678,7 @@ void set_beam_seq_delay_register( int beam, int seq, /*int delay, */ short value
 void SetAscanBeamFormDelay( void );
 
 BYTE GetbDin();
-WORD GetXLoc();
+short GetXLoc();
 WORD GetAngle();
 WORD GetPeriod();
 WORD GetFPGATemp();

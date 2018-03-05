@@ -19,7 +19,6 @@ Revised:
 
 
 #include "PA2Struct.h"
-//#include "Cmds.h"
 
 // The MAC and IP addresses of the instrument are modified by board switch setting or
 // by backplane board slot address when implemented.

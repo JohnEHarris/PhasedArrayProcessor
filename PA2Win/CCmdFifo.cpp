@@ -159,6 +159,8 @@ int CCmdFifo::GetPacketSize(void)
 		return 0;
 		}
 			// See if we are losing a real packet
+#if 0
+	// these checks made in OnReceive of both Server and Client
 	if ((pIdata->wMsgSeqCnt) != (m_wMsgSeqCnt + 1))
 		{
 		i = pIdata->wMsgSeqCnt - m_wMsgSeqCnt;	// debugging
@@ -167,6 +169,7 @@ int CCmdFifo::GetPacketSize(void)
 		pMainDlg->SaveDebugLog(s);
 		TRACE(s);
 		}
+#endif
 	m_wMsgSeqCnt = pIdata->wMsgSeqCnt;
 	return m_PacketSize;
 	}

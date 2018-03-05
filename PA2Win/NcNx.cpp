@@ -85,8 +85,10 @@ BEGIN_MESSAGE_MAP(CNcNx, CDialogEx)
 	//ON_WM_VSCROLL()
 	ON_BN_CLICKED( IDC_BN_DONOTHING, &CNcNx::OnBnClickedBnDonothing )
 	ON_EN_CHANGE( IDC_ED_PARAM, &CNcNx::OnChangeEdParam )
+#ifdef I_AM_PAG
 	ON_BN_CLICKED(IDC_RB_SMALLCMD, &CNcNx::OnBnClickedRbSmallcmd)
 	ON_BN_CLICKED(IDC_RB_LARGECMDS, &CNcNx::OnBnClickedRbLargecmds)
+#endif
 END_MESSAGE_MAP()
 
 
@@ -426,7 +428,10 @@ void CNcNx::OnCbnSelchangeCbCmds()
 	switch (m_nCmdId + nCmdOffset)
 		{
 		case 0:	
+#ifdef I_AM_PAG
 			DebugFifo(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
+#endif
+
 			break;
 		case 1:	
 			FakeData( m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam );
@@ -659,7 +664,7 @@ void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	m_GateCmd.bChnl = nCh;	// does not matter
 	m_GateCmd.bGateNumber = nGate;	// does not matter
 	if (nValue > 32)	nValue = 32;
-	m_GateCmd.bSpare = nValue; //  the modulo
+	m_GateCmd.bSpare = nValue; // the last valid seq number before restart + 1.. the modulo
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Start_Seq#=%d, (Param)SeqModulo = %d\n"),
 		m_GateCmd.Head.wMsgID, m_GateCmd.Head.wByteCount, m_GateCmd.Head.bPapNumber,
 		m_GateCmd.Head.bBoardNumber, m_GateCmd.bSeq, m_GateCmd.bSpare);
@@ -673,6 +678,7 @@ void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 // Seem to repeat a command.. probably doesn't miss command
 // cmd sequence 25x8, 24, 23, 22, 21, 12*3, 0x205x3, 0x204x2  25 sent 8 times in one packet
 // from Robert, results in about 5 total TCPIP packets
+#ifdef I_AM_PAG
 void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue)
 	{
 	ST_GATE_DELAY_CMD sml[16];
@@ -683,7 +689,7 @@ void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 		sml[i].Head.bPapNumber = 0;	// always for testing
 		sml[i].Head.bBoardNumber = nBoard;
 		sml[i].Head.wByteCount = 32;
-		sml[i].Head.uSync = 0x5CEBDAAD;
+		sml[i].Head.uSync = SYNC;
 		sml[i].bSeq = nSeq;
 		sml[i].bChnl = nCh;
 		sml[i].bGateNumber = nGate;
@@ -705,7 +711,7 @@ void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 	for (i = 0; i < 5; i++)
 		{
 		lrg[i].wByteCount = sizeof(ST_LARGE_CMD);
-		lrg[i].uSync = 0x5CEBDAAD;
+		lrg[i].uSync = SYNC;
 		lrg[i].bPAPNumber = 0;
 		lrg[i].bBoardNumber = nBoard;
 		lrg[i].bSeqNumber = nSeq;
@@ -736,6 +742,8 @@ void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 		SendMsg((GenericPacketHeader *)&lrg[i]);
 		}
 	}
+
+#endif
 
 
 // WordCmd, use nValue to assign to hardware functions,, nValue is usually m_nParam

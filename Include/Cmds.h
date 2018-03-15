@@ -68,7 +68,7 @@ the PAP and PAG
 #define SET_GATES_TRIGGER_CMD_ID	6		// GatesTrigger 
 #define SET_GATES_POLARITY_CMD_ID   7		// GatesPolarity
 #define SET_GATES_TOF_CMD_ID		8		// GatesTOF
-#define SET_TCG_CLOCK_RATE_CMD_ID	9		// SetTcgClockRate
+#define SET_TCG_CLOCK_RATE_CMD_ID	14		// SetTcgClockRate
 
 #define TCG_TRIGGER_DELAY_CMD_ID	15		// TCGTriggerDelay
 
@@ -669,7 +669,7 @@ void set_PRF( WORD wPrf );	// Set prf in Hertz. Range 10-10,000 -- on pulser boa
 
 /*   GAIN COMMANDS */
 // Utilize Large Cmd structure
-void set_rcvr_TCG_gain( int seq, unsigned short value[128] );
+void set_TCG_gain( int seq, unsigned short value[128] );  // same as sam's set_gain
 
 void set_beam_gain( int beam, int seq, unsigned short value[128] );	// beam is a virtual channel
 /*   GAIN COMMANDS */

@@ -192,7 +192,12 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 					}
 
 				else
+					{
+					s.Format( _T( "Invalid large command ID = %d" ), MsgId );
+					TRACE( s );
+					pMainDlg->SaveDebugLog( s );
 					delete pMmiCmd;
+					}
 				break;
 				}
 

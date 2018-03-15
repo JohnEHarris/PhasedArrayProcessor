@@ -376,7 +376,7 @@ void CvChannel::CopyPeakData(stPeakChnlPAP *pOut)
 	}
 
 // this channel copies its information into the slot in output data reserved for it.
-// More than jnust copying, it does a peak hold and records the sequence number for the peaking operation
+// More than just copying, it does a peak hold and records the sequence number for the peaking operation
 // Sequence number will allow more precise pipe location since header applies to all sequences
 // nSeq in formal arg ranges up to 31. It is the seq number of the input data. Not the unique seq data
 // which defines the channel. If gModulo is 4, then there are 8 sets of 4 sequences(virtual channels)

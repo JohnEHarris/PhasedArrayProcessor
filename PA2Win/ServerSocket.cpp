@@ -254,6 +254,7 @@ CServerSocket::~CServerSocket()
 					try
 						{
 						//if (m_pSCC->pSocket->m_pThread)	// added 2017-10-10 jeh
+						if (m_pThread)
 							{
 							m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
 							CAsyncSocket::Close();

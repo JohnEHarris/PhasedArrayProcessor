@@ -1875,14 +1875,15 @@ void CPA2WinDlg::ShowIdata(void)
 				s.Format(_T("Ch%d                                "), i);
 				t += s;
 				}
-			s.Format(_T("  MsgCnt = %d"), gwMsgSeqCnt);
+			s.Format(_T("  MsgCnt = %d, GlitchCnt = %d"), 
+				gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt);
 			t += s;
 			m_lbOutput.AddString(t);
 			
 			for (j = 0; j < 3; j++)
 				{
 				t = _T("");
-				for (i = 0; i < 8; i++)	// label chnl on top line
+				for (i = 0; i < 8; i++)
 					{
 					mn = gLastIdataPap.PeakChnl[j * 8 + i].wTofMin;
 					if (mn > 999) mn = 999;

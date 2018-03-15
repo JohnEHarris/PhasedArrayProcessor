@@ -577,15 +577,18 @@ void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata)
 // do sequences ever get out of order
 void CServerRcvListThread::CheckSequences(IDATA_PAP *pIdataPacket)
 	{
-	int nStartSeq, nSeqModulo, nChnl;	// test vars
-	int nChnlModulo;
-	int i, nError, nLastChnl;
+	unsigned int nStartSeq, nSeqModulo, nChnl;	// test vars
+	unsigned int nChnlModulo;
+	unsigned int i, nError, nLastChnl;
 	CString s;
 	nStartSeq = pIdataPacket->bStartSeqNumber;
 	nSeqModulo = pIdataPacket->bSeqModulo;
 	nChnl = nStartSeq * 8;	
 	nChnlModulo = nSeqModulo * 8;	// 8 chnls per sequence
 	nError = 0;
+	if (nStartSeq > 2)
+		i = 0;
+
 	//nLastChnl = gbSeqPerPacket * 8;
 	nLastChnl = nSeqModulo * 8;
 	for (i = 0; i < nLastChnl; i++)
@@ -593,10 +596,12 @@ void CServerRcvListThread::CheckSequences(IDATA_PAP *pIdataPacket)
 		//if ((nChnl % nChnlModulo) != (pIdataPacket->PeakChnl[i].bChNum % nChnlModulo))
 		if ((i % nChnlModulo) != (pIdataPacket->PeakChnl[i].bChNum % nChnlModulo))
 			{
-			s.Format(_T("Sequence error in sequence %d\n"), ((i / 8) /*+ nStartSeq */) % nSeqModulo);
+			s.Format(_T("Sequence error in sequence %d, chnl %d, start Seq = %d\n"), 
+				((i / 8), i, nStartSeq));
 			TRACE(s);
 			// set a status bit in header to indicate sequence error 
 			nError = 1;	// or whatever bit value selected for this error
+			break;
 			}
 		nChnl++;
 		}
@@ -639,6 +644,9 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			// peak holding operation
 			//
 #if 1
+
+			// glitch!= glitch... 5c != 0x14
+			// packet all good to seq mod, but  Pap = 1,startSeq=0x40, modulo = 4
 			if (pIData->bNiosGlitchCnt != m_bNiosGlitchCnt)
 				{
 				if (m_pIdataPacket)
@@ -654,6 +662,9 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 				}
 
 			// This seems to be a problem with simulated data. Always m_Seq=1 when start sequence if 0
+			// do not take this code out. Yanming thinks we should skip the data throwaway
+			// I think we are using bad data. Yet to be determined.
+#if 0
 			if (m_Seq != pIData->bStartSeqNumber)
 				{
 				if (m_pIdataPacket)
@@ -668,6 +679,19 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					}
 				m_Seq = pIData->bStartSeqNumber;
 				}
+#endif
+			m_Seq = pIData->bStartSeqNumber;	// 2018-03-07 fix break in testing
+			if (m_Seq > 3)		// for this specific machine, seq only 0,1,2
+				{
+				s.Format(_T("Deleting m_pIdataPacket, m_Seq = %d > 3, m_pIdataPacket = 0x%08x\n"), pIData->bNiosGlitchCnt, (UINT)m_pIdataPacket);
+				pMainDlg->SaveFakeData(s);
+				TRACE( s );
+				m_bNiosGlitchCnt = pIData->bNiosGlitchCnt;
+				delete m_pIdataPacket;
+				m_pIdataPacket = 0;
+				return;
+				}
+
 #endif
 
 			if (gnSeqModulo != pIData->bSeqModulo)
@@ -701,8 +725,10 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			gbSeqPerPacket = 32;	// (32 / gnSeqModulo) * gnSeqModulo;
 
 			nLastSeq = (m_Seq + gnSeqModulo -1 ) % gnSeqModulo;
+#if 0
 			s.Format(_T("Fake Data Initial m_Seq Number = %d, Last Seq = %d\n"), m_Seq, nLastSeq);
 			pMainDlg->SaveFakeData(s);
+#endif
 
 			if (m_pElapseTimer)
 				m_pElapseTimer->Start();

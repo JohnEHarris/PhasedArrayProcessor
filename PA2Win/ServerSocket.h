@@ -92,7 +92,7 @@ public:
 	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// pointer to my global structure instance 
 	int m_nMyServer;							// which server are we connected stSCM[MAX_SERVERS]
 	int m_nClientIndex;							// which instance of pClientConnection[MAX_CLIENTS_PER_SERVER];
-	CWinThread * m_pThread;						// ptr to thread which created the socket
+	//CWinThread * m_pThread;						// ptr to thread which created the socket
 	int m_nOwningThreadType;					// 0=Listener, 1=ServerConnection thread owns this socket class
 	int m_nOwningThreadId;				// debugging
 	int m_nAsyncSocketCnt;				// debugging

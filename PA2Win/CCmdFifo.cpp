@@ -129,7 +129,6 @@ int CCmdFifo::GetPacketSize(void)
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD
 	*/	
-	int i;
 	CString s;
 	WORD *pW = (WORD *)&m_Mem[m_Out];// debugging
 	GenericPacketHeader *pHeader;

@@ -126,5 +126,6 @@ PubExt short gnBoardTemp;	// temp of ADC board
 PubExt BYTE gbReadBackReady;// once readback ready, skip AScan and replace with read back data
 PubExt WORD gwGateBits;		// what combination of gates are being sent in AScan data
 PubExt WORD gwBeamType;		// rf or gates
+PubExt BYTE bAppIsClosing;
 
 #endif /* GLOBAL_H_ */

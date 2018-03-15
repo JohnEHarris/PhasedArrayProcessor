@@ -249,16 +249,14 @@ CServerSocket::~CServerSocket()
 			if (i > 0)
 				{
 				i = m_pSCC->pSocket->ShutDown();
-				if (i > 0)
+				if ((i > 0) && (bAppIsClosing == 0))
 					{
 					try
 						{
-						//if (m_pSCC->pSocket->m_pThread)	// added 2017-10-10 jeh
-						if (m_pThread)
-							{
-							m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
-							CAsyncSocket::Close();
-							}
+						//if the app is closing, dont try to close the socket 3-15-18
+
+						m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
+						CAsyncSocket::Close();
 						}
 					catch (...)
 						{
@@ -326,9 +324,9 @@ CServerSocket::~CServerSocket()
 			pMainDlg->SaveDebugLog(s);
 			}
 #endif
+		else m_pSCC->pSocket = 0;
 
 		}	// if (nShutDown)
-	m_pSCC->pSocket = 0;
 
 	}
 

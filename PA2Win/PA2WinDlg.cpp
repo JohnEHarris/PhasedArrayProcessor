@@ -409,7 +409,7 @@ BOOL CPA2WinDlg::OnInitDialog()
 	#else
 	sDlgName = _T( "PA2Win -- Phase Array Processor Version -- PAP " );
 #endif
-
+	bAppIsClosing = 0;	// just started
 	sDlgName += s;
 	SetWindowText(sDlgName);
 	// Add "About..." menu item to system menu.
@@ -1374,7 +1374,7 @@ void CPA2WinDlg::OnBnClickedBnShutdown()
 	ST_SERVER_CONNECTION_MANAGEMENT *pstSCM = 0;
 	CString s;
 
-	nShutDown = 1;
+	bAppIsClosing = nShutDown = 1;
 	AfxGetThread()->SetThreadPriority( THREAD_PRIORITY_BELOW_NORMAL );
 
 	// KIll the test thread

@@ -428,15 +428,22 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 			nError = GetLastError();
 			s.Format( _T( "Shutdown = %d\n" ), i );
 			TRACE( s );
-#if 0
+#if 1
 
-			if (i > 0)
+			if ((i > 0) && (bAppIsClosing == 1)	)// a valid socket handle
 				{
 
-				2017-06-26 jeh crashed PAP on shutdown
+				//2017-06-26 jeh crashed PAP on shutdown
 				try
 					{
-					m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
+					i = m_pSCC->pSocket->ShutDown( 2 );
+					if (m_pSCC->pSocket)
+						{
+						delete m_pSCC->pSocket;
+						m_pSCC->pSocket = 0;
+						}
+					//if (i)
+						//m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
 					}
 				catch (...)
 					{
@@ -446,7 +453,11 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 
 			}
 
-	delete pscc->pSocket;
+		if (pscc->pSocket)
+			{
+			delete pscc->pSocket;
+			m_pSCC->pSocket = 0;
+			}
 	// destructor does everything in the excluded code below
 #if 0
 	if (m_pSCC->pSocket)
@@ -513,10 +524,12 @@ afx_msg void CServerSocketOwnerThread::KillServerSocketOwner( WPARAM w, LPARAM l
 
 	if (m_pSCC)
 		{
-		//if (m_pSCC->pSocket);
-			//delete m_pSCC->pSocket; infinite loop back to socket destructor
-			//m_pSCC->pSocket = 0;
-
+		if (m_pSCC->pSocket)
+			{
+			delete m_pSCC->pSocket; //infinite loop back to socket destructor
+			m_pSCC->pSocket = 0;
+			}
+		Sleep( 10 );
 		PostQuitMessage( 0 );	// causes ExitInstance() to run 
 		// and then CServerSocketOwnerThread destructor
 		}

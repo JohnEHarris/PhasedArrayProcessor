@@ -580,6 +580,7 @@ void CServerRcvListThread::CheckSequences(IDATA_PAP *pIdataPacket)
 	unsigned int nStartSeq, nSeqModulo, nChnl;	// test vars
 	unsigned int nChnlModulo;
 	unsigned int i, nError, nLastChnl;
+	int j, k, l;
 	CString s;
 	nStartSeq = pIdataPacket->bStartSeqNumber;
 	nSeqModulo = pIdataPacket->bSeqModulo;
@@ -596,8 +597,10 @@ void CServerRcvListThread::CheckSequences(IDATA_PAP *pIdataPacket)
 		//if ((nChnl % nChnlModulo) != (pIdataPacket->PeakChnl[i].bChNum % nChnlModulo))
 		if ((i % nChnlModulo) != (pIdataPacket->PeakChnl[i].bChNum % nChnlModulo))
 			{
+			j = i / 8;
+
 			s.Format(_T("Sequence error in sequence %d, chnl %d, start Seq = %d\n"), 
-				((i / 8), i, nStartSeq));
+				j, i, nStartSeq);
 			TRACE(s);
 			// set a status bit in header to indicate sequence error 
 			nError = 1;	// or whatever bit value selected for this error
@@ -920,8 +923,9 @@ void CServerRcvListThread::ProcessPAM_Data(void *pData)
 		s.Format(_T("PeakChnl[0].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
 			pIdata->PeakChnl[0].bId2, pIdata->PeakChnl[0].bOd3, pIdata->PeakChnl[0].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
 		TRACE(s);
-		memcpy((void *)&gLastIdataPap, (void *) pIdata, sizeof(IDATA_PAP));
-		}
+		//((void *)&gLastIdataPap, (void *)pIdata, sizeof(IDATA_PAP));
+		memcpy((void *)&gLastIdataPap, (void *)pIdata, pIdata->wByteCount);
+	}
 	else if (pIdata->wMsgID == ASCAN_DATA_ID)
 		{
 		i = pIdata->wMsgID;

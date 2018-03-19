@@ -425,55 +425,62 @@ void CNcNx::OnCbnSelchangeCbCmds()
 	//m_lbOutput.AddString( s );
 
 
-	switch (m_nCmdId + nCmdOffset)
+	if (m_nCmdId + nCmdOffset < 14)
 		{
-		case 0:	
+		switch (m_nCmdId + nCmdOffset)
+			{
+		case 0:
 #ifdef I_AM_PAG
 			DebugFifo(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 #endif
 
 			break;
-		case 1:	
-			FakeData( m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam );
+		case 1:
+			FakeData(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 			break;
-		case 2: 
-		case 3: 
-		case 4: 
-		case 5: 
-		case 6: 
-		case 7: 
-		case 8: 
-			GateCmd( m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam );
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+		case 8:
+			GateCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 			break;
-		// TCG commands
+			// TCG commands
 		case 9:
 		case 10:
 		case 11:
 		case 12:
 		case 13:
-			TcgCmd( m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam );
+			TcgCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 			break;
-			//AScan control commands
-		case 14:
-		case 15:
-		case 16:
-		case 17:
-		case 18:
-		case 19:
-		case 20:
-			WordCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
+		default:
 			break;
+			}
+		}
+
+	else if (m_nCmdId + nCmdOffset < TOTAL_COMMANDS)
+		{
+		WordCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
+		}
+
+	else if ((0x200 <= (m_nCmdId + nCmdOffset)) && (m_nCmdId < TOTAL_LARGE_COMMANDS))
+		{
+		switch (m_nCmdId + nCmdOffset)
+			{
 
 		case 2 + 0x200:
 		case 3 + 0x200:
 		case 4 + 0x200:
 			// build command here
-			LargeCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, nCmdLarge, (WORD) m_nParam);
+			LargeCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, nCmdLarge, (WORD)m_nParam);
 			t = _T("Large Command");
 			break;
-		default:	
+		default:
 			break;
-		}	
+			}
+		}
 	}
 
 void CNcNx::OnBnClickedBnDonothing()

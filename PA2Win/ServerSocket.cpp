@@ -327,6 +327,7 @@ CServerSocket::~CServerSocket()
 		else m_pSCC->pSocket = 0;
 
 		}	// if (nShutDown)
+	m_pSCC->pSocket = 0;
 
 	}
 

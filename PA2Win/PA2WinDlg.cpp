@@ -1896,6 +1896,16 @@ void CPA2WinDlg::ShowIdata(void)
 				}
 #endif
 			}
+		s = _T( "" );	// blank line
+		m_lbOutput.AddString(s);
+		// Hardware input status
+		//       0123456 89012345 78901234 678901  456789012
+		s = _T( "Digital    Location Angle    Period     RotateCnt" );
+		m_lbOutput.AddString(s);
+		s.Format( _T( "0x%04x  %05d    %04d     %06d   %05d" ),
+			gLastIdataPap.bDin, gLastIdataPap.wLocation, gLastIdataPap.wAngle,
+			gLastIdataPap.wPeriod, gLastIdataPap.wRotationCnt );
+		m_lbOutput.AddString(s);
 		}
 #endif
 	}

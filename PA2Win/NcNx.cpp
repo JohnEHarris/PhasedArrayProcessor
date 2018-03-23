@@ -358,7 +358,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("Gate n Trigger"));		m_cbCommand.AddString(s);	//6
 		s.Format(_T("Gate n Polarty"));		m_cbCommand.AddString(s);	//7
 		s.Format(_T("Gate n TOF"));			m_cbCommand.AddString(s);	//8
-		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//9
+		s.Format(_T("WallNx"));				m_cbCommand.AddString(s);	//9
 		s.Format(_T("TCGGainClock"));		m_cbCommand.AddString(s);	//10
 		s.Format(_T("TCGChnlGainDelay"));	m_cbCommand.AddString(s);	//11
 		s.Format(_T("TcgBeamGainAll"));		m_cbCommand.AddString(s);	//12
@@ -417,7 +417,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		case 6: s.Format(_T("Gate %d Trigger %d"), m_nGate, m_nParam); break;
 		case 7: s.Format(_T("Gate %d Polarity %d"), m_nGate, m_nParam); break;
 		case 8: s.Format(_T("Gate %d TOF %d"), m_nGate, m_nParam); break;
-
+		case 9: s.Format(_T("Nx = %d"), m_nParam);				break;
 		case 0x204: s = _T("TCG_BEAM_GAIN");					break;
 		case 0x205: s = _T("TCG_SEQ_GAIN");						break;
 		default:	s = t;		break;
@@ -447,8 +447,11 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		case 8:
 			GateCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 			break;
-			// TCG commands
+			
 		case 9:
+			WallNxCmd(m_nPAP, m_nBoard, m_nSeq, m_nCmdId, m_nParam);
+			break;
+			// TCG commands
 		case 10:
 		case 11:
 		case 12:
@@ -610,6 +613,27 @@ void CNcNx::GateCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	SendMsg((GenericPacketHeader*)&m_GateCmd);
 	//if (m_RbGates >= 4) break;	// one command sets all gates for a chnl	
 	}
+
+void CNcNx::WallNxCmd(int nPap, int nBoard, int nSeq, int nCmd, int nValue)
+	{
+	CString s;
+	memset(&m_NxCmd, 0, sizeof(ST_NX_CMD));
+	m_NxCmd.wMsgID = SET_WALL_NX_CMD_ID;		// 9;
+	m_NxCmd.wByteCount = 32;
+	m_NxCmd.uSync = SYNC;
+	m_NxCmd.bPAPNumber = nPap;
+	m_NxCmd.bBoardNumber = nBoard;
+	m_NxCmd.wNx = 5;
+	m_NxCmd.wMax = nValue;
+	m_NxCmd.wMin = nValue / 2;
+	m_NxCmd.wDropCount = 10;
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Nx=5, Max=%d, Min=%d Drop=%5d  Seq,Ch,G don't matter\n"),
+		m_NxCmd.wMsgID, m_NxCmd.wByteCount, m_NxCmd.bPAPNumber, m_NxCmd.bBoardNumber,
+		m_NxCmd.wMax, m_NxCmd.wMin, m_NxCmd.wDropCount);
+	m_lbOutput.AddString(s);
+	SendMsg((GenericPacketHeader*)&m_NxCmd);
+	}
+
 
 void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue )
 	{

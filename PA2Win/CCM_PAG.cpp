@@ -100,13 +100,16 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 	USES_CONVERSION;
 	CString s;
 	int i;
+	int is, ic;	// sequence, channel
 			
 	// 2016-06-27 ditch legacy command structure and use PA2 structure
 
-	//ST_LARGE_CMD *pMmiCmd;
 	PAP_GENERIC_MSG *pMmiCmd;
-	PAP_INST_CHNL_NCNX *pPamChnlInfo;
+	//PAP_INST_CHNL_NCNX *pPamChnlInfo;
+	ST_NX_CMD *pCmdS;	// small command to set Nx processing for all wall channels
 	WORD MsgId;
+	ST_SERVERS_CLIENT_CONNECTION *pSCC = NULL;
+	int nInst = 0;
 
 	if (m_pstCCM->pRcvPktPacketList == NULL) return;
 
@@ -126,6 +129,9 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			
 		if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber] == nullptr)
 			{
+			s.Format(_T("No Client Connection ptr for board number=%d\n"), pMmiCmd->bBoardNumber);
+			TRACE(s);
+			DebugOut(s);
 			delete pMmiCmd;
 			return;
 			}
@@ -134,6 +140,9 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
 		if ((pSocket == 0) || (pThread == 0))
 			{
+			s = _T("No socket or no thread for CServerSocketOwnerThread\n");
+			TRACE(s);
+			DebugOut(s);
 			delete pMmiCmd;
 			return;
 			}
@@ -142,14 +151,15 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		pSocket->LockSendPktList();
 		pSocket->AddTailSendPkt(pMmiCmd);
 		pSocket->UnLockSendPktList();
+		maybe want to delete pMmiCmd later
 #endif
-
 
 		// big case statement adapted from ServiceApp.cpp 'c' routine ProcessMmiMsg()
 		switch(MsgId)
 			{
 
 		case NC_NX_CMD_ID:
+#if 0
 			// The only message as of 2016-06-27
 			// Does not get sent to instruments, sets Nc and Nx parameters for the PAM to use
 			i = sizeof(PAP_INST_CHNL_NCNX);
@@ -168,8 +178,38 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			pSocket->UnLockSendPktList();
 			// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
 			pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
+#endif
+			delete pMmiCmd;
+			break;
 
+		case SET_WALL_NX_CMD_ID:
+			// Only executes on PAP... all wall processing has same parameters for every wall channel
+			// virtual channels exist in Server side structure only
+			// Server side connects to Adc and other hardware data sources
+			pCmdS = (ST_NX_CMD *)pMmiCmd;	// cast this message to Nx command format
+			nInst = pCmdS->bBoardNumber;	// which instrument
 
+			// For now server[0] connects to Adc clients
+			// Not going to send info to client, but does process that clients data with these parameters
+			pSCC = stSCM[0].pClientConnection[nInst];
+			if (pSCC == NULL)
+				{
+				s.Format(_T("pSCC = stSCM[0].pClientConnection[%d] is null\n"), nInst);
+				TRACE(s);
+				DebugOut(s);
+				delete pMmiCmd;
+				return;
+				}
+
+			CvChannel *pChannel;
+			// for now assume sequence length 3 and 8 chnls per sequence
+			for (is = 0; is < 3; is++)
+				for (ic = 0; ic < 8; ic++)
+					{
+					pChannel = pSCC->pvChannel[is][ic];
+					pChannel->WFifoInit((BYTE)pCmdS->wNx, pCmdS->wMax, pCmdS->wMin, pCmdS->wDropCount);
+					}
+			delete pMmiCmd;
 			break;
 
 		//case 2-8:	// Gate commands from PAG TO PAP then PAP to Board
@@ -184,6 +224,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 					pSocket->AddTailSendPkt(pMmiCmd);
 					pSocket->UnLockSendPktList();
 
+					// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
 					pThread->PostThreadMessage( WM_USER_SERVER_SEND_PACKET, 0, 0L );
 					s.Format(_T("Received Large Cmd %d for board %d from Phased Array GUI\n"),
 						MsgId, pMmiCmd->bBoardNumber);
@@ -211,7 +252,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				TRACE( s );
 				pMainDlg->SaveDebugLog(s);
 
-				pSocket->LockSendPktList();
+				pSocket->LockSendPktList();	// server sockets linked list for sending
 				pSocket->AddTailSendPkt(pMmiCmd);
 				pSocket->UnLockSendPktList();
 
@@ -284,6 +325,7 @@ int CCCM_PAG::FindDisplayChannel(int nArray, int nArrayCh)
 // Only sets Nc Nx parameters. Knows not what type the channel is
 //void CInstMsgProcess::SetChannelInfo(void)
 
+// I doubt that this works correctly  --- 2018-03-23 jeh --- don't use
 void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	{
 	int nPam, nInst, nSeq, nCh, msgcnt;
@@ -352,6 +394,13 @@ void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	TRACE(s);
 #endif
 
+	}
+
+// 2018-03-23 Executes only on PAP
+// Sets all wall processing variable for each channel to the same value.
+
+void CCCM_PAG::WallNx(void)
+	{
 	}
 
 // Send the same message to all Instruments

@@ -68,6 +68,7 @@ the PAP and PAG
 #define SET_GATES_TRIGGER_CMD_ID	6		// GatesTrigger 
 #define SET_GATES_POLARITY_CMD_ID   7		// GatesPolarity
 #define SET_GATES_TOF_CMD_ID		8		// GatesTOF
+#define SET_WALL_NX_CMD_ID			9		// only runs on PAP, not in the Nios
 #define SET_TCG_CLOCK_RATE_CMD_ID	14		// SetTcgClockRate
 
 #define TCG_TRIGGER_DELAY_CMD_ID	15		// TCGTriggerDelay
@@ -175,6 +176,26 @@ typedef struct
 	BYTE bSpare[4];		// 16
 	WORD wCmd[8];		// 16	
 	} ST_SMALL_CMD;		// sizeof() = 32
+
+typedef struct
+{
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD 
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+
+	BYTE bSpare[4];		// 16
+	WORD wNx;			// length of averaging filter  0 < wNx < 9
+	WORD wMax;			// 12.5 nSec counts
+	WORD wMin;			// 12.5 nSec counts
+	WORD wDropCount;	// number of consecutive bad wall reading before wall = 0
+	WORD wCmd[4];		// 16	
+} ST_NX_CMD;			// sizeof() = 32
 
 typedef struct
 	{

@@ -33,7 +33,7 @@ public:
 	virtual ~CCCM_PAG(void);
 	void UniqueProc(void);
 	void CCCM_PAG::ProcessReceivedMessage(void);	// client got a message from the server
-
+	void CCCM_PAG::WallNx(void);		// set all channels to common wall parameters.
 
 
 	// copied from InspMsgProcess class

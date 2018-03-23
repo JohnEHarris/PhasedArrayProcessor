@@ -76,8 +76,7 @@ PubExt READBACK_DATA ReadBackDATA;
 PubExt BYTE gbFakeDataCmd;		// change operation of Xmit interrupt when fake data
 PubExt BYTE gbMakeAscanFlag; 
 PubExt ST_GATE_READBACK_DATA GateCmdData;		// a copy of every gate command setting received
-
-
+PubExt BYTE gbFakeDataCnt;
 #else	// not the instrument
 
 class CTuboIni;

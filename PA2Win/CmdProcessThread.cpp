@@ -74,7 +74,7 @@ void CCmdProcessThread::ProcessReceivedMessage(WPARAM, LPARAM)
 #ifdef I_AM_PAP
 	case 0:
 	case 2:
-		// case 0 of the client connection to PAG is the link thru which user commands come to PAM
+		// case 0 of the client connection to PAG is the link thru which user commands come to PAP
 		// These commands need to be routed to the appropriate instrument by the PAG program itself
 		// The activating agent was CClientConnectionManagement::OnReceive() we assume is running at a
 		// relatively high priority. By signaling to CCmdProcessThread we get and are now at the priority

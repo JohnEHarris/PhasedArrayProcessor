@@ -81,6 +81,10 @@ public:
 	// All gate commands have the same template. The Cmd ID determines which one of the
 	// 7 gate commands is actually sent.
 	ST_GATE_DELAY_CMD m_GateCmd;
+
+	void WallNxCmd(int nPap, int nBoard, int nSeq, int nCmd, int nValue);
+	ST_NX_CMD m_NxCmd;
+
 	void TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue );
 	// TCG commands have the same gain template
 	ST_SET_TCG_DELAY_CMD m_TcgCmd;

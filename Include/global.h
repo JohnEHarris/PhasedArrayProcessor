@@ -101,9 +101,9 @@ PubExt WORD gwMax0, gwMin0, gwMin1_0, gwMin2_0, gwZeroCnt, gwNot0;	// max and mi
 #endif
 
 PubExt int gMaxChnlsPerMainBang;
-PubExt int gMaxChnls;	// chanels per main bang * MaxSeqCount = 8*32 =256
+PubExt int gMaxChnls;	// channels per main bang * MaxSeqCount = 8*32 =256
 PubExt int gnSeqModulo;	// last seq number before reset to 0
-PubExt int gnMaxSeqCount;
+PubExt int gnMaxSeqCount;	// never used
 PubExt BYTE gbSeqPerPacket;	// up to 32 seq in packet to PAG. May be less
 PubExt int gMaxSeqCount;
 PubExt int gnMaxServers, gnMaxClientsPerServer;		// Server Connection Management

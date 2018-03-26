@@ -447,7 +447,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		case 8:
 			GateCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 			break;
-			
+			// TCG commands
 		case 9:
 			WallNxCmd(m_nPAP, m_nBoard, m_nSeq, m_nCmdId, m_nParam);
 			break;
@@ -623,12 +623,15 @@ void CNcNx::WallNxCmd(int nPap, int nBoard, int nSeq, int nCmd, int nValue)
 	m_NxCmd.uSync = SYNC;
 	m_NxCmd.bPAPNumber = nPap;
 	m_NxCmd.bBoardNumber = nBoard;
-	m_NxCmd.wNx = 5;
-	m_NxCmd.wMax = nValue;
-	m_NxCmd.wMin = nValue / 2;
-	m_NxCmd.wDropCount = 10;
-	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Nx=5, Max=%d, Min=%d Drop=%5d  Seq,Ch,G don't matter\n"),
-		m_NxCmd.wMsgID, m_NxCmd.wByteCount, m_NxCmd.bPAPNumber, m_NxCmd.bBoardNumber,
+	// change nValue assignment from wall thick to Nx
+	nValue = nValue % 5;
+	if (nValue == 0) nValue = 1;
+	m_NxCmd.wNx = nValue;
+	m_NxCmd.wMax = 800 + nValue;
+	m_NxCmd.wMin = 200 + nValue;
+	m_NxCmd.wDropCount = 10 + nValue;
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Nx=%d, Max=%d, Min=%d Drop=%5d  nValue modifies Max,Min,drop\n"),
+		m_NxCmd.wMsgID, m_NxCmd.wByteCount, m_NxCmd.bPAPNumber, m_NxCmd.bBoardNumber, nValue,
 		m_NxCmd.wMax, m_NxCmd.wMin, m_NxCmd.wDropCount);
 	m_lbOutput.AddString(s);
 	SendMsg((GenericPacketHeader*)&m_NxCmd);

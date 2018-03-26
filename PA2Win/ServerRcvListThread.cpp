@@ -713,7 +713,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 				gnSeqModulo = pIData->bSeqModulo;
 				}
 
-			gnMaxSeqCount = MAX_SEQ_COUNT;	// MAYBE THIS IS WRONG 2017-11-01 SHOULD BE gbSeqPerPacket
+// never used			gnMaxSeqCount = MAX_SEQ_COUNT;	// MAYBE THIS IS WRONG 2017-11-01 SHOULD BE gbSeqPerPacket
 
 			// get the starting sequence number and channel from the instument data
 			m_Seq = nStartSeq = pIData->bStartSeqNumber;	// only used to find which pChannel
@@ -854,7 +854,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					}	// for ( j = 0; j < gMaxChnlsPerMainBang; j++)		// channel loop
 				iSeqPkt++;
 
-				iSeqPkt = iSeqPkt %	gbSeqPerPacket;			//gnMaxSeqCount;
+				iSeqPkt = iSeqPkt %	gbSeqPerPacket;			//gnMaxSeqCount -- never used;
 				}	// for 32 SEQUENCES
 
 			// Now that finished, is m_Seq == nLastSeq???

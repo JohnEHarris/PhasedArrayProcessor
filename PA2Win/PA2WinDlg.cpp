@@ -462,6 +462,9 @@ BOOL CPA2WinDlg::OnInitDialog()
 	InitializeServerConnectionManagement();
 
 	StructSizes();
+	s.Format(_T("Version =   %d_%02d_%03d\n\n"), VERSION_MAJOR, VERSION_MINOR, VERSION_BUILD);
+	TRACE(s);
+	DlgDebugOut(s);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 	}

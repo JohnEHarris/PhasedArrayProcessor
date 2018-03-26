@@ -89,7 +89,7 @@ void CCmdProcessThread::ProcessReceivedMessage(WPARAM, LPARAM)
 		//break;
 #endif
 	default:
-		// this is processed by CClientConnectionManagement::ProcessReceivedMessage(void)
+		// this is processed by CCCM_PAG::ProcessReceivedMessage
 		m_pMyCCM->ProcessReceivedMessage();
 		}	// switch (m_pMyCCM->m_nMyConnection)
 	}

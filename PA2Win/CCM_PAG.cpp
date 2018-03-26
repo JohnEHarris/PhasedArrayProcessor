@@ -203,8 +203,15 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 			CvChannel *pChannel;
 			// for now assume sequence length 3 and 8 chnls per sequence
-			for (is = 0; is < 3; is++)
-				for (ic = 0; ic < 8; ic++)
+			if (gnSeqModulo != 3)
+				{
+				s = _T("gnSeqModulo != 3\n");
+				TRACE(s);
+				DebugOut(s);
+				gnSeqModulo = 3;
+				}
+			for (is = 0; is < gnSeqModulo; is++)
+				for (ic = 0; ic < MAX_CHNLS_PER_MAIN_BANG; ic++)
 					{
 					pChannel = pSCC->pvChannel[is][ic];
 					pChannel->WFifoInit((BYTE)pCmdS->wNx, pCmdS->wMax, pCmdS->wMin, pCmdS->wDropCount);

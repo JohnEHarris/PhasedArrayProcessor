@@ -94,7 +94,7 @@ void CvChannel::FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
 	pFifo->bThold = bThld;
 	pFifo->bMod = bMod;
 	w_DefaultConfig = 0;	// not using default config
-	// Constructor sets this true after calling FifoInit()
+	// Constructor sets this true = 8 = DEFAULT_CFG after calling FifoInit()
 	// NcNx command does not.
 	};
 
@@ -190,6 +190,7 @@ void CvChannel::WFifoInit(BYTE bNx, WORD wMax, WORD wMin, WORD wDropOut)
 	m_fWallScaler	= GetWallScaler((WORD)bNx);
 	m_bInputCnt		= 0;
 	m_wBadInARow	= 0;
+	w_DefaultConfig = 0;	// not using default config
 	}
 
 // Wall data is summed over Nx samples. The sums are peak held for max wall and min held
@@ -251,7 +252,7 @@ WORD CvChannel::InputWFifo( WORD wWall )
 				// Omitting the next line only results in a false min wall on the first sampling interval of 16
 				// Thereafter the min wall sum is correct.
 				//	if (m_bInputCnt >= pFifo->bNx)
-			if (m_wTOFMinSum > pFifo->uSum)
+			if ((m_wTOFMinSum > pFifo->uSum) && (pFifo->wGoodWall >= pFifo->bNx) )
 				{
 				m_wTOFMinSum = m_PeakData.wTofMin = pFifo->uSum;
 				}
@@ -384,7 +385,8 @@ void CvChannel::CopyPeakData(stPeakChnlPAP *pOut)
 void CvChannel::CopyPeakToIdata(IDATA_PAP *pOut, int nSeq)
 	{
 	int nCh;
-	int nDxgate2, nDxgate3, nDxMax, nDxMin;		// will become structure elements in stPeakChnlPAP eventually 2017-10-24
+	//int nDxgate2, nDxgate3, nDxMin;		// will become structure elements in stPeakChnlPAP eventually 2017-10-24
+	int nDxMax;
 	//nCh = (nSeq  % gnSeqModulo)*gMaxChnlsPerMainBang + m_bChnl;
 	nCh = m_PeakData.bChNum;
 	nDxMax = 0;	// make compiler happy for now

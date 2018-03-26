@@ -2,7 +2,7 @@
 
 
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			3
+#define BUILD_VERSION			4
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR          0

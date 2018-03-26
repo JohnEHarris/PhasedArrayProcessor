@@ -129,7 +129,7 @@ int CCmdFifo::GetPacketSize(void)
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD
 	*/	
-	CString s;
+	CString s,t;
 	WORD *pW = (WORD *)&m_Mem[m_Out];// debugging
 	GenericPacketHeader *pHeader;
 	IDATA_FROM_HW *pIdata;
@@ -142,7 +142,15 @@ int CCmdFifo::GetPacketSize(void)
 		m_Out = 0;
 		m_Size = 0;
 		m_bError = 2;	// lost sync
-		s = _T( "Lost Sync\n" );
+		s = _T("");
+		t = _T("No OverFlow");
+		if (pHeader->uSync != SYNC)		s = _T( "Lost Sync .. " );
+		if (pHeader->wByteCount > CMD_FIFO_MEM_SIZE)
+			{
+			t = _T("FIFO OVERFLOW");
+			}
+		s += t;
+		s += _T("\n");
 		TRACE(s);
 		pMainDlg->SaveDebugLog(s);
 		return 0;
@@ -153,6 +161,7 @@ int CCmdFifo::GetPacketSize(void)
 		{
 		m_bError = 4;	// wrong packet size
 		s = _T( "Wrong Packet Size\n" );
+		TRACE(s);
 		pMainDlg->SaveDebugLog(s);
 
 		return 0;

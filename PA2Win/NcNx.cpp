@@ -627,7 +627,7 @@ void CNcNx::WallNxCmd(int nPap, int nBoard, int nSeq, int nCmd, int nValue)
 	nValue = nValue % 5;
 	if (nValue == 0) nValue = 1;
 	m_NxCmd.wNx = nValue;
-	m_NxCmd.wMax = 800 + nValue;
+	m_NxCmd.wMax = 1200 + nValue;
 	m_NxCmd.wMin = 200 + nValue;
 	m_NxCmd.wDropCount = 10 + nValue;
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Nx=%d, Max=%d, Min=%d Drop=%5d  nValue modifies Max,Min,drop\n"),

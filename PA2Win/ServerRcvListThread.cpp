@@ -443,8 +443,8 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->bPAPNumber = pIData->bPAPNumber;
 		m_pIdataPacket->bBoardNumber = pIData->bBoardNumber;
 
-		//m_pIdataPacket->bStartSeqNumber = pChannel->m_bSeq;	// Come from gate board in header with gates and wall
-		m_pIdataPacket->bStartSeqNumber = pIData->bStartSeqNumber;	// Come from gate board in header with gates and wall
+		m_pIdataPacket->bStartSeqNumber = pChannel->m_bSeq;	// Come from gate board in header with gates and wall
+		//m_pIdataPacket->bStartSeqNumber = pIData->bStartSeqNumber;	// Come from gate board in header with gates and wall
 		m_pIdataPacket->bSeqModulo = gnSeqModulo = pIData->bSeqModulo;
 		m_pIdataPacket->bMaxVChnlsPerSequence = pIData->bMaxVChnlsPerSequence;
 		m_pIdataPacket->bStartChannel = pChannel->m_bChnl;

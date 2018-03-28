@@ -203,6 +203,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 			CvChannel *pChannel;
 			// for now assume sequence length 3 and 8 chnls per sequence
+#if 0
 			if (gnSeqModulo != 3)
 				{
 				s = _T("gnSeqModulo != 3\n");
@@ -210,6 +211,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				DebugOut(s);
 				gnSeqModulo = 3;
 				}
+#endif
 			for (is = 0; is < gnSeqModulo; is++)
 				for (ic = 0; ic < MAX_CHNLS_PER_MAIN_BANG; ic++)
 					{

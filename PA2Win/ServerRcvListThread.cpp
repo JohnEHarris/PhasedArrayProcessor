@@ -686,6 +686,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 				}
 #endif
 			m_Seq = pIData->bStartSeqNumber;	// 2018-03-07 fix break in testing
+#if 0
 			if (m_Seq > 3)		// for this specific machine, seq only 0,1,2
 				{
 				s.Format(_T("Deleting m_pIdataPacket, m_Seq = %d > 3, m_pIdataPacket = 0x%08x\n"), pIData->bNiosGlitchCnt, (UINT)m_pIdataPacket);
@@ -696,6 +697,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 				m_pIdataPacket = 0;
 				return;
 				}
+#endif
 
 #endif
 

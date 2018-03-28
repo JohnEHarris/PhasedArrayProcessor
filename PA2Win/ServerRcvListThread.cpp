@@ -285,6 +285,13 @@ BYTE GetRand(void)
 	//wReturn = (WORD)(((double)rand() / (RAND_MAX + 1)) * 100);
 	return (BYTE)(wReturn % 100);
 	}
+
+// For debugging, save the fake data and the contents of the output tcpip packet made from fake data
+void CServerRcvListThread::SaveFakeData(CString& s)
+	{
+	pMainDlg->SaveFakeData(s);
+	}
+
 #ifdef I_AM_PAP
 void CServerRcvListThread::IncFDstartCh(void)
 	{
@@ -383,11 +390,6 @@ void CServerRcvListThread::MakeFakeData(IDATA_FROM_HW *pData)
 		}	// for (iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
 	}
 
-// For debugging, save the fake data and the contents of the output tcpip packet made from fake data
-void CServerRcvListThread::SaveFakeData(CString& s)
-	{
-	pMainDlg->SaveFakeData(s);
-	}
 
 #if 0
 // Not enought info in data structures I am seeing on 6/7/16. Assume 32 chnls 
@@ -923,6 +925,12 @@ void CServerRcvListThread::ProcessPAM_Data(void *pData)
 		s.Format(_T("PeakChnl[0].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
 			pIdata->PeakChnl[0].bId2, pIdata->PeakChnl[0].bOd3, pIdata->PeakChnl[0].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
 		TRACE(s);
+		SaveFakeData(s);
+		// if using simulator, chnl 21 wall = 999*filter length, Od = 25
+		s.Format(_T("PeakChnl[21].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
+			pIdata->PeakChnl[21].bId2, pIdata->PeakChnl[21].bOd3, pIdata->PeakChnl[21].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
+		SaveFakeData(s);
+
 		//((void *)&gLastIdataPap, (void *)pIdata, sizeof(IDATA_PAP));
 		memcpy((void *)&gLastIdataPap, (void *)pIdata, pIdata->wByteCount);
 	}

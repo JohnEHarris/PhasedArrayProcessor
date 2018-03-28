@@ -1512,7 +1512,7 @@ void CPA2WinDlg::CloseDebugLog(void)
 
 void CPA2WinDlg::SaveFakeData(CString& s)
 	{
-#ifdef _DEBUG
+#ifdef DEBUGIT
 	char ch[4000];
 	CstringToChar(s,ch,4000);
 	if (0 == m_nFakeDataExists)

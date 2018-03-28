@@ -624,7 +624,7 @@ void CNcNx::WallNxCmd(int nPap, int nBoard, int nSeq, int nCmd, int nValue)
 	m_NxCmd.bPAPNumber = nPap;
 	m_NxCmd.bBoardNumber = nBoard;
 	// change nValue assignment from wall thick to Nx
-	nValue = nValue % 5;
+	nValue = nValue % 10;
 	if (nValue == 0) nValue = 1;
 	m_NxCmd.wNx = nValue;
 	m_NxCmd.wMax = 1200 + nValue;

@@ -340,7 +340,6 @@ void CServerRcvListThread::MakeFakeData(IDATA_FROM_HW *pData)
 	for (iSeqPkt = 0; iSeqPkt < 32; iSeqPkt++)
 		{
 		pData->bStartSeqNumber = GetFDstartSeq();
-		//pData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber = GetFDstartCh();
 		n = 0;	// channel counter. Will create gMaxChnlsPerMainBang*gMaxSeqCount channels
 		jSeq = GetFDstartSeq();
 
@@ -391,27 +390,6 @@ void CServerRcvListThread::MakeFakeData(IDATA_FROM_HW *pData)
 	}
 
 
-#if 0
-// Not enought info in data structures I am seeing on 6/7/16. Assume 32 chnls 
-int CServerRcvListThread::GetSequenceModulo(SRawDataPacketOld *pData)
-	{
-#if 0
-	int i;
-	int nStartSeqCount, nSeqQty;
-	// Since length == 1040 we have 128 ascan samples. The header tells us the 1st vChnl in the packet
-	nStartSeqCount = pData->DataHead.bSeq;
-	//Scan the whole packet to see when the start seq count occurs again .. this is the number of vChnls in th packet
-	for ( i = 1; i < 128; i++)
-		{
-		if (pData->RawData
-		}
-#endif
-	return 32;
-
-	}
-#endif
-
-
 // Build Output packet as individual channel peak held data becomes available
 // could return the index in Idata
 // If SendFlag is non zero, send the packet as is
@@ -445,8 +423,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->bPAPNumber = pIData->bPAPNumber;
 		m_pIdataPacket->bBoardNumber = pIData->bBoardNumber;
 
-		m_pIdataPacket->bStartSeqNumber = pChannel->m_bSeq;	// Come from gate board in header with gates and wall
-		//m_pIdataPacket->bStartSeqNumber = pIData->bStartSeqNumber;	// Come from gate board in header with gates and wall
+		m_pIdataPacket->bStartSeqNumber = pChannel->m_bSeq;	// the key to correctly mapping the data to the output packet	
 		m_pIdataPacket->bSeqModulo = gnSeqModulo = pIData->bSeqModulo;
 		m_pIdataPacket->bMaxVChnlsPerSequence = pIData->bMaxVChnlsPerSequence;
 		m_pIdataPacket->bStartChannel = pChannel->m_bChnl;
@@ -582,7 +559,7 @@ void CServerRcvListThread::CheckSequences(IDATA_PAP *pIdataPacket)
 	unsigned int nStartSeq, nSeqModulo, nChnl;	// test vars
 	unsigned int nChnlModulo;
 	unsigned int i, nError, nLastChnl;
-	int j, k, l;
+	int j;
 	CString s;
 	nStartSeq = pIdataPacket->bStartSeqNumber;
 	nSeqModulo = pIdataPacket->bSeqModulo;
@@ -723,15 +700,12 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			m_Seq = nStartSeq = pIData->bStartSeqNumber;	// only used to find which pChannel
 			m_Ch = 0;	// pIData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber;
 			gnSeqModulo = pIData->bSeqModulo;
-			// For example, if 3 unique sequences, then 30 Ascans is 10 whole sets of sequences
-			// If 8 unique sequences:  32/8 = 4 complete sets of data but 8*8 = 64 unique channels
-			//m_nFullPacketChnls = (32 / gnSeqModulo) * gnSeqModulo * 8; - no this catches each
-			// chnl into a new value. We want peak held data over 16 ascans for only
 			m_nFullPacketChnls = gnSeqModulo*8;
+			gbStartSeqNumberIncrement = 32 % gnSeqModulo;
 			// gnSeqModulo channels
 			gbSeqPerPacket = 32;	// (32 / gnSeqModulo) * gnSeqModulo;
 
-			nLastSeq = (m_Seq + gnSeqModulo -1 ) % gnSeqModulo;
+			nLastSeq = (m_Seq + gbStartSeqNumberIncrement + gnSeqModulo -1 ) % gnSeqModulo;
 #if 0
 			s.Format(_T("Fake Data Initial m_Seq Number = %d, Last Seq = %d\n"), m_Seq, nLastSeq);
 			pMainDlg->SaveFakeData(s);
@@ -757,15 +731,15 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					// Not defined what to do with status ???????
 #ifdef CLIVE_RAW_DATA
 					bGateTmp = pChannel->InputFifo(eIf, pIData->stSeqPkt[iSeqPkt].RawData[j].bAmp1);
-#endif		// pData->Seq[jSeq].vChnl[i].bAmp2
-					//k = iSeqPkt % gnSeqModulo;
+#endif		
+
 					// debug helper
 					if ((m_Seq == 2) && (m_Ch == 5))
 						s = _T( "Should be 99 & 999" );
 					bGateTmp2 = pChannel->InputFifo(eId, pIData->Seq[nPkt].vChnl[j].bAmp2);	// output of the Nc peak holder
 					bGateTmp3 = pChannel->InputFifo(eOd, pIData->Seq[nPkt].vChnl[j].bAmp3);
 
-					// Get Max and min tof for this channel
+					// Get Max and min tof for this channel for debug display on PAP
 					if ((m_Seq == 0) && (m_Ch == 0))
 						{
 						//if (gwMin0 = pIData->Seq[0].vChnl[0].wTof)
@@ -783,7 +757,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 						{
 						gwMin2_0 = pIData->Seq[nPkt].vChnl[0].wTof;
 						}
-					// ****  Also advances input ptr for all fifo's in this channel. ****
+					// **** InputWFifo Also advances input ptr for all fifo's in this channel. ****
 					wTOFSum = pChannel->InputWFifo(pIData->Seq[nPkt].vChnl[j].wTof);
 					//pChannel->CountInputs();
 					// testing for unique channel
@@ -808,11 +782,9 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 						{
 						// time to move peak data into output structure
 						// AddToIdataPacket will create the IdataPacket if it does not already exist.
-						// should the first 'chnl' to complete the Nc fileter be 
+						// should be the first 'chnl' to complete the Nc filter 
 						// the first channel of the start sequence -- seems logical
-						// add start seq to function call
 						AddToIdataPacket(pChannel, pIData,  nPkt);
-						// nPkt could give false location info it start seq != 0
 						pChannel->ResetGatesAndWalls();
 						
 						// MAX_RESULTS is the number of uniques channels in the inspection machine = SeqLen*(Chns/main_bang)
@@ -843,7 +815,6 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 							//pIdataPacket->wMsgID = NC_NX_IDATA_ID; //already 1 before break
 							SendIdataToPag((GenericPacketHeader *)pIdataPacket);
 							memcpy((void *)&gLastIdataPap, (void *)pIdataPacket, sizeof(IDATA_PAP));
-							//m_Seq = (pIData->bStartSeqNumber + gnSeqModulo) % gnSeqModulo; 2017-11-02 this was the killer
 							delete m_pIdataPacket;
 							m_pIdataPacket = NULL;
 							}

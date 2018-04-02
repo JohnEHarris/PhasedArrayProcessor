@@ -105,6 +105,7 @@ PubExt int gMaxChnls;	// channels per main bang * MaxSeqCount = 8*32 =256
 PubExt int gnSeqModulo;	// last seq number before reset to 0
 PubExt int gnMaxSeqCount;	// never used
 PubExt BYTE gbSeqPerPacket;	// up to 32 seq in packet to PAG. May be less
+PubExt BYTE gbStartSeqNumberIncrement;	// the next start sequence
 PubExt int gMaxSeqCount;
 PubExt int gnMaxServers, gnMaxClientsPerServer;		// Server Connection Management
 PubExt int gnMaxClients;							// Client Connection Management

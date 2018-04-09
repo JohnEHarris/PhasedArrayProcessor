@@ -88,9 +88,13 @@ the PAP and PAG
 #define ASCAN_REP_RATE_ID			27		// AscanRepRate
 
 //#define NIOS_SCOPE_CMD_ID			21		// MakeScopeCmds -- Executes in NIOS code
-//#define READBACK_CMD_ID			22		// ReadBackCmdData
+//
+#define READBACK_CMD_ID			13		// ReadBackCmdData
+// Within read back cmd, sub commands are:
+// READ BACK CMDS
+#define NX_READBACK_ID			0		// returns Nx settings for all channels of bSeq = n
+#define GET_GATE_DATA_ID		1		// returns all gate data for all channels of bSeq = n
 
-									
 									
 // LARGE
 #define NC_NX_TEST					1+0x200
@@ -471,7 +475,7 @@ typedef struct
 
 typedef struct
 	{
-	GenericPacketHeader Head;	// wMsgID= READBACK_CMD_ID
+	GenericPacketHeader Head;	// wMsgID= READBACK_CMD_ID = 13
 	BYTE bSeq;			// 
 	BYTE bChnl;		// which virtual probe
 	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.

@@ -390,18 +390,18 @@ typedef struct
 
 typedef struct
 	{
-	ST_GATE_SETTINGS Gate[4];
-	} ST_GATEINFO_PER_CHANNEL;	// 56 bytes
+	ST_GATE_SETTINGS Gate[2];	// only 2 gates in 2018 hardware
+	} ST_GATEINFO_PER_CHANNEL;	// 28 bytes
 
-typedef struct // MAX_SEQ_COUNT = 16
+typedef struct 
 	{
 	ST_GATEINFO_PER_CHANNEL Ch[MAX_CHNLS_PER_MAIN_BANG];	// 8
-	} ST_GATECH_PER_SEQ;	// 8*56 = 448
+	} ST_GATECH_PER_SEQ;	// 8*28 = 224
 
-typedef struct
+typedef struct // MAX_SEQ_COUNT = 3 in 2018 hardware
 	{
-	ST_GATECH_PER_SEQ Seq[MAX_SEQ_COUNT];
-	}	ST_GATE_READBACK_DATA;	// 448*16 = 7168
+	ST_GATECH_PER_SEQ Seq[3];
+	}	ST_GATE_READBACK_DATA;	// 224*3 = 672
 
 
 

@@ -552,6 +552,8 @@ afx_msg void Hello( WPARAM w, LPARAM lParam )
 // This function will empty the linked list by sending its contents out using the associated
 // Server Socket. Activation of the thread requires another actor to post a thread message
 // to this thread.
+// 2018-04-05 look at queue depths in NIOS before sending message. If queue is too deep
+// set flag for TestThread loop to restart the TransmitPacket operation
 afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	{
 	int nClientIndex = (int) w;

@@ -42,7 +42,7 @@ CvChannel::CvChannel(int nSeq, int nChnl)
 	m_bInputCnt = 0; 
 	// Wall processing routines
 	// Nx, Max allowed, Min, DropOut cnt
-	WFifoInit(1,1377,27,10);	// nominal 1,1377,27,4
+	WFifoInit(1,1392,35,10);	// nominal 1,1377,27,4
 	//if ( nInst > 3) return;
 	//if (nChnl > 39) return;
 	// counter of how many time constructor runs for each chnl/instrument

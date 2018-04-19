@@ -292,6 +292,11 @@ void CServerRcvListThread::SaveFakeData(CString& s)
 	pMainDlg->SaveFakeData(s);
 	}
 
+void CServerRcvListThread::SaveDebugLog(CString& s)
+	{
+	pMainDlg->SaveDebugLog(s);
+	}
+
 #ifdef I_AM_PAP
 void CServerRcvListThread::IncFDstartCh(void)
 	{
@@ -614,7 +619,8 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
 	//After AUG 2017 Only ID, OD, MinWall sent to PAG
 	i = sizeof(IDATA_FROM_HW);
-	if (pIData->wByteCount >= INSTRUMENT_PACKET_SIZE -132)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
+//	if (pIData->wByteCount >= INSTRUMENT_PACKET_SIZE - 132)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
+	if (pIData->wByteCount >= 256)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
 		{
 
 		if (pIData->wMsgID == eRawInspID)
@@ -862,7 +868,18 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			m_pIdataPacket = NULL;
 			}
 
-		delete pIData;	// info in pOutput was put into a new structure and sent to the PAG
+		else if ((pIData->wMsgID == eReadBackID))	// Read back.. pass thru to PAP
+			{
+			READBACK_DATA *pIn = (READBACK_DATA *)pIData;
+			READBACK_DATA *pIdataPacket = new (READBACK_DATA);
+			memcpy((void*)pIdataPacket, (void *)pIData, pIn->wByteCount);
+			SendIdataToPag((GenericPacketHeader *)pIdataPacket);
+			memcpy((void *)&gLastRdBkPap, (void *)pIdataPacket, pIn->wByteCount);
+			delete m_pIdataPacket;
+			m_pIdataPacket = NULL;
+			}
+		else
+			delete pIData;	// info in pOutput was put into a new structure and sent to the PAG
 		}	// if (pBuf->nLength == 1040)
 
 	else
@@ -912,6 +929,22 @@ void CServerRcvListThread::ProcessPAM_Data(void *pData)
 		i = pIdata->wMsgID;
 		memcpy((void *)&gLastAscanPap, (void *)pIdata, sizeof(ASCAN_DATA));
 		guAscanMsgCnt++;
+		}
+
+	else if (pIdata->wMsgID == READBACK_DATA_ID)
+		{
+		READBACK_DATA *pRb = (READBACK_DATA *)pIdata;
+		i = pIdata->wMsgID;
+		memcpy((void *)&gLastRdBkPap, (void *)pIdata, sizeof(READBACK_DATA));
+		guRdBkMsgCnt++;
+		s.Format(_T("Received Read Back data, wReadBackID = %d"), pRb->wReadBackID);
+		SaveDebugLog(s);
+		}
+	else
+		{
+		// something else
+		s = _T("Unknown message");
+		SaveDebugLog(s);
 		}
 	delete pData;
 	}	// ProcessPAM_Data(void *pData)

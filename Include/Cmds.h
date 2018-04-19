@@ -713,7 +713,7 @@ WORD GetScopeSetting();
 int RangeChecksWordCmd(ST_WORD_CMD *pW);	// CheckS plural
 
 void MsgPrint(char *msg);
-void BuildReadBackHeader(READBACK_DATA *pHdr);
+void BuildReadBackHeader(READBACK_DATA *pRb);
 void GetGateSettings(void);
 
 #endif

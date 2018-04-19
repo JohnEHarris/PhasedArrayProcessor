@@ -43,7 +43,7 @@ enum IdataTypes { eRawInspID = 1, eAscanID = 2, eReadBackID = 3, eKeepAliveID = 
 enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define NC_NX_IDATA_ID				1		// PAP processed inspection data sent to PAG/Receiver system
 #define ASCAN_DATA_ID				2
-
+#define READBACK_DATA_ID			3
 
 
 

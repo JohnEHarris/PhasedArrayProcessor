@@ -362,7 +362,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("TCGGainClock"));		m_cbCommand.AddString(s);	//10
 		s.Format(_T("TCGChnlGainDelay"));	m_cbCommand.AddString(s);	//11
 		s.Format(_T("TcgBeamGainAll"));		m_cbCommand.AddString(s);	//12
-		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//13
+		s.Format(_T("ReadBack"));			m_cbCommand.AddString(s);	//13
 		s.Format(_T("SetTcgClockRate"));	m_cbCommand.AddString(s);	//14
 		s.Format(_T("TCGTriggerDelay"));	m_cbCommand.AddString(s);	//15
 		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//16
@@ -418,6 +418,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		case 7: s.Format(_T("Gate %d Polarity %d"), m_nGate, m_nParam); break;
 		case 8: s.Format(_T("Gate %d TOF %d"), m_nGate, m_nParam); break;
 		case 9: s.Format(_T("Nx = %d"), m_nParam);				break;
+		case 13: s.Format(_T("ReadBk SubCmd %d"), m_nParam);	break;
 		case 0x204: s = _T("TCG_BEAM_GAIN");					break;
 		case 0x205: s = _T("TCG_SEQ_GAIN");						break;
 		default:	s = t;		break;
@@ -455,9 +456,10 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		case 10:
 		case 11:
 		case 12:
-		case 13:
 			TcgCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 			break;
+		case 13:
+			ReadBackCmd(m_nPAP, m_nBoard, m_nCmdId, m_nParam);
 		default:
 			break;
 			}
@@ -670,6 +672,29 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	m_lbOutput.AddString(t);
 	SendMsg((GenericPacketHeader*)&m_TcgCmd);
 	}
+
+// Readback has sub commands. Top read back ID is 13
+// nRbId is nValue from NcNx parameters
+void CNcNx::ReadBackCmd(int nPap, int nBoard, int nCmd, int nValue)
+	{
+	CString s, t, sym;
+	memset(&m_RdBkCmd, 0, sizeof(ST_SET_TCG_DELAY_CMD));
+	m_RdBkCmd.Head.wMsgID = nCmd;	 // 13;
+	m_RdBkCmd.Head.wByteCount = 32;
+	m_RdBkCmd.Head.uSync = SYNC;
+	//		m_TcgCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
+	m_RdBkCmd.Head.bPapNumber = nPap;
+	m_RdBkCmd.Head.bBoardNumber = nBoard;
+	m_RdBkCmd.wReadBackID = nValue;	// this is the nValue parameter
+
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, RdBkCmd = 13, RdBkID = %2d\n"),
+		m_RdBkCmd.Head.wMsgID, m_RdBkCmd.Head.wByteCount, m_RdBkCmd.Head.bPapNumber,
+		m_RdBkCmd.Head.bBoardNumber, m_RdBkCmd.wReadBackID);
+	t = sym + s;
+	m_lbOutput.AddString(t);
+	SendMsg((GenericPacketHeader*)&m_RdBkCmd);
+	}
+
 
 // Command ID = 1 generates a request for the NIOS instrument to create fake data and
 // send to PAP

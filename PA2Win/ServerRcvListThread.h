@@ -63,6 +63,7 @@ public:
 	void MakeFakeData(IDATA_FROM_HW *pData);
 	//void BuildOutputPacket(IDATA_FROM_HW *pInput);
 	void SaveFakeData(CString& s);
+	void SaveDebugLog(CString& s);
 
 	void AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW *pIData, int nSeq);
 	// create a processing class instance for each wall channel

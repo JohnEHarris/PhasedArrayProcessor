@@ -802,6 +802,9 @@ void CServerSocket::OnReceive(int nErrorCode)
 		while (1)	// total byte in FIFO. May be multiple packets.
 			{	// get packets
 			wByteCnt = m_pFifo->GetFIFOBytes();
+			if (wByteCnt == 672)
+				n = 672;
+
 			if (wByteCnt < sizeof(GenericPacketHeader))
 				{
 				//CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
@@ -844,6 +847,14 @@ void CServerSocket::OnReceive(int nErrorCode)
 			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
 			//InputRawDataPacket *pIdataPacket = (InputRawDataPacket *) pB;
 			IDATA_FROM_HW *pIdataPacket = (IDATA_FROM_HW *) pB;
+
+#if 0
+			if (pIdataPacket->wMsgID == 3)
+				{
+				s = _T("ReadBackData\n");
+				TRACE(s);
+				}
+#endif
 			
 			m_nSeqCntDbg[m_nSeqIndx++] = pIdataPacket->wMsgSeqCnt;
 			m_nSeqIndx &= 0x3ff;

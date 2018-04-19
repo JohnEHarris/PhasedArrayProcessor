@@ -97,6 +97,7 @@ typedef struct
 PubExt	GLOBAL_DLG_PTRS gDlg;
 PubExt IDATA_PAP gLastIdataPap;		// data sent to down stream systems from PAP
 PubExt ASCAN_DATA gLastAscanPap;
+PubExt READBACK_DATA gLastRdBkPap;
 PubExt WORD gwMax0, gwMin0, gwMin1_0, gwMin2_0, gwZeroCnt, gwNot0;	// max and min of seq0, chnl 0
 #endif
 
@@ -111,6 +112,7 @@ PubExt int gnMaxClients;							// Client Connection Management
 PubExt int gnFifoCnt, gnAsyncSocketCnt;
 PubExt WORD gwMsgSeqCnt;
 PubExt BYTE gbStartSeqNumber;	// starting sequence number for next Idata packet
+PubExt BYTE gbStartSeqNumberIncrement;
 PubExt int nLoc; // simulate location of pipe
 PubExt BYTE bLastFakeSeq;	// assuming fake data can reset before 32 ascans.
 PubExt BYTE gbNiosGlitchCnt;	// usually Wiznet rest count. Must reset PAP data fifo processing on change of cnt
@@ -126,5 +128,5 @@ PubExt BYTE gbReadBackReady;// once readback ready, skip AScan and replace with 
 PubExt WORD gwGateBits;		// what combination of gates are being sent in AScan data
 PubExt WORD gwBeamType;		// rf or gates
 PubExt BYTE bAppIsClosing;
-
+PubExt UINT guRdBkMsgCnt;
 #endif /* GLOBAL_H_ */

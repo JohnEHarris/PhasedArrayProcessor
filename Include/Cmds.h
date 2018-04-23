@@ -655,16 +655,16 @@ void TCGBeamGainDelay(void);		// set_beam_gain_delay
 void TCGBeamGainAll(void);			// set_beam_gain_all
 void SetPrf( void );
 void set_ascan_scope(short value);	// ascan sample period
-void AscanScopeSampleRate( void );	// set_ascan_scope also add in NcNx.cpp  -- 14
+void AscanScopeSampleRate( void );	// set_ascan_scope also add in NcNx.cpp  -- 21
 
 void set_ascan_delay(short value);
-void SetAscanDelay(void);			// set_ascan_delay before trace begins --15
+void SetAscanDelay(void);			// set_ascan_delay before trace begins --22
 
-void set_ascan_peaksel(short nBeamType); // --16
+void set_ascan_peaksel(short nBeamType); // --23
 void SelectAscanWaveForm(void);	// multiplexer, selects waveform to show, either Ascan or gates
 
 void set_ascan_rf_beam_sel_reg(short beam);
-void SetAscanRfBeamSelect(void);	// --17
+void SetAscanRfBeamSelect(void);	// --24
 
 void set_ascan_seq_beam_setup_reg(BYTE bChnl, WORD wMultiSeq); // --18
 void SetAscanSeqBeamReg(void);	// selects the beam and seq to display
@@ -685,8 +685,6 @@ void set_TCG_delay( int value );
 void set_beam_gain_step( int value );
 void set_beam_gain_delay( int value );
 
-
-void ToggleAscanBuffer(short nToggleBit);
 
 void set_PRF( WORD wPrf );	// Set prf in Hertz. Range 10-10,000 -- on pulser board
 /*	SMALL TCG commands	*/
@@ -710,10 +708,27 @@ WORD GetFPGATemp();
 WORD GetBoardTemp();
 WORD GetSpinCount();
 WORD GetScopeSetting();
+
+BYTE GetBeamType();
+void SetBeamType(BYTE bBeam);
+
+BYTE GetChCmd24();
+void SetChCmd24(WORD wChs);
+
+BYTE GetChCmd25();
+void SetChCmd25(BYTE bChs);
+
+WORD GetSeqsCmd25();
+void SetSeqsCmd25(WORD wSeqs);
+
+// cmd 26
+BYTE GetScopeGates();
+void SetScopeGates(BYTE bGates);
+
 int RangeChecksWordCmd(ST_WORD_CMD *pW);	// CheckS plural
 
 void MsgPrint(char *msg);
-void BuildReadBackHeader(READBACK_DATA *pRb);
+void BuildReadBackHeader(READBACK_DATA *pHdr);
 void GetGateSettings(void);
 
 #endif

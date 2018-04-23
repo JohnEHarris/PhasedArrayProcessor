@@ -297,10 +297,16 @@ typedef struct
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
 	WORD wFPGATemp;
 	WORD wBoardTemp;
-	WORD wStatus;		// see below
-	WORD wBeamType;		// 0=rf 1=fw  2=peak hold,  4 = gate out
-	WORD wGateBits;		// Bits values: 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
-	WORD wSpare[9];	// 64 bytes to here
+	WORD wStatus;		
+
+	BYTE bBeamType;		// 0=rf 1=fw  2=peak hold,  4 = gate out-- from cmd 23
+	BYTE bChCmd25;		// chnl  -- from cmd 25
+	WORD wSeqCmd25;		// sequences which contribute to above ChSelected  -- from cmd 25
+	BYTE bChCmd24;		// chnl selected by cmd 24 only for Ascan, not for gates -- from cmd 24
+	BYTE bScopeGates;	// 1 or more gates to display. Selected by bits -- from cmd 26
+						// 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
+
+	WORD wSpare[8];		// 64 bytes to here
 	char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA;		// sizeof() = 1088
@@ -333,10 +339,15 @@ typedef struct
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
 	WORD wFPGATemp;
 	WORD wBoardTemp;
-	WORD wStatus;		// see below
-	WORD wBeamType;		// 0=rf 1=fw  2=peak hold,  4 = gate out
-	WORD wGateBits;		// Bits values: 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
-	WORD wSpare[9];	// 64 bytes to here
+	WORD wStatus;		
+
+	BYTE bBeamType;		// 0=rf 1=fw  2=peak hold,  4 = gate out-- from cmd 23
+	BYTE bChCmd25;		// chnl  -- from cmd 25
+	WORD wSeqCmd25;		// sequences which contribute to above ChSelected  -- from cmd 25
+	BYTE bChCmd24;		// chnl selected by cmd 24 only for Ascan, not for gates -- from cmd 24
+	BYTE bScopeGates;	// 1 or more gates to display. Selected by bits -- from cmd 26
+						// 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
+	WORD wSpare[8];		// 64 bytes to here
 	//char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA_HDR;	

@@ -936,6 +936,9 @@ void CServerRcvListThread::ProcessPAM_Data(void *pData)
 		READBACK_DATA *pRb = (READBACK_DATA *)pIdata;
 		i = pIdata->wMsgID;
 		memcpy((void *)&gLastRdBkPap, (void *)pIdata, sizeof(READBACK_DATA));
+		// switch statement if more read back cmds added
+		if (pRb->wReadBackID = GET_GATE_DATA_ID)
+			memcpy((void *)&gLastGateCmd, (void *)pRb->ReadBack, sizeof(gLastGateCmd));
 		guRdBkMsgCnt++;
 		s.Format(_T("Received Read Back data, wReadBackID = %d"), pRb->wReadBackID);
 		SaveDebugLog(s);

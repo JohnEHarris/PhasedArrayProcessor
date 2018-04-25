@@ -128,21 +128,25 @@ CClientCommunicationThread::~CClientCommunicationThread()
 			//delete m_pstCCM->pReceiveThread; already done by ExitInstance
 			m_pstCCM->pReceiveThread = NULL;
 			t = _T("~CClientCommunicationThread() receive thread not null\n");
+			TRACE(t);
 			}
 		if (m_pstCCM->pSocket)
 			{
 			m_pstCCM->pSocket = NULL;
 			t = _T("~CClientCommunicationThread() ASync socket not null\n");
+			TRACE(t);
 			}
 		//AfxEndThread( 0 );	// add here, take out in Kill Send Thread
 		break;
 	case 2:
-		s.Format(_T("Send Com thread[%d],Thread ID %d Destructor ran\n"), i, AfxGetThread()->m_nThreadID);	
+		s.Format(_T("Send Com thread[%d],Thread ID %d Destructor ran\n"), i, AfxGetThread()->m_nThreadID);
+		TRACE(s);
 		if (m_pstCCM->pSendThread)
 			{
 			//delete m_pstCCM->pSendThread;
 			m_pstCCM->pSendThread = NULL;
 			t = _T("~CClientCommunicationThread() send thread not null\n");
+			TRACE(t);
 			}
 		//AfxEndThread( 0 );	// add here, take out in Kill Send Thread
 		break;

@@ -271,7 +271,7 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 			TRACE( _T( "Failed to kill Debug Out List\n" ) );
 		else { m_pstCCM->pCSDebugOut = 0;  m_pstCCM->pOutDebugMessageList = 0; }
 		}
-
+	TRACE(_T("Destructor Ran\n"));
 	}
 
 // Begin the Receive Thread

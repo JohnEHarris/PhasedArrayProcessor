@@ -1171,7 +1171,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 
 		if (i == RETRY_COUNT)
 			{
-			s.Format(_T("->Failed to send packet # = %d after %d attempts\n"), m_wMsgSeqCount-1, i);
+			s.Format(_T("Failed to send packet # = %d after %d attempts\n"), m_wMsgSeqCount-1, i);
 			TRACE(s);
 			m_nConsecutiveFailedXmit++;
 			if (m_nConsecutiveFailedXmit >= 50)

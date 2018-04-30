@@ -94,6 +94,7 @@ CClientCommunicationThread::CClientCommunicationThread()
 	m_pElapseTimer		= 0;
 	//strcpy(m_pElapseTimer->tag, "CComThrd89 ");
 	m_nTimerPacketsWaiting = 0;
+	m_nConsecutiveFailedXmit = 0;
 	}
 
 CClientCommunicationThread::~CClientCommunicationThread()
@@ -326,7 +327,10 @@ afx_msg void CClientCommunicationThread::InitTcpThread(WPARAM w, LPARAM lParam)
 		return;
 	}
 
-	m_nMyRole = (int) w;
+	m_nMyRole = (int) w;	// 1=receiving, 2= sending
+	if (w == 1)	m_sMyRole = _T("RCVR");
+	else if (w == 2)	m_sMyRole = _T("SND");
+	else m_sMyRole = _T("???");
 
 	i =  m_pMyCCM->m_nMyConnection;
 	TRACE3("Inst Com Thread[%d] is running [id=%0x] [priority=%d]\n", (2*i + m_nMyRole-1),
@@ -406,6 +410,7 @@ afx_msg void CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lPar
 				m_pstCCM->pSocket->m_pElapseTimer = 0;
 				}
 
+			// code above should not be necessary. Deleting socket should kill the timer and fifo 2018-04-20
 			delete m_pstCCM->pSocket;
 			}
 		m_pstCCM->pSocket = 0;
@@ -633,6 +638,12 @@ void CClientCommunicationThread::KillSocket(WPARAM w, LPARAM lParam)
 	{
 	int i, nError;
 	CString s;
+	s = m_sMyRole;	// debugging
+	s += _T("  ");
+	s += m_sSrv;
+	s +=_T("\n");
+
+	TRACE(s);
 	TRACE( _T( "KillSocket executed\n" ) );
 	if (m_pstCCM->pSocket)
 		{
@@ -650,10 +661,14 @@ void CClientCommunicationThread::KillSocket(WPARAM w, LPARAM lParam)
 			}
 		// The socket object's destructor calls Close for you. from Microsoft
 		//	m_pstCCM->pSocket->Close();
+		delete m_pstCCM->pSocket;
 		}
-	delete m_pstCCM->pSocket;
+
 	if (nShutDown)
-		KillReceiveThread( 1, 0L );
+		{
+		KillReceiveThread(1, 0L);
+		// maybe kill send thread??
+		}
 	Sleep( 10 );
 	}
 
@@ -1109,10 +1124,17 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 						memcpy((void *)&gLastAscanPap, (void *)pSendPkt, sizeof(ASCAN_DATA));
 						guAscanMsgCnt++;
 						}
+					if (pSendPkt->wMsgID == 3)
+						{
+						memcpy((void *)&gLastRdBkPap, (void *)pSendPkt, pSendPkt->wByteCount);
+						guRdBkMsgCnt++; // 4/24/18 didnt work
+						}
+
 
 					// capture output to PAG for Yanming
 					delete pSendPkt;
 					pSendPkt = 0;
+					m_nConsecutiveFailedXmit = 0;
 					break;
 					}
 
@@ -1130,6 +1152,12 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				{
 				// ClientConnection Socket is null
 				m_pMyCCM->LockSendPktList();
+				j = m_pstCCM->pSendPktList->GetCount();
+				if (j)
+					{
+					s.Format(_T("Deleting %d packets -- socket to PAG is down\n"), j);
+					TRACE(s);
+					}
 				while (m_pstCCM->pSendPktList->GetCount() > 0)
 					{
 					pSendPkt = (IDATA_PAP *)m_pstCCM->pSendPktList->RemoveHead();
@@ -1143,8 +1171,21 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 
 		if (i == RETRY_COUNT)
 			{
-			s.Format(_T("Failed to send packet # = %d after %d attempts\n"), m_wMsgSeqCount-1, i);
+			s.Format(_T("->Failed to send packet # = %d after %d attempts\n"), m_wMsgSeqCount-1, i);
 			TRACE(s);
+			m_nConsecutiveFailedXmit++;
+			if (m_nConsecutiveFailedXmit >= 50)
+				{
+#if 0
+				// The sender thread failed to send. Have the receiver thread kill the socket since
+				// the receiver thread created the socket.
+				CClientCommunicationThread *pRcvThread = m_pMyCCM->m_pstCCM->pReceiveThread;
+				pRcvThread->PostThreadMessageW(WM_USER_KILL_SOCKET, 1, 0);
+				m_nConsecutiveFailedXmit = 0;
+				// client side (PAP) seems to work ok, but PAG the other end crashes 4/30/18
+#endif
+
+				}
 			}
 
 		m_uXmitLoopCount++;

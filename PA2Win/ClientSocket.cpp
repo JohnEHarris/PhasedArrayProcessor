@@ -107,6 +107,7 @@ CClientSocket::~CClientSocket()
 		Sleep( 10 );
 		}
 	m_pCCM->m_pstCCM->pSocket = 0;
+	m_pCCM->m_pstCCM->bConnected = 0; //4/24/18
 	}
 
 

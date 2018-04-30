@@ -85,10 +85,11 @@ BOOL CPA2WinApp::InitInstance()
 	pMainDlg = &dlg;
 	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == IDOK)
-	{
+		{
 		// TODO: Place code here to handle when the dialog is
 		//  dismissed with OK
-	}
+		Sleep(500);
+		}
 	else if (nResponse == IDCANCEL)
 	{
 		// TODO: Place code here to handle when the dialog is

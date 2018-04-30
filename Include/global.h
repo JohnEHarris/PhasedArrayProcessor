@@ -123,7 +123,9 @@ PubExt HANDLE g_hTimerTick;
 PubExt UINT guAscanDelay;
 PubExt BYTE AscanSel;
 
-PubExt UINT guAscanMsgCnt;
+PubExt UINT guAscanMsgCnt;		// only used in PAG
+PubExt UINT guRdBkMsgCnt;		// only used in PAG
+
 PubExt short gnFpgaTemp;	// temp of FPGA chip
 PubExt short gnBoardTemp;	// temp of ADC board
 //PubExt WORD gwPeakSelect;	// differentiates between gates and ut signal for Ascan display --new gwBeamType
@@ -135,5 +137,4 @@ PubExt BYTE gbChCmd24;
 PubExt BYTE gbChCmd25;
 PubExt WORD gwSeqCmd25;	// cmd 25
 PubExt BYTE bAppIsClosing;
-PubExt UINT guRdBkMsgCnt;
 #endif /* GLOBAL_H_ */

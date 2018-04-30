@@ -61,6 +61,7 @@ public:
 	int m_nTick;
 	int m_nDebugCount;	// miscellaneous debugging
 	int m_nDebugEmptyList;
+	int m_nConsecutiveFailedXmit;		// after 50 failed xmit, close socket to server and attempt reconnect jeh 4/24/18
 
 // Overrides
 	// ClassWizard generated virtual function overrides

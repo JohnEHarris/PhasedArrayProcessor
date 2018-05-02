@@ -215,6 +215,8 @@ afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
 			m_pSCC->pSocket->UnLockRcvPktList();
 			pIdata = (IDATA_FROM_HW *)pV;
 			ProcessInstrumentData(pIdata);	// local call to this class memeber
+			if (pIdata)	
+				delete pIdata;
 			m_pSCC->pSocket->LockRcvPktList();
 			}
 		m_pSCC->pSocket->UnLockRcvPktList();
@@ -596,17 +598,9 @@ void CServerRcvListThread::CheckSequences(IDATA_PAP *pIdataPacket)
 		pIdataPacket->wStatus |= nError;	// else clear this bit
 	}
 
-
+// pIdata is deleted in the function that called ProcessInstrumentData
 void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 	{
-
-	// see ServicApp.cpp the procedure tInstMsgProcess() for legacy operation
-	//
-	//stSEND_PACKET *pBuf = (stSEND_PACKET *) pData;
-	//int nStartSeqCount, nSeqQty;
-	//SRawDataPacketOld *pOutput; before 2016-10-20
-	//InputRawDataPacket *pFakeData;
-	//InputRawDataPacket *pIData;
 	int i, j, k,l;
 	int nLastSeq, nStartSeq;
 	int iSeqPkt, nPkt;
@@ -619,11 +613,11 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
 	//After AUG 2017 Only ID, OD, MinWall sent to PAG
 	i = sizeof(IDATA_FROM_HW);
-//	if (pIData->wByteCount >= INSTRUMENT_PACKET_SIZE - 132)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
-	if (pIData->wByteCount >= 256)	//sizeof(SRawDataPacketOld))		// legacy 1040, future is ???
+	if (pIData->wByteCount >= 256)
 		{
-
-		if (pIData->wMsgID == eRawInspID)
+		switch(pIData->wMsgID)
+			{
+			case eRawInspID:
 			{
 			/***************** The peak hold opertion on all channels by PAP ********************/
 			// if m_Seq changes, ie m_Seq != pIData->bStartSeqNumber. FLUSH
@@ -639,13 +633,13 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 				{
 				if (m_pIdataPacket)
 					{
-					s.Format(_T("Deleting m_pIdataPacket, glicth cnt = %d, m_pIdataPacket = 0x%08x\n"), pIData->bNiosGlitchCnt, (UINT)m_pIdataPacket);
+					s.Format(_T("Deleting m_pIdataPacket, glicth cnt = %d, m_pIdataPacket = 0x%08x\n"), 
+						pIData->bNiosGlitchCnt, (UINT)m_pIdataPacket);
 					pMainDlg->SaveFakeData(s);
 					m_bNiosGlitchCnt = pIData->bNiosGlitchCnt;
-					delete m_pIdataPacket;
+					delete m_pIdataPacket; 
 					m_pIdataPacket = 0;
-					//m_IdataInPt = 0;
-
+					m_IdataInPt = 0;
 					}
 				}
 
@@ -695,12 +689,10 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					delete m_pIdataPacket;
 					m_pIdataPacket = 0;
 					//m_IdataInPt = 0;
-					pIData->bNiosGlitchCnt++;
+					pIData->bNiosGlitchCnt = ++m_bNiosGlitchCnt;
 					}
 				gnSeqModulo = pIData->bSeqModulo;
 				}
-
-// never used			gnMaxSeqCount = MAX_SEQ_COUNT;	// MAYBE THIS IS WRONG 2017-11-01 SHOULD BE gbSeqPerPacket
 
 			// get the starting sequence number and channel from the instument data
 			m_Seq = nStartSeq = pIData->bStartSeqNumber;	// only used to find which pChannel
@@ -820,7 +812,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 #endif
 							//pIdataPacket->wMsgID = NC_NX_IDATA_ID; //already 1 before break
 							SendIdataToPag((GenericPacketHeader *)pIdataPacket);
-							memcpy((void *)&gLastIdataPap, (void *)pIdataPacket, sizeof(IDATA_PAP));
+							memcpy((void *)&gLastIdataPap, (void *)pIdataPacket, sizeof(IDATA_PAP));	// for debugging
 							delete m_pIdataPacket;
 							m_pIdataPacket = NULL;
 							}
@@ -855,10 +847,11 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			pMainDlg->SaveFakeData(s);
 #endif
 			/***************** The peak hold opertion on all channels by PAP ********************/
+			break;
 			}
 
 
-		else if ((pIData->wMsgID == eAscanID))	//AScan data... pass thru to PAP
+		case eAscanID:	//AScan data... pass thru to PAP
 			{
 			ASCAN_DATA *pIdataPacket = new (ASCAN_DATA);
 			memcpy((void*)pIdataPacket, (void *)pIData, sizeof(ASCAN_DATA));
@@ -866,9 +859,10 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			memcpy((void *)&gLastAscanPap, (void *)pIdataPacket, sizeof(ASCAN_DATA));
 			delete m_pIdataPacket;
 			m_pIdataPacket = NULL;
+			break;
 			}
 
-		else if ((pIData->wMsgID == eReadBackID))	// Read back.. pass thru to PAP
+		case eReadBackID:	// Read back.. pass thru to PAP
 			{
 			READBACK_DATA *pIn = (READBACK_DATA *)pIData;
 			READBACK_DATA *pIdataPacket = new (READBACK_DATA);
@@ -877,16 +871,19 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			memcpy((void *)&gLastRdBkPap, (void *)pIdataPacket, pIn->wByteCount);
 			delete m_pIdataPacket;
 			m_pIdataPacket = NULL;
+			break;
 			}
-		else
-			delete pIData;	// info in pOutput was put into a new structure and sent to the PAG
-		}	// if (pBuf->nLength == 1040)
+		default:
+			s.Format(_T("ProcessInstrumentData unknown MsgId, %d\n"), pIData->wMsgID);
+			//delete pIData;	// done in caller function
+			}
+		}	// pIData->wByteCount >= 256
 
 	else
 		{
 		// This is for data coming from Yiqing simulator... change once final design done.
 		s.Format(_T("ProcessInstrumentData got a data packet of the wrong size, %d\n"),pIData->wByteCount);
-		delete pIData;	// info in pOutput was put into a new structure and sent to the PAG
+		//delete pIData;	// deleted in caller function 
 		}
 
 	}	// CServerRcvListThread::ProcessInstrumentData(void *pData)

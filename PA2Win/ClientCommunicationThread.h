@@ -57,7 +57,7 @@ public:
 	// procedure of the class
 	CClientSocket* m_pSocket;	// created in CClientCommunicationThread::StartTCPCommunication()
 								// destroyed in CClientCommunicationThread::ExitInstance()
-	SOCKET m_hSocket;
+	//SOCKET m_hSocket;
 	int m_nTick;
 	int m_nDebugCount;	// miscellaneous debugging
 	int m_nDebugEmptyList;

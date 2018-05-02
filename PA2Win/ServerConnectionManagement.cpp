@@ -192,13 +192,6 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 	CString s;
 	i = 0;
 
-	if (m_pstSCM->pServerListenThread)
-		{
-		PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID,WM_QUIT, 0L, 0L);
-		}
-
-
-	/******************/
 
 	if (0 == KillLinkedList( m_pstSCM->pCSDebugIn, m_pstSCM->pInDebugMessageList))
 		TRACE( _T( "Failed to kill InDebugMessage List\n" ) );
@@ -230,6 +223,10 @@ CServerConnectionManagement::~CServerConnectionManagement(void)
 			}
 		}
 
+	if (m_pstSCM->pServerListenThread)
+		{
+		PostThreadMessage(m_pstSCM->pServerListenThread->m_nThreadID, WM_QUIT, 0L, 0L);
+		}
 
 
 	s.Format(_T("~CServerConnectionManagement Destructor[%d] has run\n"), m_nMyServer);

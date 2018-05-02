@@ -147,12 +147,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			return;
 			}
 
-#if 0
-		pSocket->LockSendPktList();
-		pSocket->AddTailSendPkt(pMmiCmd);
-		pSocket->UnLockSendPktList();
-		maybe want to delete pMmiCmd later
-#endif
+
 
 		// big case statement adapted from ServiceApp.cpp 'c' routine ProcessMmiMsg()
 		switch(MsgId)

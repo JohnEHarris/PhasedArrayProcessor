@@ -370,11 +370,16 @@ afx_msg void CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lPar
 	//void *pV;
 
 	// Since Receive created the socket, it will kill the socket
+	if (m_nMyRole != 1)
+		{
+		TRACE("Not the Receiver Thread that is request to be killed\n");
+		ASSERT(0);
+		}
 	if (!m_pstCCM)
 		{
 		TRACE("m_pstCCM is null... cannot access client socket\n");
 		return;	// major trouble here, this should never happen
-		}	
+		}
 	if (! m_pMyCCM)
 		{
 		TRACE("m_pMyCCM is null... will not access client socket\n");
@@ -427,6 +432,11 @@ afx_msg void CClientCommunicationThread::KillSendThread(WPARAM w, LPARAM lParam)
 	CString s;
 	//void *pV;
 
+	if (m_nMyRole != 2)
+		{
+		TRACE("Not the Sender Thread that is request to be killed\n");
+		ASSERT(0);
+		}
 	// Since Receive created the socket, it will kill the socket
 	if (!m_pstCCM)
 		{

@@ -61,6 +61,7 @@ CServerSocketOwnerThread::~CServerSocketOwnerThread()
 		m_pSCC->pSocket = 0;
 		m_pSCC->pServerSocketOwnerThread = 0;
 		}
+	// kill linked lists?
 	}
 
 

@@ -42,6 +42,7 @@ public:
 	afx_msg void ProcessRcvList( WPARAM w, LPARAM lParam );
 	CHwTimer *m_pElapseTimer;
 	int m_nElapseTime;
+	BYTE bDinMap[64];
 
 	CServerConnectionManagement *m_pSCM;		// managing class ptr
 	int m_nMyServer;							// which instance of stSCM[] we are
@@ -64,6 +65,8 @@ public:
 	//void BuildOutputPacket(IDATA_FROM_HW *pInput);
 	void SaveFakeData(CString& s);
 	void SaveDebugLog(CString& s);
+
+	void MapbDin(void);
 
 	void AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW *pIData, int nSeq);
 	// create a processing class instance for each wall channel

@@ -84,6 +84,7 @@ CServerRcvListThread::CServerRcvListThread()
 	m_nFakeDataCallCount = 0;
 	m_bNiosGlitchCnt = 0;
 	srand( (unsigned)time( NULL ) );	// seed random number generator
+	MapbDin();	// 2018-05-10
 #endif
 	m_pElapseTimer = 0;
 #if 0
@@ -396,6 +397,31 @@ void CServerRcvListThread::MakeFakeData(IDATA_FROM_HW *pData)
 		}	// for (iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
 	}
 
+// build 64 byte map to map Sam' digital input patter to Roberts
+#define HD_SAM		(1 << 5)
+#define IE_SAM		(1 << 4)
+#define PP_SAM		(1 << 2)
+//#define FWD_SAM	ALWAYS Roberts bit2 for now and always 1
+#define HD_RC		(1 << 3)
+#define FWD_RC		(1 << 2)
+#define IE_RC		(1 << 1)
+#define PP_RC		(1 << 0)
+
+void CServerRcvListThread::MapbDin(void)
+	{
+	BYTE i;
+	BYTE bTmp;
+
+	// Robert doesn't care about 2 high order bits
+	for (i = 0; i < 64; i++)
+		{
+		bTmp = FWD_RC;	// always forward for now 2018-05-10
+		if (i & HD_SAM)	bTmp |= HD_RC;
+		if (i & IE_SAM)	bTmp |= IE_RC;
+		if (i & PP_SAM)	bTmp |= PP_RC;
+		bDinMap[i] = bTmp;
+		}
+	}
 
 // Build Output packet as individual channel peak held data becomes available
 // could return the index in Idata
@@ -426,7 +452,6 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->wByteCount = pIData->bSeqModulo * pIData->bMaxVChnlsPerSequence * sizeof(stPeakChnlPAP) + sizeof(IDATA_FROM_HW_HDR);
 		m_pIdataPacket->uSync = SYNC;
 		m_pIdataPacket->wMsgSeqCnt = 0;	// properly incremented when sent by CClientCommunicationThread::TransmitPackets
-		m_pIdataPacket->wStatus = 0x1234;
 		m_pIdataPacket->bPAPNumber = pIData->bPAPNumber;
 		m_pIdataPacket->bBoardNumber = pIData->bBoardNumber;
 
@@ -442,12 +467,18 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 
 		m_pIdataPacket->bMsgSubMux = pIData->bMsgSubMux;
 		memcpy(&m_pIdataPacket->bNiosFeedback, &pIData->bNiosFeedback, 8);
+		m_pIdataPacket->wLastCmdSeqCnt = pIData->wLastCmdSeqCnt;
+		// map Sams bDin to Roberts
+		m_pIdataPacket->bDin = bDinMap[pIData->bDin & 0x3f];
 		m_pIdataPacket->bSpare	= pIData->bSpare;	// Come from gate board in header with gates and wall reading
 		m_pIdataPacket->wLocation = pIData->wLocation;		//m_pSCC->InstrumentStatus.wLoc;
 		m_pIdataPacket->wAngle = pIData->wAngle;	//m_pSCC->InstrumentStatus.wAngle;
 		m_pIdataPacket->wPeriod = pIData->wPeriod;	// m_pSCC->InstrumentStatus.wPeriod;
 		m_pIdataPacket->wRotationCnt = pIData->wRotationCnt;
-		
+		m_pIdataPacket->wStatus = 0x1234;	// to be determined
+		m_pIdataPacket->wVersionHW = pIData->wVersionHW;
+		m_pIdataPacket->wVersionSW = pIData->wVersionSW;
+
 		//m_IdataInPt					= 0;	// insertion index in output data structrure-- not after 2017-08-22
 		m_nStoredChannelCount = 0;
 		//
@@ -537,9 +568,18 @@ void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata)
 	if (pCCM_PAG->m_pstCCM->pSocket == NULL)
 		{
 		// restart client connection  .. how
-		TRACE(_T("pCCM_PAG->m_pstCCM->pSocket == NULL.. ignore and keep going\n"));
-		//ASSERT(0);
 		delete pIdata;
+		TRACE(_T("pCCM_PAG->m_pstCCM->pSocket == NULL.. ignore and keep going\n"));
+		if (pCCM_PAG->m_pstCCM->pReceiveThread == NULL)
+			{
+			// destroy CCM and start all over?
+			TRACE(_T("pCCM_PAG->m_pstCCM->pReceiveThread == NULL.. Oh My\n"));
+			//ASSERT(0);
+			}
+		else
+			{
+			pCCM_PAG->m_pstCCM->bConnected = 0;	// causes a timed reconnect attempt ?
+			}
 		return;
 		}
 	if ( pCCM_PAG->m_pstCCM->pSendThread == NULL)

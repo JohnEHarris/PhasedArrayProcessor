@@ -219,7 +219,9 @@ typedef struct
     WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
 	WORD wStatus;		// see below
-	WORD wSpare[9];
+	WORD wVersionHW;	// Sams altera code version
+	WORD wVersionSW;	// Johns C++ code version
+	WORD wSpare[7];
 
 	SEQ_DATA Seq[32];	// 32 sequences each of 8 virtual channels. 32*32 = 1024
 	} IDATA_FROM_HW;	// sizeof = 1024 + 64 byte header = 1088
@@ -264,7 +266,9 @@ typedef struct
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
 	WORD wStatus;		// see below
-	WORD wSpare[9];
+	WORD wVersionHW;	// Sams altera code version
+	WORD wVersionSW;	// Johns C++ code version
+	WORD wSpare[7];
 
 	} IDATA_FROM_HW_HDR;		//sizeof = 64 bytes
 
@@ -496,7 +500,7 @@ typedef struct
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
-	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		16
+	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		
 								// Some sequence points may have channel type NOTHING
 	BYTE bStartChannel;	// First virtual channel in peak data PeakChnl--always 0 for this hardware
 	BYTE bSeqPerPacket;	// Nominally 32 sequences but can be less. Data at back end of packet is invalid
@@ -508,7 +512,7 @@ typedef struct
 						// Large, [8][1056] = 8448 bytes, Small [64][32] = 2048
 
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
-	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info		
+	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info	..30	
 
 	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
 	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
@@ -521,7 +525,9 @@ typedef struct
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
 	WORD wStatus;		// see below
-	WORD wSpare[9];
+	WORD wVersionHW;	// Sams altera code version
+	WORD wVersionSW;	// Johns C++ code version ..50
+	WORD wSpare[7];		// 64 byte header
 
 	stPeakChnlPAP PeakChnl[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 
 	} IDATA_PAP;	// sizeof = 1024 + 64 =1088
@@ -535,15 +541,15 @@ typedef struct
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
 	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address. 11
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		12
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
-	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		16
+	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		
 								// Some sequence points may have channel type NOTHING
-	BYTE bStartChannel;	// First virtual channel in peak data PeakChnl--always 0 for this hardware
+	BYTE bStartChannel;	// First virtual channel in peak data PeakChnl--always 0 for this hardware ... 16
 	BYTE bSeqPerPacket;	// Nominally 32 sequences but can be less. Data at back end of packet is invalid
 						// Maintains packet size of 1088. All seq valid when bSeqPerPacket = 32
 	BYTE bNiosGlitchCnt;
@@ -553,7 +559,7 @@ typedef struct
 						// Large, [8][1056] = 8448 bytes, Small [64][32] = 2048
 
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
-	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info		
+	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info .. 30		
 
 	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
 	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
@@ -566,7 +572,9 @@ typedef struct
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
 	WORD wStatus;		// see below
-	WORD wSpare[9];
+	WORD wVersionHW;	// Sams altera code version
+	WORD wVersionSW;	// Johns C++ code version
+	WORD wSpare[7];
 
 	} IDATA_PAP_HDR;	// sizeof = 64
 

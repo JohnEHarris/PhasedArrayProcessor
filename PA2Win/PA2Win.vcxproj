@@ -193,6 +193,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Instrument2017_TFS\ADC_NEW\software\GlobalHeaders\Inst.h" />
     <ClInclude Include="..\Include\Cmds.h" />
     <ClInclude Include="..\Include\global.h" />
     <ClInclude Include="..\Include\PA2Struct.h" />

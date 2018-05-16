@@ -1878,9 +1878,11 @@ void CPA2WinDlg::ShowIdata(void)
 				s.Format(_T("Ch%d                                "), i);
 				t += s;
 				}
+#if 0
 			s.Format(_T("  MsgCnt = %d, GlitchCnt = %d"), 
 				gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt);
 			t += s;
+#endif
 			m_lbOutput.AddString(t);
 			
 			for (j = 0; j < 3; j++)
@@ -1904,7 +1906,12 @@ void CPA2WinDlg::ShowIdata(void)
 		// Hardware input status
 		//       0123456 89012345 78901234 678901  456789012
 		s = _T( "Digital    Location Angle    Period     RotateCnt" );
-		m_lbOutput.AddString(s);
+		t = s;
+
+		s.Format(_T("    MsgCnt = %d, GlitchCnt = %d"),
+			gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt);
+		t += s;
+		m_lbOutput.AddString(t);
 		s.Format( _T( "0x%04x  %05d    %04d     %06d   %05d" ),
 			gLastIdataPap.bDin, gLastIdataPap.wLocation, gLastIdataPap.wAngle,
 			gLastIdataPap.wPeriod, gLastIdataPap.wRotationCnt );

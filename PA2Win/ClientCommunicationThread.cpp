@@ -420,6 +420,7 @@ afx_msg void CClientCommunicationThread::KillReceiveThread(WPARAM w, LPARAM lPar
 			}
 		m_pstCCM->pSocket = 0;
 		m_pSocket = 0;
+		TRACE("KillReceiveThread killed the socket\n");
 		}
 
 	//delete	m_pstCCM->pReceiveThread;		//this;
@@ -1081,6 +1082,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		
 
 		s += _T("!m_pstCCM->pSocket.. killed SendPktList member\n");
+		TRACE(s);
 		DebugMsg(s);
 		return;	// (LRESULT) 0;	// no socket to send with
 		}	// no existing socket to transmit on... kill all in linked list

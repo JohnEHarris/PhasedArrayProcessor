@@ -111,6 +111,9 @@
     <ClInclude Include="..\Include\global.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Instrument2017_TFS\ADC_NEW\software\GlobalHeaders\Inst.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PA2Win.cpp">

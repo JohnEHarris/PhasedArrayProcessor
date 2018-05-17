@@ -69,14 +69,15 @@ the PAP and PAG
 #define SET_GATES_POLARITY_CMD_ID   7		// GatesPolarity
 #define SET_GATES_TOF_CMD_ID		8		// GatesTOF
 #define SET_WALL_NX_CMD_ID			9		// only runs on PAP, not in the Nios
-#define SET_TCG_CLOCK_RATE_CMD_ID	14		// SetTcgClockRate
-
-#define TCG_TRIGGER_DELAY_CMD_ID	15		// TCGTriggerDelay
-
 #define TCG_GAIN_CLOCK_CMD_ID		10		// TCGGainClock
 #define TCG_BEAM_GAIN_DELAY_ID		11
 #define TCG_BEAM_GAIN_ALL_CMD_ID	12		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements 
+#define SET_TCG_CLOCK_RATE_CMD_ID	14		// SetTcgClockRate
+#define TCG_TRIGGER_DELAY_CMD_ID	15		// TCGTriggerDelay
 
+
+
+//16-20 are Socomate commands
 #define ASCAN_SCOPE_SAMPLE_RATE_ID	21		// AscanScopeSampleRate -- set_ascan_scope
 #define SET_ASCAN_SCOPE_DELAY_ID	22		// SetAscanDelay -- set_ascan_delay
 
@@ -87,13 +88,13 @@ the PAP and PAG
 #define	SET_ASCAN_GATE_OUTPUT_ID	26		// SetAscanGateOut -- set_ascan_gateout_reg
 #define ASCAN_REP_RATE_ID			27		// AscanRepRate
 
-//#define NIOS_SCOPE_CMD_ID			21		// MakeScopeCmds -- Executes in NIOS code
-//
-#define READBACK_CMD_ID			13		// ReadBackCmdData
+//*******************************************
+
+#define READBACK_CMD_ID				13		// ReadBackCmdData
 // Within read back cmd, sub commands are:
 // READ BACK CMDS
-#define NX_READBACK_ID			0		// returns Nx settings for all channels of bSeq = n
-#define GET_GATE_DATA_ID		1		// returns all gate data for all channels of bSeq = n
+#define NX_READBACK_ID				0		// returns Nx settings for all channels of bSeq = n
+#define GET_GATE_DATA_ID			1		// returns all gate data for all channels of bSeq = n
 
 									
 // LARGE

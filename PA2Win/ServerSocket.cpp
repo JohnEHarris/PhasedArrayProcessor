@@ -317,6 +317,7 @@ CServerSocket::~CServerSocket()
 				}
 			Sleep( 10 );
 			}
+
 		if (i >= 100)
 			{
 			s = _T( "OnClose timed out w/o closing OwnerThread\n" );
@@ -327,7 +328,8 @@ CServerSocket::~CServerSocket()
 		else m_pSCC->pSocket = 0;
 
 		}	// if (nShutDown)
-	m_pSCC->pSocket = 0;
+	if (m_pSCC->pSocket)
+		m_pSCC->pSocket = 0;
 
 	}
 

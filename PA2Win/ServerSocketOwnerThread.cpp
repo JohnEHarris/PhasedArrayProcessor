@@ -619,10 +619,12 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 
 		case SEQ_TCG_GAIN_CMD_ID:
 		case TCG_GAIN_CMD_ID:
-			s.Format( _T( "Valid Large CMD, ID= %3d, seq=%2d, PktListSize= %4d\n" ),
-					pCmd->wMsgID, pCmd->wMsgSeqCnt, pCmd->wByteCount );
+			s.Format( _T( "Valid Large CMD, ID= %3d, PAP= %d, Board= %d, seq=%2d, wCmd[0]= %d, PktListSize= %4d\n" ),
+					pCmd->wMsgID, pCmd->bPAPNumber, pCmd->bBoardNumber,
+					pCmd->wMsgSeqCnt, pCmd->wCmd[0], pCmd->wByteCount );
 			//theApp.SaveDebugLog(s);
 			pMainDlg->SaveDebugLog( s );
+			pMainDlg->SaveCommandLog(s);
 			nMsgSize = pCmd->wByteCount;
 			break;
 
@@ -631,6 +633,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 
 			if (pCmd->wByteCount <= sizeof(ST_SMALL_CMD))
 				{
+				CommandLogMsg(pCmdS);
 				nMsgSize = pCmd->wByteCount;
 				break;
 				}
@@ -701,4 +704,49 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 DELETE_CMD:
 		delete pCmd;		
 		}	// while (i = m_pConnectionSocket->m_pSCC->pSendPktList->GetCount() > 0 )
+	}
+
+// Called from TransmitPackets -- documents that command received from UUI 
+// Not called unless TransmitPackets know it is small command in range of valid commands
+void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
+	{
+	CString s;
+	switch (pCmd->wMsgID)
+		{
+	case 2: MsgPrint(pCmd, "GateDelay<2> wCmd=wDelay");	break;
+	case 3: MsgPrint(pCmd, "GateRange<3> wCmd=wRange");	break;
+	case 4: MsgPrint(pCmd, "GateBlank<4> wCmd=wBlank");	break;
+	case 5: MsgPrint(pCmd, "GateThold<5> wCmd=wThold");	break;
+	case 6: MsgPrint(pCmd, "GatesTrigger<6> wCmd=wTrigger");	break;
+	case 7: MsgPrint(pCmd, "GatesPolarity<7> wCmd=wPolarity");	break;
+	case 8: MsgPrint(pCmd, "GatesTOF<8> wCmd=TOF");		break;
+	case 10: MsgPrint(pCmd, "TCGGainClock<10> wCmd=step time");	break;
+	case 11: MsgPrint(pCmd, "TCGBeamGainDelay<11> wCmd=delay");	break;
+	case 12: MsgPrint(pCmd, "TcgBeamGainAll<12>");				break;
+	case 13: MsgPrint(pCmd, "ReadBackData<13>");				break;	// readback
+	case 14: MsgPrint(pCmd, "SetTcgClockRate<14> wCmd=step time");	break;
+	case 15: MsgPrint(pCmd, "TCGTriggerDelay<15> wCmd=delay time");	break;
+	case 21: MsgPrint(pCmd, "AscanScopeSampleRate<21> wCmd=sample rate");	break;
+	case 22: MsgPrint(pCmd, "SetAscanDelay<22> wCmd=delay clocks");	break;
+	case 23: MsgPrint(pCmd, "SelectAscanWaveForm<23>");	break;
+	case 24: MsgPrint(pCmd, "SetAscanRfBeamSelect<24> beam, no sequence");	break;
+	case 25: MsgPrint(pCmd, "SetAscanSeqBeamReg<25>");	break;
+	case 26: MsgPrint(pCmd, "SetAscanGateOut<26>");		break;
+	case 27: MsgPrint(pCmd, "Ascan Period <27> wCmd = milliseconds");		break; 
+	default: MsgPrint(pCmd,"UnknownCmd ...");			break;
+		}
+
+	}
+
+void CServerSocketOwnerThread::MsgPrint(ST_SMALL_CMD *pCmd, char *msg)
+	{
+	CString s, t;
+	ST_WORD_CMD *pwCmd = (ST_WORD_CMD *)pCmd;
+	t = msg;
+	s.Format(_T("ID=%d "),pCmd->wMsgID);	//, msg, pwCmd->bSeq, pwCmd->bChnl, pwCmd->bGateNumber, pwCmd->wCmd);
+	s += t;
+	t.Format(_T(" Seq=%d, Ch=%d, Gate=%d, wCmd=%d\n"),	 
+		pwCmd->bSeq, pwCmd->bChnl, pwCmd->bGateNumber, pwCmd->wCmd);
+	s += t;
+	pMainDlg->SaveCommandLog(s);
 	}

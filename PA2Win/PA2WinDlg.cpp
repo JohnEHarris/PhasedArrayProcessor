@@ -210,6 +210,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 		
 	CString s,Fake;	// fake is a debug file with fake data and fake data msg to PAG
 	CString DeBug;	// another debug file to catch printf statements since vs2015 does not output to monitor screen
+	CString Commands;	// catch commands from PAG to PAP
 
 	t = GetCommandLine();	// shows ""D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\PhasedArrayMasterVS2010.exe" -i -d"
 	i = t.Find(_T(".exe"));
@@ -226,6 +227,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	Fake = t;
 	Fake = t + _T("FakeData.txt");
 	DeBug = t + _T("Debug.log");
+	Commands = t + _T("Commands.log");
 	// shows "D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\"
 	// The name of the App becomes an implicit part of the key
 	// We only write Tuboscope, but clever windows makes a subregistry entry of AdpMMI
@@ -254,8 +256,8 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	//m_pTuboIni = new CTuboIni(t);
 	//i = sizeof (CTuboIni);
 
-	m_nFakeDataExists = m_nDebugLogExists = 0;
-	//CFile myFile;
+	m_nFakeDataExists = m_nDebugLogExists = m_mCommandLogExists = 0;
+
 	CFileException fileException;
   
 	if ( !m_FakeData.Open( Fake, CFile::modeCreate |   
@@ -274,6 +276,15 @@ void CPA2WinDlg::MakeDebugFiles(void)
 		DeBug, fileException.m_cause );
 		}
 	else m_nDebugLogExists = 1;
+
+	// m_CommandLog
+	if (!m_CommandLog.Open(Commands, CFile::modeCreate |
+		CFile::modeReadWrite | CFile::shareDenyNone, &fileException))
+		{
+		TRACE(_T("Can't open file %s, error = %u\n"),
+			Commands, fileException.m_cause);
+		}
+	else m_mCommandLogExists = 1;
 	}
 
 
@@ -298,9 +309,12 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	gMaxSeqCount = MAX_SEQ_COUNT;
 	pCSSaveDebug = new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pCSSaveDebug,4);
+	pCSSaveCommands = new CRITICAL_SECTION();
+	InitializeCriticalSectionAndSpinCount(pCSSaveCommands, 4);
+
 	MakeDebugFiles();
 
-	/***********
+/***********************************************************************
 
 This big comment was a # if 0 but made Visual Studio miss the definition of GetServerConnectionManagementInfo()
 			
@@ -322,7 +336,8 @@ IP Port is the port the server listens on.
 The Client Base IP is the IP of the 1st element in the 
 ST_SERVERS_CLIENT_CONNECTION *pClientConnection[MAX_CLIENTS_PER_SERVER];
 Here, ClientBaseIp[16] = 192.168.10.201
-*****/
+
+************************************************************************************/
 
 	// get configuration info from ini file
 	GetServerConnectionManagementInfo();
@@ -354,10 +369,16 @@ CPA2WinDlg::~CPA2WinDlg()
 		
 	CloseFakeData();
 	CloseDebugLog();
+	CloseCommandLog();
+
 	Sleep( 100 );
 	if (pCSSaveDebug)
 		delete pCSSaveDebug;
 	pCSSaveDebug = 0;
+
+	if (pCSSaveCommands)
+		delete pCSSaveCommands;
+	pCSSaveCommands = 0;
 
 	if (gDlg.pNcNx)
 		{
@@ -1462,6 +1483,7 @@ CServerRcvListThread* CPA2WinDlg::CreateServerReceiverThread(int nServerNumber, 
 
 #define DEBUGIT
 
+/********  Debug File *********/
 void CPA2WinDlg::SaveDebugLog(CString& s)
 	{
 #ifdef DEBUGIT
@@ -1509,6 +1531,58 @@ void CPA2WinDlg::CloseDebugLog(void)
 		}
 	m_nDebugLogExists = 0;
 	}
+
+/********  Command File *********/
+
+void CPA2WinDlg::SaveCommandLog(CString& s)
+	{
+#if 1
+	char ch[4000];
+	CstringToChar(s, ch, 4000);
+	if (0 == m_mCommandLogExists)
+		{
+		TRACE(_T("Command log file not available\n"));
+		return;
+		}
+
+	if (m_CommandLog.m_hFile > 0)
+		{
+		EnterCriticalSection(pCSSaveCommands);
+		try
+			{
+			m_CommandLog.Write(ch, (int)strlen(ch));	// I want to see ASCII in the file
+			//m_DebugLog.Flush(); -- not needed. Kills Nc Nx processing time
+			}
+		catch (CFileException* e)
+			{
+			e->ReportError();
+			e->Delete();
+			}
+		LeaveCriticalSection(pCSSaveCommands);
+		}
+#endif
+	}
+
+void CPA2WinDlg::CloseCommandLog(void)
+	{
+	if (0 == m_mCommandLogExists)
+		{
+		TRACE(_T("Command log file not available\n"));
+		return;
+		}
+	try
+		{
+		m_CommandLog.Close();
+		}
+	catch (CFileException* e)
+		{
+		e->ReportError();
+		e->Delete();
+		}
+	m_mCommandLogExists = 0;
+	}
+
+/********  Fake Data File *********/
 
 void CPA2WinDlg::SaveFakeData(CString& s)
 	{

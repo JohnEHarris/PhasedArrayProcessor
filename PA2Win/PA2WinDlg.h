@@ -144,17 +144,25 @@ public:
 	CServerRcvListThread* CreateServerReceiverThread( int nServerNumber, int nPriority );
 		
 	CRITICAL_SECTION *pCSSaveDebug;	// control access to debug output 
+	CRITICAL_SECTION *pCSSaveCommands;	// control access to Commands output 
 	CFile m_FakeData;
 	CFile m_DebugLog;
+	CFile m_CommandLog;
 	int m_nMsgSeqCnt;
 
 	int m_nFakeDataExists;
 	int m_nDebugLogExists;
+	int m_mCommandLogExists;
+
 	void SaveFakeData(CString& s);
 	void CloseFakeData(void);
 	// Debug file - replace monitor output. Read with BareTail app
 	void SaveDebugLog( CString& s );
 	void CloseDebugLog( void );
+	// Verify Commands are received by PAP
+	void SaveCommandLog(CString& s);
+	void CloseCommandLog(void);
+
 
 	int m_nPamNumber;		// the PAM number of this machine, the one running the ServiceApp
 	UINT m_uPamPort;		// the port number for the PAM being serviced by this machine (PC)

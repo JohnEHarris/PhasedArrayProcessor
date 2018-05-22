@@ -39,11 +39,13 @@ enum CallSource {eMain, eInterrupt};
 // Idata message types. This is the data that comes from the PAP and is sent 
 // To the Receiver system
 // Read Back data replaces AScan data when read back is requested
-enum IdataTypes { eRawInspID = 1, eAscanID = 2, eReadBackID = 3, eKeepAliveID = 0xff };
+//
+enum IdataTypes { eNcNxInspID = 1, eAscanID = 2, eReadBackID = 3, eAdcIdataID = 4, eKeepAliveID = 0xff };
 enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define NC_NX_IDATA_ID				1		// PAP processed inspection data sent to PAG/Receiver system
 #define ASCAN_DATA_ID				2
 #define READBACK_DATA_ID			3
+#define ADC_DATA_ID					4		// Idata and header from ADC - what comes in goes out 
 
 
 
@@ -182,7 +184,7 @@ typedef struct
 // keep data synchronized with location information
 typedef struct 
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eRawInspID	2
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
@@ -229,7 +231,7 @@ typedef struct
 // Estimated 13 uSec to copy header into Wiznet
 typedef struct 
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eRawInspID	2
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
@@ -488,7 +490,7 @@ typedef struct
 // PAP receives 5 bytes for every channel
 typedef struct
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eRawInspID	2
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
@@ -535,7 +537,7 @@ typedef struct
 
 typedef struct
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eRawInspID	2
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10

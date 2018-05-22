@@ -447,7 +447,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		TRACE( s );
 #endif
 
-		m_pIdataPacket->wMsgID = eRawInspID;
+		m_pIdataPacket->wMsgID = eNcNxInspID;
 		//m_pIdataPacket->wByteCount = sizeof(IDATA_PAP);
 		m_pIdataPacket->wByteCount = pIData->bSeqModulo * pIData->bMaxVChnlsPerSequence * sizeof(stPeakChnlPAP) + sizeof(IDATA_FROM_HW_HDR);
 		m_pIdataPacket->uSync = SYNC;
@@ -657,7 +657,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 		{
 		switch(pIData->wMsgID)
 			{
-			case eRawInspID:
+			case eNcNxInspID:
 			{
 			/***************** The peak hold opertion on all channels by PAP ********************/
 			// if m_Seq changes, ie m_Seq != pIData->bStartSeqNumber. FLUSH
@@ -667,7 +667,6 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			//
 #if 1
 
-			// glitch!= glitch... 5c != 0x14
 			// packet all good to seq mod, but  Pap = 1,startSeq=0x40, modulo = 4
 			if (pIData->bNiosGlitchCnt != m_bNiosGlitchCnt)
 				{
@@ -682,6 +681,8 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					m_IdataInPt = 0;
 					}
 				}
+			// 2018-05-21 per Clive, send this packet from ADC to UUI and then process for NcNx
+			// This to be used for All Wall processing in UUI
 
 			// This seems to be a problem with simulated data. Always m_Seq=1 when start sequence if 0
 			// do not take this code out. Yanming thinks we should skip the data throwaway

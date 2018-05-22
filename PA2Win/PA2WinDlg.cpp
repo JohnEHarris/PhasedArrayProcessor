@@ -1929,7 +1929,7 @@ void CPA2WinDlg::ShowIdata(void)
 #ifdef I_AM_PAP
 	CString s,t;
 	int i,j,mn, mx;
-	if (gLastIdataPap.wMsgID == eRawInspID)
+	if (gLastIdataPap.wMsgID == eNcNxInspID)
 		{
 		//if (gwMsgSeqCnt != m_nMsgSeqCnt)
 			{

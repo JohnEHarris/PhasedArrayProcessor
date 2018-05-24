@@ -551,9 +551,18 @@ void CPA2WinDlg::SaveServerConnectionManagementInfo(void)
 #ifdef I_AM_PAG
 			szIp = _T("PAG Server for PAP's 1-N");
 #else
-			szIp = _T("PAM Server for Instruments 1-N");
+			szIp = _T("PAP Server for Instruments 1-N");
 #endif
 			gDlg.pTuboIni->WriteProfileString(sSrvSection,szI, szIp);
+			break;
+		case 1:
+			szI.Format(_T("%d-Server_Description"), i);
+#ifdef I_AM_PAG
+			szIp = _T("PAG Server for All Wall 1-N");
+#else
+			szIp = _T("PAP Server All Walls for Instruments 1-N");
+#endif
+			gDlg.pTuboIni->WriteProfileString(sSrvSection, szI, szIp);
 			break;
 		default:
 			break;
@@ -641,9 +650,13 @@ void CPA2WinDlg::SaveClientConnectionManagementInfo()
 #else
 			// PAP assignemnts
 		case 0:
-		default:
 			szComment = _T("PAP as a client of PAG");
 			m_ptheApp->WriteProfileStringW (_T("ClientConnectionManagement"),szI, szComment);
+		case 1:
+		default:
+			szComment = _T("PAP-AllWalls as a client of PAG");
+			m_ptheApp->WriteProfileStringW(_T("ClientConnectionManagement"), szI, szComment);
+
 			break;
 #endif
 			}
@@ -893,7 +906,9 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	}
 
 #else
-
+// Phased Array Processor
+// PAP has a client connection for NcNx Idata
+// and a 2nd client connection for All Wall data -- same NIC, different prot
 
 void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	{
@@ -984,8 +999,36 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			{
 			// There may be multiple Phased Array Master (PAM) computers connected
 			// This is the one and only server for ALL PAM's
-			// #define ePAM_Server			0 - IN ServerConnectionManagement.h
-		case ePAM_Server:		
+			// #define ePAP_Server			0 - IN ServerConnectionManagement.h
+		case ePAP_Server:		
+			pSCM[i] = new CServerConnectionManagement(i);
+			j = sizeof(pSCM[i]);
+			j = sizeof(CServerConnectionManagement);
+			if (pSCM[i])
+				{
+				s = gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.10"));
+				uPort = gServerArray[i].uPort;
+				pSCM[i]->SetServerPort(uPort);	// 7501);
+				pSCM[i]->SetServerType(ePhaseArrayMaster);
+				s = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(s);
+				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
+				// start the listen thread which will create a listener socket
+				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
+				// the connection socket's OnReceive will populate the input data linked list and post messages
+				// to the main dlg/application to process the data.
+				nError = pSCM[i]->StartListenerThread(i);
+				if (nError)
+					{
+					s.Format(_T("Failed to start listener Thread[%d], ERROR = %d\n"), i, nError);
+					TRACE(s);
+					delete pSCM[i];
+					pSCM[i] = NULL;
+					}
+				}
+			break;
+		case ePAP_AllWall_server:
 			pSCM[i] = new CServerConnectionManagement(i);
 			j = sizeof(pSCM[i]);
 			j = sizeof(CServerConnectionManagement);
@@ -2035,8 +2078,8 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		return FALSE;
 		}
 
-		// assuming server # 0 = ePAM_Server is the PAM server
-	if (NULL == stSCM[ePAM_Server].pClientConnection[nClientNumber])
+		// assuming server # 0 = ePAP_Server is the PAM server
+	if (NULL == stSCM[ePAP_Server].pClientConnection[nClientNumber])
 		{
 		s.Format(_T("CPA2WinDlg::SendMsgToPAM No Valid ClientConnection for client = %d\n"),nClientNumber );
 		TRACE(s);
@@ -2046,7 +2089,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		return FALSE;
 		}
 
-	if (NULL == stSCM[ePAM_Server].pClientConnection[nClientNumber]->pSocket)
+	if (NULL == stSCM[ePAP_Server].pClientConnection[nClientNumber]->pSocket)
 		{
 		s.Format(_T("CPA2WinDlg::SendMsgToPAM pSocket is NULL for client = %d\n"), nClientNumber);
 		TRACE(s);
@@ -2056,7 +2099,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		return FALSE;
 		}
 
-	if (0 == stSCM[ePAM_Server].pClientConnection[nClientNumber]->bConnected)
+	if (0 == stSCM[ePAP_Server].pClientConnection[nClientNumber]->bConnected)
 		{
 		s.Format(_T("CPA2WinDlg::SendMsgToPAM Client = %d is not connected\n"),nClientNumber );
 		TRACE(s);
@@ -2074,16 +2117,16 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 	if (nMsgID > 0)	// && (nMsgID <= LAST_MSG_ID))
 		{
 
-		// int CServerConnectionManagement::SendPacketToPAM
+		// int CServerConnectionManagement::SendPacketToPAP
 		// posts a thread message to a ServerSocketOwnerThread to empty the linked list and send all packets
 		// Message activates CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 
-		s = _T("rc = stSCM[ePAM_Server].pSCM->SendPacketToPAM\n");
+		s = _T("rc = stSCM[ePAP_Server].pSCM->SendPacketToPAP\n");
 //		if (gDlg.pNcNx)
 //			gDlg.pNcNx->DebugOut(s);
 
 		// auto delete
-		rc = stSCM[ePAM_Server].pSCM->SendPacketToPAM(nClientNumber, (BYTE *)pMsg, nLen, 1);
+		rc = stSCM[ePAP_Server].pSCM->SendPacketToPAP(nClientNumber, (BYTE *)pMsg, nLen, 1);
 		if (rc < 0)
 			{
 			s.Format(_T("PA2WinDlg::SendMsgToPAM Failed to send pkt, err num  = %d\n"), rc);

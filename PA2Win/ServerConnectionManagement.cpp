@@ -703,7 +703,7 @@ MMI -----|--PAM_1-------|--Inst_0
 
 //extern CTscanDlg *pCTscanDlg;
 
-int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag)
+int CServerConnectionManagement::SendPacketToPAP(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag)
 	{
 	int nReturn = 0;
 	CString s;

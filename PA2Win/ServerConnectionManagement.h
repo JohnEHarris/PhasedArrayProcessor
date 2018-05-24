@@ -36,9 +36,9 @@ typedef struct
 
 // these 3 describe the same machine with a varying name over time.
 
-#define ePAM_Server			0	// the one and only server for all Phased Array Master computers
 #define ePAP_Server			0	// the one and only server for all Phased Array Processor computers
 #define eInstrument_Server	0	// the one and only server for all instrument connected to a PAM
+#define ePAP_AllWall_server	1
 
 
 // An instrument client can have up to this many virtual channels
@@ -51,7 +51,7 @@ class CPA2WinDlg;
 #define MAIN_DLG_NAME	CPA2WinDlg
 
 // edit this value if more client connections to servers are needed
-//#define	MAX_SERVERS						2
+#define	MAX_SERVERS						2
 #define MAX_CLIENTS_PER_SERVER				8
 
 // I_AM_PAP is defined in the PAP project under C++ | Preprocessor Definitions 
@@ -83,7 +83,7 @@ class CPA2WinDlg;
 //#define MAIN_DLG_NAME	PA2WinDlg
 
 // edit this value if more client connections to servers are needed
-#define	MAX_SERVERS							1
+#define	MAX_SERVERS							2
 #define MAX_CLIENTS_PER_SERVER				8
 extern THE_APP_CLASS theApp;
 
@@ -374,7 +374,7 @@ public:
 #endif
 
 #ifdef I_AM_PAG
-	int SendPacketToPAM(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag);
+	int SendPacketToPAP(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag);
 #endif
 
 	/**************************************************************************************/

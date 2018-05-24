@@ -50,7 +50,7 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 
 
 // edit this value if more client connections to servers are needed
-#define	MAX_SERVERS							1	//do it in ServerConnection Management for which ever type of server we are using
+//#define	MAX_SERVERS		1	//do it in ServerConnection Management for which ever type of server we are using
 // Likely will have at least 2 server types. 1 for inspetion data and 1 for pulsers
 // Mixing pulsers in with gate boards will make it more difficult to put dimensions on things like virtual channels. 2016-10-19
 

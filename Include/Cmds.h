@@ -686,6 +686,8 @@ void set_TCG_delay( int value );
 void set_beam_gain_step( int value );
 void set_beam_gain_delay( int value );
 
+void set_sel_bit_cut_reg(int value); //default cut 0-4
+void Pow2GainBoost(void);
 
 void set_PRF( WORD wPrf );	// Set prf in Hertz. Range 10-10,000 -- on pulser board
 /*	SMALL TCG commands	*/
@@ -709,6 +711,7 @@ WORD GetFPGATemp();
 WORD GetBoardTemp();
 WORD GetSpinCount();
 WORD GetScopeSetting();
+WORD GetVersionHw();
 
 BYTE GetBeamType();
 void SetBeamType(BYTE bBeam);

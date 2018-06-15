@@ -39,6 +39,7 @@ Revised:	20-Jan-13
 class CCCM_PAG;
 
 CCCM_PAG *pCCM_PAG;
+CCCM_PAG *pCCM_PAG_AW;
 // nMyConnection selects which one of MAX_CLIENTS connections we are managing with this instance
 // This class is a child of the base class CClientConnectionManagement. It was crafted specifically
 // for handling communications with the PAG
@@ -282,7 +283,11 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 	// not part of the base class... debug
 void CCCM_PAG::UniqueProc(void)
 	{
-	TRACE("Unique to the child class\n");
+	CString s;
+	int i;
+	i = m_nMyConnection;
+	s.Format(_T("Unique to the child class of CCM, my connection = %d\n"), i);
+	TRACE(s);
 	}
 
 

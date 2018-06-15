@@ -38,6 +38,9 @@ I AM THE PHASED ARRAY PROCESSOR
 */
 #endif
 
+class CClientConnectionManagement *pCCM[MAX_CLIENTS];	// global, static ptrs to class instances defined outside of the class definition.
+class CServerConnectionManagement *pSCM[MAX_SERVERS];	// global, static ptrs to class instances define outside of the class definition.
+												//  -- not created with 'new'
 // C code callable from any class
 //pointer objects deleted, but not nulled
 // Since we are using poiter to pointer, setting pointer to 0 only sets argument pointer
@@ -303,6 +306,8 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{		pSCM[i] = NULL;		}
+	for (i = 0; i < MAX_CLIENTS; i++)
+		{		pCCM[i] = NULL;		}
 
 	// DEFAULT VALUES - CAN BE OVERWRIDDEN WITH COMMAND FROM PAG
 	gMaxChnlsPerMainBang	= MAX_CHNLS_PER_MAIN_BANG;
@@ -518,7 +523,7 @@ void CPA2WinDlg::GetServerConnectionManagementInfo(void)
 		gServerArray[i].nPacketSize = gDlg.pTuboIni->GetProfileInt(sSrvSection,szI,INSTRUMENT_PACKET_SIZE);
 
 		szI.Format(_T("%d-Client_Base_IP"), i);
-		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection,szI, _T("192.168.10.201"));
+		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection,szI, _T("192.168.11.40"));
 		CstringToChar(szIp,gServerArray[i].ClientBaseIp);
 		}
 	}
@@ -551,9 +556,18 @@ void CPA2WinDlg::SaveServerConnectionManagementInfo(void)
 #ifdef I_AM_PAG
 			szIp = _T("PAG Server for PAP's 1-N");
 #else
-			szIp = _T("PAM Server for Instruments 1-N");
+			szIp = _T("PAP Server for Instruments 1-N");
 #endif
 			gDlg.pTuboIni->WriteProfileString(sSrvSection,szI, szIp);
+			break;
+		case 1:
+			szI.Format(_T("%d-Server_Description"), i);
+#ifdef I_AM_PAG
+			szIp = _T("PAG Server for All Wall 1-N");
+#else
+			szIp = _T("PAP Server All Walls for Instruments 1-N");
+#endif
+			gDlg.pTuboIni->WriteProfileString(sSrvSection, szI, szIp);
 			break;
 		default:
 			break;
@@ -578,6 +592,8 @@ void CPA2WinDlg::SaveServerConnectionManagementInfo(void)
 // PAM clients connect to the PAG server which is listening at port 7501
 // Client 0 should be the connection to the PAG server.
 // 2016-05-17 The PAM now called the Receiver is a client to only the PT
+// 2nd client if connected to PAG_AW server for  testing.
+// PAG and PAG_AW will be separate machines in the general case
 void CPA2WinDlg::GetClientConnectionManagementInfo()
 	{
 	int i;
@@ -641,6 +657,13 @@ void CPA2WinDlg::SaveClientConnectionManagementInfo()
 #else
 			// PAP assignemnts
 		case 0:
+			szComment = _T("PAP as a client of PAG");
+			m_ptheApp->WriteProfileStringW(_T("ClientConnectionManagement"), szI, szComment);
+			break;
+		case 1:
+			szComment = _T("PAP_AW as a client of PAG_AW");
+			m_ptheApp->WriteProfileStringW(_T("ClientConnectionManagement"), szI, szComment);
+			break;
 		default:
 			szComment = _T("PAP as a client of PAG");
 			m_ptheApp->WriteProfileStringW (_T("ClientConnectionManagement"),szI, szComment);
@@ -893,7 +916,9 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	}
 
 #else
-
+// Phased Array Processor
+// PAP has a client connection for NcNx Idata
+// and a 2nd client connection for All Wall data -- same NIC, different prot
 
 void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	{
@@ -904,7 +929,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	CString sClientIP,  sServerIp, sServerName, s;	// sServerName use the url for this server
 	UINT uServerPort = 0;
 
-	for ( i = 0; i < MAX_CLIENTS; i++)
+	for ( i = 0; i < gnMaxClients; i++)
 		{
 		if (pCCM[i])	continue;	// instance already exists
 		switch (i)
@@ -918,6 +943,8 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			uServerPort = GetServerPort( i ) & 0xffff;	// port on the PAG server that we will try to connect to
 			// Make a specific child class of CCM to handle the Phased Array GUI - PAG
 			pCCM_PAG = (CCCM_PAG *) new CCCM_PAG( i );
+			pCCM[i] = (CClientConnectionManagement *)pCCM_PAG;
+			pCCM[i]->m_nMyConnection = i;
 			j = sizeof( CCCM_PAG );
 			if (NULL == pCCM_PAG)
 				{
@@ -949,6 +976,53 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			// causes CClientCommunicationThread::InitTcpThread(WPARAM w, LPARAM lParam) to run
 			pCCM_PAG->InitSendThread();				Sleep( 50 );
 			pCCM_PAG->CreateCmdProcessThread();		Sleep( 50 );
+			while (pCCM_PAG->m_pstCCM->pCmdProcessThread == NULL)
+				{
+				Sleep(50);
+				}
+			break;
+
+			// 2018-05-23 Now have an All-Wall channel with different port and or IP Address
+			// For testing with PAG it is same IP address and different port. For general case
+			// will be separate IP and Port from PAG
+		case 1:
+			sClientIP = GetClientIP(i);
+			sServerIp = GetServerIP(i);
+			sServerName = GetServerName(i);
+			uServerPort = GetServerPort(i) & 0xffff;	// port on the PAG server that we will try to connect to
+														// Make a specific child class of CCM to handle the Phased Array GUI - PAG
+			pCCM_PAG_AW = (CCCM_PAG *) new CCCM_PAG(i);
+			j = sizeof(CCCM_PAG);
+			if (NULL == pCCM_PAG_AW)
+				{
+				TRACE1("pCCM_PAG_AW[%d] is NULL\n", i);
+				break;
+				}
+			if (pCCM_PAG_AW->m_pstCCM == NULL)
+				{
+				TRACE1("pCCM_PAG_AW[%d]->m_pstCCM is NULL\n", i);
+				break;
+				}
+			//pCCM[i] = pCCM_SysCp; causes problem on shut down
+
+			pCCM_PAG_AW->UniqueProc();	// JUST FOR DEBUG
+			pCCM_PAG_AW->SetSocketName(_T("CCM_PAG_AW"));
+			//pCCM_PAG->SetWinVersion(theApp.m_iWinVer);
+			pCCM_PAG_AW->SetClientIp(sClientIP);
+			pCCM_PAG_AW->SetServerIp(sServerIp);
+			pCCM_PAG_AW->SetServerName(sServerName);	// url of server, e.g. srvhouapp67
+			pCCM_PAG_AW->SetServerPort(uServerPort);
+
+
+			pCCM_PAG_AW->m_pstCCM->nReceivePriority = THREAD_PRIORITY_ABOVE_NORMAL;
+			pCCM_PAG_AW->m_pstCCM->nSendPriority = THREAD_PRIORITY_BELOW_NORMAL;
+			pCCM_PAG_AW->m_pstCCM->nCmdProcessPriority = THREAD_PRIORITY_BELOW_NORMAL;
+			pCCM_PAG_AW->CreateReceiveThread();		Sleep(50);
+			pCCM_PAG_AW->CreateSendThread();			Sleep(50);
+			pCCM_PAG_AW->InitReceiveThread();			Sleep(50);
+			// causes CClientCommunicationThread::InitTcpThread(WPARAM w, LPARAM lParam) to run
+			pCCM_PAG_AW->InitSendThread();				Sleep(50);
+			pCCM_PAG_AW->CreateCmdProcessThread();		Sleep(50);
 			break;
 
 		default:
@@ -984,8 +1058,56 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			{
 			// There may be multiple Phased Array Master (PAM) computers connected
 			// This is the one and only server for ALL PAM's
-			// #define ePAM_Server			0 - IN ServerConnectionManagement.h
-		case ePAM_Server:		
+			// #define ePAP_Server			0 - IN ServerConnectionManagement.h
+		case ePAP_Server:		
+			pSCM[i] = new CServerConnectionManagement(i);
+			j = sizeof(pSCM[i]);
+			j = sizeof(CServerConnectionManagement);
+			if (pSCM[i])
+				{
+				s = gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.10"));
+				uPort = gServerArray[i].uPort;
+				pSCM[i]->SetServerPort(uPort);	// 7501);
+				pSCM[i]->SetServerType(ePhaseArrayMaster);
+				s = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(s);
+				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
+				// start the listen thread which will create a listener socket
+				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
+				// the connection socket's OnReceive will populate the input data linked list and post messages
+				// to the main dlg/application to process the data.
+				pSCM[i]->m_pstSCM->nServerIsListening = 0;
+
+				nError = pSCM[i]->StartListenerThread(i);
+				if (nError)
+					{
+					s.Format(_T("Failed to start listener Thread[%d], ERROR = %d\n"), i, nError);
+					TRACE(s);
+					delete pSCM[i];
+					pSCM[i] = NULL;
+					break;
+					}
+
+				// wait a while until listening
+				for (j = 0; j < 100; j++)
+					{
+					Sleep(10);
+					if (pSCM[i]->m_pstSCM->nServerIsListening)	break;
+					}
+				if (j < 100)	break;
+				else
+					{
+					s.Format(_T("Listener Thread[%d] timed out, ERROR = %d\n"), i, nError);
+					TRACE(s);
+					delete pSCM[i];
+					pSCM[i] = NULL;
+					break;
+					}
+				}
+			break;
+
+		case ePAP_AllWall_server:
 			pSCM[i] = new CServerConnectionManagement(i);
 			j = sizeof(pSCM[i]);
 			j = sizeof(CServerConnectionManagement);
@@ -1466,6 +1588,8 @@ CServerRcvListThread* CPA2WinDlg::CreateServerReceiverThread(int nServerNumber, 
 		{
 		// AfxBeginThread(RUNTIME_CLASS (), priority, stack_size, suspended-or-run, security)
 	case 0:
+	case 1:	//special case for all wall - using two different servers for essentially the same input data
+			// server[0] get NcNx data, server[1] gets all wall data -- the same data stream from the adc
 		// Case 0 is instrument data serviced by a custom thread class named CServerRcvListThread.
 		// Other types of service offered to other types of clients would likely have a different
 		// custom thread to process the data which came from the client.
@@ -1669,25 +1793,36 @@ bool CPA2WinDlg::UpdateTimeDate(time_t *tNow)
     return FALSE;
 	}
 
+#ifdef I_AM_PAG
+
+// Deconstruct/destroy all created for Client Connection Management system
+void CPA2WinDlg::DestroyCCM(void)
+	{
+	int i, nError, j, iClient;
+	CString s;
+	nError = j = 0;
+	}
+#endif
+
+
+#ifdef I_AM_PAP
+
 // Deconstruct/destroy all created for Client Connection Management system
 void CPA2WinDlg::DestroyCCM( void )
 	{
-	int i, nError, j;
+	int i, nError, j, iClient;
 	CString s;
 	nError = j = 0;
-
-	for (i = 0; i < gnMaxClients; i++)
+	
+	for (iClient = 0; iClient < gnMaxClients; iClient++)
 		{
 		// every client connetion to an external server will likely have different characteristics
 		// Thus each connection will involve different shut down operations
 		// Assume the firs connection is to the test GUI aka PAG
-		switch (i)
+
+		switch (iClient)
 			{
 		case 0:
-#ifdef I_AM_PAG
-			// PAG does not connect to any server at the present. Thus nothing to do
-#endif
-#ifdef I_AM_PAP
 			// PAP does connect to the GUI - PAG.
 			// It is a special child case of the general CCM
 		if (pCCM_PAG)
@@ -1733,21 +1868,85 @@ void CPA2WinDlg::DestroyCCM( void )
 					{	Sleep (10);		i++;	}
 				if ( i >= 50) TRACE("CCM - Failed to kill CmdProcess Thread");
 			
+			i = pCCM_PAG->m_nMyConnection;
 			delete pCCM_PAG;	
-			pCCM_PAG = NULL;		
+			pCCM_PAG = NULL;
+			pCCM[iClient] = NULL;	// MAYBE NOT A GOOD IDEA TO HAVE TWO POINTERS TO THE SAME CLASS INSTANCE
 			break;
 			}	// if (pCCM_PAG)
 			// delete send thread and critical sections, delete receive thread and critical sections
+			break;
 
+		case 1:
+		
 
+			// PAP does connect to the GUI - PAG.
+			// It is a special child case of the general CCM
+			if (pCCM_PAG_AW)
+				{
+				// close down the connection to the	PAG BY 
+				// closing the connected socket, deleteing critical sections and lists
+				// and deleting any other supporting threads.
+				// delete the client socket, then the cmd process thread, then the send thread,
+				// then the receive thead
+				// maybe have receive thread kill socket since it owns it.
+				if (pCCM_PAG_AW->m_pstCCM)
+					{
+					if (pCCM_PAG_AW->m_pstCCM->pSocket)
+						{	// socket exists
+						pCCM_PAG_AW->KillSocket();
+						}
+					}	// socket exists
 
-#endif
+						// wait for a while for the socket to be destroyed
+				i = 0;
+				while ((i < 100) && (pCCM_PAG_AW->m_pstCCM->pSocket != 0))
+					{
+					Sleep(10);		i++;
+					}
+				if (i >= 100) TRACE("CCM - Failed to kill Client socket");
+				Sleep(20);
+				pCCM_PAG_AW->KillReceiveThread();
+				Sleep(20);
+				i = 0;
+				while ((i < 50) && (pCCM_PAG_AW->m_pstCCM->pReceiveThread != 0))
+					{
+					Sleep(10);		i++;
+					}
+				if (i >= 50) TRACE("CCM - Failed to kill Receive Thread");
+
+				pCCM_PAG_AW->KillSendThread();
+				Sleep(20);
+				i = 0;
+				while ((i < 50) && (pCCM_PAG_AW->m_pstCCM->pSendThread != 0))
+					{
+					Sleep(10);		i++;
+					}
+				if (i >= 50) TRACE("CCM - Failed to kill Send Thread");
+
+				pCCM_PAG_AW->KillCmdProcessThread();
+				Sleep(20);
+				i = 0;
+				while ((i < 50) && (pCCM_PAG_AW->m_pstCCM->pCmdProcessThread != 0))
+					{
+					Sleep(10);		i++;
+					}
+				if (i >= 50) TRACE("CCM - Failed to kill CmdProcess Thread");
+
+				i = pCCM_PAG_AW->m_nMyConnection;
+				delete pCCM_PAG_AW;
+				pCCM_PAG_AW = NULL;
+				pCCM[iClient] = NULL;	// MAYBE NOT A GOOD IDEA TO HAVE TWO POINTERS TO THE SAME CLASS INSTANCE
+				break;
+				}	// if (pCCM_PAG_AW)
+					// delete send thread and critical sections, delete receive thread and critical sections
+
 
 		default:
-			for ( i = 0; i < MAX_CLIENTS; i++)
+			//for ( i = 0; i < MAX_CLIENTS; i++)
 				{
-				if (pCCM[i])	delete pCCM[i];	// in 2016 there is only pCCM_PAG
-				pCCM[i] = NULL;
+				if (pCCM[iClient])	delete pCCM[iClient];	// in 2016 there is only pCCM_PAG
+				pCCM[iClient] = NULL;
 				//Sleep(10);
 				}
 			i = 14;
@@ -1755,10 +1954,13 @@ void CPA2WinDlg::DestroyCCM( void )
 			TRACE(s);
 			break;
 
-			}	 // switch (i)
+			}	 // switch (iClient)
 
-		}	// for (i = 0; i < gnMaxClients; i++)
+		}	// for (iClient = 0; iClient < gnMaxClients; iClient++)
+
 	}	// DestroyCCM( void )
+#endif
+
 
 // Deconstruct/destroy all created for Server Connection Management system
 // called from the destructor of CPA2WinDlg
@@ -1929,7 +2131,7 @@ void CPA2WinDlg::ShowIdata(void)
 #ifdef I_AM_PAP
 	CString s,t;
 	int i,j,mn, mx;
-	if (gLastIdataPap.wMsgID == eRawInspID)
+	if (gLastIdataPap.wMsgID == eNcNxInspID)
 		{
 		//if (gwMsgSeqCnt != m_nMsgSeqCnt)
 			{
@@ -1979,17 +2181,23 @@ void CPA2WinDlg::ShowIdata(void)
 		m_lbOutput.AddString(s);
 		// Hardware input status
 		//       0123456 89012345 78901234 678901  456789012
-		s = _T( "Digital    Location Angle    Period     RotateCnt" );
+		s = _T( "Digital    Location Angle    Period     RotateCnt   MsgSeq  Glitch  LastCmdId  1stWord" );
 		t = s;
-
-		s.Format(_T("    MsgCnt = %d, GlitchCnt = %d"),
-			gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt);
-		t += s;
+		//m_lbOutput.AddString(t);	// show top line
+		//s.Format(_T("    MsgCnt = %d, GlitchCnt = %d  CmdId  1stWord"),
+		//	gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
+		//	gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd);
+		//t += s;
 		m_lbOutput.AddString(t);
 		s.Format( _T( "0x%04x  %05d    %04d     %06d   %05d" ),
 			gLastIdataPap.bDin, gLastIdataPap.wLocation, gLastIdataPap.wAngle,
 			gLastIdataPap.wPeriod, gLastIdataPap.wRotationCnt );
-		m_lbOutput.AddString(s);
+		t = s;
+		s.Format(_T("          %05d    %03d            %03d        %05d"),
+			gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
+			gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd);
+		t += s;
+		m_lbOutput.AddString(t);
 		}
 #endif
 	}
@@ -2035,8 +2243,8 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		return FALSE;
 		}
 
-		// assuming server # 0 = ePAM_Server is the PAM server
-	if (NULL == stSCM[ePAM_Server].pClientConnection[nClientNumber])
+		// assuming server # 0 = ePAP_Server is the PAM server
+	if (NULL == stSCM[ePAP_Server].pClientConnection[nClientNumber])
 		{
 		s.Format(_T("CPA2WinDlg::SendMsgToPAM No Valid ClientConnection for client = %d\n"),nClientNumber );
 		TRACE(s);
@@ -2046,7 +2254,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		return FALSE;
 		}
 
-	if (NULL == stSCM[ePAM_Server].pClientConnection[nClientNumber]->pSocket)
+	if (NULL == stSCM[ePAP_Server].pClientConnection[nClientNumber]->pSocket)
 		{
 		s.Format(_T("CPA2WinDlg::SendMsgToPAM pSocket is NULL for client = %d\n"), nClientNumber);
 		TRACE(s);
@@ -2056,7 +2264,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		return FALSE;
 		}
 
-	if (0 == stSCM[ePAM_Server].pClientConnection[nClientNumber]->bConnected)
+	if (0 == stSCM[ePAP_Server].pClientConnection[nClientNumber]->bConnected)
 		{
 		s.Format(_T("CPA2WinDlg::SendMsgToPAM Client = %d is not connected\n"),nClientNumber );
 		TRACE(s);
@@ -2074,16 +2282,16 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 	if (nMsgID > 0)	// && (nMsgID <= LAST_MSG_ID))
 		{
 
-		// int CServerConnectionManagement::SendPacketToPAM
+		// int CServerConnectionManagement::SendPacketToPAP
 		// posts a thread message to a ServerSocketOwnerThread to empty the linked list and send all packets
 		// Message activates CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 
-		s = _T("rc = stSCM[ePAM_Server].pSCM->SendPacketToPAM\n");
+		s = _T("rc = stSCM[ePAP_Server].pSCM->SendPacketToPAP\n");
 //		if (gDlg.pNcNx)
 //			gDlg.pNcNx->DebugOut(s);
 
 		// auto delete
-		rc = stSCM[ePAM_Server].pSCM->SendPacketToPAM(nClientNumber, (BYTE *)pMsg, nLen, 1);
+		rc = stSCM[ePAP_Server].pSCM->SendPacketToPAP(nClientNumber, (BYTE *)pMsg, nLen, 1);
 		if (rc < 0)
 			{
 			s.Format(_T("PA2WinDlg::SendMsgToPAM Failed to send pkt, err num  = %d\n"), rc);

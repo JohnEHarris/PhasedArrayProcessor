@@ -246,7 +246,7 @@ afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
 				m_pSCC->pSocket->UnLockRcvPktList();
 				pIdata = (IDATA_PAP *)pV;	// examine contents with debugger
 #ifdef I_AM_PAG
-				ProcessPAM_Data(pV);
+				ProcessPAP_Data(pV);
 #else
 				delete pV;
 #endif
@@ -447,7 +447,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		TRACE( s );
 #endif
 
-		m_pIdataPacket->wMsgID = eRawInspID;
+		m_pIdataPacket->wMsgID = eNcNxInspID;
 		//m_pIdataPacket->wByteCount = sizeof(IDATA_PAP);
 		m_pIdataPacket->wByteCount = pIData->bSeqModulo * pIData->bMaxVChnlsPerSequence * sizeof(stPeakChnlPAP) + sizeof(IDATA_FROM_HW_HDR);
 		m_pIdataPacket->uSync = SYNC;
@@ -469,7 +469,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		memcpy(&m_pIdataPacket->bNiosFeedback, &pIData->bNiosFeedback, 8);
 		m_pIdataPacket->wLastCmdSeqCnt = pIData->wLastCmdSeqCnt;
 		// map Sams bDin to Roberts
-		m_pIdataPacket->bDin = bDinMap[pIData->bDin & 0x3f];
+		m_pIdataPacket->bDin = pIData->bDin;//  bDinMap[pIData->bDin & 0x3f]; 5/23/18 allow all jeh
 		m_pIdataPacket->bSpare	= pIData->bSpare;	// Come from gate board in header with gates and wall reading
 		m_pIdataPacket->wLocation = pIData->wLocation;		//m_pSCC->InstrumentStatus.wLoc;
 		m_pIdataPacket->wAngle = pIData->wAngle;	//m_pSCC->InstrumentStatus.wAngle;
@@ -555,8 +555,9 @@ void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata)
 #ifdef I_AM_PAP
 	if (pCCM_PAG == NULL)
 		{
-		ASSERT(0);
-		delete pIdata;
+		//ASSERT(0);
+		if (pIdata)
+			delete pIdata;
 		return;
 		}
 	if (pCCM_PAG->m_pstCCM == NULL)
@@ -657,7 +658,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 		{
 		switch(pIData->wMsgID)
 			{
-			case eRawInspID:
+			case eNcNxInspID:
 			{
 			/***************** The peak hold opertion on all channels by PAP ********************/
 			// if m_Seq changes, ie m_Seq != pIData->bStartSeqNumber. FLUSH
@@ -667,7 +668,6 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			//
 #if 1
 
-			// glitch!= glitch... 5c != 0x14
 			// packet all good to seq mod, but  Pap = 1,startSeq=0x40, modulo = 4
 			if (pIData->bNiosGlitchCnt != m_bNiosGlitchCnt)
 				{
@@ -682,6 +682,8 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					m_IdataInPt = 0;
 					}
 				}
+			// 2018-05-21 per Clive, send this packet from ADC to UUI and then process for NcNx
+			// This to be used for All Wall processing in UUI
 
 			// This seems to be a problem with simulated data. Always m_Seq=1 when start sequence if 0
 			// do not take this code out. Yanming thinks we should skip the data throwaway
@@ -934,59 +936,87 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 #ifdef I_AM_PAG
 
 
-void CServerRcvListThread::ProcessPAM_Data(void *pData)
+void CServerRcvListThread::ProcessPAP_Data(void *pData)
 	{
 	CString s;
 	int i;
 	IDATA_PAP *pIdata = (IDATA_PAP *)pData;
+	IDATA_FROM_HW* pAllWall = (IDATA_FROM_HW*)pData;
 
-	if (pIdata->wMsgID == NC_NX_IDATA_ID)
+	switch (m_nMyServer)
 		{
-		s.Format(_T("wByteCount=%d, wMsgSeqCnt=%d, bPAPNumber=%d, bBoardNumber=%d, bStartSeqNumber=%d\n"),
-			pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->bPAPNumber, pIdata->bBoardNumber, pIdata->bStartSeqNumber);
-		// use debugger to view
-		TRACE(s);
-		s.Format(_T("bSeqModulo=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
-			pIdata->bSeqModulo, pIdata->bStartChannel, pIdata->bMaxVChnlsPerSequence);
-		TRACE(s);
-		s.Format(_T("PeakChnl[0].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
-			pIdata->PeakChnl[0].bId2, pIdata->PeakChnl[0].bOd3, pIdata->PeakChnl[0].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
-		TRACE(s);
-		SaveFakeData(s);
-		// if using simulator, chnl 21 wall = 999*filter length, Od = 25
-		s.Format(_T("PeakChnl[21].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
-			pIdata->PeakChnl[21].bId2, pIdata->PeakChnl[21].bOd3, pIdata->PeakChnl[21].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
-		SaveFakeData(s);
+	case 0:
+		// NcNx server
+		if (pIdata->wMsgID == NC_NX_IDATA_ID)
+			{
+			s.Format(_T("wByteCount=%d, wMsgSeqCnt=%d, bPAPNumber=%d, bBoardNumber=%d, bStartSeqNumber=%d\n"),
+				pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->bPAPNumber, pIdata->bBoardNumber, pIdata->bStartSeqNumber);
+			// use debugger to view
+			TRACE(s);
+			s.Format(_T("bSeqModulo=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
+				pIdata->bSeqModulo, pIdata->bStartChannel, pIdata->bMaxVChnlsPerSequence);
+			TRACE(s);
+			s.Format(_T("PeakChnl[0].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
+				pIdata->PeakChnl[0].bId2, pIdata->PeakChnl[0].bOd3, pIdata->PeakChnl[0].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
+			TRACE(s);
+			SaveFakeData(s);
+			// if using simulator, chnl 21 wall = 999*filter length, Od = 25
+			s.Format(_T("PeakChnl[21].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
+				pIdata->PeakChnl[21].bId2, pIdata->PeakChnl[21].bOd3, pIdata->PeakChnl[21].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
+			SaveFakeData(s);
 
-		//((void *)&gLastIdataPap, (void *)pIdata, sizeof(IDATA_PAP));
-		memcpy((void *)&gLastIdataPap, (void *)pIdata, pIdata->wByteCount);
-	}
-	else if (pIdata->wMsgID == ASCAN_DATA_ID)
-		{
-		i = pIdata->wMsgID;
-		memcpy((void *)&gLastAscanPap, (void *)pIdata, sizeof(ASCAN_DATA));
-		guAscanMsgCnt++;
-		}
+			//((void *)&gLastIdataPap, (void *)pIdata, sizeof(IDATA_PAP));
+			memcpy((void *)&gLastIdataPap, (void *)pIdata, pIdata->wByteCount);
+			}
+		else if (pIdata->wMsgID == ASCAN_DATA_ID)
+			{
+			i = pIdata->wMsgID;
+			memcpy((void *)&gLastAscanPap, (void *)pIdata, sizeof(ASCAN_DATA));
+			guAscanMsgCnt++;
+			}
 
-	else if (pIdata->wMsgID == READBACK_DATA_ID)
-		{
-		READBACK_DATA *pRb = (READBACK_DATA *)pIdata;
-		i = pIdata->wMsgID;
-		memcpy((void *)&gLastRdBkPap, (void *)pIdata, sizeof(READBACK_DATA));
-		// switch statement if more read back cmds added
-		if (pRb->wReadBackID = GET_GATE_DATA_ID)
-			memcpy((void *)&gLastGateCmd, (void *)pRb->ReadBack, sizeof(gLastGateCmd));
-		guRdBkMsgCnt++;
-		s.Format(_T("Received Read Back data, wReadBackID = %d"), pRb->wReadBackID);
+		else if (pIdata->wMsgID == READBACK_DATA_ID)
+			{
+			READBACK_DATA *pRb = (READBACK_DATA *)pIdata;
+			i = pIdata->wMsgID;
+			memcpy((void *)&gLastRdBkPap, (void *)pIdata, sizeof(READBACK_DATA));
+			// switch statement if more read back cmds added
+			if (pRb->wReadBackID = GET_GATE_DATA_ID)
+				memcpy((void *)&gLastGateCmd, (void *)pRb->ReadBack, sizeof(gLastGateCmd));
+			guRdBkMsgCnt++;
+			s.Format(_T("Received Read Back data, wReadBackID = %d"), pRb->wReadBackID);
+			SaveDebugLog(s);
+			}
+		else
+			{
+			// something else
+			s = _T("Unknown message");
+			SaveDebugLog(s);
+			}
+		break;
+
+	case 1:
+		// All wall server
+		// cast new data format from pIdata ???
+		if (pAllWall->wMsgID == ADC_DATA_ID)
+			{
+			// show some piece of all wall data 
+			if ((pAllWall->wMsgSeqCnt & 0xf) == 0)
+				{
+				s.Format(_T("Got all wall data Seq Cnt = %d"), pAllWall->wMsgSeqCnt);
+				SaveDebugLog(s);
+				TRACE(s);
+				}
+			}
+		break;
+
+	default:
+		// Houston, we have problem -- Not NcNx processing and not all_wall processing
+		s = _T("Unknown Server running ProcessPAP_Data rountine");
 		SaveDebugLog(s);
-		}
-	else
-		{
-		// something else
-		s = _T("Unknown message");
-		SaveDebugLog(s);
+		break;
 		}
 	delete pData;
-	}	// ProcessPAM_Data(void *pData)
+	}	// ProcessPAP_Data(void *pData)
 
 #endif

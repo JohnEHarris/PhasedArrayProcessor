@@ -611,7 +611,8 @@ void CClientCommunicationThread::ConnectSocket(WPARAM w, LPARAM lParam)
 			{
 			// THIS IS WHAT ALWAYS HAPPENS HERE !!!, in a moment it will connect and the OnConnect
 			// code in CClientSocket will complete the socket connection operation.
-			s.Format(_T("Connect Error = %d ...waiting to connect "), m_pstCCM->nOnConnectError);
+			s.Format(_T("Connect Error = %d ...waiting to connect to server %s.."), 
+				m_pstCCM->nOnConnectError, m_pstCCM->sServerName);
 			t = GetTimeString();
 			t += _T("\n");
 			s += t;
@@ -947,11 +948,16 @@ void CClientCommunicationThread::StartTCPCommunication()
 		// WSAEINVAL already bound to a socket		10022L
 		// #define WSAEISCONN                       10056L
 
+		m_pstCCM->nOnConnectError = nError;
 		if ( (WSAEWOULDBLOCK == nError) || (WSAEINVAL == nError) || (WSAEISCONN))
 			{
 			// THIS IS WHAT ALWAYS HAPPENS HERE !!!, in a moment it will connect and the OnConnect
 			// code in CClientSocket will complete the socket connection operation.
-			s.Format(_T("Connect Error = %d ...waiting to connect "), nError);
+			//s.Format(_T("Connect Error = %d ...waiting to connect "), nError);
+
+			s.Format(_T("Connect Error = %d ...waiting to connect to server %s.."),
+				m_pstCCM->nOnConnectError, m_pstCCM->sServerName);
+
 			t = GetTimeString();
 			t += _T("\n");
 			s += t;
@@ -1250,8 +1256,10 @@ afx_msg void CClientCommunicationThread::OnTimer( WPARAM w, LPARAM lParam )
 			break;
 
 			// we are targeting the PAM client to the PAG server connection
-		case eRestartPAMtoPAG:
+		case eRestartPAPtoPAG:
 			// if we haven't made the connection after a second or so, retry
+			// Same case statement whether PAP 2 PAG or PAP_AW to PAG_AW or whatever catches the data
+			// with the real system
 			if (NULL == m_pMyCCM)	
 				return;
 			//if (m_pMyCCM->GetConnectionState() == 0)	// not connected yet

@@ -348,7 +348,10 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		//GetPeerName(m_pCCM->m_pstCCM->sServerIP4, m_pCCM->m_pstCCM->uServerPort);
 		GetPeerName(s0, uSPort);
 		GetSockName(s1, uCPort);	// my ip and port
-		s.Format(_T("PAG client IP = %s:%d connected to PAG server = %s:%d "), s1, uCPort, s0, uSPort);
+		if (m_pCCM->m_nMyConnection == 0)
+			s.Format(_T("PAG client IP = %s:%d connected to PAG server = %s:%d "), s1, uCPort, s0, uSPort);
+		else if (m_pCCM->m_nMyConnection == 1)
+			s.Format(_T("PAG client IP = %s:%d connected to PAG_AW server = %s:%d "), s1, uCPort, s0, uSPort);
 		//DebugOutMessage(s);
 #ifdef I_AM_PAP
 		pMainDlg->SetMy_PAM_Number(s1, uCPort);
@@ -371,9 +374,12 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		char buffer [80];
 		strcpy(buffer,GetTimeStringPtr());
 		CstringToChar(s1, txt);
-		printf("PAM client %s:%d connected to PAG server at %s\n",txt,uCPort, buffer);
+		if (m_pCCM->m_nMyConnection == 0)
+			printf("PAP client %s:%d connected to PAG server at %s\n",txt,uCPort, buffer);
+		else if (m_pCCM->m_nMyConnection == 1)
+			printf("PAP All Walls client %s:%d connected to PAG_AW server at %s\n", txt, uCPort, buffer);
 		s2 = buffer;
-		s.Format(_T("PAM client %s:%d connected to PAG server at %s  ***********************\n"), s1, uCPort, s2);
+		s.Format(_T("PAP client %s:%d connected to PAG server at %s  ***********************\n"), s1, uCPort, s2);
 		DebugOutMessage(s);
 #endif
 		int nSize;

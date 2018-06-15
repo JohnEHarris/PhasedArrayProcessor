@@ -116,6 +116,16 @@ PubExt int gnFifoCnt, gnAsyncSocketCnt;
 PubExt WORD gwMsgSeqCnt;
 PubExt BYTE gbStartSeqNumber;	// starting sequence number for next Idata packet
 PubExt BYTE gbStartSeqNumberIncrement;
+PubExt WORD gwLastCmdId;	// keep cmd ID of last command executer by NIOS
+PubExt WORD gw1stWordCmd;	// keep 1st cmd word of last command executer by NIOS
+PubExt BYTE gbCmdSeq;
+PubExt BYTE gbCmdChnl;
+PubExt BYTE gbCmdGate;
+PubExt WORD gwStatus;		// bit field of error sent with Idata
+PubExt WORD gwStatusHoldCnt;	// set to non-zero when status changes
+			// main task manager will hold status bits for output until Hold Cnt decrements to 0
+PubExt WORD gwSmallCmdLost, gwLargeCmdLost;
+
 PubExt int nLoc; // simulate location of pipe
 PubExt BYTE bLastFakeSeq;	// assuming fake data can reset before 32 ascans.
 PubExt BYTE gbNiosGlitchCnt;	// usually Wiznet rest count. Must reset PAP data fifo processing on change of cnt

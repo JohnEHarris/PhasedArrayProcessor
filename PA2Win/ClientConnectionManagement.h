@@ -72,7 +72,7 @@ enum eThreadRole { eUnknown, eReceiver, eSender };		// 0=unknown, 1=Receiver, 2=
 // Use these enum's to tell CClientConnectionManagement::TimerTick() what action to take 
 // for each type of system implemented
 
-enum eClientRestart	{ eRestartPAGtoSysCp, eRestartPAMtoPAG, eFake_GDP_Pipe_Data };
+enum eClientRestart	{ eRestartPAGtoSysCp, eRestartPAPtoPAG, eFake_GDP_Pipe_Data };
 
 // Collect all or most of the necessary control variables into a structure
 
@@ -163,6 +163,7 @@ typedef struct
 
 	UINT uLastTick;					// Use with main app uAppTimerTick value to provide keep alive messages
 
+	int nMyClientIndex;				// which client structure out of MAX_CLIENTS
 	CClientConnectionManagement *pCCM;	// point to ourself. This is important.
 
 	}	ST_CLIENT_CONNECTION_MANAGEMENT;

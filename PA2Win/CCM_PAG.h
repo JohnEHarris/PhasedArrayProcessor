@@ -60,12 +60,13 @@ public:
 	int m_nWhichInstrument;
 	int m_nOldInstrument;
 	int m_nMsgQty;
+	int m_nCmdProcessRunning;
 	};
 
 // End of Class declaration
 // global variables below
 
 
-extern CCCM_PAG *pCCM_PAG;
+extern CCCM_PAG *pCCM_PAG, *pCCM_PAG_AW;
 
 #endif

@@ -39,16 +39,19 @@ enum CallSource {eMain, eInterrupt};
 // Idata message types. This is the data that comes from the PAP and is sent 
 // To the Receiver system
 // Read Back data replaces AScan data when read back is requested
-enum IdataTypes { eRawInspID = 1, eAscanID = 2, eReadBackID = 3, eKeepAliveID = 0xff };
+//
+enum Arria {eRawInspID = 1};	// hardware flaw/wall data for every chnl and seq
+enum IdataTypes { eNcNxInspID = 1, eAscanID = 2, eReadBackID = 3, eAdcIdataID = 4, eKeepAliveID = 0xff };
 enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define NC_NX_IDATA_ID				1		// PAP processed inspection data sent to PAG/Receiver system
 #define ASCAN_DATA_ID				2
 #define READBACK_DATA_ID			3
+#define ADC_DATA_ID					4		// Idata and header from ADC - what comes in goes out 
 
 
 
 // edit this value if more client connections to servers are needed
-#define	MAX_SERVERS							1	//do it in ServerConnection Management for which ever type of server we are using
+//#define	MAX_SERVERS		1	//do it in ServerConnection Management for which ever type of server we are using
 // Likely will have at least 2 server types. 1 for inspetion data and 1 for pulsers
 // Mixing pulsers in with gate boards will make it more difficult to put dimensions on things like virtual channels. 2016-10-19
 
@@ -92,6 +95,11 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define MSec50							50000
 #define MSec40							40000
 
+// IDATA_FROM_HW  wStatus bit definitions
+#define BAD_CMD_FORMAT					(1 << 0)	// TCPIP message does not match header format in some way
+#define BAD_SYNC_CHARS					(1 << 1)	// SYNC character not found at expected location
+#define SMALL_CMD_BUF_OVERFLOW			(1 << 2)	// Small cmds arrived too fast - buffer overflowed
+#define BIG_CMD_BUF_OVERFLOW			(1 << 3)	// Large cmds arrived too fast - buffer overflowed
 
 /*****************	STRUCTURES	*********************/
 // A channel is a UT echo or reflection assigned a physical position in the transducer.
@@ -182,7 +190,7 @@ typedef struct
 // keep data synchronized with location information
 typedef struct 
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eRawInspID	2
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
@@ -221,7 +229,14 @@ typedef struct
 	WORD wStatus;		// see below
 	WORD wVersionHW;	// Sams altera code version
 	WORD wVersionSW;	// Johns C++ code version
-	WORD wSpare[7];
+	// Debugging command activation in instrument
+	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
+	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
+	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
+	BYTE bCmdChnl;		// channel in sequence selected for command
+	BYTE bCmdGate;		// gate addressed by last command
+	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
+	WORD wSpare[3];
 
 	SEQ_DATA Seq[32];	// 32 sequences each of 8 virtual channels. 32*32 = 1024
 	} IDATA_FROM_HW;	// sizeof = 1024 + 64 byte header = 1088
@@ -229,7 +244,7 @@ typedef struct
 // Estimated 13 uSec to copy header into Wiznet
 typedef struct 
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eRawInspID	2
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
@@ -268,7 +283,14 @@ typedef struct
 	WORD wStatus;		// see below
 	WORD wVersionHW;	// Sams altera code version
 	WORD wVersionSW;	// Johns C++ code version
-	WORD wSpare[7];
+						// Debugging command activation in instrument
+	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
+	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
+	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
+	BYTE bCmdChnl;		// channel in sequence selected for command
+	BYTE bCmdGate;		// gate addressed by last command
+	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
+	WORD wSpare[3];
 
 	} IDATA_FROM_HW_HDR;		//sizeof = 64 bytes
 
@@ -488,7 +510,7 @@ typedef struct
 // PAP receives 5 bytes for every channel
 typedef struct
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eRawInspID	2
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
@@ -527,15 +549,21 @@ typedef struct
 	WORD wStatus;		// see below
 	WORD wVersionHW;	// Sams altera code version
 	WORD wVersionSW;	// Johns C++ code version ..50
-	WORD wSpare[7];		// 64 byte header
-
+						// Debugging command activation in instrument
+	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
+	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
+	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
+	BYTE bCmdChnl;		// channel in sequence selected for command
+	BYTE bCmdGate;		// gate addressed by last command
+	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
+	WORD wSpare[3];	
 	stPeakChnlPAP PeakChnl[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 
 	} IDATA_PAP;	// sizeof = 1024 + 64 =1088
 
 
 typedef struct
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eRawInspID	2
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
@@ -561,7 +589,7 @@ typedef struct
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
 	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info .. 30		
 
-	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
+	WORD wLastCmdSeqCnt;//last command sequence cnt received by this PAP
 	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
 
 						// Pipe position information
@@ -574,8 +602,14 @@ typedef struct
 	WORD wStatus;		// see below
 	WORD wVersionHW;	// Sams altera code version
 	WORD wVersionSW;	// Johns C++ code version
-	WORD wSpare[7];
-
+						// Debugging command activation in instrument
+	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
+	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
+	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
+	BYTE bCmdChnl;		// channel in sequence selected for command
+	BYTE bCmdGate;		// gate addressed by last command
+	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
+	WORD wSpare[3];
 	} IDATA_PAP_HDR;	// sizeof = 64
 
 						

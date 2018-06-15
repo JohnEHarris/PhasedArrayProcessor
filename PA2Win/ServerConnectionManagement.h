@@ -36,9 +36,9 @@ typedef struct
 
 // these 3 describe the same machine with a varying name over time.
 
-#define ePAM_Server			0	// the one and only server for all Phased Array Master computers
 #define ePAP_Server			0	// the one and only server for all Phased Array Processor computers
 #define eInstrument_Server	0	// the one and only server for all instrument connected to a PAM
+#define ePAP_AllWall_server	1
 
 
 // An instrument client can have up to this many virtual channels
@@ -51,7 +51,7 @@ class CPA2WinDlg;
 #define MAIN_DLG_NAME	CPA2WinDlg
 
 // edit this value if more client connections to servers are needed
-//#define	MAX_SERVERS						2
+#define	MAX_SERVERS						2
 #define MAX_CLIENTS_PER_SERVER				8
 
 // I_AM_PAP is defined in the PAP project under C++ | Preprocessor Definitions 
@@ -83,7 +83,7 @@ class CPA2WinDlg;
 //#define MAIN_DLG_NAME	PA2WinDlg
 
 // edit this value if more client connections to servers are needed
-#define	MAX_SERVERS							1
+#define	MAX_SERVERS							2
 #define MAX_CLIENTS_PER_SERVER				8
 extern THE_APP_CLASS theApp;
 
@@ -221,6 +221,7 @@ typedef struct
 	CString sServerIP4;				// IP4 dotted address of server eg., 192.168.10.50
 	UINT uServerPort;				// where the server is listening
 	int nServerType;				// Phased array master, Wall display, etc
+	int nServerIsListening;			// listening socket is active
 	CString sClientBaseIP;			// the IP address of the '1st' client. Assumes clients are ordered beginning
 									// with a base address. nth client index is IP of nth client - client base ip
 //	int nInstrumentSelector;		// 0 = amalog, 1 = sonoscope, 2 = tbd - or instances of the same type inspection machine
@@ -363,6 +364,7 @@ public:
 	void SetListenerSocket(CServerSocket *psock)	{ m_pstSCM->pServerListenSocket = psock;	}
 	void SetListenThreadID(DWORD Id)		{ m_pstSCM->ListenThreadID = Id;	}
 	DWORD GetListenThreadID(void)			{ ( m_pstSCM ? m_pstSCM->ListenThreadID : NULL );	}
+	int IsServerLIstenint(void)				{ (m_pstSCM->nServerIsListening ? 1 : 0 ); }
 
 	//int StopListeningThread(int nMyServer);
 
@@ -374,7 +376,7 @@ public:
 #endif
 
 #ifdef I_AM_PAG
-	int SendPacketToPAM(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag);
+	int SendPacketToPAP(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag);
 #endif
 
 	/**************************************************************************************/
@@ -390,12 +392,8 @@ public:
 // The main dialog or some other global memory operating agent declares an array of
 // pointer to ST_SERVER_CONNECTION_MANAGEMENT. The size of the array is MAX_SERVERS
 //
-#ifdef I_AM_SCM
-CServerConnectionManagement *pSCM[MAX_SERVERS];	// global, static ptrs to class instances define outside of the class definition.
-												//  -- not created with 'new'
-#else
-CServerConnectionManagement *pSCM[];
-#endif
+								//  -- not created with 'new'
+extern CServerConnectionManagement *pSCM[];
 
 // C functions for copying mostly pointers from ST_SERVERS_CLIENT_CONNECTION
 //

@@ -320,7 +320,7 @@ CServerSocket::~CServerSocket()
 
 		if (i >= 100)
 			{
-			s = _T( "OnClose timed out w/o closing OwnerThread\n" );
+			s = _T( "CServerSocket::OnClose timed out w/o closing OwnerThread\n" );
 			TRACE( s );
 			pMainDlg->SaveDebugLog(s);
 			}
@@ -328,7 +328,7 @@ CServerSocket::~CServerSocket()
 		else m_pSCC->pSocket = 0;
 
 		}	// if (nShutDown)
-	if (m_pSCC->pSocket)
+	if (m_pSCC->pSocket)		// sometimes crashes here ??
 		m_pSCC->pSocket = 0;
 
 	}

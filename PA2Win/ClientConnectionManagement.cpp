@@ -91,7 +91,7 @@ How it is intended to work:
 //#include "CmdProcessThread.h"
 
 class CClientConnectionManagement;
-class CClientConnectionManagement *pCCM[MAX_CLIENTS];	// global, static ptrs to class instances defined outside of the class definition.
+//class CClientConnectionManagement *pCCM[MAX_CLIENTS];	// global, static ptrs to class instances defined outside of the class definition.
 
 
 ST_CLIENT_CONNECTION_MANAGEMENT stCCM[MAX_CLIENTS];		// a global, static array of CCM structs
@@ -127,6 +127,21 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 		return;
 		}
 	m_nMyConnection = nMyConnection;
+	// It would be nice at this point to get a more specific name for the connection
+#ifdef I_AM_PAP
+	switch (m_nMyConnection)
+		{
+		case 0:
+			szName = _T("PAP NcNx Processing Client\n");	break;
+		case 1:
+			szName = _T("PAP All Walls Processing Client\n");	break;
+		default:	break;
+		}
+#endif
+
+#ifdef I_AM_PAG
+
+#endif
 
 	m_pstCCM = &stCCM[m_nMyConnection];	// my particular structure. stCCM is a static, global structure, not part of the class.
 
@@ -271,6 +286,7 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 			TRACE( _T( "Failed to kill Debug Out List\n" ) );
 		else { m_pstCCM->pCSDebugOut = 0;  m_pstCCM->pOutDebugMessageList = 0; }
 		}
+
 	TRACE(_T("Destructor Ran\n"));
 	}
 

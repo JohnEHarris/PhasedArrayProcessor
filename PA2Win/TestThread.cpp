@@ -103,7 +103,14 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 				if ((pCCM_PAG) &&
 					(nShutDown == 0))
 					{
-					pCCM_PAG->TimerTick(eRestartPAMtoPAG);
+					pCCM_PAG->TimerTick(eRestartPAPtoPAG);
+					}
+				break;
+			case 1:
+				if ((pCCM_PAG_AW) &&
+					(nShutDown == 0))
+					{
+					pCCM_PAG_AW->TimerTick(eRestartPAPtoPAG);
 					}
 				break;
 

@@ -269,6 +269,7 @@ int CServerConnectionManagement::StartListenerThread(int nMyServer)
 	// post a message to init the listener thread. Feed in a pointer to this instancec of SCM
 	// causes afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam) to execute
 	pThread->PostThreadMessage(WM_USER_INIT_LISTNER_THREAD, (WORD) 0, (LPARAM) this);
+	// wait until each thread is running before allowing another one??
 	return 0;	// success
 	}
 
@@ -703,7 +704,7 @@ MMI -----|--PAM_1-------|--Inst_0
 
 //extern CTscanDlg *pCTscanDlg;
 
-int CServerConnectionManagement::SendPacketToPAM(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag)
+int CServerConnectionManagement::SendPacketToPAP(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag)
 	{
 	int nReturn = 0;
 	CString s;

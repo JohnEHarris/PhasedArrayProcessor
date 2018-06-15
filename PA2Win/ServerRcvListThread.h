@@ -127,7 +127,7 @@ public:
 
 
 //#ifdef I_AM_PAG
-	void ProcessPAM_Data(void *pData);
+	void ProcessPAP_Data(void *pData);
 //#endif
 
 

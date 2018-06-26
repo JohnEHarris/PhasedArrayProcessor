@@ -181,6 +181,31 @@ int CCmdFifo::GetPacketSize(void)
 	m_wMsgSeqCnt = pIdata->wMsgSeqCnt;
 	return m_PacketSize;
 	}
+
+// Maybe we don't want to remove the packet just yet
+// Peek at the packet for doin all-wall processing
+
+BYTE* CCmdFifo::PeakNextPacket(void)
+	{
+	CString s;
+	int i = 10;	//debug
+	BYTE *pStart = &m_Mem[m_Out];		// beginning of NEXT whole packet(s) memory
+	GenericPacketHeader *pHeader = (GenericPacketHeader *)pStart;
+	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > sizeof(IDATA_PAP)))
+		{	// we are lost in the data, reset the FIFO and set an error bit
+		m_In = 0;
+		m_Out = 0;
+		m_Size = 0;
+		s = _T("Lost Sync or wrong packet size\n");
+		pMainDlg->SaveDebugLog(s);
+		TRACE(s);
+
+		return NULL;
+		}
+	return pStart;
+	}
+
+
 // Remove a PacketSize chunk from the FIFO. May leave a portion packet in the FIFO
 // If the input ptr aproaches the end of the memory, reset the FIFO to avoid wrap around problems associated
 // with typical software FIFO's

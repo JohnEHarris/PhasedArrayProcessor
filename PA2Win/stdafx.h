@@ -34,7 +34,7 @@
 
 
 #include <afxsock.h>            // MFC socket extensions
-
+#include <winnt.h>				// resolves memcpy
 
 
 

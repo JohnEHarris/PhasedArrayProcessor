@@ -26,6 +26,7 @@ class CCmdFifo
 		void Reset(void);
 		BYTE *GetInLoc(void);	// { return (&m_Mem[m_In]); }	// starting point where next packet will be stored
 		BYTE *GetNextPacket(void);
+		BYTE* PeakNextPacket(void); // like GetNextPacket but doesn't advance ptr in buffer or change in/out/size
 		int  GetFIFOBytes(void) { return m_Size; }
 		void AddBytesToFifo(int n);	// moves In back by n, increases size by n
 		int GetPacketSize(void);	// { return m_PacketSize; }

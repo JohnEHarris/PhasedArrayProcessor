@@ -39,10 +39,9 @@ public:
 	int m_nConnectRetryTick[3];
 	int m_nThreadIdOld;
 	int m_nInXmitLoop;
-	int m_uXmitLoopCount;
 	int m_uLastPacketsReceived;	// how many packets received in the past
 	int m_nConnectionRestartCounter;
-	WORD m_wMsgSeqCount;
+	WORD m_wMsgSeqCount, m_wMsgSeqCountAW;
 	int m_DebugLimit;
 
 	CHwTimer *m_pElapseTimer;	// created in CClientCommunicationThread::CClientCommunicationThread()

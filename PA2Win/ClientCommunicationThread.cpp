@@ -79,7 +79,6 @@ CClientCommunicationThread::CClientCommunicationThread()
 	m_nMyRole			= 0;
 	m_nInXmitLoop		= 0;
 	m_nThreadIdOld		= 0;
-	m_uXmitLoopCount	= 0;
 	for ( i = 0; i < 3; i++)
 		m_nConnectRetryTick[i]	= 0;
 	m_pSocket			= NULL;
@@ -89,6 +88,7 @@ CClientCommunicationThread::CClientCommunicationThread()
 	m_pMyCCM			= NULL;
 	m_nDebugCount		= 0;
 	m_wMsgSeqCount		= 0;
+	m_wMsgSeqCountAW	= 0;
 	m_DebugLimit		= 0;
 	m_nDebugEmptyList	= 0;
 	m_pElapseTimer		= 0;
@@ -1022,6 +1022,8 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 	CString s,t;
 	int nSent;
 	int i, j;
+	IDATA_PAP *pSendPkt = 0;	// ptr to the packet info in the linked list of send packets
+	IDATA_FROM_HW *pIdataHw = 0;
 
 	int nId = AfxGetThread()->m_nThreadID;
 	if (nId != m_nThreadIdOld)
@@ -1071,7 +1073,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 	m_nDebugEmptyList = 0;
 
 	// Since we got here we know the list is not empty
-	IDATA_PAP *pSendPkt;	// ptr to the packet info in the linked list of send packets
+
 	//ASCAN_DATA *pAscan;
 
 	if (!m_pstCCM->pSocket)
@@ -1100,71 +1102,133 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 
 	// if we get to here, there is at least one packet to send
 	while (m_pstCCM->pSendPktList->GetCount() > 0)
-		{
+		{	// packets available
 		m_pMyCCM->LockSendPktList();
 		pSendPkt = (IDATA_PAP *) m_pstCCM->pSendPktList->RemoveHead();
+		pIdataHw = (IDATA_FROM_HW *)pSendPkt;
 		m_pMyCCM->UnLockSendPktList();	// give a higher priority thread a chance to add packets
 		// examine the MsgId of the extracted packet to see what type message it really is
-		// As of 2017-01-24 the only message back to PAG is Idata
-		// do the socket send
-		gwMsgSeqCnt = 
-			pSendPkt->wMsgSeqCnt = m_wMsgSeqCount++;
-		// debug look at Ascan data 
-		if (pSendPkt->wMsgID == eAscanID)
-			j = 3;
-
-		if ((m_pstCCM->uPacketsSent & 0x7ff) == 0)		m_pElapseTimer->Start();
-		if ((m_pstCCM->uPacketsSent & 0x7ff) == 0x7ff)	// originally 0xff
+		switch (m_pMyCCM->m_nMyConnection)
 			{
-			m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
-			float fPksPerSec = 2048000000.0f/( (float) m_nElapseTime);	// originally 256
-			s.Format(_T("Idata Transmit Packets/sec = %6.1f\n"), fPksPerSec);
-			TRACE(s);
+		case 0:
+		default:
+			// NcNx data
+
+			gwMsgSeqCnt = 
+				pSendPkt->wMsgSeqCnt = m_wMsgSeqCount++;
+			// debug look at Ascan data 
+			if (pSendPkt->wMsgID == eAscanID)
+				j = 3;
+
+			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0)		m_pElapseTimer->Start();
+			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0x7ff)	// originally 0xff
+				{
+				m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
+				float fPksPerSec = 2048000000.0f/( (float) m_nElapseTime);	// originally 256
+				s.Format(_T("Idata Transmit Packets/sec = %6.1f\n"), fPksPerSec);
+				TRACE(s);
+				}
+			break;
+
+
+		case 1:
+			// All wall data
+			pIdataHw->wMsgSeqCnt = m_wMsgSeqCountAW++;
+			pIdataHw->wMsgID = ADC_DATA_ID;
+			break;
 			}
-		// take up to 4 attempts to deliver the packet
+
+		// take up to 4 attempts to deliver the packet linked list is empty??? 2018-06-18
 		for (i = 0; i < RETRY_COUNT; i++)
 			{	// loop till good xmit
-			if (m_pstCCM->pSocket != NULL)
+
+			nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
+			if (nSent == pSendPkt->wByteCount)
 				{
-				nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
-				if (nSent == pSendPkt->wByteCount)
+				m_pstCCM->uBytesSent += nSent;
+				m_pstCCM->uPacketsSent++;
+				if (m_pstCCM->uPacketsSent < 10)
 					{
+					if (pSendPkt->wMsgID < 4)
+						s.Format(_T("[%d]CCT::PAP sent PAG %d bytes\n"), m_pstCCM->uPacketsSent, nSent);
+					else
+						s.Format(_T("[%d]CCT::PAP_AW sent PAG %d bytes\n"), m_pstCCM->uPacketsSent, nSent);
+					TRACE(s);
+					}
+				//NxNx data and all wall have already been copied to a global
+				switch (pSendPkt->wMsgID)
+					{
+				case 0:
+				default:
+					break;
 
-					m_pstCCM->uBytesSent += nSent;
-					m_pstCCM->uPacketsSent++;
-					if (m_pstCCM->uPacketsSent < 10)
-						{
-						s.Format(_T("[%d]CCT::PAM sent PAG %d bytes\n"), m_pstCCM->uPacketsSent, nSent);
-						TRACE(s);
-						}
-					if (pSendPkt->wMsgID == 2)
-						{
-						memcpy((void *)&gLastAscanPap, (void *)pSendPkt, sizeof(ASCAN_DATA));
-						guAscanMsgCnt++;
-						}
-					if (pSendPkt->wMsgID == 3)
-						{
-						memcpy((void *)&gLastRdBkPap, (void *)pSendPkt, pSendPkt->wByteCount);
-						guRdBkMsgCnt++; // 4/24/18 didnt work
-						}
-
-
-					// capture output to PAG for Yanming
-					delete pSendPkt;
-					pSendPkt = 0;
-					m_nConsecutiveFailedXmit = 0;
+				case 2:
+					memcpy((void *)&gLastAscanPap, (void *)pSendPkt, sizeof(ASCAN_DATA));
+					guAscanMsgCnt++;
+					break;
+				case 3:
+					memcpy((void *)&gLastRdBkPap, (void *)pSendPkt, pSendPkt->wByteCount);
+					guRdBkMsgCnt++; // 4/24/18 didnt work
 					break;
 					}
 
-				Sleep(1);
-				j = m_pstCCM->pSendPktList->GetCount();
-				if ((j > 5) && (m_DebugLimit < 10))
+
+				// capture output to PAG for Yanming
+				delete pSendPkt;
+				pSendPkt = 0;
+				pIdataHw = 0;
+				m_nConsecutiveFailedXmit = 0;
+				break;
+				}	//if (nSent == pSendPkt->wByteCount)
+
+			Sleep(1);
+			j = m_pstCCM->pSendPktList->GetCount();
+			if ((j > 5) && (m_DebugLimit < 10))
+				{
+				Sleep(0);
+				s.Format(_T("Send List count = %5d, Bytes sent = %d\n"), j, nSent);
+				TRACE(s);
+				m_DebugLimit++;
+				}
+					
+			}	// for (i = 0; i < RETRY_COUNT; i++)
+
+#if 0
+				else  // else assume all wall data
 					{
-					Sleep(0);
-					s.Format(_T("Send List count = %5d, Bytes sent = %d\n"), j, nSent);
-					TRACE(s);
-					m_DebugLimit++;
-					}
+					if ((m_pMyCCM->m_nMyConnection == 1) && (pIdataHw->wByteCount = sizeof(IDATA_FROM_HW)))
+						{	// all wall data
+						nSent = m_pstCCM->pSocket->Send(pIdataHw, (int)pIdataHw->wByteCount);
+						if (nSent == pIdataHw->wByteCount)
+							{
+
+							m_pstCCM->uBytesSent += nSent;
+							m_pstCCM->uPacketsSent++;
+							if ((m_pstCCM->uPacketsSent < 10) ||((m_pstCCM->uPacketsSent & 0xfff) == 0))
+								{
+								s.Format(_T("[%d]CCT::PAP_AW sent PAG %d bytes\n"), m_pstCCM->uPacketsSent, nSent);
+								TRACE(s);
+								}
+							memcpy((void *)&gLastAllWall, (void*)pIdataHw, (int)pIdataHw->wByteCount);
+							// capture output to PAG for Yanming
+							delete pSendPkt;
+							pSendPkt = 0;
+							pIdataHw = 0;
+							m_nConsecutiveFailedXmit = 0;
+							break;
+							}
+						}
+
+					Sleep(1);
+					j = m_pstCCM->pSendPktList->GetCount();
+					if ((j > 5) && (m_DebugLimit < 10))
+						{
+						Sleep(0);
+						s.Format(_T("Send List count = %5d, Bytes sent = %d\n"), j, nSent);
+						TRACE(s);
+						m_DebugLimit++;
+						}
+					} // else assume all wall data
 				}
 			else
 				{
@@ -1187,28 +1251,39 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				}
 			}	// loop till good xmit
 
+#endif	
+			
+			
 		if (i == RETRY_COUNT)
 			{
-			s.Format(_T("Failed to send packet # = %d after %d attempts\n"), m_wMsgSeqCount-1, i);
+			s.Format(_T("Failed to send packet # = %d after %d attempts\n"), m_wMsgSeqCount - 1, i);
 			TRACE(s);
 			m_nConsecutiveFailedXmit++;
 			if (m_nConsecutiveFailedXmit >= 50)
 				{
 #if 0
-				// The sender thread failed to send. Have the receiver thread kill the socket since
-				// the receiver thread created the socket.
-				CClientCommunicationThread *pRcvThread = m_pMyCCM->m_pstCCM->pReceiveThread;
-				pRcvThread->PostThreadMessageW(WM_USER_KILL_SOCKET, 1, 0);
-				m_nConsecutiveFailedXmit = 0;
-				// client side (PAP) seems to work ok, but PAG the other end crashes 4/30/18
+					// The sender thread failed to send. Have the receiver thread kill the socket since
+					// the receiver thread created the socket.
+					CClientCommunicationThread *pRcvThread = m_pMyCCM->m_pstCCM->pReceiveThread;
+					pRcvThread->PostThreadMessageW(WM_USER_KILL_SOCKET, 1, 0);
+					m_nConsecutiveFailedXmit = 0;
+					// client side (PAP) seems to work ok, but PAG the other end crashes 4/30/18
 #endif
 
 				}
+			}	// failed to send
+		if (pSendPkt != NULL)
+			{
+			delete pSendPkt;
+			pSendPkt = 0;
 			}
 
-		m_uXmitLoopCount++;
-		if (pSendPkt != NULL)
-			delete pSendPkt;
+		}		// packets available
+
+	if (pSendPkt != NULL)
+		{
+		delete pSendPkt;
+		pSendPkt = 0;
 		}
 
 	m_nInXmitLoop = 0;	// now out of loop

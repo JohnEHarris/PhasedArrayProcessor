@@ -46,6 +46,7 @@ extern  CInspState InspState;
 #else
 #include "stdafx.h"
 #include "AfxSock.h"
+#include "..\Include\Global.h"
 #include "PA2Win.h"
 #include "PA2WinDlg.h"
 
@@ -397,6 +398,7 @@ void CServerRcvListThread::MakeFakeData(IDATA_FROM_HW *pData)
 		}	// for (iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
 	}
 
+#if 0
 // build 64 byte map to map Sam' digital input patter to Roberts
 #define HD_SAM		(1 << 5)
 #define IE_SAM		(1 << 4)
@@ -406,6 +408,8 @@ void CServerRcvListThread::MakeFakeData(IDATA_FROM_HW *pData)
 #define FWD_RC		(1 << 2)
 #define IE_RC		(1 << 1)
 #define PP_RC		(1 << 0)
+#endif
+
 
 void CServerRcvListThread::MapbDin(void)
 	{
@@ -550,53 +554,112 @@ void CServerRcvListThread::IncStartSeq(void)
 // link. This routine puts the Idata packet ptr into a linked list
 // and then commands the CCM_PAG component to empty the linked list thru
 // the client socket to the PHASED ARRAY GUI - PAG
-void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata)
+// 2018/06/18 now 2 client communication threads. 0 is NcNx wll, 1 is all wall ie raw adc data
+void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata, int nWhichClient)
 	{
 #ifdef I_AM_PAP
-	if (pCCM_PAG == NULL)
-		{
-		//ASSERT(0);
-		if (pIdata)
-			delete pIdata;
-		return;
-		}
-	if (pCCM_PAG->m_pstCCM == NULL)
-		{
-		ASSERT(0);
-		delete pIdata;
-		return;
-		}
-	if (pCCM_PAG->m_pstCCM->pSocket == NULL)
-		{
-		// restart client connection  .. how
-		delete pIdata;
-		TRACE(_T("pCCM_PAG->m_pstCCM->pSocket == NULL.. ignore and keep going\n"));
-		if (pCCM_PAG->m_pstCCM->pReceiveThread == NULL)
-			{
-			// destroy CCM and start all over?
-			TRACE(_T("pCCM_PAG->m_pstCCM->pReceiveThread == NULL.. Oh My\n"));
-			//ASSERT(0);
-			}
-		else
-			{
-			pCCM_PAG->m_pstCCM->bConnected = 0;	// causes a timed reconnect attempt ?
-			}
-		return;
-		}
-	if ( pCCM_PAG->m_pstCCM->pSendThread == NULL)
-		{
-		ASSERT(0);
-		delete pIdata;
-		return;
-		}
 	int i;
-	CClientCommunicationThread *pThread = pCCM_PAG->m_pstCCM->pSendThread;
-	pCCM_PAG->LockSendPktList();
-	pCCM_PAG->AddTailSendPkt((void*)pIdata);
-	i = pCCM_PAG->m_pstCCM->pSendPktList->GetCount();
-	pCCM_PAG->UnLockSendPktList();
-	//ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, CClientCommunicationThread::TransmitPackets)
-	PostThreadMessage(WM_USER_SEND_TCPIP_PACKET,(WORD) 3,(LPARAM) i);
+	CClientCommunicationThread *pThread;
+	IDATA_FROM_HW *pHwData = 0;
+
+
+	switch (nWhichClient)
+		{
+	case 0:
+	default:
+		if (pCCM_PAG == NULL)
+			{
+			//ASSERT(0);
+			if (pIdata)
+				delete pIdata;
+			return;
+			}
+		if (pCCM_PAG->m_pstCCM == NULL)
+			{
+			ASSERT(0);
+			delete pIdata;
+			return;
+			}
+		if (pCCM_PAG->m_pstCCM->pSocket == NULL)
+			{
+			// restart client connection  .. how
+			delete pIdata;
+			TRACE(_T("pCCM_PAG->m_pstCCM->pSocket == NULL.. ignore and keep going\n"));
+			if (pCCM_PAG->m_pstCCM->pReceiveThread == NULL)
+				{
+				// destroy CCM and start all over?
+				TRACE(_T("pCCM_PAG->m_pstCCM->pReceiveThread == NULL.. Oh My\n"));
+				//ASSERT(0);
+				}
+			else
+				{
+				pCCM_PAG->m_pstCCM->bConnected = 0;	// causes a timed reconnect attempt ?
+				}
+			return;
+			}
+		if (pCCM_PAG->m_pstCCM->pSendThread == NULL)
+			{
+			ASSERT(0);
+			delete pIdata;
+			return;
+			}
+		pThread = pCCM_PAG->m_pstCCM->pSendThread;
+		pCCM_PAG->LockSendPktList();
+		pCCM_PAG->AddTailSendPkt((void*)pIdata);
+		i = pCCM_PAG->m_pstCCM->pSendPktList->GetCount();
+		pCCM_PAG->UnLockSendPktList();
+		//ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, CClientCommunicationThread::TransmitPackets)
+		PostThreadMessage(WM_USER_SEND_TCPIP_PACKET, (WORD)3, (LPARAM)i);	// maybe change WORD 3 to select correct ccm_pag
+		break;
+
+	case 1:	// all wall data... different client socket
+
+		if (pCCM_PAG_AW == NULL)
+			{
+			//ASSERT(0);
+			if (pIdata)
+				delete pIdata;
+			return;
+			}
+		if (pCCM_PAG_AW->m_pstCCM == NULL)
+			{
+			ASSERT(0);
+			delete pIdata;
+			return;
+			}
+		if (pCCM_PAG_AW->m_pstCCM->pSocket == NULL)
+			{
+			// restart client connection  .. how
+			delete pIdata;
+			TRACE(_T("pCCM_PAG->m_pstCCM->pSocket == NULL.. ignore and keep going\n"));
+			if (pCCM_PAG_AW->m_pstCCM->pReceiveThread == NULL)
+				{
+				// destroy CCM and start all over?
+				TRACE(_T("pCCM_PAG_AW->m_pstCCM->pReceiveThread == NULL.. Oh My\n"));
+				//ASSERT(0);
+				}
+			else
+				{
+				pCCM_PAG_AW->m_pstCCM->bConnected = 0;	// causes a timed reconnect attempt ?
+				}
+			return;
+			}
+		if (pCCM_PAG_AW->m_pstCCM->pSendThread == NULL)
+			{
+			ASSERT(0);
+			delete pIdata;
+			return;
+			}
+		pHwData = (IDATA_FROM_HW *)pIdata;
+		pThread = pCCM_PAG_AW->m_pstCCM->pSendThread;
+		pCCM_PAG_AW->LockSendPktList();
+		pCCM_PAG_AW->AddTailSendPkt((void*)pIdata);
+		i = pCCM_PAG_AW->m_pstCCM->pSendPktList->GetCount();
+		pCCM_PAG_AW->UnLockSendPktList();
+		//ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, CClientCommunicationThread::TransmitPackets)
+		PostThreadMessage(WM_USER_SEND_TCPIP_PACKET, (WORD)3, (LPARAM)i);	// maybe change WORD 3 to select correct ccm_pag
+		break;
+		}
 #endif
 	}	//SendIdataToPag
 
@@ -649,6 +712,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 	WORD wTOFSum;
 	CvChannel *pChannel;
 	CString s;
+	IDATA_FROM_HW *pIdataHw;
 
 
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
@@ -660,6 +724,15 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			{
 			case eNcNxInspID:
 			{
+			// For all wall if full packet queue now to All Wall Processor
+			if (pIData->wByteCount = 1088) // and All Wall Flag ON
+				{
+				pIdataHw = new(IDATA_FROM_HW);
+				memcpy((void*)pIdataHw, (void*)pIData, sizeof(IDATA_FROM_HW));
+				memcpy((void*) &gLastAllWall, (void*)pIData, sizeof(IDATA_FROM_HW));
+				SendIdataToPag((GenericPacketHeader *)pIdataHw, 1);	// send to client 1
+				}
+
 			/***************** The peak hold opertion on all channels by PAP ********************/
 			// if m_Seq changes, ie m_Seq != pIData->bStartSeqNumber. FLUSH
 			// the IDATA_PAP structure and start new.
@@ -853,7 +926,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 							CheckSequences(pIdataPacket);
 #endif
 							//pIdataPacket->wMsgID = NC_NX_IDATA_ID; //already 1 before break
-							SendIdataToPag((GenericPacketHeader *)pIdataPacket);
+							SendIdataToPag((GenericPacketHeader *)pIdataPacket,0);
 							memcpy((void *)&gLastIdataPap, (void *)pIdataPacket, sizeof(IDATA_PAP));	// for debugging
 							delete m_pIdataPacket;
 							m_pIdataPacket = NULL;
@@ -897,7 +970,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			{
 			ASCAN_DATA *pIdataPacket = new (ASCAN_DATA);
 			memcpy((void*)pIdataPacket, (void *)pIData, sizeof(ASCAN_DATA));
-			SendIdataToPag((GenericPacketHeader *)pIdataPacket);
+			SendIdataToPag((GenericPacketHeader *)pIdataPacket, 0);
 			memcpy((void *)&gLastAscanPap, (void *)pIdataPacket, sizeof(ASCAN_DATA));
 			delete m_pIdataPacket;
 			m_pIdataPacket = NULL;
@@ -909,7 +982,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			READBACK_DATA *pIn = (READBACK_DATA *)pIData;
 			READBACK_DATA *pIdataPacket = new (READBACK_DATA);
 			memcpy((void*)pIdataPacket, (void *)pIData, pIn->wByteCount);
-			SendIdataToPag((GenericPacketHeader *)pIdataPacket);
+			SendIdataToPag((GenericPacketHeader *)pIdataPacket, 0);
 			memcpy((void *)&gLastRdBkPap, (void *)pIdataPacket, pIn->wByteCount);
 			delete m_pIdataPacket;
 			m_pIdataPacket = NULL;
@@ -939,7 +1012,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 void CServerRcvListThread::ProcessPAP_Data(void *pData)
 	{
 	CString s;
-	int i;
+	int i, j;
 	IDATA_PAP *pIdata = (IDATA_PAP *)pData;
 	IDATA_FROM_HW* pAllWall = (IDATA_FROM_HW*)pData;
 
@@ -997,13 +1070,24 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 
 	case 1:
 		// All wall server
-		// cast new data format from pIdata ???
 		if (pAllWall->wMsgID == ADC_DATA_ID)
 			{
+			// May not work if multiple ServerRcvListThreads. Each thread likely would need to 
+			// open a unique file name that included the thread number in the name.
+#ifdef I_AM_PAG
+			if (gDlg.pNcNx)
+				if (gDlg.pNcNx->m_nRecordState > 0)
+					{	// record the data in binary format
+					gDlg.pNcNx->m_AllWallFile.Write(pAllWall, pAllWall->wByteCount);
+					}
+#endif
 			// show some piece of all wall data 
 			if ((pAllWall->wMsgSeqCnt & 0xf) == 0)
 				{
-				s.Format(_T("Got all wall data Seq Cnt = %d"), pAllWall->wMsgSeqCnt);
+				i = pAllWall->wByteCount;
+				j = pAllWall->bStartSeqNumber;
+				s.Format(_T("Got all wall data Seq Cnt = %d, ByteCount = %d, StartSeq = %d"), 
+					pAllWall->wMsgSeqCnt, pAllWall->wByteCount, pAllWall->bStartSeqNumber);
 				SaveDebugLog(s);
 				TRACE(s);
 				}

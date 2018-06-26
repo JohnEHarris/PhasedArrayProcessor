@@ -100,6 +100,7 @@ PubExt GLOBAL_DLG_PTRS gDlg;
 PubExt IDATA_PAP gLastIdataPap;		// data sent to down stream systems from PAP
 PubExt ASCAN_DATA gLastAscanPap;
 PubExt READBACK_DATA gLastRdBkPap;
+PubExt IDATA_FROM_HW gLastAllWall;
 PubExt ST_GATE_READBACK_DATA gLastGateCmd;
 PubExt WORD gwMax0, gwMin0, gwMin1_0, gwMin2_0, gwZeroCnt, gwNot0;	// max and min of seq0, chnl 0
 #endif

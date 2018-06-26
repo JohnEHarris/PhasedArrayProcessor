@@ -45,6 +45,7 @@ IMPLEMENT_DYNAMIC(CNcNx, CDialogEx)
 CNcNx::CNcNx(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_NCNX_PA, pParent)
 //	, m_nAscanCnt(0)
+, m_nRecordLabel(0)
 	{
 	m_DlgLocationKey = _T("NC_NX_PA2");
 	m_DlgLocationSection = _T("Dialog Locations");	// Section is always this string for all dlgs
@@ -89,6 +90,7 @@ BEGIN_MESSAGE_MAP(CNcNx, CDialogEx)
 	ON_BN_CLICKED(IDC_RB_SMALLCMD, &CNcNx::OnBnClickedRbSmallcmd)
 	ON_BN_CLICKED(IDC_RB_LARGECMDS, &CNcNx::OnBnClickedRbLargecmds)
 #endif
+	ON_BN_CLICKED(IDC_BN_RECORD, &CNcNx::OnBnClickedBnRecord)
 END_MESSAGE_MAP()
 
 
@@ -113,6 +115,8 @@ BOOL CNcNx::OnInitDialog()
 	PositionWindow();
 	m_nPAP = m_nBoard = m_nSeq = m_nCh = m_nGate = m_nParam	= 0;
 	guAscanMsgCnt = 0;
+	m_nRecordState = 0;
+	SetDlgItemText(IDC_BN_RECORD, _T("RECORD"));
 	// if this is the PAG
 #ifdef I_AM_PAG
 	m_spPap.SetRange( 0, PAP_MAX );	// gnMaxClientsPerServer - 1 );  //how many clients do I have
@@ -940,4 +944,55 @@ void CNcNx::OnBnClickedRbLargecmds()
 	// Fill COMBO box with large commands-- 1056 byte commands
 	m_nShowSmallCmds = 0;
 	PopulateCmdComboBox();
+	}
+
+
+void CNcNx::OnBnClickedBnRecord()
+	{
+	// TODO: Add your control notification handler code here
+	TCHAR szFilter[] = _T("AllWall Files(*.awd) | *.awd||");
+	CString s;
+	char t[32];
+
+	CFileDialog dlg(TRUE, _T("cfg"), _T("*.cfg"), OFN_OVERWRITEPROMPT,
+		szFilter);
+
+	//	if (strlen(m_szDefCfgDir)) dlg.m_ofn.lpstrInitialDir = m_szDefCfgDir;
+	//if (m_szDefCfgDir.GetLength()) dlg.m_ofn.lpstrInitialDir = m_szDefCfgDir;
+	if (m_nRecordState == 0)
+		{
+		if (dlg.DoModal() == IDOK)
+			{
+			s = dlg.GetPathName();
+			try
+				{
+				m_AllWallFile.Open(s, CFile::modeCreate | CFile::modeReadWrite | CFile::shareDenyNone);
+				// when this procedure closes, it will close the open file
+				m_AllWallFileName = s;
+				m_AllWallFile.SeekToBegin();
+				m_nRecordState = 1;
+				SetDlgItemText(IDC_BN_RECORD, _T("SAVE & CLOSE"));
+				}
+			catch (CFileException* e)
+				{
+				e->ReportError();
+				e->Delete();
+				}
+
+			}
+		}
+	else
+		{
+		if (m_AllWallFile.GetLength() == 0)
+			{
+			strcpy(t, "End");
+			m_AllWallFile.Write(t, strlen(t));
+			}
+		m_AllWallFile.Flush();
+		m_AllWallFile.Close();
+			// save the file and close
+		SetDlgItemText(IDC_BN_RECORD, _T("RECORD"));
+		m_nRecordState = 0;
+		}
+
 	}

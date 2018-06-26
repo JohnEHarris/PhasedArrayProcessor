@@ -48,6 +48,15 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define READBACK_DATA_ID			3
 #define ADC_DATA_ID					4		// Idata and header from ADC - what comes in goes out 
 
+// build 64 byte map to map Sam' digital input patter to Roberts
+#define HD_SAM		(1 << 5)
+#define IE_SAM		(1 << 4)
+#define PP_SAM		(1 << 2)
+//#define FWD_SAM	ALWAYS Roberts bit2 for now and always 1
+#define HD_RC		(1 << 3)
+#define FWD_RC		(1 << 2)
+#define IE_RC		(1 << 1)
+#define PP_RC		(1 << 0)
 
 
 // edit this value if more client connections to servers are needed

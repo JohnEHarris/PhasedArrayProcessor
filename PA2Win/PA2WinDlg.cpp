@@ -2131,10 +2131,9 @@ void CPA2WinDlg::ShowIdata(void)
 #ifdef I_AM_PAP
 	CString s,t;
 	int i,j,mn, mx;
+	int hd, pp, ie;
 	if (gLastIdataPap.wMsgID == eNcNxInspID)
 		{
-		//if (gwMsgSeqCnt != m_nMsgSeqCnt)
-			{
 #ifdef SHOW_CH0_ALL_SEQ
 			s.Format(_T("Idata-to-PT WMin=%d, G1=%d, G2=%d, Raw[0][0] = %4d,  Raw[1][0] = %4d, Raw[2][0] = %4d, MsgSeqCnt= %d, ZeroCnt = %3d, Not 0 = %d"),
 				gLastIdataPap.PeakChnl[0].wTofMin,
@@ -2146,42 +2145,65 @@ void CPA2WinDlg::ShowIdata(void)
 			gwMax0 = gwZeroCnt = gwNot0 = 0;
 			m_nMsgSeqCnt = gwMsgSeqCnt;
 #else
-			// Show the current flaw gate values for all channels going to PT. erase first so no scrolling
-			m_lbOutput.ResetContent();
+		// Show the current flaw gate values for all channels going to PT. erase first so no scrolling
+		m_lbOutput.ResetContent();
+		t = _T("");
+		for (i = 0; i < 8; i++)	// label chnl on top line
+			{
+			s.Format(_T("Ch%d                                "), i);
+			t += s;
+			}
+
+		m_lbOutput.AddString(t);
+			
+		for (j = 0; j < 3; j++)
+			{
 			t = _T("");
-			for (i = 0; i < 8; i++)	// label chnl on top line
+			for (i = 0; i < 8; i++)
 				{
-				s.Format(_T("Ch%d                                "), i);
+				mn = gLastIdataPap.PeakChnl[j * 8 + i].wTofMin;
+				if (mn > 999) mn = 999;
+				mx = gLastIdataPap.PeakChnl[j * 8 + i].wTofMax;
+				s.Format(_T("Min=%03d  Max=%03d      "), 
+					mn, mx );
 				t += s;
 				}
-#if 0
-			s.Format(_T("  MsgCnt = %d, GlitchCnt = %d"), 
-				gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt);
-			t += s;
-#endif
 			m_lbOutput.AddString(t);
-			
-			for (j = 0; j < 3; j++)
-				{
-				t = _T("");
-				for (i = 0; i < 8; i++)
-					{
-					mn = gLastIdataPap.PeakChnl[j * 8 + i].wTofMin;
-					if (mn > 999) mn = 999;
-					mx = gLastIdataPap.PeakChnl[j * 8 + i].wTofMax;
-					s.Format(_T("Min=%03d  Max=%03d      "), 
-						mn, mx );
-					t += s;
-					}
-				m_lbOutput.AddString(t);
-				}
-#endif
 			}
-		s = _T( "" );	// blank line
+#endif
+		// find the first sequence in the data
+		j = 0;
+		for (j = 0; j < gLastIdataPap.bSeqModulo; j++)
+			{
+			if (((j + gLastIdataPap.bStartSeqNumber) % gLastIdataPap.bSeqModulo) == 0)
+				{
+				break;	// j is the seq index for hw seq 0
+				}
+			}
+			
+		s = t = _T( "" );	// blank line
 		m_lbOutput.AddString(s);
+		s = _T("All Wall 1st 8 beams");
+		m_lbOutput.AddString(s);
+		for (i = 0; i < 8; i++)
+			{
+			mn = gLastAllWall.Seq[j].vChnl[i].wTof;
+			if (mn > 999) mn = 999;
+
+			s.Format(_T("AllWall[0][%d]=%03d         "), i,mn);
+			t += s;
+			}
+		m_lbOutput.AddString(t);
+		s = _T("");
+		m_lbOutput.AddString(s);
+
+		hd = pp = ie = 0;
+		if (gLastIdataPap.bDin & PP_SAM) pp = 1;
+		if (gLastIdataPap.bDin & IE_SAM) ie = 1;
+		if (gLastIdataPap.bDin & HD_SAM) hd = 1;
 		// Hardware input status
 		//       0123456 89012345 78901234 678901  456789012
-		s = _T( "Digital    Location Angle    Period     RotateCnt   MsgSeq  Glitch  LastCmdId  1stWord" );
+		s = _T( "Digital    PP  IE  HD  Location Angle    Period     RotateCnt   MsgSeq  Glitch  LastCmdId  1stWord" );
 		t = s;
 		//m_lbOutput.AddString(t);	// show top line
 		//s.Format(_T("    MsgCnt = %d, GlitchCnt = %d  CmdId  1stWord"),
@@ -2189,8 +2211,8 @@ void CPA2WinDlg::ShowIdata(void)
 		//	gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd);
 		//t += s;
 		m_lbOutput.AddString(t);
-		s.Format( _T( "0x%04x  %05d    %04d     %06d   %05d" ),
-			gLastIdataPap.bDin, gLastIdataPap.wLocation, gLastIdataPap.wAngle,
+		s.Format( _T( "0x%04x  %d    %d    %d    %05d    %04d     %06d   %05d" ),
+			gLastIdataPap.bDin, pp, ie, hd, gLastIdataPap.wLocation, gLastIdataPap.wAngle,
 			gLastIdataPap.wPeriod, gLastIdataPap.wRotationCnt );
 		t = s;
 		s.Format(_T("          %05d    %03d            %03d        %05d"),
@@ -2198,7 +2220,7 @@ void CPA2WinDlg::ShowIdata(void)
 			gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd);
 		t += s;
 		m_lbOutput.AddString(t);
-		}
+		}	// if (gLastIdataPap.wMsgID == eNcNxInspID)
 #endif
 	}
 

@@ -123,7 +123,7 @@ public:
 	int m_nFullPacketChnls;		// All the channels of a complete set of unique sequences
 	BYTE m_bNiosGlitchCnt;
 	//int GetIdataPacketIndex(void);
-	void SendIdataToPag(GenericPacketHeader *pIdata);
+	void SendIdataToPag(GenericPacketHeader *pIdata, int nWhichClient);
 
 
 //#ifdef I_AM_PAG

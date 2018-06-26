@@ -89,8 +89,8 @@ BEGIN_MESSAGE_MAP(CNcNx, CDialogEx)
 #ifdef I_AM_PAG
 	ON_BN_CLICKED(IDC_RB_SMALLCMD, &CNcNx::OnBnClickedRbSmallcmd)
 	ON_BN_CLICKED(IDC_RB_LARGECMDS, &CNcNx::OnBnClickedRbLargecmds)
-#endif
 	ON_BN_CLICKED(IDC_BN_RECORD, &CNcNx::OnBnClickedBnRecord)
+#endif
 END_MESSAGE_MAP()
 
 
@@ -116,9 +116,9 @@ BOOL CNcNx::OnInitDialog()
 	m_nPAP = m_nBoard = m_nSeq = m_nCh = m_nGate = m_nParam	= 0;
 	guAscanMsgCnt = 0;
 	m_nRecordState = 0;
+#ifdef I_AM_PAG
 	SetDlgItemText(IDC_BN_RECORD, _T("RECORD"));
 	// if this is the PAG
-#ifdef I_AM_PAG
 	m_spPap.SetRange( 0, PAP_MAX );	// gnMaxClientsPerServer - 1 );  //how many clients do I have
 	m_spBoard.SetRange( 0, BOARD_MAX-1 );	// gnMaxClients - 1 );		// how many clients does my client have
 #else
@@ -946,7 +946,7 @@ void CNcNx::OnBnClickedRbLargecmds()
 	PopulateCmdComboBox();
 	}
 
-
+#ifdef I_AM_PAG
 void CNcNx::OnBnClickedBnRecord()
 	{
 	// TODO: Add your control notification handler code here
@@ -996,3 +996,6 @@ void CNcNx::OnBnClickedBnRecord()
 		}
 
 	}
+#endif
+
+

@@ -651,6 +651,11 @@ void CPA2WinDlg::SaveClientConnectionManagementInfo()
 		default:
 			szComment = _T("PAP as a client of PAG");
 			m_ptheApp->WriteProfileStringW (_T("ClientConnectionManagement"),szI, szComment);
+		case 1:
+		default:
+			szComment = _T("PAP-AllWalls as a client of PAG");
+			m_ptheApp->WriteProfileStringW(_T("ClientConnectionManagement"), szI, szComment);
+
 			break;
 #endif
 			}
@@ -900,9 +905,6 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	}
 
 #else
-// Phased Array Processor
-// PAP has a client connection for NcNx Idata
-// and a 2nd client connection for All Wall data -- same NIC, different prot
 
 void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	{
@@ -1042,56 +1044,8 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			{
 			// There may be multiple Phased Array Master (PAM) computers connected
 			// This is the one and only server for ALL PAM's
-			// #define ePAP_Server			0 - IN ServerConnectionManagement.h
-		case ePAP_Server:		
-			pSCM[i] = new CServerConnectionManagement(i);
-			j = sizeof(pSCM[i]);
-			j = sizeof(CServerConnectionManagement);
-			if (pSCM[i])
-				{
-				s = gServerArray[i].Ip;			// a global static table of ip addresses
-				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.10"));
-				uPort = gServerArray[i].uPort;
-				pSCM[i]->SetServerPort(uPort);	// 7501);
-				pSCM[i]->SetServerType(ePhaseArrayMaster);
-				s = gServerArray[i].ClientBaseIp;
-				pSCM[i]->SetClientBaseIp(s);
-				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
-				// start the listen thread which will create a listener socket
-				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
-				// the connection socket's OnReceive will populate the input data linked list and post messages
-				// to the main dlg/application to process the data.
-				pSCM[i]->m_pstSCM->nServerIsListening = 0;
-
-				nError = pSCM[i]->StartListenerThread(i);
-				if (nError)
-					{
-					s.Format(_T("Failed to start listener Thread[%d], ERROR = %d\n"), i, nError);
-					TRACE(s);
-					delete pSCM[i];
-					pSCM[i] = NULL;
-					break;
-					}
-
-				// wait a while until listening
-				for (j = 0; j < 100; j++)
-					{
-					Sleep(10);
-					if (pSCM[i]->m_pstSCM->nServerIsListening)	break;
-					}
-				if (j < 100)	break;
-				else
-					{
-					s.Format(_T("Listener Thread[%d] timed out, ERROR = %d\n"), i, nError);
-					TRACE(s);
-					delete pSCM[i];
-					pSCM[i] = NULL;
-					break;
-					}
-				}
-			break;
-
-		case ePAP_AllWall_server:
+			// #define ePAM_Server			0 - IN ServerConnectionManagement.h
+		case ePAM_Server:		
 			pSCM[i] = new CServerConnectionManagement(i);
 			j = sizeof(pSCM[i]);
 			j = sizeof(CServerConnectionManagement);
@@ -2102,8 +2056,7 @@ void CPA2WinDlg::ShowIdata(void)
 #ifdef I_AM_PAP
 	CString s,t;
 	int i,j,mn, mx;
-	int hd, pp, ie;
-	if (gLastIdataPap.wMsgID == eNcNxInspID)
+	if (gLastIdataPap.wMsgID == eRawInspID)
 		{
 #ifdef SHOW_CH0_ALL_SEQ
 			s.Format(_T("Idata-to-PT WMin=%d, G1=%d, G2=%d, Raw[0][0] = %4d,  Raw[1][0] = %4d, Raw[2][0] = %4d, MsgSeqCnt= %d, ZeroCnt = %3d, Not 0 = %d"),

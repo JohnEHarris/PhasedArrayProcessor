@@ -123,8 +123,7 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 		DebugLog(s);
 		return;
 		}
-	
-	m_pstSCM->nServerIsListening = 0;
+
 // Purely Randy's work
 // fix a well known Microsoft screw up that occurs
 // when using sockets in a multithreaded application 
@@ -171,23 +170,29 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 		}
 	//SockErr = ERROR_SUCCESS = 0;
 
-	if (m_pMySCM->m_nMyServer == 0)
+	switch (m_pMySCM->m_nMyServer)
 		{
 #ifdef I_AM_PAG
+	case 0:
 		m_pstSCM->sServerDescription = _T("PAG server for PAPs");
+		break;
+	case 1:
+		m_pstSCM->sServerDescription = _T("PAG server for PAP_ALLWALLs");
+		break;
+	default:
+		m_pstSCM->sServerDescription = _T("Unknow or Incorrecct server");
+		break;
 #else if I_AM_PAP
-		m_pstSCM->sServerDescription = _T("PAP server for Instruments ");
-#endif
-		}
 
-	if (m_pMySCM->m_nMyServer == 1)
-		{
-#ifdef I_AM_PAG
-		m_pstSCM->sServerDescription = _T("PAG_AW server for PAPs");
-#else if I_AM_PAP
-		TRACE(_T("No 2nd server for PAP"));
+	case 0:
+		m_pstSCM->sServerDescription = _T("PAP server for Instruments");
+		break;
+
+	default:
+		m_pstSCM->sServerDescription = _T("Unknow or Incorrecct server");
+		break;
 #endif
-		}
+		}	// switch (m_pMySCM->m_nMyServer)
 
 	m_pstSCM->pServerListenSocket = m_pListenSocket;
 	s.Format(_T("Srv[%d] <%s> is listening at %s : %d\n"),m_pMySCM->m_nMyServer, 
@@ -199,11 +204,6 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 		{
 		SockErr = GetLastError();
 		TRACE1("Listen Error = 0x%x\n", SockErr);
-		}
-	else
-		{
-		// signify that we are now listening
-		m_pstSCM->nServerIsListening = 1;
 		}
 
 	}

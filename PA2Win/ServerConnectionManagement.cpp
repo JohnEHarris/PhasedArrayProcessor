@@ -171,16 +171,6 @@ CServerConnectionManagement::CServerConnectionManagement(int nMyServerIndex)
 		{
 		m_pstSCM->pClientConnection[i]	= NULL;
 		m_pstSCM->nComThreadExited[i]	= 0;
-#if 0
-		// signify that previously running thread has exited.
-		// create critical sections and linked lists for every potential client connected
-		m_pstSCM->pCS_ClientConnectionRcvList[i]	= new CRITICAL_SECTION();
-		m_pstSCM->pCS_ClientConnectionSndList[i]	= new CRITICAL_SECTION();
-		InitializeCriticalSectionAndSpinCount(m_pstSCM->pCS_ClientConnectionRcvList[i],4);
-		InitializeCriticalSectionAndSpinCount(m_pstSCM->pCS_ClientConnectionSndList[i],4);
-		m_pstSCM->pRcvPktList[i]		= new CPtrList(64);
-		m_pstSCM->pSendPktList[i]		= new CPtrList(64);
-#endif
 		}
 
 	};
@@ -334,38 +324,6 @@ int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientInd
 
 	return 0;
 	}
-#if 0
-int CServerConnectionManagement::KillServerSocketOwnerThread( int nMyServer, int nClientIndex, int nWait )
-	{
-	CWinThread *pThread;
-	ST_SERVERS_CLIENT_CONNECTION *pscc;
-	CString s;
-	int i;
-		
-	pscc = m_pstSCM->pClientConnection[nClientIndex];
-	if (pscc == NULL)
-		{
-		s.Format( _T( "pscc == NULL in KillServerSocketOwnerThread, client = %d\n" ), nClientIndex );
-		TRACE( s );
-		return 0;
-		}
-	pThread = (CWinThread *)m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread;
-	if (pThread == NULL)	return 0;
-	pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET_THREAD,nClientIndex,(LPARAM)pscc);
-	for (i = 0; i < nWait; i++)
-		{
-		if (m_pstSCM->pClientConnection[nClientIndex]  = 0)		break;
-		if (m_pstSCM->pClientConnection[nClientIndex]->pServerSocketOwnerThread == 0)	break;
-		Sleep( 10 );
-		}
-	if (i >= nWait)
-		{
-		TRACE( _T( "Failed to kill Server Socket Owner Thread\n" ) );
-		return 1;
-		}
-	return 0;
-	}
-#endif
 
 
 int CServerConnectionManagement::KillServerRcvListThread( int nMyServer, int nClientIndex )

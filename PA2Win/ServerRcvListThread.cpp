@@ -262,23 +262,6 @@ afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
 #endif
 
 
-#if 0
-void CServerRcvListThread::MakeFakeDataHead(IDATA_FROM_HW *pData)
-//void CServerRcvListThread::MakeFakeDataHead(SRawDataPacket *pData)
-	{
-	pData->DataHead.bMsgID	= eRawInsp;	// raw data=10
-	pData->DataHead.bSeq	= m_nFakeDataSeqNumber;
-	m_nFakeDataSeqNumber	+= 128;	// the next packet will 128 Ascans/Main bangs later
-	m_nFakeDataSeqNumber	= m_nFakeDataSeqNumber % 128;
-
-	pData->DataHead.bDin = FORWARD | PIPE_PRESENT;
-	pData->DataHead.wMsgSeqCnt++;
-	pData->DataHead.wLocation = nLoc++;
-	if (nLoc > 500) nLoc = 20;
-	pData->DataHead.wAngle = nLoc % 12;
-	pData->DataHead.wPeriod = 1465;	// 300 ms = 200 rpm
-	}
-#endif
 // Random number between 0 and 100
 // Notice - not a class member
 //
@@ -398,18 +381,6 @@ void CServerRcvListThread::MakeFakeData(IDATA_FROM_HW *pData)
 		}	// for (iSeqPkt = 0; iSeqPkt < 7; iSeqPkt++)
 	}
 
-#if 0
-// build 64 byte map to map Sam' digital input patter to Roberts
-#define HD_SAM		(1 << 5)
-#define IE_SAM		(1 << 4)
-#define PP_SAM		(1 << 2)
-//#define FWD_SAM	ALWAYS Roberts bit2 for now and always 1
-#define HD_RC		(1 << 3)
-#define FWD_RC		(1 << 2)
-#define IE_RC		(1 << 1)
-#define PP_RC		(1 << 0)
-#endif
-
 
 void CServerRcvListThread::MapbDin(void)
 	{
@@ -500,15 +471,6 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 	// if (nSendFlag) Send the packet now.
 	}	// AddToIdataPacket
 
-
-#if 0
-int CServerRcvListThread::GetIdataPacketIndex(void)
-	{
-	if (m_pIdataPacket == NULL)	return -1;
-	//return m_IdataInPt;	// how many Result buffers are full. Limit is 256
-	// 256 is for 32 sequences of 8 channels each
-	}
-#endif
 
 #endif
 
@@ -778,18 +740,6 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 				}
 #endif
 			m_Seq = pIData->bStartSeqNumber;	// 2018-03-07 fix break in testing
-#if 0
-			if (m_Seq > 3)		// for this specific machine, seq only 0,1,2
-				{
-				s.Format(_T("Deleting m_pIdataPacket, m_Seq = %d > 3, m_pIdataPacket = 0x%08x\n"), pIData->bNiosGlitchCnt, (UINT)m_pIdataPacket);
-				pMainDlg->SaveFakeData(s);
-				TRACE( s );
-				m_bNiosGlitchCnt = pIData->bNiosGlitchCnt;
-				delete m_pIdataPacket;
-				m_pIdataPacket = 0;
-				return;
-				}
-#endif
 
 #endif
 
@@ -1086,7 +1036,7 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 				{
 				i = pAllWall->wByteCount;
 				j = pAllWall->bStartSeqNumber;
-				s.Format(_T("Got all wall data Seq Cnt = %d, ByteCount = %d, StartSeq = %d"), 
+				s.Format(_T("Got all wall data Seq Cnt = %d, ByteCount = %d, StartSeq = %d\n"), 
 					pAllWall->wMsgSeqCnt, pAllWall->wByteCount, pAllWall->bStartSeqNumber);
 				SaveDebugLog(s);
 				TRACE(s);

@@ -501,14 +501,6 @@ void CClientConnectionManagement::SendPacket(BYTE *pB, int nBytes, int nDeleteFl
 // Put debug messages into debug out linked list
 void CClientConnectionManagement::DebugOut(CString s)
 {
-#if 0
-// this won't work.. causes memory leak on program exit
-	CString *s1 = new CString();
-	*s1 = s + _T("\n");
-	LockDebugOut();
-	m_pstCCM->pOutDebugMessageList->AddTail(s1);		//AddTailDebugOut(*s1); crashes and burns
-	UnLockDebugOut();
-#endif
 	// new attempt.. convert string to tchar and store in linked list
 	CString s1 = s + _T("\n");	// s1 on stack
 

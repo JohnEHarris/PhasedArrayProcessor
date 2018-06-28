@@ -1141,7 +1141,9 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		// take up to 4 attempts to deliver the packet linked list is empty??? 2018-06-18
 		for (i = 0; i < RETRY_COUNT; i++)
 			{	// loop till good xmit
-
+			if (m_pstCCM == NULL)	break;
+			if (m_pstCCM->pSocket == NULL)	break;
+			if (pSendPkt == NULL)	break;
 			nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
 			if (nSent == pSendPkt->wByteCount)
 				{
@@ -1193,67 +1195,6 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 					
 			}	// for (i = 0; i < RETRY_COUNT; i++)
 
-#if 0
-				else  // else assume all wall data
-					{
-					if ((m_pMyCCM->m_nMyConnection == 1) && (pIdataHw->wByteCount = sizeof(IDATA_FROM_HW)))
-						{	// all wall data
-						nSent = m_pstCCM->pSocket->Send(pIdataHw, (int)pIdataHw->wByteCount);
-						if (nSent == pIdataHw->wByteCount)
-							{
-
-							m_pstCCM->uBytesSent += nSent;
-							m_pstCCM->uPacketsSent++;
-							if ((m_pstCCM->uPacketsSent < 10) ||((m_pstCCM->uPacketsSent & 0xfff) == 0))
-								{
-								s.Format(_T("[%d]CCT::PAP_AW sent PAG %d bytes\n"), m_pstCCM->uPacketsSent, nSent);
-								TRACE(s);
-								}
-							memcpy((void *)&gLastAllWall, (void*)pIdataHw, (int)pIdataHw->wByteCount);
-							// capture output to PAG for Yanming
-							delete pSendPkt;
-							pSendPkt = 0;
-							pIdataHw = 0;
-							m_nConsecutiveFailedXmit = 0;
-							break;
-							}
-						}
-
-					Sleep(1);
-					j = m_pstCCM->pSendPktList->GetCount();
-					if ((j > 5) && (m_DebugLimit < 10))
-						{
-						Sleep(0);
-						s.Format(_T("Send List count = %5d, Bytes sent = %d\n"), j, nSent);
-						TRACE(s);
-						m_DebugLimit++;
-						}
-					} // else assume all wall data
-				}
-			else
-				{
-				// ClientConnection Socket is null
-				m_pMyCCM->LockSendPktList();
-				j = m_pstCCM->pSendPktList->GetCount();
-				if (j)
-					{
-					s.Format(_T("Deleting %d packets -- socket to PAG is down\n"), j);
-					TRACE(s);
-					}
-				while (m_pstCCM->pSendPktList->GetCount() > 0)
-					{
-					pSendPkt = (IDATA_PAP *)m_pstCCM->pSendPktList->RemoveHead();
-					delete pSendPkt;
-					}
-				m_pMyCCM->UnLockSendPktList();
-				m_nInXmitLoop = 0;	// now out of loop
-				return;
-				}
-			}	// loop till good xmit
-
-#endif	
-			
-			
 		if (i == RETRY_COUNT)
 			{
 			s.Format(_T("Failed to send packet # = %d after %d attempts\n"), m_wMsgSeqCount - 1, i);

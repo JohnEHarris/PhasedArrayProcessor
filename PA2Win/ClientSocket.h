@@ -22,14 +22,7 @@ class CClientSocket : public CAsyncSocket //CSocket
 	DECLARE_DYNAMIC(CClientSocket);
 // Attributes
 public:
-#if 0
-	CPtrList *m_pListDataIn;
-	CPtrList *m_pListDebugMsgIn;
-	CPtrList *m_pListDataOut;
-	CPtrList *m_pListDebugMsgOut;
-	CSemaphore * m_psemDataIn;
-	CSemaphore * m_psemDataOut;
-#endif
+
 	//
 	int m_nChooseYourOnReceive;		// 0 if legacy OnReceive0, 1 if new, then OnReceive1
 	CClientConnectionManagement *m_pCCM; 

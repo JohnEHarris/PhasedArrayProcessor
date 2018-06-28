@@ -102,11 +102,7 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	//m_pConnectionSocket->m_nClientIndex = m_nClientIndex;
 	//m_pConnectionSocket->m_pThread	= this;
 	//m_pThread = this;
-#if 0
-	m_pConnectionSocket->m_pSCM			= this->m_pMySCM;	// ST_SERVER_CONNECTION_MANAGEMENT
-	m_pConnectionSocket->m_nMyServer	= this->m_nMyServer;
-	m_pConnectionSocket->m_pSCC			= this->m_pSCC;		//m_pMySCM->m_pstSCM->pClientConnection[0]; // Server's client connection
-#endif
+
 	//m_pConnectionSocket->m_pstSCM		= this->m_pSCM->m_pstSCM;
 	//m_pConnectionSocket->m_pSCC->pServerSocketOwnerThread = this;
 	// m_hConnectionSocket = Asocket.Detach(); set when thread created suspended
@@ -307,29 +303,6 @@ int CServerSocketOwnerThread::ExitInstance()
 		m_pSCC->bConnected = (BYTE)eNotConnected;
 		//
 		i = 0;
-#if 0
-		if (m_pSCC->pServerRcvListThread)
-			{
-			m_pSCC->pServerRcvListThread->PostThreadMessage( WM_QUIT, 0, 0L );
-			Sleep( 10 );
-			for (i = 0; i < 100; i++)
-				{
-				if (NULL == m_pSCC->pServerRcvListThread)	break;
-				Sleep( 10 );
-				}
-			}
-		if (i == 100)
-			{
-			s.Format( _T( "CServerSocketOwnerThread::ExitInstance[%d][%d] failed to kill pServerRcvListThread\n" ),
-				m_nMyServer, m_nClientIndex );
-			TRACE( s );
-			}
-		else
-			{
-			s.Format( _T( "CServerSocketOwnerThread::ExitInstance killed ServerRcvListThread in less than %d ms\n" ), i );
-			TRACE( s );
-			}
-#endif
 
 #ifdef _DEBUG
 		s.Format( _T( "CServerSocketOwnerThread::ExitInstance[%d][%d]\n" ), m_nMyServer, m_nClientIndex );
@@ -652,6 +625,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		// up to 50 attempts to send
 		for ( i = 0; i < 50; i++)
 			{
+			if (m_pSCC == NULL)				break;
+			if (m_pSCC->pSocket == NULL)	break;
 			nSent = m_pSCC->pSocket->Send( (void *) pCmd, nMsgSize,0);
 			if (nSent == nMsgSize)
 				{

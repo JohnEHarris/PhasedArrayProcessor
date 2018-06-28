@@ -98,26 +98,7 @@ extern THE_APP_CLASS theApp;
 // the packet size it expects to receive from the client that connects.
 
 SRV_SOCKET_INFO gServerArray[MAX_SERVERS];	// =
-#if 0
-#ifdef I_AM_PAP
-	{
-		// listening address, listening port, size of packet from client, expected client address
-		{ "192.168.10.10", 7502, INSTRUMENT_PACKET_SIZE, "192.168.10.201"}		// phased array master to 1st client instrument
-//		,{"192.168.10.10", 9999, MASTER_PACKET_SIZE, "192.168.10.201"}		// dummy, 
-	};
-#endif
 
-#ifdef I_AM_PAG
-	{
-		{ "192.168.10.10", 7501, PAG_CMD_PACKET_SIZE,"192.168.10.10"}		// PAG server IP and listening port for 1st phased array master
-//		{ "192.168.10.10", 7501, INSTRUMENT_PACKET_SIZE,"192.168.10.201"}		// PAG server IP and listening port for 1st phased array master
-//		{ "192.168.10.30", 7501, INSTRUMENT_PACKET_SIZE,"192.168.10.40"}		// PAG server IP and listening port for 1st phased array master
-//		,{"192.168.10.10", 9997, 1040, ""}		// dummy, 
-//		,{"192.168.10.10", 9998, 1040, ""}		// dummy, 
-//		,{"192.168.10.10", 9999, 1040, ""}		// dummy, 
-	};
-#endif
-#endif
 
 #else
 

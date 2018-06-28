@@ -165,13 +165,6 @@ void CClientSocket::OnReceive0(int nErrorCode)
 //	TCPDUMMY * Data = new TCPDUMMY;
 	int n = nErrorCode;	// means nothing, kills compiler warning
 	CString s;
-#if 0
-	n = Receive( (void *) Data, sizeof(TCPDUMMY), 0 );
-	m_pListDataIn->AddTail( Data );
-	s.Format( _T("OnReceive0(): Received %d bytes.\n"), n );
-	DebugInMessage( s );
-#endif
-	;
 }
 
 // This is added to let the class ClientConnectionManagement manage sending and receiving - jeh 6/6/12

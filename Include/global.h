@@ -126,6 +126,8 @@ PubExt WORD gwStatus;		// bit field of error sent with Idata
 PubExt WORD gwStatusHoldCnt;	// set to non-zero when status changes
 			// main task manager will hold status bits for output until Hold Cnt decrements to 0
 PubExt WORD gwSmallCmdLost, gwLargeCmdLost;
+// track max command depth
+PubExt BYTE gbSmallCmdQ, gbSmallCmdQPrior, gbLargeCmdQ, gbLargeCmdQPrior;
 
 PubExt int nLoc; // simulate location of pipe
 PubExt BYTE bLastFakeSeq;	// assuming fake data can reset before 32 ascans.

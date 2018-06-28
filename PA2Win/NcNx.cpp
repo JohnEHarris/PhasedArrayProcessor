@@ -191,11 +191,6 @@ void CNcNx::OnDeltaposSpBoard( NMHDR *pNMHDR, LRESULT *pResult )
 	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
 	// TODO: Add your control notification handler code here
 	*pResult = 0;
-#if 0
-	m_nBoard = pNMUpDown->iPos + pNMUpDown->iDelta;
-	if (m_nBoard < 0)	m_nBoard = 0;
-	if (m_nBoard > BOARD_MAX)	m_nBoard = BOARD_MAX;
-#endif
 	m_nBoard = GetSpinValue( pNMUpDown, &m_spBoard );
 	}
 
@@ -206,11 +201,6 @@ void CNcNx::OnDeltaposSpPap( NMHDR *pNMHDR, LRESULT *pResult )
 	// TODO: Add your control notification handler code here
 	// must use vertical scroll to retrieve the new value after the button spins
 	*pResult = 0;
-#if 0
-	m_nPAP = pNMUpDown->iPos + pNMUpDown->iDelta;
-	//if (m_nPAP < 0)	
-	m_nPAP = 0;
-#endif
 	m_nPAP = GetSpinValue( pNMUpDown, &m_spPap );
 	}
 
@@ -220,11 +210,6 @@ void CNcNx::OnDeltaposSpSeq( NMHDR *pNMHDR, LRESULT *pResult )
 	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
 	// TODO: Add your control notification handler code here
 	*pResult = 0;
-#if 0
-	m_nSeq = pNMUpDown->iPos + pNMUpDown->iDelta;
-	if (m_nSeq > gMaxSeqCount - 1)	m_nSeq = gMaxSeqCount - 1;
-	if (m_nSeq < 0)		m_nSeq = 0;
-#endif
 	m_nSeq = GetSpinValue( pNMUpDown, &m_spSeq );
 	}
 
@@ -234,11 +219,6 @@ void CNcNx::OnDeltaposSpCh( NMHDR *pNMHDR, LRESULT *pResult )
 	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
 	// TODO: Add your control notification handler code here
 	*pResult = 0;
-#if 0
-	m_nCh = pNMUpDown->iPos + pNMUpDown->iDelta;
-	if (m_nCh > gMaxChnlsPerMainBang - 1)	m_nCh =  gMaxChnlsPerMainBang - 1;
-	if (m_nCh < 0)		m_nCh = 0;
-#endif
 	m_nCh = GetSpinValue( pNMUpDown, &m_spCh );
 	}
 
@@ -248,11 +228,6 @@ void CNcNx::OnDeltaposSpGate( NMHDR *pNMHDR, LRESULT *pResult )
 	LPNMUPDOWN pNMUpDown = reinterpret_cast<LPNMUPDOWN>(pNMHDR);
 	// TODO: Add your control notification handler code here
 	*pResult = 0;
-#if 0
-	m_nGate = pNMUpDown->iPos + pNMUpDown->iDelta;
-	if (m_nGate > 3)		m_nGate = 3;
-	if (m_nGate < 0)		m_nGate = 0;
-#endif
 	m_nGate = GetSpinValue( pNMUpDown, &m_spGate );
 	}
 
@@ -853,23 +828,6 @@ void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 		m_WordCmd.Head.bBoardNumber, m_WordCmd.bSeq, m_WordCmd.wCmd);
 	t = sym + s;
 	m_lbOutput.AddString(t);
-#if 0
-	if (nCmd == NIOS_SCOPE_CMD_ID)
-		{
-		ST_SET_SCOPE_CMD *pCmd = (ST_SET_SCOPE_CMD *)&m_WordCmd;
-		// value in this case is the gate assignments, Ascan, gate0, gate1 .. bit defined
-		//m_WordCmd.wCmd = nValue;
-		pCmd->wTraceAssign = nValue;
-		pCmd->wStartDelay = 100;	// in system clocks
-		pCmd->wStepSize = 4;		// sampling rate in 80 Mhz clocks..Robert calls scale
-		//m_WordCmd.wFill[2] = 500;	// range in system clocks..probably redundant since always 1024 samples
-		if (m_wPacketRate == 0)			m_wPacketRate = 40;
-		else m_wPacketRate = 0;
-			
-		pCmd->wPacketRate = m_wPacketRate;		// 40 ms TCPIP packet update. 0=AScan packets off or not sent
-		// but really sent every 5 seconds to get temperature info to PAP
-		}
-#endif
 
 	SendMsg((GenericPacketHeader*)&m_WordCmd);
 	}

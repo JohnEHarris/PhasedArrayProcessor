@@ -199,15 +199,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 			CvChannel *pChannel;
 			// for now assume sequence length 3 and 8 chnls per sequence
-#if 0
-			if (gnSeqModulo != 3)
-				{
-				s = _T("gnSeqModulo != 3\n");
-				TRACE(s);
-				DebugOut(s);
-				gnSeqModulo = 3;
-				}
-#endif
+
 			for (is = 0; is < gnSeqModulo; is++)
 				for (ic = 0; ic < MAX_CHNLS_PER_MAIN_BANG; ic++)
 					{
@@ -297,21 +289,6 @@ void CCCM_PAG::UniqueProc(void)
 int CCCM_PAG::FindWhichSlave(int nChannel)
 	{
 	// UNTIL WE HAVE A GOOD FIX, RETURN 0
-	return 0;
-#if 0
-	int sum=0, nSlave=0, i;
-
-	for (i=0; i<10; i++)
-		{
-
-		if ( (nChannel / sum) == 0)
-			{
-			nSlave = i;
-			break;
-			}
-		}
-#endif
-
 	return 0;
 	}
 
@@ -417,21 +394,7 @@ BOOL CCCM_PAG::SendSlaveMsgToAll(ST_LARGE_CMD *pCmd)
 	{
 	int i;
 	i = 2;
-#if 0
-	ST_LARGE_CMD  *ptempCmd;
-	m_nOldInstrument = m_nWhichInstrument;
 
-	// Since SendSlaveMsg() deletes the input msg ptr, make a copy before each call
-	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
-		{
-		ptempCmd = new ST_LARGE_CMD;
-		memcpy(ptempCmd,pCmd, sizeof(ST_LARGE_CMD));
-		ptempCmd->bBoardNumber = m_nWhichInstrument = i;
-		SendSlaveMsg (i, ptempCmd);
-		}
-	m_nWhichInstrument = m_nOldInstrument;
-	delete pCmd;
-#endif
 	return TRUE;
 	}
 
@@ -545,40 +508,6 @@ int CCCM_PAG::GetMaxXSpan(void)
 
 int CCCM_PAG::GetMaxXOffset(void)
 {
-#if 0
-	CHANNEL_CONFIG2 ChannelCfg;
-	int nSlave;
-	int i;
-	int MaxXOffset = -1000;
-
-	InspState.GetChannelConfig(&ChannelCfg);
-	for (nSlave=0; nSlave<MAX_SHOES; nSlave++)
-	{
-//		InspState.GetChannelConfig(&ChannelCfg);
-
-		for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
-		{
-			switch ( ChannelCfg.Ch[nSlave][i].Type )
-			{
-			case IS_WALL:
-			case IS_LONG:
-			case IS_TRAN:
-			case IS_OBQ1:
-			case IS_OBQ2:
-			case IS_OBQ3:
-			case IS_NOTHING:
-				if ( ChannelCfg.Ch[nSlave][i].cXOffset > MaxXOffset )
-					MaxXOffset = ChannelCfg.Ch[nSlave][i].cXOffset;
-				break;
-
-			default:
-				break;
-			}
-		}
-	}
-
-	return MaxXOffset;
-#endif
 	return 0;
 }
 
@@ -586,39 +515,7 @@ int CCCM_PAG::GetMaxXOffset(void)
 
 int CCCM_PAG::GetMinXOffset(void)
 {
-#if 0
-	CHANNEL_CONFIG2 ChannelCfg;
-	int nSlave;
-	int i;
-	int MinXOffset = 1000;
 
-	InspState.GetChannelConfig(&ChannelCfg);
-	for (nSlave=0; nSlave<MAX_SHOES; nSlave++)
-		{
-
-		for (i=0; i<MAX_CHANNEL_PER_INSTRUMENT; i++)
-			{
-			switch ( ChannelCfg.Ch[nSlave][i].Type )
-			{
-			case IS_WALL:
-			case IS_LONG:
-			case IS_TRAN:
-			case IS_OBQ1:
-			case IS_OBQ2:
-			case IS_OBQ3:
-			case IS_NOTHING:
-				if ( ChannelCfg.Ch[nSlave][i].cXOffset < MinXOffset )
-					MinXOffset = ChannelCfg.Ch[nSlave][i].cXOffset;
-				break;
-
-			default:
-				break;
-			}
-		}
-	}
-
-	return MinXOffset;
-#endif
 	return 0;
 }
 

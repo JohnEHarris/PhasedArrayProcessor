@@ -264,40 +264,6 @@ WORD CvChannel::InputWFifo( WORD wWall )
 	return pFifo->uSum;
 	}
 
-// Increment an input counter until we get ASCANS_TO_AVG
-#if 0
-void CvChannel::CountInputs( void )
-	{
-	Nx_FIFO *pFifo = &NxFifo;
-	BYTE dbgCh, dbgSeq, bx;
-	dbgCh = m_bChnl;
-	dbgSeq = m_bSeq;
-	if ((dbgCh == 0) && (dbgSeq == 0))
-		bx = 2;
-	++m_bInputCnt;
-	if (m_bInputCnt >= ASCANS_TO_AVG)
-		{
-		if ((m_wStatus & SET_READ) == 0)	// previous peak data has not been read yet
-			SetOverRun();
-		else ClearOverRun();
-		ClrRead();
-		/********  how we know we have enough data  *********/
-		m_bInputCnt = 0;	// how we know we have enough data
-		m_PeakData.bId2 = NcFifo[0].bMaxFinal;
-		m_PeakData.bOd3 = NcFifo[1].bMaxFinal;
-		// not a wall channel
-		if (pFifo->bNx == 0)
-			{
-			m_PeakData.wTofMin = /*m_PeakData.wTofMan = */ 10;
-			}
-		else
-			{
-			m_PeakData.wTofMin = m_wTOFMinSum;
-			}
-		}
-
-	}
-#endif
 
 BYTE CvChannel::AscanInputDone( void )
 	{

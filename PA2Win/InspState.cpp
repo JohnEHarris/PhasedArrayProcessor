@@ -9,12 +9,6 @@
 // constructor
 CInspState::CInspState(void)
 	{
-#if 0
-	m_nInspectMode = NOP_MODE;
-	m_nMotionTime  = TIME_BASED;
-	memset((void *) &m_ChannelCfg, 0, sizeof (CHANNEL_CONFIG2));
-	memset ( (void *) &m_SiteDefaults, 0, sizeof(SITE_SPECIFIC_DEFAULTS) );
-#endif
 	}
 
 // destructor

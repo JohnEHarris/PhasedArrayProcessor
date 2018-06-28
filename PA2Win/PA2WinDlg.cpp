@@ -71,24 +71,8 @@ int KillLinkedList( CRITICAL_SECTION *pCritSec, CPtrList *pList )
 	return 1;
 	}
 
-// Probably not suitable for thread which need to exit via AfxEndThread
-// Definitely not suitable for thread which must get parameters from the message
-// if return = 0, not a valid thread handle
-// if return 101, timed out w/o killing thread
-#if 0
-int KillMyThread( CWinThread *pThread )
-	{
-	int i;
-	if (pThread == NULL)	return 0;
-	pThread->PostThreadMessageW(WM_QUIT,0,0l);
-	for (i = 0; i < 100; i++)
-		{
-		if (pThread == 0)	return i + 1;
-		Sleep( 10 );
-		}
-	return i + 1;
-	}
-#endif
+
+
 
 // CAboutDlg dialog used for App About
 
@@ -1542,19 +1526,6 @@ void CPA2WinDlg::OnBnClickedBnShutdown()
 		delete pCSSaveDebug;
 	pCSSaveDebug = 0;
 
-
-#if 0
-	for (i = 0; i < gnMaxServers; i++)
-		{
-		if (pSCM[i])
-			{
-			pstSCM = pSCM[i]->m_pstSCM;
-			pSCM[i]->ServerShutDown( i );
-			delete pSCM[i];
-			}
-		pSCM[i] = 0;
-		}
-#endif
 	}
 
 void CPA2WinDlg::OnFileExit()
@@ -1798,7 +1769,7 @@ bool CPA2WinDlg::UpdateTimeDate(time_t *tNow)
 // Deconstruct/destroy all created for Client Connection Management system
 void CPA2WinDlg::DestroyCCM(void)
 	{
-	int i, nError, j, iClient;
+	int nError, j;
 	CString s;
 	nError = j = 0;
 	}
@@ -2172,10 +2143,9 @@ void CPA2WinDlg::ShowIdata(void)
 			}
 #endif
 		// find the first sequence in the data
-		j = 0;
-		for (j = 0; j < gLastIdataPap.bSeqModulo; j++)
+		for (j = 0; j < gLastAllWall.bSeqModulo; j++)
 			{
-			if (((j + gLastIdataPap.bStartSeqNumber) % gLastIdataPap.bSeqModulo) == 0)
+			if (((j + gLastAllWall.bStartSeqNumber) % gLastAllWall.bSeqModulo) == 0)
 				{
 				break;	// j is the seq index for hw seq 0
 				}
@@ -2343,19 +2313,6 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		delete pMsg;	// clean up the mess
 		return FALSE;
 		}
-
-	
-
-
-#if 0
-	pBuf = BuildPAM_Message(nClientNumber, nMsg, &nLen, pv);	// allocates and returns memory with message in it.
-	if (pBuf == NULL)
-		{
-		s.Format(_T("PA2WinDlg::BuildPAM[%d] returned NULL\n"),nClientNumber );
-		TRACE(s);
-		return FALSE;		
-		}
-#endif
 
 	return FALSE;
 	}

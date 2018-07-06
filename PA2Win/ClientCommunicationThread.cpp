@@ -1076,7 +1076,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 
 	//ASCAN_DATA *pAscan;
 
-	if (!m_pstCCM->pSocket)
+	if ((!m_pstCCM->pSocket) || (m_pstCCM->bConnected == 0))
 		{
 		// kill the recently added members of the linked list
 
@@ -1089,7 +1089,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		m_pMyCCM->UnLockSendPktList();	// give a higher priority thread a chance to add packets
 		
 
-		s += _T("!m_pstCCM->pSocket.. killed SendPktList member\n");
+		s += _T("!m_pstCCM->pSocket or not connected.. killed SendPktList member\n");
 		TRACE(s);
 		DebugMsg(s);
 		return;	// (LRESULT) 0;	// no socket to send with

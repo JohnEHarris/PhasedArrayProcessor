@@ -40,6 +40,7 @@ enum CallSource {eMain, eInterrupt};
 // To the Receiver system
 // Read Back data replaces AScan data when read back is requested
 //
+enum Arria {eRawInspID = 1};	// hardware flaw/wall data for every chnl and seq
 enum IdataTypes { eNcNxInspID = 1, eAscanID = 2, eReadBackID = 3, eAdcIdataID = 4, eKeepAliveID = 0xff };
 enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define NC_NX_IDATA_ID				1		// PAP processed inspection data sent to PAG/Receiver system
@@ -47,6 +48,15 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define READBACK_DATA_ID			3
 #define ADC_DATA_ID					4		// Idata and header from ADC - what comes in goes out 
 
+// build 64 byte map to map Sam' digital input patter to Roberts
+#define HD_SAM		(1 << 5)
+#define IE_SAM		(1 << 4)
+#define PP_SAM		(1 << 2)
+//#define FWD_SAM	ALWAYS Roberts bit2 for now and always 1
+#define HD_RC		(1 << 3)
+#define FWD_RC		(1 << 2)
+#define IE_RC		(1 << 1)
+#define PP_RC		(1 << 0)
 
 
 // edit this value if more client connections to servers are needed
@@ -94,6 +104,11 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define MSec50							50000
 #define MSec40							40000
 
+// IDATA_FROM_HW  wStatus bit definitions
+#define BAD_CMD_FORMAT					(1 << 0)	// TCPIP message does not match header format in some way
+#define BAD_SYNC_CHARS					(1 << 1)	// SYNC character not found at expected location
+#define SMALL_CMD_BUF_OVERFLOW			(1 << 2)	// Small cmds arrived too fast - buffer overflowed
+#define BIG_CMD_BUF_OVERFLOW			(1 << 3)	// Large cmds arrived too fast - buffer overflowed
 
 /*****************	STRUCTURES	*********************/
 // A channel is a UT echo or reflection assigned a physical position in the transducer.
@@ -106,30 +121,7 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 
 // REVISED 2016-10-20
 
-#if 0
-// keep old versions for a while to use with Yiqing's simulator.
-typedef struct 
-	{
-    BYTE bMsgID;		// = eIdataTypes
-	BYTE bChannelTypes;	// eg. Long, Wall, Tran, Oblq. All long type have same focal law. All tran types have same focal law, etc
-    BYTE bChannelRepeats;	//how many times a channel type repeats during a frame before coming to the 1st virtual channel again
-	BYTE bFramesInDataPacket;	// bFramesInDataPacket*bChannelRepeats*bChannelTypes <= 128
-    BYTE bDin;			//digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
-    BYTE bSpare[3];
-    WORD wMsgSeqCnt;
-    WORD wLocation;		//x location in motion pulses
-    WORD wAngle;		//unit in .2048ms
-    WORD wPeriod;		//unit in .2048ms
-	} SDataHeadOld;		//16 bytes
 
-
-typedef struct 
-	{
-    SDataHeadOld DataHead;		// 16 bytes
-    stRawData RawData[128];	// raw data of 128 consecutive pulses 128*8=1024
-	} SRawDataPacketOld;		//1040 bytes
-
-#endif
 
 // Data coming from the Tuboscope electronics, that is the phased array boards.
 #ifdef CLIVE_STYLE
@@ -184,11 +176,13 @@ typedef struct
 // keep data synchronized with location information
 typedef struct 
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
-	UINT uSync;			// 0x5CEBDAAD													8
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address. 11
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
+	UINT uSync;			// 0x5CEBDAAD													
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
+// perhaps a future bPAPClientNumber - implying more than one client connection to more than one PAG server
+// using data from the data feed to this PAPNumber
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		12
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
@@ -205,7 +199,7 @@ typedef struct
 	BYTE bCmdQDepthS;	// How deep is the Small command queue in the instrument NIOS processor
 	BYTE bCmdQDepthL;	// How deep is the Large command queue in the instrument NIOS processor
 						// NIOS has limited memory. Msg Q likely to be 
-						// Large, [8][1056] = 8448 bytes, Small [64][32] = 2048
+						// Large, [16][1056] = 16896 bytes, Small [128][32] = 4096
 
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
 	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info		
@@ -223,7 +217,14 @@ typedef struct
 	WORD wStatus;		// see below
 	WORD wVersionHW;	// Sams altera code version
 	WORD wVersionSW;	// Johns C++ code version
-	WORD wSpare[7];
+	// Debugging command activation in instrument
+	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
+	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
+	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
+	BYTE bCmdChnl;		// channel in sequence selected for command
+	BYTE bCmdGate;		// gate addressed by last command
+	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
+	WORD wSpare[3];
 
 	SEQ_DATA Seq[32];	// 32 sequences each of 8 virtual channels. 32*32 = 1024
 	} IDATA_FROM_HW;	// sizeof = 1024 + 64 byte header = 1088
@@ -231,15 +232,15 @@ typedef struct
 // Estimated 13 uSec to copy header into Wiznet
 typedef struct 
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
-	UINT uSync;			// 0x5CEBDAAD													8
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address. 11
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
+	UINT uSync;			// 0x5CEBDAAD													
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
+	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
+// perhaps a future bPAPClientNumber - implying more than one client connection to more than one PAG server
+// using data from the data feed to this PAPNumber
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		12
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+						// Wall = ...210 DigPlsr=...220, gaps allow for more of each board type
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
@@ -252,7 +253,7 @@ typedef struct
 	BYTE bCmdQDepthS;	// How deep is the Small command queue in the instrument NIOS processor
 	BYTE bCmdQDepthL;	// How deep is the Large command queue in the instrument NIOS processor
 						// NIOS has limited memory. Msg Q likely to be 
-						// Large, [8][1056] = 8448 bytes, Small [64][32] = 2048
+						// Large, [16][1056] = 16896 bytes, Small [128][32] = 4096
 
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
 	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info		
@@ -270,7 +271,14 @@ typedef struct
 	WORD wStatus;		// see below
 	WORD wVersionHW;	// Sams altera code version
 	WORD wVersionSW;	// Johns C++ code version
-	WORD wSpare[7];
+						// Debugging command activation in instrument
+	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
+	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
+	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
+	BYTE bCmdChnl;		// channel in sequence selected for command
+	BYTE bCmdGate;		// gate addressed by last command
+	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
+	WORD wSpare[3];
 
 	} IDATA_FROM_HW_HDR;		//sizeof = 64 bytes
 
@@ -511,7 +519,7 @@ typedef struct
 	BYTE bCmdQDepthS;	// How deep is the Small command queue in the instrument NIOS processor
 	BYTE bCmdQDepthL;	// How deep is the Large command queue in the instrument NIOS processor
 						// NIOS has limited memory. Msg Q likely to be 
-						// Large, [8][1056] = 8448 bytes, Small [64][32] = 2048
+						// Large, [8][1056] = 16896 bytes, Small [128][32] = 4096
 
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
 	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info	..30	
@@ -529,8 +537,14 @@ typedef struct
 	WORD wStatus;		// see below
 	WORD wVersionHW;	// Sams altera code version
 	WORD wVersionSW;	// Johns C++ code version ..50
-	WORD wSpare[7];		// 64 byte header
-
+						// Debugging command activation in instrument
+	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
+	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
+	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
+	BYTE bCmdChnl;		// channel in sequence selected for command
+	BYTE bCmdGate;		// gate addressed by last command
+	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
+	WORD wSpare[3];	
 	stPeakChnlPAP PeakChnl[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 
 	} IDATA_PAP;	// sizeof = 1024 + 64 =1088
 
@@ -558,12 +572,12 @@ typedef struct
 	BYTE bCmdQDepthS;	// How deep is the Small command queue in the instrument NIOS processor
 	BYTE bCmdQDepthL;	// How deep is the Large command queue in the instrument NIOS processor
 						// NIOS has limited memory. Msg Q likely to be 
-						// Large, [8][1056] = 8448 bytes, Small [64][32] = 2048
+						// Large, [8][1056] = 16896 bytes, Small [128][32] = 4096
 
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
 	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info .. 30		
 
-	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
+	WORD wLastCmdSeqCnt;//last command sequence cnt received by this PAP
 	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
 
 						// Pipe position information
@@ -576,8 +590,14 @@ typedef struct
 	WORD wStatus;		// see below
 	WORD wVersionHW;	// Sams altera code version
 	WORD wVersionSW;	// Johns C++ code version
-	WORD wSpare[7];
-
+						// Debugging command activation in instrument
+	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
+	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
+	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
+	BYTE bCmdChnl;		// channel in sequence selected for command
+	BYTE bCmdGate;		// gate addressed by last command
+	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
+	WORD wSpare[3];
 	} IDATA_PAP_HDR;	// sizeof = 64
 
 						
@@ -665,135 +685,6 @@ typedef struct
 
 /*****************	STRUCTURES	END *********************/
 
-#if 0
-
-/*****************	COMMANDS *********************/
-
-#define NC_NX_TEST					1
-#define SET_GATE_DELAY_CMD_ID		2
-#define SET_GATE_RANGE_CMD_ID       3
-/*****************	COMMANDS  END *********************/
-
-
-
-#define TEST_UT                          20
-#define SET_INSPECT_MODE                 21
-#define SET_INSPECT_ENABLE				 30
-
-#define RAW_DATA_ID                      10
-#define DATA_ID                          11
-#define ASCAN_ID                         12
-#define CHANNEL_CMD_1_ID				 1
-
-#define READ_TIMER_CMD_ID                201 //read command>200
-#define READ_LM86_LT_CMD_ID              210
-#define READ_LM86_RT_CMD_ID              211
-
-#define SET_PULSE_RATE_CMD_ID           50
-#define SET_SEQ_CMD_ID                  51
-#define SET_PULSE_WIDTH_CMD_ID          52
-#define SET_PULSE_CONTROL_CMD_ID        53
-#define SET_PULSE_IN_OUT_CMD_ID         54
-#define SET_PULSE_ENABLE_CMD_ID         55
-#define SET_RECEIVE_ENABLE_CMD_ID       56
-
-#define SET_PULSE_MEMORY_CMD_ID         57
-#define SET_PULSE_ENABLE_ALL_CMD_ID     58
-#define SET_PULSE_CPU_ENABLE_CMD_ID     59
-#define SET_PULSE_AUTO_ENABLE_CMD_ID    40
-#define SET_PULSE_ENABLE_MEM_CMD_ID     41
-
-
-//#define SET_GATE_DELAY_CMD_ID           60
-#define SET_GATE_RANGE_CMD_ID           61
-#define SET_GATE_BLANK_CMD_ID           62
-#define SET_GATE_THRESHOLD_CMD_ID       63
-#define SET_GATE_CONTROL_CMD_ID         64
-#define SET_GATE_DATA_MODE_CMD_ID       65
-#define SET_GATE_TOF_MODE_CMD_ID        66
-#define SET_GATE_SEQ_REG_CMD_ID         67
-
-#define SET_HV_SWITCH_MEM_CMD_ID        70
-#define SET_HV_SEQ_GROUP_CMD_ID         71
-
-#define SET_GAIN_DAC_CMD_ID             79
-#define SET_GAIN_STEP_CMD_ID            76
-#define SET_GAIN_TGC_DELAY_CMD_ID       77
-#define SET_GAIN_SEQ_CMD_ID             78
-
-#define SET_LM86_ACT_CMD_ID             81
-#define SET_LM86_CMD_CMD_ID             82
-#define SET_LM86_DATA_CMD_ID            83
-#define SET_LM86_CONF_CMD_ID            84
-#define SET_LM86_LH_CMD_ID              85
-#define SET_LM86_LL_CMD_ID              86
-
-
-#define RESET_SCAN_CMD_ID              110
-#define SET_SCAN_1X1_CMD_ID            100
-#define SET_SCAN_2X2_CMD_ID            101
-#define SET_SCAN_16X16_CMD_ID          102
-#define SET_SCAN_DELAY_CMD_ID          103
-#define SET_SCAN_DELAY_16X16_CMD_ID    104
-#define SET_SCAN16_16X16_CMD_ID        105
-
-#define SET_ASCAN_DELAY_CMD_ID         120
-#define SET_ASCAN_RANGE_CMD_ID         121
-#define SET_ASCAN_SEQ_REG_CMD_ID       122
-#define ENABLE_ASCAN_INT_CMD_ID        123
-#define DISABLE_ASCAN_INT_CMD_ID       124
-#define SET_ASCAN_PEAK_SEL_REG_CMD_ID  125
-#define SET_ASCAN_ZERO_MEM_CONFIG_ID   126
-
-//add for lvds setup
-#define LVDS_DATA_ALIGN                  130
-#define LVDS_ALIGN_RESET                 131
-#define ADC_SERIAL_SET                   132
-#define ADC_REG_UPDATE                   133
-
-#define SET_RECEIVER_MEMORY_CMD_ID      135 
-#define SET_SCAN_REC_DELAY_16X16_CMD_ID       136
-#define SET_SCAN_PITCH_PULSER_DELAY_16X16_CMD_ID    137
-
-#define SET_SCAN_PULSER_MODE                 138 //0: echo mode, 1: pitch mode
-
-
-#define WRITE_SPI0_REG      140
-#define RESET_ALT_LVDS      141
-
-#define CHANGE_9272_REG     161
-#define CHANGE_9272_GAIN     162
-
-#define SET_ASCAN_SEQ_ONE_BEAM_CMD_ID  170
-
-#define SET_TCG_STEP_CMD_ID			   197
-#define SET_TCG_FN_CMD_ID              198
-#define SET_SCAN_TYPE_CMD_ID           199
-
-#define LINEAR_SCAN_0_DEGREE           0
-#define LINEAR_SCAN_37_DEGREE          1
-#define THREE_SCAN_LRW_8_BEAM          2
-#define THREE_SCAN_LRW_16_BEAM         3
-#define TWO_SCAN_LR_8_BEAM             4
-#define TWO_SCAN_LR_16_BEAM            5
-#define LONG_8_BEAM_12345678		   6
-#define LONG_8_BEAM_56781234		   7
-#define LONG_24_BEAM_800               8
-#define LONG_24_BEAM_080               9
-#define THREE_SCAN_LRW_8_BEAM_FOCUS    10
-#define THREE_SCAN_LO1LO1R_8_BEAM_12345678    11
-#define THREE_SCAN_LO1LO1R_8_BEAM_56781234    12
-#define LONG_24_BEAM_12345678		   13
-#define LONG_24_BEAM_56781234		   14
-#define WALL_25_BEAM_90_DEGREE_PROBE   15
-
-#define DataHeadLength 16
-#define DataPacketLength 24
-#define RAW_DATA_PACKET_LENGTH 1040
-#define AscanPacketLength 1040
-#define CmdPacketLength 1040
-
-#endif
 
 
 #endif	// PA2_STRUCTS_H

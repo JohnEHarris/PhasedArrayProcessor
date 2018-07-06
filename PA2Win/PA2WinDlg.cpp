@@ -651,11 +651,6 @@ void CPA2WinDlg::SaveClientConnectionManagementInfo()
 		default:
 			szComment = _T("PAP as a client of PAG");
 			m_ptheApp->WriteProfileStringW (_T("ClientConnectionManagement"),szI, szComment);
-		case 1:
-		default:
-			szComment = _T("PAP-AllWalls as a client of PAG");
-			m_ptheApp->WriteProfileStringW(_T("ClientConnectionManagement"), szI, szComment);
-
 			break;
 #endif
 			}
@@ -905,6 +900,9 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	}
 
 #else
+// Phased Array Processor
+// PAP has a client connection for NcNx Idata
+// and a 2nd client connection for All Wall data -- same NIC, different prot
 
 void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	{
@@ -921,7 +919,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 		switch (i)
 			{
 		case 0:
-
+			// NcNx data client of NcNx Server
 	// I_AM_PAP. I connect only to the PAG
 			sClientIP = GetClientIP( i );
 			sServerIp = GetServerIP( i );
@@ -1044,8 +1042,56 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			{
 			// There may be multiple Phased Array Master (PAM) computers connected
 			// This is the one and only server for ALL PAM's
-			// #define ePAM_Server			0 - IN ServerConnectionManagement.h
-		case ePAM_Server:		
+			// #define ePAP_Server			0 - IN ServerConnectionManagement.h
+		case ePAP_Server:		
+			pSCM[i] = new CServerConnectionManagement(i);
+			j = sizeof(pSCM[i]);
+			j = sizeof(CServerConnectionManagement);
+			if (pSCM[i])
+				{
+				s = gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.10"));
+				uPort = gServerArray[i].uPort;
+				pSCM[i]->SetServerPort(uPort);	// 7501);
+				pSCM[i]->SetServerType(ePhaseArrayMaster);
+				s = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(s);
+				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
+				// start the listen thread which will create a listener socket
+				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
+				// the connection socket's OnReceive will populate the input data linked list and post messages
+				// to the main dlg/application to process the data.
+				pSCM[i]->m_pstSCM->nServerIsListening = 0;
+
+				nError = pSCM[i]->StartListenerThread(i);
+				if (nError)
+					{
+					s.Format(_T("Failed to start listener Thread[%d], ERROR = %d\n"), i, nError);
+					TRACE(s);
+					delete pSCM[i];
+					pSCM[i] = NULL;
+					break;
+					}
+
+				// wait a while until listening
+				for (j = 0; j < 100; j++)
+					{
+					Sleep(10);
+					if (pSCM[i]->m_pstSCM->nServerIsListening)	break;
+					}
+				if (j < 100)	break;
+				else
+					{
+					s.Format(_T("Listener Thread[%d] timed out, ERROR = %d\n"), i, nError);
+					TRACE(s);
+					delete pSCM[i];
+					pSCM[i] = NULL;
+					break;
+					}
+				}
+			break;
+
+		case ePAP_AllWall_server:
 			pSCM[i] = new CServerConnectionManagement(i);
 			j = sizeof(pSCM[i]);
 			j = sizeof(CServerConnectionManagement);
@@ -2056,7 +2102,8 @@ void CPA2WinDlg::ShowIdata(void)
 #ifdef I_AM_PAP
 	CString s,t;
 	int i,j,mn, mx;
-	if (gLastIdataPap.wMsgID == eRawInspID)
+	int hd, pp, ie;
+	if (gLastIdataPap.wMsgID == eNcNxInspID)
 		{
 #ifdef SHOW_CH0_ALL_SEQ
 			s.Format(_T("Idata-to-PT WMin=%d, G1=%d, G2=%d, Raw[0][0] = %4d,  Raw[1][0] = %4d, Raw[2][0] = %4d, MsgSeqCnt= %d, ZeroCnt = %3d, Not 0 = %d"),
@@ -2181,17 +2228,18 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 
 	if ( (nClientNumber < 0) || (nClientNumber >= MAX_CLIENTS))
 		{
-		s.Format(_T("CPA2WinDlg::SendMsgToPAM FAIL, n = %d\n"),nClientNumber );
+		s.Format(_T("CPA2WinDlg::SendMsgToPAP FAIL, n = %d\n"),nClientNumber );
 		TRACE(s);
 		if (gDlg.pNcNx)
-			gDlg.pNcNx->DebugOut(s);		delete pMsg;	// clean up the mess
+			gDlg.pNcNx->DebugOut(s);		
+		delete pMsg;	// clean up the mess
 		return FALSE;
 		}
 
-		// assuming server # 0 = ePAP_Server is the PAM server
+		// assuming server # 0 = ePAP_Server is the PAP server
 	if (NULL == stSCM[ePAP_Server].pClientConnection[nClientNumber])
 		{
-		s.Format(_T("CPA2WinDlg::SendMsgToPAM No Valid ClientConnection for client = %d\n"),nClientNumber );
+		s.Format(_T("CPA2WinDlg::SendMsgToPAP No Valid ClientConnection for client = %d\n"),nClientNumber );
 		TRACE(s);
 		if (gDlg.pNcNx)
 			gDlg.pNcNx->DebugOut(s);
@@ -2201,7 +2249,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 
 	if (NULL == stSCM[ePAP_Server].pClientConnection[nClientNumber]->pSocket)
 		{
-		s.Format(_T("CPA2WinDlg::SendMsgToPAM pSocket is NULL for client = %d\n"), nClientNumber);
+		s.Format(_T("CPA2WinDlg::SendMsgToPAP pSocket is NULL for client = %d\n"), nClientNumber);
 		TRACE(s);
 		if (gDlg.pNcNx)
 			gDlg.pNcNx->DebugOut(s);
@@ -2211,20 +2259,17 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 
 	if (0 == stSCM[ePAP_Server].pClientConnection[nClientNumber]->bConnected)
 		{
-		s.Format(_T("CPA2WinDlg::SendMsgToPAM Client = %d is not connected\n"),nClientNumber );
+		s.Format(_T("CPA2WinDlg::SendMsgToPAP Client = %d is not connected\n"),nClientNumber );
 		TRACE(s);
 		if (gDlg.pNcNx)
 			gDlg.pNcNx->DebugOut(s);
 
-#if 0
-
 		delete pMsg;	// clean up the mess
 		return FALSE;
-#endif
 		}
 
 	// allow for more than one type of message. As of June 2016 only NcNx msg
-	if (nMsgID > 0)	// && (nMsgID <= LAST_MSG_ID))
+	if (nMsgID > 0)	
 		{
 
 		// int CServerConnectionManagement::SendPacketToPAP
@@ -2239,7 +2284,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		rc = stSCM[ePAP_Server].pSCM->SendPacketToPAP(nClientNumber, (BYTE *)pMsg, nLen, 1);
 		if (rc < 0)
 			{
-			s.Format(_T("PA2WinDlg::SendMsgToPAM Failed to send pkt, err num  = %d\n"), rc);
+			s.Format(_T("PA2WinDlg::SendMsgToPAP Failed to send pkt, err num  = %d\n"), rc);
 			TRACE(s);
 			if (gDlg.pNcNx)
 				gDlg.pNcNx->DebugOut(s);
@@ -2251,14 +2296,14 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		// Instrument can only take 5 commands at a time.
 		// Check feedback info in Idata to see how deep Instruments fifo is
 		// temporary fix??
-		Sleep(50);
+		Sleep(10);
 		return TRUE;
 		}
 
 	else
 		{
 
-		s.Format(_T("PA2WinDlg::SendMsgToPAM FAIL, Unknown know msg ID = %d\n"), nMsgID);
+		s.Format(_T("PA2WinDlg::SendMsgToPAP FAIL, Unknown know msg ID = %d\n"), nMsgID);
 		TRACE(s);
 		if (gDlg.pNcNx)
 			gDlg.pNcNx->DebugOut(s);

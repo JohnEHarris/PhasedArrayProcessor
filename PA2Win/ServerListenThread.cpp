@@ -123,7 +123,8 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 		DebugLog(s);
 		return;
 		}
-
+	
+	m_pstSCM->nServerIsListening = 0;
 // Purely Randy's work
 // fix a well known Microsoft screw up that occurs
 // when using sockets in a multithreaded application 
@@ -204,6 +205,11 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 		{
 		SockErr = GetLastError();
 		TRACE1("Listen Error = 0x%x\n", SockErr);
+		}
+	else
+		{
+		// signify that we are now listening
+		m_pstSCM->nServerIsListening = 1;
 		}
 
 	}

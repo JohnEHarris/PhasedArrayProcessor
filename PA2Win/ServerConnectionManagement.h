@@ -36,8 +36,8 @@ typedef struct
 
 // these 3 describe the same machine with a varying name over time.
 
-#define ePAP_Server			0	// the one and only server for all Phased Array Processor computers
-#define eInstrument_Server	0	// the one and only server for all instrument connected to a PAM
+#define ePAP_Server			0	// the server for all Phased Array Processor computers
+#define eInstrument_Server	0	// the server for all instrument connected to a PAP
 #define ePAP_AllWall_server	1
 
 

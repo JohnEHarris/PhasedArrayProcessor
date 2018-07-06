@@ -74,6 +74,7 @@ the PAP and PAG
 #define TCG_BEAM_GAIN_ALL_CMD_ID	12		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements 
 #define SET_TCG_CLOCK_RATE_CMD_ID	14		// SetTcgClockRate
 #define TCG_TRIGGER_DELAY_CMD_ID	15		// TCGTriggerDelay
+#define POW2_GAIN_CMD_ID			16		// Pow2GainBoost
 
 
 

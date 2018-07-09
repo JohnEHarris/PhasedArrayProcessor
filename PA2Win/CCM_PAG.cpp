@@ -127,147 +127,214 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 			
 		MsgId = pMmiCmd->wMsgID;
-			
-		if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber] == nullptr)
+		// MsgId < 0x200 is a small command for the ADC board(s)
+		// MsgId >= 0x200 but < 0x300 is a large command for the ADC board(s)
+		// MsgId >= 0x300 is routed to the PAP Srv[1] thread to the Pulser board
+
+		/*       PULSER COMMAND SECTION     */
+
+		if (MsgId >= 0x300)
 			{
-			s.Format(_T("No Client Connection ptr for board number=%d\n"), pMmiCmd->bBoardNumber);
-			TRACE(s);
-			DebugOut(s);
-			delete pMmiCmd;
-			return;
-			}
-
-		CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
-		CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
-		if ((pSocket == 0) || (pThread == 0))
-			{
-			s = _T("No socket or no thread for CServerSocketOwnerThread\n");
-			TRACE(s);
-			DebugOut(s);
-			delete pMmiCmd;
-			return;
-			}
-
-
-
-		// big case statement adapted from ServiceApp.cpp 'c' routine ProcessMmiMsg()
-		switch(MsgId)
-			{
-
-		case NC_NX_CMD_ID:
-#if 0
-			// The only message as of 2016-06-27
-			// Does not get sent to instruments, sets Nc and Nx parameters for the PAM to use
-			i = sizeof(PAP_INST_CHNL_NCNX);
-			pPamChnlInfo = (PAP_INST_CHNL_NCNX *)pMmiCmd;
-			s.Format(_T("Received NC_NX_CMD_ID for Instrument %d from Phased Array GUI - now deleting\n"),pMmiCmd->bBoardNumber);
-			TRACE( s );
-			SetChannelInfo(pPamChnlInfo);
-			// For debugging instrument commands, send Hello message to the connected instrument
-			// Echo this message to the simulator to test commands which must go to the instrument
-			// In this case, we will let the thread which forwards the message to the instrument delete this 
-			// memory segment.
-			// delete pMmiCmd;
-
-			pSocket->LockSendPktList();
-			pSocket->AddTailSendPkt(pMmiCmd);
-			pSocket->UnLockSendPktList();
-			// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
-			pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
-#endif
-			delete pMmiCmd;
-			break;
-
-		case SET_WALL_NX_CMD_ID:
-			// Only executes on PAP... all wall processing has same parameters for every wall channel
-			// virtual channels exist in Server side structure only
-			// Server side connects to Adc and other hardware data sources
-			pCmdS = (ST_NX_CMD *)pMmiCmd;	// cast this message to Nx command format
-			nInst = pCmdS->bBoardNumber;	// which instrument
-
-			// For now server[0] connects to Adc clients
-			// Not going to send info to client, but does process that clients data with these parameters
-			pSCC = stSCM[0].pClientConnection[nInst];
-			if (pSCC == NULL)
+			// board number should always be 0 for pulser
+			if (stSCM[1].pClientConnection[pMmiCmd->bBoardNumber] == nullptr)
 				{
-				s.Format(_T("pSCC = stSCM[0].pClientConnection[%d] is null\n"), nInst);
+				s.Format(_T("No Client Connection ptr for Pulser board number=%d\n"), pMmiCmd->bBoardNumber);
 				TRACE(s);
 				DebugOut(s);
 				delete pMmiCmd;
 				return;
 				}
 
-			CvChannel *pChannel;
-			// for now assume sequence length 3 and 8 chnls per sequence
-
-			for (is = 0; is < gnSeqModulo; is++)
-				for (ic = 0; ic < MAX_CHNLS_PER_MAIN_BANG; ic++)
-					{
-					pChannel = pSCC->pvChannel[is][ic];
-					pChannel->WFifoInit((BYTE)pCmdS->wNx, pCmdS->wMax, pCmdS->wMin, pCmdS->wDropCount);
-					}
-			delete pMmiCmd;
-			break;
-
-		//case 2-8:	// Gate commands from PAG TO PAP then PAP to Board
-
-		default:
-			if (MsgId > 0x200)
+			CServerSocket *pSocket = stSCM[1].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
+			CServerSocketOwnerThread *pThread = stSCM[1].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
+			if ((pSocket == 0) || (pThread == 0))
 				{
-				// Large message.. forward to NIOS boards
-				if (MsgId <= LAST_LARGE_COMMAND + 0X200)
-					{
-					pSocket->LockSendPktList();
-					pSocket->AddTailSendPkt(pMmiCmd);
-					pSocket->UnLockSendPktList();
-
-					// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
-					pThread->PostThreadMessage( WM_USER_SERVER_SEND_PACKET, 0, 0L );
-					s.Format(_T("Received Large Cmd %d for board %d from Phased Array GUI\n"),
-						MsgId, pMmiCmd->bBoardNumber);
-					TRACE( s );
-					pMainDlg->SaveDebugLog(s);
-					}
-
-				else
-					{
-					s.Format( _T( "Invalid large command ID = %d" ), MsgId );
-					TRACE( s );
-					pMainDlg->SaveDebugLog( s );
-					delete pMmiCmd;
-					}
-				break;
+				s = _T("No socket or no thread for CServerSocketOwnerThread to Pulser board\n");
+				TRACE(s);
+				DebugOut(s);
+				delete pMmiCmd;
+				return;
 				}
 
-			if (MsgId <= LAST_SMALL_COMMAND)
+			// Assuming all pulser board commands are small commands
+			if (MsgId <= LAST_PULSER_COMMAND)
 				{
 				ST_WORD_CMD *pSmall;
 				pSmall = (ST_WORD_CMD *)pMmiCmd;
 				s.Format(_T("Received from GUI: Cmd= %2d board= %d Seq= %2d Ch= %d G= %d wCmd= %d\n"),
-					MsgId, pSmall->Head.bBoardNumber, pSmall->bSeq, 
+					MsgId, pSmall->Head.bBoardNumber, pSmall->bSeq,
 					pSmall->bChnl, pSmall->bGateNumber, pSmall->wCmd);	// 1st word in command values
-				TRACE( s );
+				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
 
-				pSocket->LockSendPktList();	// server sockets linked list for sending
+				pSocket->LockSendPktList();	// server sockets linked list for sending commands
 				pSocket->AddTailSendPkt(pMmiCmd);
 				pSocket->UnLockSendPktList();
 
 				// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
 				pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
 				break;
-				}
+				}	// MsgId <= LAST_PULSER_COMMAND
 
 			else
 				{
-				s.Format(_T("No command recognized ID = %d\nDeleting command from Phased Array GUI\n"), MsgId);
+				s.Format(_T("No Pulser command recognized ID = %d\nDeleting command from Phased Array GUI\n"), MsgId);
 				delete pMmiCmd;
 				}
-			}	// end switch(MsgId)			delete pMmiCmd;
+			}
 
+		/*       PULSER COMMAND SECTION ENDS    */
+
+		/*     ADC Board Commands BEGIN         */
+		
+		else
+			{	// command for ADC board
+
+			if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber] == nullptr)
+				{
+				s.Format(_T("No Client Connection ptr for ADC board number=%d\n"), pMmiCmd->bBoardNumber);
+				TRACE(s);
+				DebugOut(s);
+				delete pMmiCmd;
+				return;
+				}
+
+			CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
+			CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
+			if ((pSocket == 0) || (pThread == 0))
+				{
+				s = _T("No socket or no thread for ADC CServerSocketOwnerThread\n");
+				TRACE(s);
+				DebugOut(s);
+				delete pMmiCmd;
+				return;
+				}
+
+
+
+			// big case statement adapted from ServiceApp.cpp 'c' routine ProcessMmiMsg()
+			switch (MsgId)
+				{
+
+				case NC_NX_CMD_ID:
+#if 0
+					// The only message as of 2016-06-27
+					// Does not get sent to instruments, sets Nc and Nx parameters for the PAM to use
+					i = sizeof(PAP_INST_CHNL_NCNX);
+					pPamChnlInfo = (PAP_INST_CHNL_NCNX *)pMmiCmd;
+					s.Format(_T("Received NC_NX_CMD_ID for Instrument %d from Phased Array GUI - now deleting\n"), pMmiCmd->bBoardNumber);
+					TRACE(s);
+					SetChannelInfo(pPamChnlInfo);
+					// For debugging instrument commands, send Hello message to the connected instrument
+					// Echo this message to the simulator to test commands which must go to the instrument
+					// In this case, we will let the thread which forwards the message to the instrument delete this 
+					// memory segment.
+					// delete pMmiCmd;
+
+					pSocket->LockSendPktList();
+					pSocket->AddTailSendPkt(pMmiCmd);
+					pSocket->UnLockSendPktList();
+					// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
+					pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
+#endif
+					delete pMmiCmd;
+					break;
+
+				case SET_WALL_NX_CMD_ID:
+					// Only executes on PAP... all wall processing has same parameters for every wall channel
+					// virtual channels exist in Server side structure only
+					// Server side connects to Adc and other hardware data sources
+					pCmdS = (ST_NX_CMD *)pMmiCmd;	// cast this message to Nx command format
+					nInst = pCmdS->bBoardNumber;	// which instrument
+
+					// For now server[0] connects to Adc clients
+					// Not going to send info to client, but does process that clients data with these parameters
+					pSCC = stSCM[0].pClientConnection[nInst];
+					if (pSCC == NULL)
+						{
+						s.Format(_T("pSCC = stSCM[0].pClientConnection[%d] is null\n"), nInst);
+						TRACE(s);
+						DebugOut(s);
+						delete pMmiCmd;
+						return;
+						}
+
+					CvChannel *pChannel;
+					// for now assume sequence length 3 and 8 chnls per sequence
+
+					for (is = 0; is < gnSeqModulo; is++)
+						for (ic = 0; ic < MAX_CHNLS_PER_MAIN_BANG; ic++)
+							{
+							pChannel = pSCC->pvChannel[is][ic];
+							pChannel->WFifoInit((BYTE)pCmdS->wNx, pCmdS->wMax, pCmdS->wMin, pCmdS->wDropCount);
+							}
+					delete pMmiCmd;
+					break;
+
+					//case 2-8:	// Gate commands from PAG TO PAP then PAP to Board
+
+				default:
+					if (MsgId > 0x200)
+						{
+						// Large message.. forward to NIOS boards
+						if (MsgId <= LAST_LARGE_COMMAND + 0X200)
+							{
+							pSocket->LockSendPktList();
+							pSocket->AddTailSendPkt(pMmiCmd);
+							pSocket->UnLockSendPktList();
+
+							// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
+							pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
+							s.Format(_T("Received Large Cmd %d for board %d from Phased Array GUI\n"),
+								MsgId, pMmiCmd->bBoardNumber);
+							TRACE(s);
+							pMainDlg->SaveDebugLog(s);
+							}
+
+						else
+							{
+							s.Format(_T("Invalid large command ID = %d"), MsgId);
+							TRACE(s);
+							pMainDlg->SaveDebugLog(s);
+							delete pMmiCmd;
+							}
+						break;
+						}
+
+					if (MsgId <= LAST_SMALL_COMMAND)
+						{
+						ST_WORD_CMD *pSmall;
+						pSmall = (ST_WORD_CMD *)pMmiCmd;
+						s.Format(_T("Received from GUI: Cmd= %2d board= %d Seq= %2d Ch= %d G= %d wCmd= %d\n"),
+							MsgId, pSmall->Head.bBoardNumber, pSmall->bSeq,
+							pSmall->bChnl, pSmall->bGateNumber, pSmall->wCmd);	// 1st word in command values
+						TRACE(s);
+						pMainDlg->SaveDebugLog(s);
+
+						pSocket->LockSendPktList();	// server sockets linked list for sending
+						pSocket->AddTailSendPkt(pMmiCmd);
+						pSocket->UnLockSendPktList();
+
+						// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
+						pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
+						break;
+						}
+
+					else
+						{
+						s.Format(_T("No command recognized ID = %d\nDeleting command from Phased Array GUI\n"), MsgId);
+						delete pMmiCmd;
+						}
+				}	// end switch(MsgId)			delete pMmiCmd;
+
+			}	// command for ADC board
+				
+		/*     ADC Board Commands               */
 
 		m_nMsgQty++;
+
 		}	// while (m_pstCCM->pRcvPktPacketList->GetCount())
+
 
 	}	// ProcessReceivedMessage(void)
 

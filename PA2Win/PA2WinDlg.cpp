@@ -902,7 +902,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 #else
 // Phased Array Processor
 // PAP has a client connection for NcNx Idata
-// and a 2nd client connection for All Wall data -- same NIC, different prot
+// and a 2nd client connection for All Wall data -- same NIC, different port
 
 void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	{
@@ -920,7 +920,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			{
 		case 0:
 			// NcNx data client of NcNx Server
-	// I_AM_PAP. I connect only to the PAG
+			// I_AM_PAP. I connect to the PAG NcNx server and another All_wall server
 			sClientIP = GetClientIP( i );
 			sServerIp = GetServerIP( i );
 			sServerName = GetServerName( i );
@@ -1040,17 +1040,17 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 
 		switch (i)
 			{
-			// There may be multiple Phased Array Master (PAM) computers connected
-			// This is the one and only server for ALL PAM's
+			// There may be multiple Phased Array Processor (PAP) computers connected to PAG
 			// #define ePAP_Server			0 - IN ServerConnectionManagement.h
-		case ePAP_Server:		
+		case ePAP_Server:
+			// a server for PAP NcNx data
 			pSCM[i] = new CServerConnectionManagement(i);
 			j = sizeof(pSCM[i]);
 			j = sizeof(CServerConnectionManagement);
 			if (pSCM[i])
 				{
 				s = gServerArray[i].Ip;			// a global static table of ip addresses
-				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.10"));
+				pSCM[i]->SetServerIP4(s);		// _T("192.168.11.20"));
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7501);
 				pSCM[i]->SetServerType(ePhaseArrayMaster);
@@ -1091,7 +1091,40 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 				}
 			break;
 
-		case ePAP_AllWall_server:
+#ifdef I_AM_PAG
+		case ePAP_AllWall_server:	// PAG function, gets All Wall Data
+									// For PAP, becomes command server for Pulser Board.. numerical value is 1
+			pSCM[i] = new CServerConnectionManagement(i);
+			j = sizeof(pSCM[i]);
+			j = sizeof(CServerConnectionManagement);
+			if (pSCM[i])
+				{
+				s = gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.20"));
+				uPort = gServerArray[i].uPort;
+				pSCM[i]->SetServerPort(uPort);	// 7520);
+				pSCM[i]->SetServerType(ePAP_AllWall_server);
+				s = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(s);
+				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
+				// start the listen thread which will create a listener socket
+				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
+				// the connection socket's OnReceive will populate the input data linked list and post messages
+				// to the main dlg/application to process the data.
+				nError = pSCM[i]->StartListenerThread(i);
+				if (nError)
+					{
+					s.Format(_T("Failed to start listener Thread[%d], ERROR = %d\n"), i, nError);
+					TRACE(s);
+					delete pSCM[i];
+					pSCM[i] = NULL;
+					}
+				}
+			break;
+
+#else
+			// PAP server for Pulser board
+		case ePAP_Pulser_server:		// For PAP, becomes command server for Pulser Board
 			pSCM[i] = new CServerConnectionManagement(i);
 			j = sizeof(pSCM[i]);
 			j = sizeof(CServerConnectionManagement);
@@ -1100,7 +1133,7 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 				s = gServerArray[i].Ip;			// a global static table of ip addresses
 				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.10"));
 				uPort = gServerArray[i].uPort;
-				pSCM[i]->SetServerPort(uPort);	// 7501);
+				pSCM[i]->SetServerPort(uPort);	// 7602);
 				pSCM[i]->SetServerType(ePhaseArrayMaster);
 				s = gServerArray[i].ClientBaseIp;
 				pSCM[i]->SetClientBaseIp(s);
@@ -1119,6 +1152,9 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 					}
 				}
 			break;
+
+
+#endif
 		default:
 			pSCM[i] = NULL;
 			break;
@@ -2296,7 +2332,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		// Instrument can only take 5 commands at a time.
 		// Check feedback info in Idata to see how deep Instruments fifo is
 		// temporary fix??
-		Sleep(10);
+		Sleep(10); // WAS 50
 		return TRUE;
 		}
 

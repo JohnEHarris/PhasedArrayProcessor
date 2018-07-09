@@ -241,10 +241,11 @@ typedef struct
 // using data from the data feed to this PAPNumber
 						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
 						// Wall = ...210 DigPlsr=...220, gaps allow for more of each board type
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
-	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		16
+	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		
 								// Some sequence points may have channel type NOTHING
 	BYTE bStartChannel;	// First virtual channel in peak data PeakChnl--always 0 for this hardware
 	BYTE bSeqPerPacket;	// Nominally 32 sequences but can be less. Data at back end of packet is invalid

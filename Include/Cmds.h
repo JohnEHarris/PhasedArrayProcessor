@@ -51,6 +51,9 @@ the PAP and PAG
 #define TOTAL_READ_BACK_COMMANDS	10
 #define LAST_READ_BACK_COMMAND		TOTAL_READ_BACK_COMMANDS - 1
 
+#define TOTAL_PULSER_COOMMANDS		10
+#define LAST_PULSER_COMMAND			TOTAL_PULSER_COOMMANDS - 1
+
 // SMALL
 // modify Cmds.h and Cmds.cpp in the NIOS code files
 // also add the command name to: void ( *ProcPtrArray[TOTAL_COMMANDS])() =

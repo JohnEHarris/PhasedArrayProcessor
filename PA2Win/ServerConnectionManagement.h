@@ -38,7 +38,8 @@ typedef struct
 
 #define ePAP_Server			0	// the server for all Phased Array Processor computers
 #define eInstrument_Server	0	// the server for all instrument connected to a PAP
-#define ePAP_AllWall_server	1
+#define ePAP_AllWall_server	1	// PAG server for all_wall data from PAP
+#define ePAP_Pulser_server	1	// PAP server to supply commands to Pulser board.
 
 
 // An instrument client can have up to this many virtual channels

@@ -690,6 +690,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			if (pIData->wByteCount = 1088) // and All Wall Flag ON
 				{
 				pIdataHw = new(IDATA_FROM_HW);
+				pIdataHw->wMsgID = eAdcIdataID;
 				memcpy((void*)pIdataHw, (void*)pIData, sizeof(IDATA_FROM_HW));
 				memcpy((void*) &gLastAllWall, (void*)pIData, sizeof(IDATA_FROM_HW));
 				SendIdataToPag((GenericPacketHeader *)pIdataHw, 1);	// send to client 1
@@ -975,20 +976,22 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 			s.Format(_T("wByteCount=%d, wMsgSeqCnt=%d, bPAPNumber=%d, bBoardNumber=%d, bStartSeqNumber=%d\n"),
 				pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->bPAPNumber, pIdata->bBoardNumber, pIdata->bStartSeqNumber);
 			// use debugger to view
-			TRACE(s);
-			s.Format(_T("bSeqModulo=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
-				pIdata->bSeqModulo, pIdata->bStartChannel, pIdata->bMaxVChnlsPerSequence);
-			TRACE(s);
-			s.Format(_T("PeakChnl[0].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
-				pIdata->PeakChnl[0].bId2, pIdata->PeakChnl[0].bOd3, pIdata->PeakChnl[0].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
-			TRACE(s);
-			SaveFakeData(s);
-			// if using simulator, chnl 21 wall = 999*filter length, Od = 25
-			s.Format(_T("PeakChnl[21].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
-				pIdata->PeakChnl[21].bId2, pIdata->PeakChnl[21].bOd3, pIdata->PeakChnl[21].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
-			SaveFakeData(s);
+			if ((pIdata->wMsgSeqCnt & 0xff) == 0) 
+				{
+				TRACE(s);
+				s.Format(_T("bSeqModulo=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
+					pIdata->bSeqModulo, pIdata->bStartChannel, pIdata->bMaxVChnlsPerSequence);
+				TRACE(s);
+				s.Format(_T("PeakChnl[0].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
+					pIdata->PeakChnl[0].bId2, pIdata->PeakChnl[0].bOd3, pIdata->PeakChnl[0].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
+				TRACE(s);
+				SaveFakeData(s);
+				// if using simulator, chnl 21 wall = 999*filter length, Od = 25
+				s.Format(_T("PeakChnl[21].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
+					pIdata->PeakChnl[21].bId2, pIdata->PeakChnl[21].bOd3, pIdata->PeakChnl[21].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
+				SaveFakeData(s);
+				}
 
-			//((void *)&gLastIdataPap, (void *)pIdata, sizeof(IDATA_PAP));
 			memcpy((void *)&gLastIdataPap, (void *)pIdata, pIdata->wByteCount);
 			}
 		else if (pIdata->wMsgID == ASCAN_DATA_ID)
@@ -1026,13 +1029,17 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 			// open a unique file name that included the thread number in the name.
 #ifdef I_AM_PAG
 			if (gDlg.pNcNx)
+				{
+				memcpy((void*)&pAllWall->bNiosFeedback, "AllWall", 7);
+				memcpy((void*)&gLastAllWall, (void*)pAllWall, pAllWall->wByteCount);
 				if (gDlg.pNcNx->m_nRecordState > 0)
 					{	// record the data in binary format
 					gDlg.pNcNx->m_AllWallFile.Write(pAllWall, pAllWall->wByteCount);
 					}
+				}
 #endif
 			// show some piece of all wall data 
-			if ((pAllWall->wMsgSeqCnt & 0xf) == 0)
+			if ((pAllWall->wMsgSeqCnt & 0xff) == 0)
 				{
 				i = pAllWall->wByteCount;
 				j = pAllWall->bStartSeqNumber;

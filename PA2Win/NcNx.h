@@ -98,6 +98,8 @@ public:
 	void WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue);
 	ST_WORD_CMD m_WordCmd;
 	void LargeCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue);
+	void PulserCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue);
+		
 	ST_LARGE_CMD m_wLargeCmd;
 	afx_msg void OnChangeEdParam();
 	CEdit m_edParam;
@@ -105,10 +107,11 @@ public:
 	void IncrementAscanCnt(void);
 	afx_msg void OnBnClickedRbSmallcmd();
 	afx_msg void OnBnClickedRbLargecmds();
-	int m_nShowSmallCmds;
+	int m_nWhichTypeCmd;
 #ifdef I_AM_PAG
 	void DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue);
 #endif
 	afx_msg void OnBnClickedBnRecord();
 	int m_nRecordLabel;
+	afx_msg void OnBnClickedRbPulsercmd();
 };

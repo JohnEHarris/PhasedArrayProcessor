@@ -2118,6 +2118,7 @@ void CPA2WinDlg::StructSizes( void )
 //	i = sizeof( InputRawDataPacket );	// 944 ->272 replaced by IDATA_FROM_HW
 //	i = sizeof( stRawSeqPacket );	// 130 ->34 
 	i = sizeof( IDATA_FROM_HW );	// 1088
+	i = sizeof(IDATA_FROM_HW_HDR);
 	i = sizeof( ASCAN_DATA_HDR );	// 64
 	i = sizeof(SEQ_DATA);	// 32
 	i = sizeof(ASCAN_DATA);	// 1088

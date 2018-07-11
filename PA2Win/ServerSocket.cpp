@@ -571,7 +571,7 @@ winsock2.h
 	// assume there is only one connection from the client to the server. If there is more than
 	// one connection we can determine from the clients IP address captured above in the GetPeerName
 	// which client we are connecting to and adjust the pClientConnection[] subscript accordingly
-	// For now assume only one Phased Array Master processor is connected to on PA GUI server.
+	// For now assume only one Phased Array Master processor is connected to one PA GUI server.
 	if (m_pSCM->m_pstSCM == NULL)
 		{
 		TRACE("Fatal error, pMySCM->m_pstSCM == NULL\n");
@@ -830,8 +830,8 @@ void CServerSocket::OnReceive(int nErrorCode)
 				{
 				n = m_nSeqIndx;
 				int j = GetRcvListCount();
-				s.Format(_T("Lost Packet, OnReceive got MsgSeqCnt %d, expected %d..RcvList Count = %5d\n"),
-					pHeader->wMsgSeqCnt, (m_nLastSeqCnt + 1), j);
+				s.Format(_T("Lost Packet, Socket %d OnReceive got MsgSeqCnt %d, expected %d..RcvList Count = %5d\n"),
+					m_pSCM->GetServerPort(),  pHeader->wMsgSeqCnt, (m_nLastSeqCnt + 1), j);
 				TRACE(s);
 				}
 			m_nLastSeqCnt = pHeader->wMsgSeqCnt;

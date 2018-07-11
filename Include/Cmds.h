@@ -51,8 +51,8 @@ the PAP and PAG
 #define TOTAL_READ_BACK_COMMANDS	10
 #define LAST_READ_BACK_COMMAND		TOTAL_READ_BACK_COMMANDS - 1
 
-#define TOTAL_PULSER_COOMMANDS		10
-#define LAST_PULSER_COMMAND			TOTAL_PULSER_COOMMANDS - 1
+#define TOTAL_PULSER_COMMANDS		10
+#define LAST_PULSER_COMMAND			TOTAL_PULSER_COMMANDS - 1
 
 // SMALL
 // modify Cmds.h and Cmds.cpp in the NIOS code files
@@ -107,9 +107,13 @@ the PAP and PAG
 #define SEQ_TCG_GAIN_CMD_ID			5+0x200		// SetSeqTCGGain
 //#define SET_ASCAN_BEAMFORM_DELAY_ID	4+0x200		// SetAscanBeamFormDelay
 
-// READ BACK CMDS
-#define NC_NX_READBACK_ID			0			// Read Back wReadBackID in SMALL command READBACK_CMD_ID 21
-#define GET_GATE_DATA_ID			1			// returns all gate data for all channels from bSeq to bSpare=bSeq_end
+
+// PULSER CMDS
+#define PULSER_PRF_CMD_ID			0+0x300		// In Hertz??
+#define HV_ON_OFF_CMD_ID			1+0x300		// 1=ON, 0=OFF
+#define PULSE_POLARITY_CMD_ID		2+0x300		// 0=+, 1=-
+#define PULSE_SHAPE_CMD_ID			3+0x300		//0=OFF, 1=1 pulse, 255=1/2 pulse
+#define SEQUENCE_LEN_CMD_ID			4+0x300		// 3 for current system
 
 /*************** Command Structures **************/
 

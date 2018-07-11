@@ -95,6 +95,7 @@ CClientCommunicationThread::CClientCommunicationThread()
 	//strcpy(m_pElapseTimer->tag, "CComThrd89 ");
 	m_nTimerPacketsWaiting = 0;
 	m_nConsecutiveFailedXmit = 0;
+	m_nConsecutiveFailedXmitAW = 0;
 	}
 
 CClientCommunicationThread::~CClientCommunicationThread()
@@ -611,8 +612,9 @@ void CClientCommunicationThread::ConnectSocket(WPARAM w, LPARAM lParam)
 			{
 			// THIS IS WHAT ALWAYS HAPPENS HERE !!!, in a moment it will connect and the OnConnect
 			// code in CClientSocket will complete the socket connection operation.
-			s.Format(_T("Connect Error = %d ...waiting to connect to server %s.."), 
-				m_pstCCM->nOnConnectError, m_pstCCM->sServerName);
+			s.Format(_T("Connect Error = %d ...waiting to connect to server %s at %s : %d\n"), 
+				m_pstCCM->nOnConnectError, m_pstCCM->sServerName,
+				m_pstCCM->sServerIP4, m_nPort);
 			t = GetTimeString();
 			t += _T("\n");
 			s += t;
@@ -1162,15 +1164,21 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 					{
 				case 0:
 				default:
+					m_nConsecutiveFailedXmit = 0;
 					break;
 
 				case 2:
 					memcpy((void *)&gLastAscanPap, (void *)pSendPkt, sizeof(ASCAN_DATA));
 					guAscanMsgCnt++;
+					m_nConsecutiveFailedXmit = 0;
 					break;
 				case 3:
 					memcpy((void *)&gLastRdBkPap, (void *)pSendPkt, pSendPkt->wByteCount);
 					guRdBkMsgCnt++; // 4/24/18 didnt work
+					m_nConsecutiveFailedXmit = 0;
+					break;
+				case 4:
+					m_nConsecutiveFailedXmitAW = 0;
 					break;
 					}
 
@@ -1179,7 +1187,6 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				delete pSendPkt;
 				pSendPkt = 0;
 				pIdataHw = 0;
-				m_nConsecutiveFailedXmit = 0;
 				break;
 				}	//if (nSent == pSendPkt->wByteCount)
 
@@ -1197,10 +1204,18 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 
 		if (i == RETRY_COUNT)
 			{
-			s.Format(_T("Failed to send packet # = %d after %d attempts\n"), m_wMsgSeqCount - 1, i);
+			if (pSendPkt->wMsgID == 4)
+				{
+				s.Format(_T("Failed to send AW packet  # = %d after %d attempts\n"), m_wMsgSeqCountAW - 1, i);
+				m_nConsecutiveFailedXmitAW++;
+				}
+			else
+				{
+				s.Format(_T("Failed to send packet # = %d after %d attempts\n"), m_wMsgSeqCount - 1, i);
+				m_nConsecutiveFailedXmit++;
+				}
 			TRACE(s);
-			m_nConsecutiveFailedXmit++;
-			if (m_nConsecutiveFailedXmit >= 50)
+			if ((m_nConsecutiveFailedXmit >= 50) || (m_nConsecutiveFailedXmitAW >= 50))
 				{
 #if 0
 					// The sender thread failed to send. Have the receiver thread kill the socket since

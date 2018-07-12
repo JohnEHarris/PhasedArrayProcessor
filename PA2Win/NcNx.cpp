@@ -346,7 +346,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("Gate n Trigger"));		m_cbCommand.AddString(s);	//6
 		s.Format(_T("Gate n Polarty"));		m_cbCommand.AddString(s);	//7
 		s.Format(_T("Gate n TOF"));			m_cbCommand.AddString(s);	//8
-		s.Format(_T("WallNx"));				m_cbCommand.AddString(s);	//9
+		s.Format(_T("TCGChnlTrigger"));		m_cbCommand.AddString(s);	//9  TCGProbeTrigger
 		s.Format(_T("TCGGainClock"));		m_cbCommand.AddString(s);	//10
 		s.Format(_T("TCGChnlGainDelay"));	m_cbCommand.AddString(s);	//11
 		s.Format(_T("TcgBeamGainAll"));		m_cbCommand.AddString(s);	//12
@@ -365,11 +365,22 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("ASCAN_RF_BEAM_SELECT"));	m_cbCommand.AddString(s);	//24--check case statements below
 		s.Format(_T("ASCAN_BEAM_SEQ"));			m_cbCommand.AddString(s);	//25 -- nop
 		s.Format(_T("ASCAN_GATE_OUTPUT"));		m_cbCommand.AddString(s);	//26
-		s.Format(_T("ASCAN_REP_RATE"));			m_cbCommand.AddString(s);	//27
+		s.Format(_T("WallNx"));					m_cbCommand.AddString(s);	//27
+		s.Format(_T("ASCAN_REP_RATE"));			m_cbCommand.AddString(s);	//28 was 27 before WallNx move
+		s.Format(_T("ProcNull"));				m_cbCommand.AddString(s);	//29
+		s.Format(_T("ProcNull"));				m_cbCommand.AddString(s);	//30
+		s.Format(_T("ProcNull"));				m_cbCommand.AddString(s);	//31
+
 		m_cbCommand.SetCurSel(2);
 		break;
 	case 2:	// pulser
-		s.Format(_T("PULSER_DUMMY_0"));			m_cbCommand.AddString(s);	// 0+300h
+		s.Format(_T("PULSER_PRF"));				m_cbCommand.AddString(s);	// 0+300h
+		s.Format(_T("HV_ON_OFF"));				m_cbCommand.AddString(s);	// 1+300h
+		s.Format(_T("PULSE_POLARITY"));			m_cbCommand.AddString(s);	// 2+300h
+		s.Format(_T("PULSE_SHAPE"));			m_cbCommand.AddString(s);	// 3+300h
+		s.Format(_T("PULSE_WIDTH"));			m_cbCommand.AddString(s);	// 4+300h
+		s.Format(_T("SEQUENCE_LEN"));			m_cbCommand.AddString(s);	// 5+300h
+		s.Format(_T("SOCOMATE_SYNC"));			m_cbCommand.AddString(s);	// 6+300h
 		m_cbCommand.SetCurSel(0);
 		break;
 
@@ -411,6 +422,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 				PulserCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, (m_nCmdId + nCmdOffset), (WORD)m_nParam);
 				break;
 			default:
+				PulserCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, (m_nCmdId + nCmdOffset), (WORD)m_nParam);
 				break;
 			}
 		}

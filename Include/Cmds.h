@@ -94,10 +94,11 @@ the PAP and PAG
 
 //*******************************************
 
+// Small command format
 #define READBACK_CMD_ID				13		// ReadBackCmdData
 // Within read back cmd, sub commands are:
 // READ BACK CMDS
-#define NX_READBACK_ID				0		// returns Nx settings for all channels of bSeq = n
+#define NX_READBACK_ID				0		// returns Nx settings for all channels
 #define GET_GATE_DATA_ID			1		// returns all gate data for all channels of bSeq = n
 
 									
@@ -108,12 +109,15 @@ the PAP and PAG
 //#define SET_ASCAN_BEAMFORM_DELAY_ID	4+0x200		// SetAscanBeamFormDelay
 
 
+// Small command format
 // PULSER CMDS
-#define PULSER_PRF_CMD_ID			0+0x300		// In Hertz??
-#define HV_ON_OFF_CMD_ID			1+0x300		// 1=ON, 0=OFF
+#define PULSER_PRF_CMD_ID			0+0x300		// the peiod in 80 Mhz clocks, 5khz->16000 clocks
+#define HV_ON_OFF_CMD_ID			1+0x300		// 1=ON, 0=OFF means no pulse
 #define PULSE_POLARITY_CMD_ID		2+0x300		// 0=+, 1=-
-#define PULSE_SHAPE_CMD_ID			3+0x300		//0=OFF, 1=1 pulse, 255=1/2 pulse
-#define SEQUENCE_LEN_CMD_ID			4+0x300		// 3 for current system
+#define PULSE_SHAPE_CMD_ID			3+0x300		// 0=OFF, 1=1 pulse, 255=1/2 pulse
+#define PULSE_WIDTH_CMD_ID			4+0x300		// How wide is pulse in clock cycles at 80 Mhz
+#define SEQUENCE_LEN_CMD_ID			5+0x300		// 3 for current system
+#define SOCOMATE_SYNC_PULSE_CMD_ID	6+0x300		// Default is 4
 
 /*************** Command Structures **************/
 

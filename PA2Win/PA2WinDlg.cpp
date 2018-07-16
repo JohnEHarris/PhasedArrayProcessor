@@ -2249,7 +2249,7 @@ void CPA2WinDlg::DebugToNcNxDlg( CString s )
 // Adapted from PhasedArrayMMI CTscanDlg code. In PhasdArrayMMI, the server to the
 // inspection machinery was called PAM - Phased Array Master. Here it is called
 // PhasedArrayProcessor - PAP
-// nClientNumber is the targer PAP that will receive the message. Internally the 
+// nClientNumber is the target PAP that will receive the message. Internally the 
 // message specifies which board will receive the message. The PAP uses that information
 // to route the message to the correct board.
 //

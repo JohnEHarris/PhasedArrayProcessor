@@ -71,17 +71,16 @@ the PAP and PAG
 #define SET_GATES_TRIGGER_CMD_ID	6		// GatesTrigger 
 #define SET_GATES_POLARITY_CMD_ID   7		// GatesPolarity
 #define SET_GATES_TOF_CMD_ID		8		// GatesTOF
-#define SET_WALL_NX_CMD_ID			9		// only runs on PAP, not in the Nios
+// define PROC_NULL					9		-- WAS WALL_NX
 #define TCG_GAIN_CLOCK_CMD_ID		10		// TCGGainClock
-#define TCG_BEAM_GAIN_DELAY_ID		11
-#define TCG_BEAM_GAIN_ALL_CMD_ID	12		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements 
+#define TCG_BEAM_GAIN_DELAY_ID		11		// what is this in adc board?
+//		?????						12
+// #define TCG_TRIGGER_CMD_ID		13		//does it exist in adc board?
 #define SET_TCG_CLOCK_RATE_CMD_ID	14		// SetTcgClockRate
 #define TCG_TRIGGER_DELAY_CMD_ID	15		// TCGTriggerDelay
 #define POW2_GAIN_CMD_ID			16		// Pow2GainBoost
 
-
-
-//16-20 are Socomate commands
+//17-20 are Socomate commands
 #define ASCAN_SCOPE_SAMPLE_RATE_ID	21		// AscanScopeSampleRate -- set_ascan_scope
 #define SET_ASCAN_SCOPE_DELAY_ID	22		// SetAscanDelay -- set_ascan_delay
 
@@ -91,11 +90,12 @@ the PAP and PAG
 #define SET_ASCAN_BEAM_SEQ_ID		25		// SetAscanSeqBeamReg -- set_ascan_seq_beam_setup_reg
 #define	SET_ASCAN_GATE_OUTPUT_ID	26		// SetAscanGateOut -- set_ascan_gateout_reg
 #define ASCAN_REP_RATE_ID			27		// AscanRepRate
-
+#define SET_WALL_NX_CMD_ID			28		// only runs on PAP, not in the Nios
+#define TCG_BEAM_GAIN_ALL_CMD_ID	29		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
 //*******************************************
 
 // Small command format
-#define READBACK_CMD_ID				13		// ReadBackCmdData
+#define READBACK_CMD_ID				30		// ReadBackCmdData
 // Within read back cmd, sub commands are:
 // READ BACK CMDS
 #define NX_READBACK_ID				0		// returns Nx settings for all channels
@@ -291,7 +291,7 @@ typedef struct
 	BYTE bChnl;		// which virtual probe
 	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
 	BYTE bSpare;	// 16 bytes to here
-	WORD wThold;	// in 80 Mhz clocks
+	WORD wThold;	// in ??
 	WORD wFill[7];	// all 0
 	}	ST_GATE_THRESHOLD_CMD;
 

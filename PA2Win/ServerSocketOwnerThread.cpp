@@ -686,6 +686,7 @@ DELETE_CMD:
 void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	{
 	CString s;
+	
 	switch (pCmd->wMsgID)
 		{
 	case 2: MsgPrint(pCmd, "GateDelay<2> wCmd=wDelay");	break;
@@ -694,21 +695,36 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case 5: MsgPrint(pCmd, "GateThold<5> wCmd=wThold");	break;
 	case 6: MsgPrint(pCmd, "GatesTrigger<6> wCmd=wTrigger");	break;
 	case 7: MsgPrint(pCmd, "GatesPolarity<7> wCmd=wPolarity");	break;
-	case 8: MsgPrint(pCmd, "GatesTOF<8> wCmd=TOF");		break;
+	case 8: MsgPrint(pCmd, "GatesTOF<8> wCmd=TOF");				break;
+	case 9: MsgPrint(pCmd, "nullTCGChnlTrig<9> wCmd=step time");break;
 	case 10: MsgPrint(pCmd, "TCGGainClock<10> wCmd=step time");	break;
 	case 11: MsgPrint(pCmd, "TCGBeamGainDelay<11> wCmd=delay");	break;
-	case 12: MsgPrint(pCmd, "TcgBeamGainAll<12>");				break;
-	case 13: MsgPrint(pCmd, "ReadBackData<13>");				break;	// readback
+	case 12: MsgPrint(pCmd, "ProcNull<12>");					break;		// moved
+	case 13: MsgPrint(pCmd, "ProcNullReadBack<13>");				break;	// moved
 	case 14: MsgPrint(pCmd, "SetTcgClockRate<14> wCmd=step time");	break;
 	case 15: MsgPrint(pCmd, "TCGTriggerDelay<15> wCmd=delay time");	break;
+	case 16: MsgPrint(pCmd, "Pow2Gain<16> wCmd=gain");				break;
+	//17-20 are null
 	case 21: MsgPrint(pCmd, "AscanScopeSampleRate<21> wCmd=sample rate");	break;
 	case 22: MsgPrint(pCmd, "SetAscanDelay<22> wCmd=delay clocks");	break;
-	case 23: MsgPrint(pCmd, "SelectAscanWaveForm<23>");	break;
+	case 23: MsgPrint(pCmd, "SelectAscanWaveForm<23>");				break;
 	case 24: MsgPrint(pCmd, "SetAscanRfBeamSelect<24> beam, no sequence");	break;
-	case 25: MsgPrint(pCmd, "SetAscanSeqBeamReg<25>");	break;
-	case 26: MsgPrint(pCmd, "SetAscanGateOut<26>");		break;
-	case 27: MsgPrint(pCmd, "Ascan Period <27> wCmd = milliseconds");		break; 
-	default: MsgPrint(pCmd,"UnknownCmd ...");			break;
+	case 25: MsgPrint(pCmd, "SetAscanSeqBeamReg<25>");				break;
+	case 26: MsgPrint(pCmd, "SetAscanGateOut<26>");					break;
+	case 27: MsgPrint(pCmd, "Ascan Period <27> wCmd = milliseconds");		break;
+	case 28: MsgPrint(pCmd, "WallNx <28> wCmd = Nx");				break;
+	case 29: MsgPrint(pCmd, "TCGBeamGainAll <29> wCmd = gain");		break;
+	case 30: MsgPrint(pCmd, "ReadBack <30> wCmd = ?");				break;
+
+	// Pulser commands
+	case PULSER_PRF_CMD_ID:		MsgPrint(pCmd, "PulserPrf<0+300h>");		break;
+	case HV_ON_OFF_CMD_ID:		MsgPrint(pCmd, "PulserOnOff<1+300h>");		break;
+	case PULSE_POLARITY_CMD_ID: MsgPrint(pCmd, "PulserPolarity<2+300h>");	break;
+	case PULSE_SHAPE_CMD_ID:	MsgPrint(pCmd, "PulserShape<3+300h>");		break;
+	case PULSE_WIDTH_CMD_ID:	MsgPrint(pCmd, "PulserWidth<4+300h>");		break;
+	case SEQUENCE_LEN_CMD_ID:	MsgPrint(pCmd, "SeqLen<5+300h>");			break;
+	case SOCOMATE_SYNC_PULSE_CMD_ID: MsgPrint(pCmd, "SocoSync<6+300h>");	break;
+	default: MsgPrint(pCmd, "Unknown command");								break;
 		}
 
 	}

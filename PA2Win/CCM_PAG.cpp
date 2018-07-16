@@ -96,6 +96,8 @@ CCCM_PAG::~CCCM_PAG( void )
 // Called from CCmdProcessThread::ProcessReceivedMessage which was invoked by
 // CClientConnectionManagement::OnReceive() - m_pstCCM->pCmdProcessThread->PostThreadMessageA(WM_USER_CLIENT_PKT_RECEIVED, 0,0L);
 //
+#define NEW_SOCKET
+
 void CCCM_PAG::ProcessReceivedMessage(void)
 	{
 	USES_CONVERSION;
@@ -136,8 +138,13 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		if (MsgId >= 0x300)
 			{
 			// board number should always be 0 for pulser
+			/*             FOR INTERIM TESTING USE stSCM[0]*/
+#ifdef NEW_SOCKET
 			if (stSCM[1].pClientConnection[pMmiCmd->bBoardNumber] == nullptr)
-				{
+#else
+			if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber] == nullptr)
+#endif
+					{
 				s.Format(_T("No Client Connection ptr for Pulser board number=%d\n"), pMmiCmd->bBoardNumber);
 				TRACE(s);
 				DebugOut(s);
@@ -145,8 +152,14 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				return;
 				}
 
+			// stSCM[1].  use [0] for initial testing
+#ifdef NEW_SOCKET
 			CServerSocket *pSocket = stSCM[1].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
 			CServerSocketOwnerThread *pThread = stSCM[1].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
+#else
+			CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
+			CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
+#endif
 			if ((pSocket == 0) || (pThread == 0))
 				{
 				s = _T("No socket or no thread for CServerSocketOwnerThread to Pulser board\n");
@@ -157,7 +170,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				}
 
 			// Assuming all pulser board commands are small commands
-			if (MsgId <= LAST_PULSER_COMMAND)
+			if (MsgId <= 0x300 + LAST_PULSER_COMMAND)
 				{
 				ST_WORD_CMD *pSmall;
 				pSmall = (ST_WORD_CMD *)pMmiCmd;

@@ -346,14 +346,14 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("Gate n Trigger"));		m_cbCommand.AddString(s);	//6
 		s.Format(_T("Gate n Polarty"));		m_cbCommand.AddString(s);	//7
 		s.Format(_T("Gate n TOF"));			m_cbCommand.AddString(s);	//8
-		s.Format(_T("TCGChnlTrigger"));		m_cbCommand.AddString(s);	//9  TCGProbeTrigger
+		s.Format(_T("null TCGChnlTrigger"));m_cbCommand.AddString(s);	//9  TCGProbeTrigger T("TCGChnlTrigger")
 		s.Format(_T("TCGGainClock"));		m_cbCommand.AddString(s);	//10
 		s.Format(_T("TCGChnlGainDelay"));	m_cbCommand.AddString(s);	//11
-		s.Format(_T("TcgBeamGainAll"));		m_cbCommand.AddString(s);	//12
-		s.Format(_T("ReadBack"));			m_cbCommand.AddString(s);	//13
+		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//12
+		s.Format(_T("null ReadBack"));		m_cbCommand.AddString(s);	//13
 		s.Format(_T("SetTcgClockRate"));	m_cbCommand.AddString(s);	//14
 		s.Format(_T("TCGTriggerDelay"));	m_cbCommand.AddString(s);	//15
-		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//16
+		s.Format(_T("Powr2Gain"));			m_cbCommand.AddString(s);	//16
 		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//17
 		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//18
 		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//19
@@ -363,13 +363,12 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("ASCAN_SCOPE_DELAY"));		m_cbCommand.AddString(s);	//22 delays trigger
 		s.Format(_T("SET_ASCAN_WaveForm"));		m_cbCommand.AddString(s);	//23  data [0..4]
 		s.Format(_T("ASCAN_RF_BEAM_SELECT"));	m_cbCommand.AddString(s);	//24--check case statements below
-		s.Format(_T("ASCAN_BEAM_SEQ"));			m_cbCommand.AddString(s);	//25 -- nop
+		s.Format(_T("ASCAN_BEAM_SEQ"));			m_cbCommand.AddString(s);	//25 SetAscanSeqBeamReg
 		s.Format(_T("ASCAN_GATE_OUTPUT"));		m_cbCommand.AddString(s);	//26
-		s.Format(_T("WallNx"));					m_cbCommand.AddString(s);	//27
-		s.Format(_T("ASCAN_REP_RATE"));			m_cbCommand.AddString(s);	//28 was 27 before WallNx move
-		s.Format(_T("ProcNull"));				m_cbCommand.AddString(s);	//29
-		s.Format(_T("ProcNull"));				m_cbCommand.AddString(s);	//30
-		s.Format(_T("ProcNull"));				m_cbCommand.AddString(s);	//31
+		s.Format(_T("ASCAN_REP_RATE"));			m_cbCommand.AddString(s);	//27
+		s.Format(_T("WallNx"));					m_cbCommand.AddString(s);	//28
+		s.Format(_T("TcgBeamGainAll"));			m_cbCommand.AddString(s);	//29
+		s.Format(_T("ReadBack"));				m_cbCommand.AddString(s);	//30
 
 		m_cbCommand.SetCurSel(2);
 		break;

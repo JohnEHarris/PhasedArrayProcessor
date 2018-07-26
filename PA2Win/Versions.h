@@ -2,7 +2,7 @@
 
 
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			4
+#define BUILD_VERSION			5
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR          0
@@ -13,6 +13,7 @@
 #define PA2_VERSION _T("Version =   %d_%02d_%03d"), VERSION_MAJOR, VERSION_MINOR, VERSION_BUILD 
 /*
 Show the version number of this program. Newest version on TOP
+1.0.005 2018-07-26 Supports All Wall data and controls pulser from one PAP
 1.0.004	2018-03-28 Supports seq length up to 7.Tested Nx operation with nx=3-7
 					Seq length 3-7
 1.0.003 2017-08-14 Idata_Packet same size and structure as data from NIOS. Drop interface gate, status and max wall reading..

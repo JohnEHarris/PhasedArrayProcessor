@@ -90,7 +90,7 @@ class CPA2WinDlg;
 extern THE_APP_CLASS theApp;
 
 
-#define PAG_CMD_PACKET_SIZE					1040
+#define PAG_CMD_PACKET_SIZE					1040	// irrelevant 2018-07-20
 
 #endif
 
@@ -116,7 +116,7 @@ class CServerSocketOwnerThread;		// a thread to control the resource of the mana
 class CAsyncSocket;
 //class CServerRcvListThreadBase;	// a thread to read the linked list filled from the data received from the client
 class CServerRcvListThread;			// a thread to read the linked list filled from the data received from the client
-class CvChannel;					// array of ptrs of this type to logically connect channels to instruments
+class CvChannel;					// array of ptrs of this type to logically connect channels of each instrument
 
 
 /** =============================================================================**/

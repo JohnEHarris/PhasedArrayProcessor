@@ -966,7 +966,9 @@ void CNcNx::PulserCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 		case 1+0x300:			sym = _T("HV_ON_OF ");					break;
 		case 2+0x300:			sym = _T("PULSE_POLARITY ");			break;
 		case 3+0x300:			sym = _T("PULSE_SHAPE ");				break;
-		case 4+0x300:			sym = _T("SEQUENCE_LEN ");				break;
+		case 4 + 0x300:			sym = _T("PULSE_WIDTH ");				break;
+		case 5 + 0x300:			sym = _T("SEQUENCE_LEN ");				break;
+		case 6 + 0x300:			sym = _T("SOCOMATE_SYNC ");				break;
 		default:				sym = _T("UNKNOWN CMD ");				break;
 
 		}

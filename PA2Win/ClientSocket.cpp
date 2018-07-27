@@ -158,6 +158,7 @@ void CClientSocket::DebugOutMessage(CString s)
 
 }
 
+#if 0
 // This is the legacy OnReceive. Selected by using the legacy constructor
 // as used in ACP, the async feature is switched off supposedly. It is. Never breaks when PT sim sending data
 void CClientSocket::OnReceive0(int nErrorCode) 
@@ -196,7 +197,7 @@ void CClientSocket::OnReceive1(int nErrorCode)
 // Override the base class OnReceive method
 // A method to allow mixture of Yanmings original code with this code
 
-
+#endif
 
 // Clean up the code w/o 2 OnReceive methods
 void CClientSocket::OnReceive(int nErrorCode) 
@@ -347,7 +348,7 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 			s.Format(_T("PAG client IP = %s:%d connected to PAG_AW server = %s:%d "), s1, uCPort, s0, uSPort);
 		//DebugOutMessage(s);
 #ifdef I_AM_PAP
-		pMainDlg->SetMy_PAM_Number(s1, uCPort);
+		pMainDlg->SetMy_PAP_Number(s1, uCPort);
 #endif
 		// may need to replace this with some sort of call to MakeConnectionDetail
 		// changed when CLIENT_IDENTITY_DETAIL removed from structure ST_CLIENT_CONNECTION_MANAGEMENT

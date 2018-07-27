@@ -598,7 +598,7 @@ void CPA2WinDlg::GetClientConnectionManagementInfo()
 		szI.Format(_T("%d-Server_Name"), i);	// url of the client machine
 		stSocketNames[i].sServerName =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T(""));
 		szI.Format(_T("%d-Server_IP4"), i);	// dotted IP 192.168.10.10 etc
-		stSocketNames[i].sServerIP4 =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T("192.168.10.20"));
+		stSocketNames[i].sServerIP4 =  gDlg.pTuboIni->GetProfileString(sClientSection,szI, _T("192.168.11.20"));
 
 		szI.Format(_T("%d-Server_Listen_Port"), i);
 		stSocketNames[i].nPort = gDlg.pTuboIni->GetProfileInt(sClientSection,szI, 7501);
@@ -681,15 +681,15 @@ void CPA2WinDlg::SaveClientConnectionManagementInfo()
 // Assumes the first client connection from the PAP is to the Receiver or PAG
 // hence stSocketNames[0]
 // convert characters 192.168.10.200 to uint
-void CPA2WinDlg::SetMy_PAM_Number(CString &Ip4, UINT uPort)
+void CPA2WinDlg::SetMy_PAP_Number(CString &Ip4, UINT uPort)
 	{
 	char txt[32];
 	CstringToChar(stSocketNames[0].sClientIP4, txt);
 	UINT uBaseIp = ntohl(inet_addr(txt));
 	CstringToChar(Ip4, txt);
 	UINT uMyIp = ntohl(inet_addr(txt));
-	m_nPamNumber = uMyIp - uBaseIp;
-	m_uPamPort = uPort;
+	m_nPapNumber = uMyIp - uBaseIp;
+	m_uPapPort = uPort;
 	}
 
 

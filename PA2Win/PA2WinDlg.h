@@ -139,7 +139,7 @@ public:
 	void GetClientConnectionManagementInfo( void );
 	void SaveServerConnectionManagementInfo( void );
 	void SaveClientConnectionManagementInfo( void );
-	void SetMy_PAM_Number( CString &Ip4, UINT uPort );
+	void SetMy_PAP_Number( CString &Ip4, UINT uPort );
 
 	CServerRcvListThread* CreateServerReceiverThread( int nServerNumber, int nPriority );
 		
@@ -164,12 +164,12 @@ public:
 	void CloseCommandLog(void);
 
 
-	int m_nPamNumber;		// the PAM number of this machine, the one running the ServiceApp
-	UINT m_uPamPort;		// the port number for the PAM being serviced by this machine (PC)
+	int m_nPapNumber;		// the PAM number of this machine, the one running the ServiceApp
+	UINT m_uPapPort;		// the port number for the PAM being serviced by this machine (PC)
 	UINT m_wMsgSeqCnt;	// counter to uniquely identify each packet. Used by PamSendToPag()
-	//void SetMy_PAM_Number(CString &Ip4, UINT uPort);
-	int  GetMy_PAM_Number(void)	{ return m_nPamNumber;	}
-	UINT GetMy_PAM_Port(void)	{ return m_uPamPort;	}
+	//void SetMy_PAP_Number(CString &Ip4, UINT uPort);
+	int  GetMy_PAP_Number(void)	{ return m_nPapNumber;	}
+	UINT GetMy_PAP_Port(void)	{ return m_uPapPort;	}
 	
 	time_t m_tTimeNow;
 	void StartTimer();

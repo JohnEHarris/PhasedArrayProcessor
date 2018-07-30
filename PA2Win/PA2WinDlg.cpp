@@ -19,6 +19,7 @@
 #include "..\Include\Global.h"
 #include "..\Include\PA2Struct.h"
 #include "TuboIni.h"
+#include "ServerConnectionManagement.h"
 
 
 
@@ -486,6 +487,7 @@ void CPA2WinDlg::GetServerConnectionManagementInfo(void)
 	CString szPort, szIp, szI, sSrvSection;
 	sSrvSection = _T("ServerConnectionManagement");
 
+	
 	gnMaxServers = gDlg.pTuboIni->GetProfileInt(sSrvSection, _T("! MaxServers"), MAX_SERVERS);
 	//gnMaxServers = m_ptheApp->GetProfileIntA(_T("ServerConnectionManagement"),_T("[-]MaxServers"), MAX_SERVERS);
 	gnMaxClientsPerServer = gDlg.pTuboIni->GetProfileInt(sSrvSection,_T("# MaxClientsPerServer"), MAX_CLIENTS_PER_SERVER);
@@ -498,7 +500,10 @@ void CPA2WinDlg::GetServerConnectionManagementInfo(void)
 		szI += _T("  ") + szIp + _T("\n");
 		//TRACE(szI);
 		CstringToChar(szIp,gServerArray[i].Ip);
+		// Server Name
+		szI.Format(_T("%d-Server_Description"), i);
 
+		stSCM[i].sServerDescription = gDlg.pTuboIni->GetProfileString(sSrvSection, szI,_T("Unknown"));
 		// The server's port that listens for clients to connect
 		szI.Format(_T("%d-Server_IP_Port"), i);
 		gServerArray[i].uPort =  gDlg.pTuboIni->GetProfileInt(sSrvSection,szI, 7502);

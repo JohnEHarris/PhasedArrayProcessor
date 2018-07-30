@@ -55,7 +55,6 @@ class CPA2WinDlg;
 #define	MAX_SERVERS						2
 #define MAX_CLIENTS_PER_SERVER				8
 
-
 // I_AM_PAP is defined in the PAP project under C++ | Preprocessor Definitions 
 
 #ifdef I_AM_PAP

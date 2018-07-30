@@ -189,6 +189,9 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 		m_pstSCM->sServerDescription = _T("PAP server for Instruments");
 		break;
 
+	case 1:
+		m_pstSCM->sServerDescription = _T("PAP server for Pulser");
+		break;
 	default:
 		m_pstSCM->sServerDescription = _T("Unknow or Incorrecct server");
 		break;

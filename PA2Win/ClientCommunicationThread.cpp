@@ -1016,7 +1016,7 @@ afx_msg void CClientCommunicationThread::RestartTcpComDlg(WPARAM w, LPARAM lPara
 // instructing the thread to check the linked list and send all queued messages.
 // WPARAM and  LPARAM are unused at this time
 
-#define RETRY_COUNT			4
+#define RETRY_COUNT			6
 
 afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 	{
@@ -1122,14 +1122,16 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 			if (pSendPkt->wMsgID == eAscanID)
 				j = 3;
 
+#if 0
 			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0)		m_pElapseTimer->Start();
 			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0x7ff)	// originally 0xff
 				{
 				m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
 				float fPksPerSec = 2048000000.0f/( (float) m_nElapseTime);	// originally 256
-				s.Format(_T("Idata Transmit Packets/sec = %6.1f\n"), fPksPerSec);
+				s.Format(_T("Nx data Transmit Packets/sec = %6.1f\n"), fPksPerSec);
 				TRACE(s);
 				}
+#endif
 			break;
 
 
@@ -1137,6 +1139,18 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 			// All wall data
 			pIdataHw->wMsgSeqCnt = m_wMsgSeqCountAW++;
 			pIdataHw->wMsgID = ADC_DATA_ID;
+#if 0
+			// this processing cause significant dropped all - wall packets
+			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0)		m_pElapseTimer->Start();
+			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0x7ff)	// originally 0xff
+				{
+				m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
+				float fPksPerSec = 2048000000.0f / ((float)m_nElapseTime);	// originally 256-now 2048
+				s.Format(_T("All Wall data Transmit Packets/sec = %6.1f\n"), fPksPerSec);
+				TRACE(s);
+				}
+#endif
+
 			break;
 			}
 
@@ -1211,7 +1225,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				}
 			else
 				{
-				s.Format(_T("Failed to send packet # = %d after %d attempts\n"), m_wMsgSeqCount - 1, i);
+				s.Format(_T("Failed to send Nx packet # = %d after %d attempts\n"), m_wMsgSeqCount - 1, i);
 				m_nConsecutiveFailedXmit++;
 				}
 			TRACE(s);
@@ -1225,7 +1239,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 					m_nConsecutiveFailedXmit = 0;
 					// client side (PAP) seems to work ok, but PAG the other end crashes 4/30/18
 #endif
-
+					j = 5;
 				}
 			}	// failed to send
 		if (pSendPkt != NULL)

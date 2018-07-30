@@ -358,7 +358,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// m_nOwningThreadType = eListener;
 
 
-#if 0
+#if 1
 	DWORD hMyThreadID = GetCurrentThreadId();
 	// look at all the servers and see if I am in the list
 	for (nMyServer = 0; nMyServer < MAX_SERVERS; nMyServer++)
@@ -374,7 +374,9 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// a better way to id which server I am
 	// Only works for case of OnAccept. Does not always work for other cases such as OnClose
 
-
+#if 0
+	// has race condition with simulator when both pulser and adc clients try to connect
+	// use the thread test on the listen threadID above
 	for (nMyServer = 0; nMyServer < MAX_SERVERS; nMyServer++)
 		{
 		if (this == stSCM[nMyServer].pServerListenSocket)
@@ -384,6 +386,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 			break;
 			}
 		}
+#endif
 
 	m_nMyServer = nMyServer;
 	// If in shut down, refuse to accept a client

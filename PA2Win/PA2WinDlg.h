@@ -148,6 +148,7 @@ public:
 	CFile m_FakeData;
 	CFile m_DebugLog;
 	CFile m_CommandLog;
+	CFile m_PapNumberFile;
 	int m_nMsgSeqCnt;
 
 	int m_nFakeDataExists;
@@ -162,14 +163,15 @@ public:
 	// Verify Commands are received by PAP
 	void SaveCommandLog(CString& s);
 	void CloseCommandLog(void);
+	void ReadPAPnumber(void);
 
 
-	int m_nPapNumber;		// the PAM number of this machine, the one running the ServiceApp
-	UINT m_uPapPort;		// the port number for the PAM being serviced by this machine (PC)
+	int m_nPapNumber;		// the PAP number of this machine, the one running the ServiceApp
+	UINT m_uPapPort;		// the port number for the PAP being serviced by this machine (PC)
 	UINT m_wMsgSeqCnt;	// counter to uniquely identify each packet. Used by PamSendToPag()
 	//void SetMy_PAP_Number(CString &Ip4, UINT uPort);
-	int  GetMy_PAP_Number(void)	{ return m_nPapNumber;	}
-	UINT GetMy_PAP_Port(void)	{ return m_uPapPort;	}
+	//int  GetMy_PAP_Number(void)	{ return m_nPapNumber;	}  never called
+	//UINT GetMy_PAP_Port(void)	{ return m_uPapPort;	}
 	
 	time_t m_tTimeNow;
 	void StartTimer();

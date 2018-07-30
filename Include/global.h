@@ -150,4 +150,6 @@ PubExt BYTE gbChCmd24;
 PubExt BYTE gbChCmd25;
 PubExt WORD gwSeqCmd25;	// cmd 25
 PubExt BYTE bAppIsClosing;
-#endif /* GLOBAL_H_ */
+// PAP number now obtained by reading a file
+PubExt BYTE gbAssignedPAPnumber;	// every PAP has it own unique code set
+ #endif /* GLOBAL_H_ */

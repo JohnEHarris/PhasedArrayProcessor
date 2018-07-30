@@ -1109,6 +1109,11 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		pSendPkt = (IDATA_PAP *) m_pstCCM->pSendPktList->RemoveHead();
 		pIdataHw = (IDATA_FROM_HW *)pSendPkt;
 		m_pMyCCM->UnLockSendPktList();	// give a higher priority thread a chance to add packets
+
+#ifdef I_AM_PAP
+		pSendPkt->bPAPNumber = gbAssignedPAPnumber;
+#endif
+
 		// examine the MsgId of the extracted packet to see what type message it really is
 		switch (m_pMyCCM->m_nMyConnection)
 			{
@@ -1154,7 +1159,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 			break;
 			}
 
-		// take up to 4 attempts to deliver the packet linked list is empty??? 2018-06-18
+		// take up to 6 attempts to deliver the packet linked list is empty??? 2018-06-18
 		for (i = 0; i < RETRY_COUNT; i++)
 			{	// loop till good xmit
 			if (m_pstCCM == NULL)	break;

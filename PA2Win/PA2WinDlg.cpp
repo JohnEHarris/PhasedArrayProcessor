@@ -409,6 +409,59 @@ END_MESSAGE_MAP()
 
 // CPA2WinDlg message handlers
 
+// Read pap number from a usb memory stick. File name is PAPnumber0_7.txt
+// Implies the usb stick will identify 1 of 8 different PAP's
+// Look for usb stick starting on D drive assuming the PAP code/Windows machine
+// has only a C hard drive. File content is a single number from 0 to 7
+
+void CPA2WinDlg::ReadPAPnumber(void)
+	{
+	//m_PapNumberFile
+	CString sPath, s;
+	char FileName[64] = "D:\\PAP0_7.txt";
+	char Buf[32];
+	CFileException fileException;
+	int i;
+	for (i = 0; i < 5; i++)
+		{
+		sPath = FileName;
+		if (!m_PapNumberFile.Open(sPath, CFile::modeRead | CFile::shareDenyNone, &fileException))
+			{
+			TRACE(_T("Can't open file %s, error = %u\n"),
+				sPath, fileException.m_cause);
+			}
+		else break;
+		FileName[0]++;	// setp thru drive letters.
+		}
+	if (i >= 5)
+		{
+		TRACE(_T("Failed to find file name and thus PAP number\n"));
+		gbAssignedPAPnumber = 8;	//INVALID
+		return;
+		}
+	// found the file name. Try to read contents
+	s = _T("Found file PAP0_7.txt on drive ");
+	s += FileName[0];
+	s += "\n";
+	TRACE(s);
+	i = m_PapNumberFile.Read(Buf, 16);
+	m_PapNumberFile.Close();
+	if (i)
+		{
+		i = atoi(Buf);
+		gbAssignedPAPnumber = i;
+		s.Format(_T("gbAssignedPAPnumber = %d\n"), i);
+		TRACE(s);
+		}
+	else
+		{
+		TRACE(_T("Failed to find file name and thus PAP number\n"));
+		gbAssignedPAPnumber = 8;	//INVALID
+		return;
+		}
+	}
+
+
 BOOL CPA2WinDlg::OnInitDialog()
 	{
 	CString sDlgName, s;
@@ -467,7 +520,11 @@ BOOL CPA2WinDlg::OnInitDialog()
 		i = m_pTestThread->PostThreadMessage(WM_USER_THREAD_HELLO_WORLD,1,5L);
 
 	Sleep(50);
-
+	//PAP will get its PAP number (0-7) by reading a memory stick -- not a very reliable way
+	//PAP will get its IP address via DHCP. Hence, PAP number will not be tied to IP address
+#ifdef I_AM_PAP
+	ReadPAPnumber();
+#endif
 	GetAllIP4AddrForThisMachine();	
 	InitializeClientConnectionManagement();	// moved from after thread list creation
 	InitializeServerConnectionManagement();

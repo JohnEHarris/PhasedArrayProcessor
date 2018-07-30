@@ -162,10 +162,7 @@ typedef struct
 // The current Sam designed PA machine has 8 channels, each formed from 16 elements
 // The elements overlap to produce 8 chnls from 64 elements.
 // virtual channels are made from 16 contiguous elements.
-// this would seem to give 7 virtual channels, but somehow we have 8
-// 1111111111111111  2222222222222222  3333333333333333  4444444444444444
-//       5555555555  5555556666666666  6666667777777777  7777778888888888  (6 short on #8)
-//(or maybe)                 88888888  88888888
+
 typedef struct 
 	{
 	CHNL_DATA vChnl[8];		// 8 virtual channels each formed from 16 beams = 1 sequence
@@ -180,11 +177,8 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-// perhaps a future bPAPClientNumber - implying more than one client connection to more than one PAG server
-// using data from the data feed to this PAPNumber
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		12
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
@@ -236,12 +230,10 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-// perhaps a future bPAPClientNumber - implying more than one client connection to more than one PAG server
-// using data from the data feed to this PAPNumber
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-						// Wall = ...210 DigPlsr=...220, gaps allow for more of each board type
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type	
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
@@ -290,9 +282,8 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count	10
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address. 
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 	BYTE bSeqNumber;
@@ -332,9 +323,8 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count	10
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address. 
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 	BYTE bSeqNumber;	//for this vChnl
@@ -374,9 +364,8 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		14
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
 	BYTE bSeqNumber;

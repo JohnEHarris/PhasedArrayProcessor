@@ -141,7 +141,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
-	BYTE bPAPNumber;	// which PAP is the command for
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -184,8 +184,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
@@ -200,8 +199,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
@@ -220,8 +218,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
@@ -549,8 +546,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
@@ -565,8 +561,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. 0-n. Based on last digit of IP address.
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type

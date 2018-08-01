@@ -411,18 +411,21 @@ END_MESSAGE_MAP()
 
 // Read pap number from a usb memory stick. File name is PAPnumber0_7.txt
 // Implies the usb stick will identify 1 of 8 different PAP's
-// Look for usb stick starting on D drive assuming the PAP code/Windows machine
+// Look for usb stick starting on G drive assuming the PAP code/Windows machine
 // has only a C hard drive. File content is a single number from 0 to 7
+// Default pap number is held in file on C drive
 
 void CPA2WinDlg::ReadPAPnumber(void)
 	{
 	//m_PapNumberFile
 	CString sPath, s;
-	char FileName[64] = "D:\\PAP0_7.txt";
+	char FileName[64] = "G:\\PAP0_7.txt";
 	char Buf[32];
 	CFileException fileException;
 	int i;
-	for (i = 0; i < 5; i++)
+	gbAssignedPAPnumber = 128;	// INVALID PAP number
+
+	for (i = 5; i > 0; i--)
 		{
 		sPath = FileName;
 		if (!m_PapNumberFile.Open(sPath, CFile::modeRead | CFile::shareDenyNone, &fileException))
@@ -431,9 +434,9 @@ void CPA2WinDlg::ReadPAPnumber(void)
 				sPath, fileException.m_cause);
 			}
 		else break;
-		FileName[0]++;	// setp thru drive letters.
+		FileName[0]--;	// setp thru drive letters.
 		}
-	if (i >= 5)
+	if (i == 0)
 		{
 		TRACE(_T("Failed to find file name and thus PAP number\n"));
 		gbAssignedPAPnumber = 8;	//INVALID
@@ -456,7 +459,7 @@ void CPA2WinDlg::ReadPAPnumber(void)
 	else
 		{
 		TRACE(_T("Failed to find file name and thus PAP number\n"));
-		gbAssignedPAPnumber = 8;	//INVALID
+		gbAssignedPAPnumber = 128;	//INVALID
 		return;
 		}
 	}
@@ -522,9 +525,9 @@ BOOL CPA2WinDlg::OnInitDialog()
 	Sleep(50);
 	//PAP will get its PAP number (0-7) by reading a memory stick -- not a very reliable way
 	//PAP will get its IP address via DHCP. Hence, PAP number will not be tied to IP address
-#ifdef I_AM_PAP
+//#ifdef I_AM_PAP
 	ReadPAPnumber();
-#endif
+//#endif
 	GetAllIP4AddrForThisMachine();	
 	InitializeClientConnectionManagement();	// moved from after thread list creation
 	InitializeServerConnectionManagement();

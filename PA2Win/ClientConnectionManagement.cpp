@@ -1,4 +1,4 @@
-#if 0
+/*
 // copied from header file-
 Author:		JEH
 Date:		05-Jun-2012
@@ -61,7 +61,7 @@ How it is intended to work:
 		that inclusion of this header file by the main application / dialog is all that is necessary to connect the application
 		with this Client Connection Management subsystem.
 
-#endif
+*/
 
 
 
@@ -628,6 +628,7 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 				s.Format(_T("Lost Packet, OnReceive got MsgSeqCnt %d, expected %d..RcvList Count = %5d, Total packets rcv = %d\n"),
 					pPacket->wMsgSeqCnt, (m_pstCCM->wLastSeqCnt + 1), j, m_pstCCM->uPacketsReceived);
 				TRACE(s);
+				pMainDlg->SaveDebugLog(s);
 				}
 			m_pstCCM->wLastSeqCnt = pPacket->wMsgSeqCnt;
 

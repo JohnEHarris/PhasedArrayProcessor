@@ -58,6 +58,11 @@ CServerSocketOwnerThread::~CServerSocketOwnerThread()
 		}
 	if (m_pSCC)
 		{
+		// 2018-08-02
+#if 1
+		if (m_pSCC->pSocket)
+			delete m_pSCC->pSocket;
+#endif
 		m_pSCC->pSocket = 0;
 		m_pSCC->pServerSocketOwnerThread = 0;
 		}

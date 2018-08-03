@@ -2366,8 +2366,11 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		if (gDlg.pNcNx)
 			gDlg.pNcNx->DebugOut(s);
 
+#if 1
+
 		delete pMsg;	// clean up the mess
 		return FALSE;
+#endif
 		}
 
 	// allow for more than one type of message. As of June 2016 only NcNx msg

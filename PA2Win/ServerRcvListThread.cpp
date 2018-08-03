@@ -976,7 +976,7 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 			s.Format(_T("wByteCount=%d, wMsgSeqCnt=%d, bPAPNumber=%d, bBoardNumber=%d, bStartSeqNumber=%d\n"),
 				pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->bPAPNumber, pIdata->bBoardNumber, pIdata->bStartSeqNumber);
 			// use debugger to view
-			if ((pIdata->wMsgSeqCnt & 0xff) == 0) 
+			if ((pIdata->wMsgSeqCnt & 0x7ff) == 0) 
 				{
 				TRACE(s);
 				s.Format(_T("bSeqModulo=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
@@ -1045,8 +1045,8 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 				j = pAllWall->bStartSeqNumber;
 				s.Format(_T("Got all wall data Seq Cnt = %d, ByteCount = %d, StartSeq = %d\n"), 
 					pAllWall->wMsgSeqCnt, pAllWall->wByteCount, pAllWall->bStartSeqNumber);
-				SaveDebugLog(s);
-				TRACE(s);
+				//SaveDebugLog(s);
+				//TRACE(s);
 				}
 			}
 		break;

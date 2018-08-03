@@ -836,6 +836,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 				s.Format(_T("Lost Packet, Socket %d OnReceive got MsgSeqCnt %d, expected %d..RcvList Count = %5d\n"),
 					m_pSCM->GetServerPort(),  pHeader->wMsgSeqCnt, (m_nLastSeqCnt + 1), j);
 				TRACE(s);
+				pMainDlg->SaveDebugLog(s);
 				}
 			m_nLastSeqCnt = pHeader->wMsgSeqCnt;
 			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used

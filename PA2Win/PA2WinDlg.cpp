@@ -2381,7 +2381,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 		// posts a thread message to a ServerSocketOwnerThread to empty the linked list and send all packets
 		// Message activates CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 
-		s = _T("rc = stSCM[ePAP_Server].pSCM->SendPacketToPAP\n");
+		s = _T("rc = stSCM[ePAP_Server].pSCM->SendMsgToPAP\n");
 //		if (gDlg.pNcNx)
 //			gDlg.pNcNx->DebugOut(s);
 

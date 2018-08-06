@@ -171,6 +171,9 @@ CServerConnectionManagement::CServerConnectionManagement(int nMyServerIndex)
 		{
 		m_pstSCM->pClientConnection[i]	= NULL;
 		m_pstSCM->nComThreadExited[i]	= 0;
+		// new 2018-08-03 to support DHCP on PAP boxes. Only applies to PAG/UUI
+		// PAP servers still have hard coded IP address and so to their clients (Sam's NIOS hardware)
+		m_pstSCM->nPapNum2ConnectionNum[i] = -1;
 		}
 
 	};
@@ -553,11 +556,11 @@ void CServerConnectionManagement::DoNothing(void)
 // the thread to empty the associated linked list by sending to the client. 17-Sep-2012
 // This function runs at the priority level of its caller. The thread message posting allows
 // the actual sending of the packet to occur at a different priority level.
-// A typical server in the PAG would be the interface to the Phased Array Master Instrument(s)
-// A typical client would be a specific Phased Array Master Instrument
+// A typical server in the PAG would be the interface to the Phased Array Processor Instrument(s)
+// A typical client would be a specific Phased Array Processor Instrument such as the ADC board.
 //
 #ifdef I_AM_PAP
-int CServerConnectionManagement::SendPacket(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag)
+int CServerConnectionManagement::SendPacketToClient(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag)
 	{
 	int nReturn = 0;
 

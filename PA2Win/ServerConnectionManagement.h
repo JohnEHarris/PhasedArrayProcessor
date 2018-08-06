@@ -51,9 +51,7 @@ class CPA2WinDlg;
 #define THE_APP_CLASS	CPA2WinApp
 #define MAIN_DLG_NAME	CPA2WinDlg
 
-// edit this value if more client connections to servers are needed
-#define	MAX_SERVERS						2
-#define MAX_CLIENTS_PER_SERVER				8
+
 
 // I_AM_PAP is defined in the PAP project under C++ | Preprocessor Definitions 
 
@@ -64,7 +62,9 @@ class CPA2WinDlg;
 
 //class CServiceApp;
 
-
+// edit this value if more client connections to servers are needed
+#define	MAX_SERVERS						2
+#define MAX_CLIENTS_PER_SERVER			8
 
 
 /******************* FOR PHASED ARRAY GUI OR OTHER SYSTEMS *********************/
@@ -72,19 +72,12 @@ class CPA2WinDlg;
 /******************* FOR PHASED ARRAY GUI OR OTHER SYSTEMS *********************/
 
 #else
-// These are the includes and defines for the Phased Array GUI
+// These are the includes and defines for the Phased Array GUI  -- PAG
 
-//#include "..\Include\MC_SysCp_constants.h"
-//#include "tscandlg.h"
-//#include "Truscan.h"
-
-//class CTscanDlg;
-
-//#define THE_APP_CLASS	CTscanApp
 //#define MAIN_DLG_NAME	PA2WinDlg
 
 // edit this value if more client connections to servers are needed
-#define	MAX_SERVERS							2
+#define	MAX_SERVERS							1
 #define MAX_CLIENTS_PER_SERVER				8
 extern THE_APP_CLASS theApp;
 
@@ -241,6 +234,7 @@ typedef struct
 	CPtrList* pInDebugMessageList;	// input operations put messages into this list.. common for all connections
 	CPtrList* pOutDebugMessageList;
 
+	int nPapNum2ConnectionNum[MAX_CLIENTS_PER_SERVER];
 	CServerConnectionManagement *pSCM;	// point to ourself. This is important. Pointer to a CLASS  -- not created with 'new'
 
 	}	ST_SERVER_CONNECTION_MANAGEMENT;
@@ -350,22 +344,45 @@ public:
 
 	//int StopListeningThread(int nMyServer);
 
-	// Assume the routine sending knows the target client for the TCP/IP connection by a client index
+	// Assume the routine sending cmds knows the target client for the TCP/IP connection by a client index
 	// This routine places the packet into a linked list and posts a thread message to the appropriate
 	// thread to unpack and send the message at the thread's priority level.
+	// For Sam's board, must keep the original design since IP is set in a range
+	// by a dip switch.
 #ifdef I_AM_PAP
-	int SendPacket(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag);
+	// But not for PAP. PAP must use hard coded server addresses for the NIOS 
+	// based processors to be able to find them. And the NIOS processors
+	// msut have hard coded addresses which vary in only the last dotted number
+	// based on a switch position on the board.
+	int SendPacketToClient(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag);
+	//int m_nAdcNum2ConnectionNum[MAX_CLIENTS_PER_SERVER];
 #endif
 
 #ifdef I_AM_PAG
+	// For PA2 system the client is a PAP computer
+	// 2018-08-03 Server must map PAP number to the connection number
+	// First connection gets connection # 0. PAP may be some other number.
+	// Server must use correct connection to get to client. Mapping is done only
+	// on the server side. Assume PAP 2 connects first. ClientIndex is 0. Then PAP 0 connects
+	// m_nPapNum2ConnectionNum[] = { 1 /*PAP 0 connects 2nd*/,  0 /* PAP 1 connects first */, ff,ff,ff,..
+	// initial values of m_nPapNum2ConnectionNum are set to invalid connection number to start.
 	int SendPacketToPAP(int nClientIndex, BYTE *pB, int nBytes, int nDeleteFlag);
+	// to send to PAP 0 the call is
+	// SendPacketToPAP(m_nPapNum2ConnectionNum[0], &CmdBuf, nBytes, deleteFlag);
 #endif
 
+	// This mapping allows DHCP to be used for the PAP's. The client IP address for PAP's must 
+	// still be 192.168.11.xxx. The first PAP to connect takes array location 0 but we still
+	// don't know its PAP number. When it sends the first packet, it will include its PAP number.
+	// On receiving the first packet from Client0, the server will check the mapping for index 
+	// of client 0. Finding ff in location 1 (client 0 was second to connect) it will change
+	// that number to 0. m_nPapNum2ConnectionNum will then be {1,0,ff,
+	// the server will change the value to whatever the PAPnumber in the message is
 	/**************************************************************************************/
 
 	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// pointer to my global structure instance  -- not created with 'new'
 	int m_nMyServer;		// which one of the global ST_SERVER_CONNECTION_MANAGEMENT is mine
-
+	// specifically in terms relating to PA2 System which has ADC and pulser clients
 	};	
 // End of CServerConnectionManagement class declaration.
 

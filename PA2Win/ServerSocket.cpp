@@ -10,21 +10,17 @@
 #include "stdafx.h"
 #include "string.h"
 
+#include "PA2WinDlg.h"
+#include "AfxSock.h"
+#include "time.h"
+
 // I_AM_PAP is defined in the PAP project under C++ | Preprocessor Definitions 
 
 #ifdef I_AM_PAP
 
 //#include "PA2Win.h"
-#include "PA2WinDlg.h"
-#include "AfxSock.h"
-#include "time.h"
-
-
 #else
-
 #include "PA2Win.h"
-#include "PA2WinDlg.h"
-
 #endif
 
 
@@ -350,7 +346,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	//int i;
 	CString Ip4,s,t,sOut;
 	BYTE bIsClosing = 0;
-
+	CAsyncSocket Asocket;
 
 	// how are we going to set our pSCM pointer???
 	// get our threadID of the thread running me
@@ -417,7 +413,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 //	CServerSocket Asocket(m_pSCM, eOnStack);	// a temporary Async socket of our fashioning ON THE STACK
 //	Asocket.m_nOwningThreadType = eOnStack;
-	CAsyncSocket Asocket;
+//	CAsyncSocket Asocket;
 	// Asocket.m_pSCM = m_pSCM;
 	// Asocket.m_pstSCM = m_pstSCM; built in constructor
 	// ACCEPT the connection from our client into the temporary socket Asocket
@@ -467,7 +463,6 @@ void CServerSocket::OnAccept(int nErrorCode)
 		{
 		TRACE(_T("InetPton success in OnAccept\n"));
 		uClientBaseAddress = ntohl(*(u_long*)&wClientBaseAddress);	// same value as uClientBaseAddress
-		;
 		}
 
 
@@ -502,7 +497,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	//
 
 	nClientPortIndex = (ntmp - uClientBaseAddress);
-
+	s = Ip4;	// meaning less
 #else
 	// Assume we know a range of addresses of clients which connected to this server
 	// for example 192.168.10.10 - the first master to 192.168.10.17 - the eighth master in consecutive IP address order
@@ -510,8 +505,10 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// From the PeerName IP address we can compute the index for the pClientConnection
 		
 	//nClientPortIndex = (inet_addr(cIp4) - uClientBaseAddress); WHEN PAM on another machine
+	s = Ip4;	// meaning less
 #endif
 	
+#ifdef I_AM_PAP
 
 	if ((nClientPortIndex < 0) || (nClientPortIndex >= MAX_CLIENTS_PER_SERVER))	// || bIsClosing)
 		{
@@ -523,7 +520,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		CAsyncSocket::OnAccept( nErrorCode );
 		s.Format( _T( "Fatal error - nClientPortIndex = %d\n" ), 
 			nClientPortIndex );
-		TRACE( s );
+		TRACE( s );	// bad client port index for PAP to ADC. Must be fixed IP addresses
 		return;
 		}
 
@@ -532,6 +529,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 	if (m_nClientIndex == 0)
 		TRACE( _T( "m_nClientIndex == 0 Since nClientPortIndex=0 in OnAccept )\n" ) );
+#endif
+
 #if 0
 winsock2.h
 #define SO_DEBUG        0x0001          /* turn on debugging info recording */
@@ -584,21 +583,51 @@ winsock2.h
 		}
 
 	// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
+	// for PAG if we don't care about pap Client Index, just start from 0 and loop till
+	// first null ptr found
 	ST_SERVERS_CLIENT_CONNECTION *pscc;
 
-	if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)	// first time thru
+#ifdef I_AM_PAG
+	// top level machine like UUI. Client gets address via DHCP
+	for (m_nClientIndex = 0; m_nClientIndex < MAX_CLIENTS_PER_SERVER; m_nClientIndex++)
 		{
-		pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] = new ST_SERVERS_CLIENT_CONNECTION();
-		OnAcceptInitializeConnectionStats(pscc,nMyServer, m_nClientIndex);
-		pscc->sClientIP4 = Ip4;
-		pscc->m_nClientIndex = m_nClientIndex;
-#ifdef I_AM_PAP
-		s.Format(_T("PAPSrv[%d]:Instrument[%d]"), nMyServer, m_nClientIndex);
-		t = s + _T("  OnAccept() creating critical sections/lists/vChannels\n");
+		if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)	// first time thru
+			{
+			pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] = new ST_SERVERS_CLIENT_CONNECTION();
+			OnAcceptInitializeConnectionStats(pscc, nMyServer, m_nClientIndex);
+			pscc->sClientIP4 = Ip4;
+			pscc->m_nClientIndex = m_nClientIndex;
+			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept\n"), nMyServer, m_nClientIndex);
+			t = s;
+			break;
+			}
+		}
+
+	if (m_nClientIndex >= MAX_CLIENTS_PER_SERVER)
+		{
+		s.Format(_T("PAGSrv[%d] OnAccept failed, nClientIndex too big %d\n"), nMyServer, m_nClientIndex);
+		TRACE(s);
+		Asocket.Close();
+		CAsyncSocket::OnAccept(nErrorCode);
+		return;
+		}
+
 #else
+	// PAP Server
+		if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)	// first time thru
+			{
+			pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] = new ST_SERVERS_CLIENT_CONNECTION();
+			OnAcceptInitializeConnectionStats(pscc, nMyServer, m_nClientIndex);
+			pscc->sClientIP4 = Ip4;
+			pscc->m_nClientIndex = m_nClientIndex;
+
+			s.Format(_T("PAPSrv[%d]:Instrument[%d]"), nMyServer, m_nClientIndex);
+			t = s + _T("  OnAccept() creating critical sections/lists/vChannels\n");
+			// PAG
+			}
 		s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept\n"), nMyServer, m_nClientIndex);
-		t = s;
 #endif
+		t = s;
 		TRACE(t);
 
 //		theApp.SaveDebugLog(t);
@@ -609,7 +638,7 @@ winsock2.h
 		SetpSCC( pscc );
 		
 ///////////////////////////////////////
-			s = _T("AfxBeginThread(RUNTIME_CLASS (CServerSocketOwnerThread) is next\n");
+		s = _T("AfxBeginThread(RUNTIME_CLASS (CServerSocketOwnerThread) is next\n");
 		TRACE(s);
 		// ServerSocketOwnerThread will attach to the accepted socket at the priority level of the ServerSocketOwnerThread
 		// This allows (we think) the socket to run at a high priority level
@@ -629,7 +658,7 @@ winsock2.h
 		if (pThread)
 			{
 			// This is how we boost the ServerSocket to a higher priority
-			//pThread->m_pConnectionSocket					= new CServerSocket(m_pSCM, eServerConnection);
+			//pThread->m_pConnectionSocket	= new CServerSocket(m_pSCM, eServerConnection);
 			pThread->m_pSCM		= m_pSCM;
 			pThread->m_pstSCM	= m_pSCM->m_pstSCM;
 			pThread->m_nMyServer= m_pSCM->m_pstSCM->pSCM->m_nMyServer;
@@ -657,6 +686,7 @@ winsock2.h
 			{
 			// do some sort of cleanup
 			ASSERT(0);
+			s = _T("Cleanup");
 			}
 		
 		// Display the connect socket IP and port
@@ -679,11 +709,11 @@ winsock2.h
 		// destructor closes the socket
 		
 		
-		}	// if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)
+		// if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)
 	/************************** What if already connected ?? *******************/
 
-	else 	if	(m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] && 
-				(m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread))
+	if	(m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] && 
+		(m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread))
 		{
 		//2017-05-24 try detaching the existing socket and reattaching the new socket
 		SOCKET hSocket;
@@ -701,7 +731,8 @@ winsock2.h
 				//hSocket = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pSocket->Detach();
 				}			
 			}
-		hSocket = Asocket.Detach();
+		hSocket = pscc->pSocket->Detach();
+		//hSocket = Asocket.Detach();
 		m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread->m_hConnectionSocket = hSocket;
 		m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread->m_pSCC->pSocket = pscc->pSocket;
 		m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread->m_pSCC->pSocket->Attach( hSocket );

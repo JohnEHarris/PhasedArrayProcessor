@@ -123,7 +123,7 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	#ifdef I_AM_PAP
 	m_pSCC->sClientName.Format(_T("Instrument[%d] on PAM Server[%d]\n"), m_nClientIndex, m_nMyServer);
 #else
-	m_pSCC->sClientName.Format(_T("PAM Client[%d] on PAG Server[%d]\n"), m_nClientIndex, m_nMyServer);
+	m_pSCC->sClientName.Format(_T("PAP Client[%d] on PAG Server[%d]\n"), m_nClientIndex, m_nMyServer);
 #endif
 	m_pSCC->pSocket->m_nOwningThreadType = eServerConnection;
 

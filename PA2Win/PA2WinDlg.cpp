@@ -288,6 +288,8 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	m_nMsgSeqCnt = 0;
 
 	g_hTimerTick = ::CreateEvent(0, TRUE, FALSE, 0);
+	//memset((void*)stSCM, 0, sizeof(stSCM)*MAX_SERVERS);
+	//memset((void*)stCCM, 0, sizeof(stCCM)*MAX_CLIENTS);
 
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{		pSCM[i] = NULL;		}
@@ -307,14 +309,6 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 /***********************************************************************
 
 This big comment was a # if 0 but made Visual Studio miss the definition of GetServerConnectionManagementInfo()
-			
-typedef struct
-	{
-	char Ip[16];	// dotted address eg., "192.168.10.10"
-	UINT uPort;		// port to listen on
-	int nPacketSize;	// Expected packet size from client...ie. how many bytes to receive in a packet
-	char ClientBaseIp[16];
-	}	SRV_SOCKET_INFO;	// Element of a server listener socket
 
 MAX_SERVERS				// how many servers supported by this application program
 MAX_CLIENTS_PER_SERVER	// how many client connection on each server
@@ -462,6 +456,15 @@ void CPA2WinDlg::ReadPAPnumber(void)
 		gbAssignedPAPnumber = 128;	//INVALID
 		return;
 		}
+	}
+
+// Display a matrix of n rows of servers with m columns of connected clients.
+void CPA2WinDlg::ShowConnectedClients(void)
+	{
+	}
+
+void CPA2WinDlg::AddConnectedClient(int nServer, int nClientNum, CString& sIP4)
+	{
 	}
 
 

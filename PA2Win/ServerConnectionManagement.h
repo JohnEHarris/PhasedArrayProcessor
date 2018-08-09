@@ -133,7 +133,8 @@ typedef struct
 	{
 	CString szSocketName;			// name of this server socket
 	CString sClientName;			// symbolic name of the client network address,  eg., MC_ACP_HOSTNAME = "mc-acp"
-	CString sClientIP4;				// IP4 dotted address of client, normally this computers NIC address, eg., 192.168.10.10 
+	CString sClientIP4;				// IP4 dotted address of client, normally this computers NIC address, eg., 192.168.10.10
+	UINT uClientIP4;				// 2018-08-08 easier to compare sockets if 32 bit uint
 	UINT uClientPort;				// set when connection to server made
 	CRITICAL_SECTION *pCSSendPkt;	// control access to output (send) list
 	CPtrList* pSendPktList;			// list containing packets to send

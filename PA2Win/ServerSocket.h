@@ -44,6 +44,7 @@ public:
 
 	virtual ~CServerSocket();
 	void Init(void);
+	int OnAcceptPrep(void);
 	virtual void OnAccept(int nErrorCode);
 	virtual void OnReceive(int nErrorCode);
 	virtual void OnClose(int nErrorCode);

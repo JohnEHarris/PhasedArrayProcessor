@@ -321,6 +321,62 @@ CServerSocket::~CServerSocket()
 
 // CServerSocket member functions
 
+
+
+// Do some checking to see if all data structures will support a new socket
+//
+int CServerSocket::OnAcceptPrep(void)
+	{
+	int nMyServer;
+	CString s;
+	DWORD hMyThreadID = GetCurrentThreadId();
+
+	// look at all the servers and see if I am in the list
+	for (nMyServer = 0; nMyServer < MAX_SERVERS; nMyServer++)
+		{
+		if (hMyThreadID == stSCM[nMyServer].ListenThreadID)
+			{	// found myself
+			m_pSCM = pSCM[nMyServer];
+			m_nMyServer = nMyServer;
+			//m_pstSCM = m_pSCM->m_pstSCM;	// ptr to specific entry in global structure
+			break;
+			}
+		if (nMyServer >= MAX_SERVERS)
+			{
+			s = _T("Could not determine MyServer Number\n");
+			TRACE(s);
+			pMainDlg->SaveDebugLog(s);
+			return 0;
+			}
+		}
+	/******************************************************/
+	// If in shut down, refuse to accept a client
+	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)
+		{
+		TRACE("Server ShutDown Flag is true, aborting OnAccept\n");
+		CAsyncSocket dummy;
+		Accept(dummy);
+		dummy.Close();	// should we close after CAsyncSocket::OnAccept ??? 2016-08-29 jeh
+		CAsyncSocket::OnAccept(100);
+		return 0;
+		}
+
+	/*********************************************/
+	if ((m_nMyServer >= MAX_SERVERS) || (NULL == m_pSCM))
+		{
+		ASSERT(0);
+		TRACE("On Accept can't identify the controlling SCM\n");
+		// need to throw away the socket??
+		CAsyncSocket dummy;
+		Accept(dummy);
+		dummy.Close();
+		CAsyncSocket::OnAccept(101);
+		return 0;
+		}
+	/*********************************************/
+	return 1;
+	}
+
 // When OnAccept runs, it will pass the connected socket onto a permanent socket which will be 
 // adminsitered by a thread of its own. OnAccept will create the new socket and thread.
 // Since we can have serveral servers running (ST_SERVER_CONNECTION_MANAGEMENT stSCM[MAX_SERVERS];) we need
@@ -331,6 +387,16 @@ CServerSocket::~CServerSocket()
 // then calls the listen function on a listener socket.
 // Once the client connects, this end accepts the connection.
 //
+
+#ifdef I_AM_PAG
+// PAG is a server only, does not connect at present to any servers 2018-08-07
+// PAG and UUI must work with IP addresses assigned by DHCP
+//
+// PAP on the other hand depends on fixed IP address ranges to identify NIOS software based hardware
+// What will happen if a PAG client quits without closing the connection and then comes back.
+// May have to keep IP addresses in a table to detect when the same IP address comes back w/o closing
+// and then somehow know which set of threads to destroy... otherwise run out of Client structures
+//
 void CServerSocket::OnAccept(int nErrorCode)
 	{
 	// TODO: Add your specialized code here and/or call the base class
@@ -339,12 +405,13 @@ void CServerSocket::OnAccept(int nErrorCode)
 	BOOL bufBOOL;
 	bufBOOLsize = &bufBOOL;
     *bufBOOLsize = TRUE;
-	int nMyServer;
+	//int nMyServer;
 	int sockerr;
 	SOCKADDR SockAddr;
 	int SockAddrLen = sizeof(SOCKADDR);
 	//int i;
 	CString Ip4,s,t,sOut;
+	UINT uIp4 = 0;
 	BYTE bIsClosing = 0;
 	CAsyncSocket Asocket;
 
@@ -353,62 +420,12 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// and then see if it is in the static list to know which stSCM[MAX_SERVERS] we belong to
 	// m_nOwningThreadType = eListener;
 
-
-#if 1
-	DWORD hMyThreadID = GetCurrentThreadId();
-	// look at all the servers and see if I am in the list
-	for (nMyServer = 0; nMyServer < MAX_SERVERS; nMyServer++)
+	if (OnAcceptPrep() == 0)
 		{
-		if (hMyThreadID == stSCM[nMyServer].ListenThreadID)
-			{	// found myself
-			m_pSCM = pSCM[nMyServer];
-			//m_pstSCM = m_pSCM->m_pstSCM;	// ptr to specific entry in global structure
-			break;
-			}
-		}
-#endif
-	// a better way to id which server I am
-	// Only works for case of OnAccept. Does not always work for other cases such as OnClose
-
-#if 0
-	// has race condition with simulator when both pulser and adc clients try to connect
-	// use the thread test on the listen threadID above
-	for (nMyServer = 0; nMyServer < MAX_SERVERS; nMyServer++)
-		{
-		if (this == stSCM[nMyServer].pServerListenSocket)
-			{	// found myself
-			m_pSCM = pSCM[nMyServer];
-			//m_pstSCM = m_pSCM->m_pstSCM;	// ptr to specific entry in global structure
-			break;
-			}
-		}
-#endif
-
-	m_nMyServer = nMyServer;
-	// If in shut down, refuse to accept a client
-	if (m_pSCM->m_pstSCM->nSeverShutDownFlag) 
-		{
-		TRACE("Server ShutDown Flag is true, aborting OnAccept\n");
-		CAsyncSocket dummy;
-		Accept(dummy);
-		dummy.Close();	// should we close after CAsyncSocket::OnAccept ??? 2016-08-29 jeh
-		CAsyncSocket::OnAccept(nErrorCode);
+		TRACE(_T("OnAccept of socket was rejected by OnAcceptPrep"));
 		return;
 		}
 
-	if ( ( nMyServer >= MAX_SERVERS) || (NULL == m_pSCM) )
-		{
-		ASSERT(0);
-		TRACE("On Accept can't identify the controlling SCM\n");
-		// need to throw away the socket??
-		CAsyncSocket dummy;
-		Accept(dummy);
-		dummy.Close();
-		CAsyncSocket::OnAccept(nErrorCode);
-		return;
-		}
-
-		
 	Sleep( 20 );
 
 //	CServerSocket Asocket(m_pSCM, eOnStack);	// a temporary Async socket of our fashioning ON THE STACK
@@ -443,10 +460,10 @@ void CServerSocket::OnAccept(int nErrorCode)
 #endif
 
 	UINT uPort;
-	int nClientPortIndex;					// which client are we connecting to? Derive from IP address
+	int nClientPortIndex;			// which client are we connecting to? Derive from IP address
 	UINT uClientBaseAddress;		// what is the 32 bit index of the 1st PA Master?
 	WORD wClientBaseAddress[8];
-	char *pIpBase = gServerArray[nMyServer].ClientBaseIp;
+	char *pIpBase = gServerArray[m_nMyServer].ClientBaseIp;
 
 #ifdef CLIENT_AND_SERVER_ON_SAME_MACHINE
 	uClientBaseAddress = inet_addr (pIpBase);	// Instrument base "192.168.10.201", PAG is "192.168.10.10"
@@ -469,82 +486,25 @@ void CServerSocket::OnAccept(int nErrorCode)
 #endif
 
 
-	//char cIp4[20];
-
 	Asocket.GetSockName(Ip4,uPort);	// my socket info??
 	s.Format(_T("Server side socket %s : %d\n"), Ip4, uPort);	// crash here 7-14-16 on reconnect by instrument
 	TRACE(s);
 	Asocket.GetPeerName(Ip4,uPort);	// connecting clients info??
 	s.Format(_T("Client side socket %s : %d\n"), Ip4, uPort);
 	TRACE(s);
-	int ntmp;
+	int ntmp = 0;
 	s = Ip4;
 	if (1 != InetPton(AF_INET, s, &wClientBaseAddress) )
 		{	TRACE(_T("InetPton error\n"));		return;		}
 	else
 		{	TRACE(_T("InetPton success in OnAccept ... CLIENT CONNECTED ******************\n"));
-		ntmp = ntohl(*(u_long*)&wClientBaseAddress);		}
-
-
-	nClientPortIndex = (ntmp - uClientBaseAddress);	// 0-n
-
-#ifdef I_AM_PAP
-	// Assume we know a range of addresses of clients which connected to this server
-	// for example 192.168.10.201 - the first instrument and 192.168.10.208 - the eighth instrument 
-	// in consecutive IP address order
-	// and assume they all connect to the same nic on the PAM side and thus need their own pClientConnection
-	// From the PeerName IP address we can compute the index for the pClientConnection
-	//
-
-	nClientPortIndex = (ntmp - uClientBaseAddress);
-	s = Ip4;	// meaning less
-#else
-	// Assume we know a range of addresses of clients which connected to this server
-	// for example 192.168.10.10 - the first master to 192.168.10.17 - the eighth master in consecutive IP address order
-	// and assume they all connect to the same nic on the MMI side and thus need their own pClientConnection
-	// From the PeerName IP address we can compute the index for the pClientConnection
-		
-	//nClientPortIndex = (inet_addr(cIp4) - uClientBaseAddress); WHEN PAM on another machine
-	s = Ip4;	// meaning less
-#endif
-	
-#ifdef I_AM_PAP
-
-	if ((nClientPortIndex < 0) || (nClientPortIndex >= MAX_CLIENTS_PER_SERVER))	// || bIsClosing)
-		{
-		//CAsyncSocket dummy;
-		//Accept(dummy);
-		//dummy.Close();
-
-		Asocket.Close();
-		CAsyncSocket::OnAccept( nErrorCode );
-		s.Format( _T( "Fatal error - nClientPortIndex = %d\n" ), 
-			nClientPortIndex );
-		TRACE( s );	// bad client port index for PAP to ADC. Must be fixed IP addresses
-		return;
+		ntmp = uClientBaseAddress = ntohl(*(u_long*)&wClientBaseAddress);
+		uIp4 = uClientBaseAddress;
 		}
 
-	m_nClientIndex = nClientPortIndex;		// this should not change during the course of execution
-														// even when the client disconnects/reconnects
 
-	if (m_nClientIndex == 0)
-		TRACE( _T( "m_nClientIndex == 0 Since nClientPortIndex=0 in OnAccept )\n" ) );
-#endif
+	nClientPortIndex = (ntmp - uClientBaseAddress);	// 0-n.. in general, not true for PAG
 
-#if 0
-winsock2.h
-#define SO_DEBUG        0x0001          /* turn on debugging info recording */
-#define SO_ACCEPTCONN   0x0002          /* socket has had listen() */
-#define SO_REUSEADDR    0x0004          /* allow local address reuse */
-#define SO_KEEPALIVE    0x0008          /* keep connections alive */
-#define SO_DONTROUTE    0x0010          /* just use interface addresses */
-#define SO_BROADCAST    0x0020          /* permit sending of broadcast msgs */
-#define SO_USELOOPBACK  0x0040          /* bypass hardware when possible */
-#define SO_LINGER       0x0080          /* linger on close if data present */
-#define SO_OOBINLINE    0x0100          /* leave received OOB data in line */
-	
-	
-#endif
 
 	// May be redundant to set these in Asocket since same as the listening socket
 	sockerr = Asocket.SetSockOpt(SO_REUSEADDR, &bufBOOL, sizeof(int), SOL_SOCKET);
@@ -585,57 +545,68 @@ winsock2.h
 	// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
 	// for PAG if we don't care about pap Client Index, just start from 0 and loop till
 	// first null ptr found
-	ST_SERVERS_CLIENT_CONNECTION *pscc;
+	
+	ST_SERVERS_CLIENT_CONNECTION *pscc; // ****************************************
 
-#ifdef I_AM_PAG
+/////#ifdef I_AM_PAG
 	// top level machine like UUI. Client gets address via DHCP
+	// Find the 1st available pClientConnection
+	// Hope there aren't "dead" ClientConnections
 	for (m_nClientIndex = 0; m_nClientIndex < MAX_CLIENTS_PER_SERVER; m_nClientIndex++)
 		{
 		if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)	// first time thru
 			{
 			pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] = new ST_SERVERS_CLIENT_CONNECTION();
-			OnAcceptInitializeConnectionStats(pscc, nMyServer, m_nClientIndex);
+			OnAcceptInitializeConnectionStats(pscc, m_nMyServer, m_nClientIndex);
 			pscc->sClientIP4 = Ip4;
+			pscc->uClientIP4 = uIp4;
 			pscc->m_nClientIndex = m_nClientIndex;
-			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept\n"), nMyServer, m_nClientIndex);
+			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept Client\n"), m_nMyServer, m_nClientIndex);
 			t = s;
+			TRACE(t);
+
+			//		theApp.SaveDebugLog(t);
+			pMainDlg->SaveDebugLog(t);
+			pscc->szSocketName = s;
+			pscc->uClientPort = uPort;
+			m_pstSCM->nComThreadExited[m_nClientIndex] = 0;
+			SetpSCC(pscc);
+
 			break;
 			}
-		}
+		else  // this might be the same IP address as was previously connecdted
+			{	
+			// In that case, detach the existing socket and connect to a new socket
+			// Could NOT just set pThread->socket = detatched value before because that thread was suspended
+			// Now the Owner thread is not suspended.
+			SOCKET hConnectionSocket;
+			pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];	// we know its not null
+			if (pscc->uClientIP4 == uIp4)
+				{
+				CServerSocketOwnerThread * pThread = pscc->pServerSocketOwnerThread;
+				hConnectionSocket = Asocket.Detach();
+				pThread->PostThreadMessageW(WM_USER_ATTACH_SERVER_SOCKET, 0, (LPARAM)hConnectionSocket);
+				Sleep(50);
+				CAsyncSocket::OnAccept(nErrorCode);
+				return;
+				}
+			}
+		}	// for (m_nClientIndex = 0; m_nClientIndex < MAX_CLIENTS_PER_SERVER; m_nClientIndex++)
 
 	if (m_nClientIndex >= MAX_CLIENTS_PER_SERVER)
 		{
-		s.Format(_T("PAGSrv[%d] OnAccept failed, nClientIndex too big %d\n"), nMyServer, m_nClientIndex);
+		// Maybe we have dead entried in pClientconnection
+		// see if same IP address associated with more than one slot. If so kill the oldest one
+		// and delete all its created elements... means we have to add a time stamp to the 
+		// client connection structure. Then use that slot for this connection attempt
+		s.Format(_T("PAGSrv[%d] OnAccept failed, nClientIndex too big %d\n"), m_nMyServer, m_nClientIndex);
 		TRACE(s);
 		Asocket.Close();
 		CAsyncSocket::OnAccept(nErrorCode);
 		return;
 		}
 
-#else
-	// PAP Server
-		if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)	// first time thru
-			{
-			pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] = new ST_SERVERS_CLIENT_CONNECTION();
-			OnAcceptInitializeConnectionStats(pscc, nMyServer, m_nClientIndex);
-			pscc->sClientIP4 = Ip4;
-			pscc->m_nClientIndex = m_nClientIndex;
 
-			s.Format(_T("PAPSrv[%d]:Instrument[%d]"), nMyServer, m_nClientIndex);
-			t = s + _T("  OnAccept() creating critical sections/lists/vChannels\n");
-			// PAG
-			}
-		s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept\n"), nMyServer, m_nClientIndex);
-#endif
-		t = s;
-		TRACE(t);
-
-//		theApp.SaveDebugLog(t);
-		pMainDlg->SaveDebugLog(t);
-		pscc->szSocketName = s;
-		pscc->uClientPort = uPort;
-		m_pstSCM->nComThreadExited[m_nClientIndex] = 0;
-		SetpSCC( pscc );
 		
 ///////////////////////////////////////
 		s = _T("AfxBeginThread(RUNTIME_CLASS (CServerSocketOwnerThread) is next\n");
@@ -652,7 +623,7 @@ winsock2.h
 		//pThread->m_bAutoDelete = 0;
 
 		s.Format(_T("CServerSocketOwnerThread[%d][%d]= 0x%08x, Id=0x%04x was created\n"),
-						nMyServer, m_nClientIndex, pThread, pThread->m_nThreadID);
+						m_nMyServer, m_nClientIndex, pThread, pThread->m_nThreadID);
 		TRACE(s);
 		// Init some things in the thread before it runs. We are now accessing things inside the new thread, not in this thread
 		if (pThread)
@@ -712,6 +683,7 @@ winsock2.h
 		// if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)
 	/************************** What if already connected ?? *******************/
 
+#if 0
 	if	(m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] && 
 		(m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread))
 		{
@@ -750,11 +722,343 @@ winsock2.h
 			nErrorCode);
 		return;
 		}
-
+#endif
 
 	CAsyncSocket::OnAccept(nErrorCode);
 	//pThread->Run();
 	}
+#endif
+// can't be both
+#ifdef I_AM_PAP
+	void CServerSocket::OnAccept(int nErrorCode)
+		{
+		// TODO: Add your specialized code here and/or call the base class
+		int * bufBOOLsize;
+		//int nResult;
+		BOOL bufBOOL;
+		bufBOOLsize = &bufBOOL;
+		*bufBOOLsize = TRUE;
+		int nMyServer;
+		int sockerr;
+		SOCKADDR SockAddr;
+		int SockAddrLen = sizeof(SOCKADDR);
+		//int i;
+		CString Ip4, s, t, sOut;
+		BYTE bIsClosing = 0;
+
+
+		// how are we going to set our pSCM pointer???
+		// get our threadID of the thread running me
+		// and then see if it is in the static list to know which stSCM[MAX_SERVERS] we belong to
+		// m_nOwningThreadType = eListener;
+
+		if (OnAcceptPrep() == 0)
+			{
+			TRACE(_T("On Accept of socket was rejected by OnAcceptPrep"));
+			return;
+			}
+
+		Sleep(20);
+
+		//	CServerSocket Asocket(m_pSCM, eOnStack);	// a temporary Async socket of our fashioning ON THE STACK
+		//	Asocket.m_nOwningThreadType = eOnStack;
+		CAsyncSocket Asocket;
+		// Asocket.m_pSCM = m_pSCM;
+		// Asocket.m_pstSCM = m_pstSCM; built in constructor
+		// ACCEPT the connection from our client into the temporary socket Asocket
+		// ACCEPT the connection from our client into the temporary socket Asocket
+		// ACCEPT the connection from our client into the temporary socket Asocket
+		// We have to do this in order to get the client index number.
+		sockerr = Accept(Asocket, &SockAddr, &SockAddrLen);
+
+		if (0 == sockerr)
+			{
+			sockerr = GetLastError();
+			TRACE2("OnAccept sockerr = %d = 0x%x\n", sockerr, sockerr);
+			CAsyncSocket::OnAccept(nErrorCode);
+			return;
+			}
+		// Successful OnAccept
+		// Since our listener was created to service events FD_READ | FD_CONNECT | FD_CLOSE | FD_ACCEPT
+		// will this accepted socket continue to support those services or do we need to set them
+		// in the Asocket object on the stack????
+#if 0
+		From Microsoft help file -
+			The socket created by the accept function has the same properties as the listening socket used to accept it.
+			Consequently, WSAAsyncSelect events set for the listening socket also apply to the accepted socket.
+			For example, if a listening socket has WSAAsyncSelect events FD_ACCEPT, FD_READ, and FD_WRITE,
+			then any socket accepted on that listening socket will also have FD_ACCEPT, FD_READ, and FD_WRITE events
+			with the same wMsg value used for messages.
+#endif
+
+			UINT uPort;
+		int nClientPortIndex;					// which client are we connecting to? Derive from IP address
+		UINT uClientBaseAddress;		// what is the 32 bit index of the 1st PA Master?
+		WORD wClientBaseAddress[8];
+		char *pIpBase = gServerArray[nMyServer].ClientBaseIp;
+
+#ifdef CLIENT_AND_SERVER_ON_SAME_MACHINE
+		uClientBaseAddress = inet_addr(pIpBase);	// Instrument base "192.168.10.201", PAG is "192.168.10.10"
+#else
+		//	uClientBaseAddress = ntohl(inet_addr (pIpBase));	// Instrument base "192.168.10.201", PAG is "192.168.10.10"
+		// update to newer function 
+		s = pIpBase;
+		if (1 != InetPton(AF_INET, s, &wClientBaseAddress))
+			{
+			TRACE(_T("InetPton error\n"));
+			return;
+			}
+		else
+			{
+			TRACE(_T("InetPton success in OnAccept\n"));
+			uClientBaseAddress = ntohl(*(u_long*)&wClientBaseAddress);	// same value as uClientBaseAddress
+			}
+
+
+#endif
+
+		Asocket.GetSockName(Ip4, uPort);	// my socket info??
+		s.Format(_T("Server side socket %s : %d\n"), Ip4, uPort);	// crash here 7-14-16 on reconnect by instrument
+		TRACE(s);
+		Asocket.GetPeerName(Ip4, uPort);	// connecting clients info??
+		s.Format(_T("Client side socket %s : %d\n"), Ip4, uPort);
+		TRACE(s);
+		int ntmp;
+		s = Ip4;
+		if (1 != InetPton(AF_INET, s, &wClientBaseAddress))
+			{
+			TRACE(_T("InetPton error\n"));		return;
+			}
+		else
+			{
+			TRACE(_T("InetPton success in OnAccept ... CLIENT CONNECTED ******************\n"));
+			ntmp = ntohl(*(u_long*)&wClientBaseAddress);
+			}
+
+
+		nClientPortIndex = (ntmp - uClientBaseAddress);	// 0-n
+
+#ifdef I_AM_PAP
+	// Assume we know a range of addresses of clients which connected to this server
+	// for example 192.168.10.201 - the first instrument and 192.168.10.208 - the eighth instrument 
+	// in consecutive IP address order
+	// and assume they all connect to the same nic on the PAM side and thus need their own pClientConnection
+	// From the PeerName IP address we can compute the index for the pClientConnection
+	//
+
+		nClientPortIndex = (ntmp - uClientBaseAddress);
+
+
+#endif
+
+
+		if ((nClientPortIndex < 0) || (nClientPortIndex >= MAX_CLIENTS_PER_SERVER))	// || bIsClosing)
+			{
+			Asocket.Close();
+			CAsyncSocket::OnAccept(nErrorCode);
+			s.Format(_T("Fatal error - nClientPortIndex = %d\n"), nClientPortIndex);
+			TRACE(s);	// bad client port index for PAP to ADC. Must be fixed IP addresses
+			return;
+			}
+
+		m_nClientIndex = nClientPortIndex;		// this should not change during the course of execution
+												// even when the client disconnects/reconnects
+
+		if (m_nClientIndex == 0)
+			TRACE(_T("m_nClientIndex == 0 Since nClientPortIndex=0 in OnAccept )\n"));
+#if 0
+		winsock2.h
+#define SO_DEBUG        0x0001          /* turn on debugging info recording */
+#define SO_ACCEPTCONN   0x0002          /* socket has had listen() */
+#define SO_REUSEADDR    0x0004          /* allow local address reuse */
+#define SO_KEEPALIVE    0x0008          /* keep connections alive */
+#define SO_DONTROUTE    0x0010          /* just use interface addresses */
+#define SO_BROADCAST    0x0020          /* permit sending of broadcast msgs */
+#define SO_USELOOPBACK  0x0040          /* bypass hardware when possible */
+#define SO_LINGER       0x0080          /* linger on close if data present */
+#define SO_OOBINLINE    0x0100          /* leave received OOB data in line */
+
+
+#endif
+
+		// May be redundant to set these in Asocket since same as the listening socket
+		sockerr = Asocket.SetSockOpt(SO_REUSEADDR, &bufBOOL, sizeof(int), SOL_SOCKET);
+		ASSERT(sockerr != SOCKET_ERROR);
+
+		sockerr = Asocket.SetSockOpt(SO_ACCEPTCONN, &bufBOOL, sizeof(int), SOL_SOCKET);
+		ASSERT(sockerr != SOCKET_ERROR);
+
+		sockerr = Asocket.SetSockOpt(SO_DONTROUTE, &bufBOOL, sizeof(int), SOL_SOCKET);
+		ASSERT(sockerr != SOCKET_ERROR);
+
+		sockerr = Asocket.SetSockOpt(TCP_NODELAY, &bufBOOL, sizeof(int), IPPROTO_TCP);
+		ASSERT(sockerr != SOCKET_ERROR);
+
+		int nSize;
+		int nSizeOf = sizeof(int);
+		GetSockOpt(SO_SNDBUF, &nSize, &nSizeOf, SOL_SOCKET);
+		s.Format(_T("ServerSocket NIC Transmit Buffer Size = %d\n"), nSize);
+		TRACE(s);
+
+		GetSockOpt(SO_RCVBUF, &nSize, &nSizeOf, SOL_SOCKET);
+		s.Format(_T("ServerSocket NIC Receiver Buffer Size = %d\n"), nSize);
+		TRACE(s);
+
+		// create a connection thread to own/contain this socket... if one already exists, kill it first
+		// assume there is only one connection from the client to the server. If there is more than
+		// one connection we can determine from the clients IP address captured above in the GetPeerName
+		// which client we are connecting to and adjust the pClientConnection[] subscript accordingly
+		// For now assume only one Phased Array Master processor is connected to one PA GUI server.
+		if (m_pSCM->m_pstSCM == NULL)
+			{
+			TRACE("Fatal error, pMySCM->m_pstSCM == NULL\n");
+			Asocket.Close();
+			CAsyncSocket::OnAccept(nErrorCode);
+			return;
+			}
+
+		// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
+		ST_SERVERS_CLIENT_CONNECTION *pscc;
+
+		if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)	// first time thru
+			{
+			pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] = new ST_SERVERS_CLIENT_CONNECTION();
+			OnAcceptInitializeConnectionStats(pscc, nMyServer, m_nClientIndex);
+			pscc->sClientIP4 = Ip4;
+			pscc->m_nClientIndex = m_nClientIndex;
+
+			s.Format(_T("PAPSrv[%d]:Instrument[%d]"), nMyServer, m_nClientIndex);
+			t = s + _T("  OnAccept() creating critical sections/lists/vChannels\n");
+
+			TRACE(t);
+
+			//		theApp.SaveDebugLog(t);
+			pMainDlg->SaveDebugLog(t);
+			pscc->szSocketName = s;
+			pscc->uClientPort = uPort;
+			m_pstSCM->nComThreadExited[m_nClientIndex] = 0;
+			SetpSCC(pscc);
+
+			///////////////////////////////////////
+			s = _T("AfxBeginThread(RUNTIME_CLASS (CServerSocketOwnerThread) is next\n");
+			TRACE(s);
+			// ServerSocketOwnerThread will attach to the accepted socket at the priority level of the ServerSocketOwnerThread
+			// This allows (we think) the socket to run at a high priority level
+			// create a new thread IN SUSPENDED STATE. LEAVE AUTODELETE ON !!!
+			CServerSocketOwnerThread * pThread =
+				m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread = (CServerSocketOwnerThread *)AfxBeginThread(RUNTIME_CLASS(CServerSocketOwnerThread),
+					THREAD_PRIORITY_ABOVE_NORMAL,
+					0,					// stacksize
+					CREATE_SUSPENDED,	// runstate
+					NULL);				// security
+										//pThread->m_bAutoDelete = 0;
+
+			s.Format(_T("CServerSocketOwnerThread[%d][%d]= 0x%08x, Id=0x%04x was created\n"),
+				nMyServer, m_nClientIndex, pThread, pThread->m_nThreadID);
+			TRACE(s);
+			// Init some things in the thread before it runs. We are now accessing things inside the new thread, not in this thread
+			if (pThread)
+				{
+				// This is how we boost the ServerSocket to a higher priority
+				//pThread->m_pConnectionSocket	= new CServerSocket(m_pSCM, eServerConnection);
+				pThread->m_pSCM = m_pSCM;
+				pThread->m_pstSCM = m_pSCM->m_pstSCM;
+				pThread->m_nMyServer = m_pSCM->m_pstSCM->pSCM->m_nMyServer;
+				pThread->m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];
+				pThread->m_nClientIndex = m_nClientIndex;
+				pThread->m_pSCC->pSocket = new CServerSocket(m_pSCM, eServerConnection); ;
+				s.Format(_T("CServerSocket::OnAccept, pThread->m_pSCC->pSocket = 0x%08x\n"), pThread->m_pSCC->pSocket);
+				TRACE(s);
+
+
+				//pThread->m_pSCC->pSocket = NULL;
+				pThread->m_hConnectionSocket = Asocket.Detach();	// hand off the socket we just accepted to the thread
+				Sleep(10);
+				// Resume will cause CServerSocketOwnerThread::InitInstance() to execute
+				// pThread->m_pSCC->pSocket = (CServerSocket *) FromHandle(Asocket.Detach()); doesn't work
+				pThread->m_pSCC->pSocket->m_nOwningThreadType = eServerConnection;
+				pThread->m_pSCC->pSocket->m_pSCC = pThread->m_pSCC;
+				pThread->m_pSCC->bConnected = 1;
+				pThread->m_pSCC->pSocket->m_pSCM = pThread->m_pSCM;
+				pThread->m_pSCC->pSocket->m_pstSCM = pThread->m_pstSCM;
+				pThread->m_pSCC->pSocket->m_nClientIndex = m_nClientIndex;
+				pThread->ResumeThread();
+				}
+			else
+				{
+				// do some sort of cleanup
+				ASSERT(0);
+				s = _T("Cleanup");
+				}
+
+			// Display the connect socket IP and port
+			Asocket.GetSockName(Ip4, uPort);	// my socket info??
+			pThread->m_pSCC->bConnected = eConfigured;
+
+			char buffer[80], txt[64];
+			strcpy(buffer, GetTimeStringPtr());
+			CstringToChar(Ip4, txt);
+			printf("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n",
+				m_nClientIndex, txt, uPort, buffer);
+			sOut = buffer;
+			s.Format(_T("\nInstrument Client[%d]  on socket %s : %d accepted by server at %s\n"),
+				m_nClientIndex, Ip4, uPort, sOut);
+			TRACE(s);
+			pMainDlg->SaveDebugLog(s);
+			Sleep(10);
+
+			// Asocket.Close();	not necessary. Since Asocket on stack, when this routine ends, Asocket deletes
+			// destructor closes the socket
+
+
+			}	// if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)
+				
+		/************************** What if already connected ?? *******************/
+
+		else 	if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] &&
+			(m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread))
+			{
+			//2017-05-24 try detaching the existing socket and reattaching the new socket
+			SOCKET hSocket;
+			pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];	// shortcut for coding
+			pscc->m_nClientIndex = m_nClientIndex;
+			if (pscc->pSocket == 0)
+				{
+				m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pSocket = new CServerSocket(m_pSCM, eServerConnection);
+				if (pscc->pSocket)
+					{
+					pscc->pSocket->m_nClientIndex = m_nClientIndex;
+					pscc->pSocket->m_pSCM = m_pSCM;
+					pscc->pSocket->m_pstSCM = m_pSCM->m_pstSCM;
+					pscc->pSocket->m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];
+					//hSocket = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pSocket->Detach();
+					}
+				}
+			hSocket = Asocket.Detach();
+			m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread->m_hConnectionSocket = hSocket;
+			m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread->m_pSCC->pSocket = pscc->pSocket;
+			m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->pServerSocketOwnerThread->m_pSCC->pSocket->Attach(hSocket);
+			m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->bConnected = 1;
+			Sleep(10);
+			//Sleep(10);
+			}
+
+		else
+			{
+			ASSERT(0);	// got a break here from real instrument 2016-09-08
+			Asocket.Close();
+			CAsyncSocket::OnAccept(nErrorCode);
+			s.Format(_T("Refused connection: no ClientConnection or no ServerSocketOwnerThread Error = %d\n"),
+				nErrorCode);
+			return;
+			}
+
+
+		CAsyncSocket::OnAccept(nErrorCode);
+		//pThread->Run();
+		}
+
+#endif
 
 
 	/******************************************************************************/

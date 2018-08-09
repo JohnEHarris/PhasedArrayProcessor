@@ -122,7 +122,6 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 // REVISED 2016-10-20
 
 
-
 // Data coming from the Tuboscope electronics, that is the phased array boards.
 #ifdef CLIVE_STYLE
 typedef struct 

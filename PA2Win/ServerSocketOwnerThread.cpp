@@ -223,6 +223,22 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	}
 
 /***********************************************************************/
+// After detaching old socket in ServerSocket::OnAccept, use this call
+// to attach the new socket
+// WPARAM w = 0, lParam = new socket handle
+// Necessitated by using DHCP for PAP. Only needed for PAP code at this time 2018-08-08
+#if 1
+void CServerSocketOwnerThread::AttachSocket(WPARAM w, LPARAM lParam)
+	{
+	m_hConnectionSocket = (SOCKET) lParam;
+	ST_SERVERS_CLIENT_CONNECTION *pscc = GetpSCC();
+	if (pscc->pSocket)
+		pscc->pSocket->Attach(m_hConnectionSocket);
+	else
+		TRACE(_T("AttachSocket failed... pSocket = 0"));
+	}
+#endif
+/***********************************************************************/
 
 int CServerSocketOwnerThread::ExitInstance()
 	{
@@ -349,7 +365,8 @@ BEGIN_MESSAGE_MAP(CServerSocketOwnerThread, CWinThread)
 	ON_THREAD_MESSAGE(WM_USER_SERVER_SEND_PACKET, TransmitPackets)
 	ON_THREAD_MESSAGE(WM_USER_KILL_OWNER_SOCKET, KillServerSocket)
 	ON_THREAD_MESSAGE(WM_USER_KILL_OWNER_SOCKET_THREAD, KillServerSocketOwner)
-	
+	ON_THREAD_MESSAGE(WM_USER_ATTACH_SERVER_SOCKET, AttachSocket)
+
 END_MESSAGE_MAP()
 
 
@@ -366,6 +383,7 @@ END_MESSAGE_MAP()
 // wparam is client index number, lParam points to the target pClientConnection
 // Patterened after CClientCommunicationThread::KillSocket(WPARAM w, LPARAM lParam)
 
+// w = client index and lParam = pClientConnection
 afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 	{
 	CString t, s = _T("KillServerSocket is running\n");
@@ -380,7 +398,7 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 		// perhaps the client has shut down. In that case
 		// call the thread shutdown if we are in shutdown mode
 		//ASSERT( 0 );
-		if (nShutDown) 
+		//if (nShutDown) 
 			KillServerSocketOwner( w, lParam );
 		return;
 		}
@@ -509,8 +527,14 @@ afx_msg void CServerSocketOwnerThread::KillServerSocketOwner( WPARAM w, LPARAM l
 			m_pSCC->pSocket = 0;
 			}
 		Sleep( 10 );
-		PostQuitMessage( 0 );	// causes ExitInstance() to run 
+		//PostQuitMessage( 0 );	// causes ExitInstance() to run 
 		// and then CServerSocketOwnerThread destructor
+		if (m_pSCC->pServerRcvListThread)
+			{	// kill rcv list thread
+
+			// sleep a little while rcv list is killed
+			// then delete linked lists
+			}
 		}
 	else
 		{

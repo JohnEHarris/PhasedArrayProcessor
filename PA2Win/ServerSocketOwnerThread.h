@@ -49,6 +49,7 @@ public:
 	int m_nMyServer;							// which instance of stSCM[] we are
 	int m_nClientIndex;							// which one of SSC are we
 	void SetClientConnectionIndex( int indx ) { m_nClientIndex = indx; }
+	afx_msg void AttachSocket(WPARAM w, LPARAM lParam);
 	// call these get/set function from ServerSocketOwnerThread ExitInstance to update
 	// the values
 	ST_SERVERS_CLIENT_CONNECTION * GetpSCC( void )	{ return m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]; }

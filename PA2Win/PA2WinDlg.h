@@ -71,7 +71,7 @@ using namespace std;
 #define WM_USER_KILL_ADP_CONNECTION					WM_USER+0x201
 #define WM_USER_RESTART_ADP_CONNECTION				WM_USER+0x202
 // Has to agree in both asidlg and dibapi32.dll code
-#define WM_USER_PRINT_SCREEN						WM_USER + 0x203
+#define WM_USER_PRINT_SCREEN						WM_USER+0x203
 #define WM_USER_INIT_TCP_THREAD						WM_USER+0x207
 #define WM_USER_RESTART_TCP_COM_DLG					WM_USER+0x208
 #define WM_USER_DO_NOTHING							WM_USER+0x209		// for debugging purposes
@@ -104,6 +104,7 @@ using namespace std;
 #define WM_USER_CONNECT_SOCKET						WM_USER+0x222
 #define WM_USER_KILL_SOCKET							WM_USER+0x223
 #define WM_USER_KILL_OWNER_SOCKET_THREAD			WM_USER+0x224
+#define WM_USER_ATTACH_SERVER_SOCKET				WM_USER+0x225
 
 // global variables for debugging
 extern int gnAsyncSocketCnt, gnFifoCnt;		// counter to count sequence of ASyncSocket creation
@@ -183,6 +184,11 @@ public:
 	void GetAllIP4AddrForThisMachine(void);		// Fills in the array sThisMachineIP4Addr[]
 	CString sThisMachineIP4Addr[20];			// doubtfull this machine will have 20 "NIC's"
 	UINT uThisMachineIP4Addr[20];				// 32 bit ulong representation of ip4
+	
+	// on screen graph in PA2Win dialot of server rows with connected client IP addresses
+	CString sConnectedClients[MAX_SERVERS][MAX_CLIENTS_PER_SERVER];	// 2018-08-07
+	void ShowConnectedClients(void);
+	void AddConnectedClient(int nServer, int nClientNum, CString& sIP4);
 
 	void InitializeServerConnectionManagement( void );
 	void InitializeClientConnectionManagement(void);

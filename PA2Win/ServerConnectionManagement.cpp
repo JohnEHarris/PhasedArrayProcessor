@@ -308,14 +308,16 @@ int CServerConnectionManagement::KillServerSocket( int nMyServer, int nClientInd
 	if (pThread == NULL)	
 		return 0;
 	
+	// w = client index and lParam = pClientConnection
 	pThread->PostThreadMessage(WM_USER_KILL_OWNER_SOCKET,nClientIndex,(LPARAM)pscc);
 	// set this thread priority to low
 	for (i = 0; i < nWait; i++)
 		{
 		if (m_pstSCM->pClientConnection[nClientIndex] == 0)				break;
-		if (m_pstSCM->pClientConnection[nClientIndex]->pSocket == 0)	break;
+		//if (m_pstSCM->pClientConnection[nClientIndex]->pSocket == 0)	break;
 		Sleep( 10 );
 		}
+
 	if (i >= nWait)
 		{
 		TRACE( _T( "Failed to kill Server Socket\n" ) );

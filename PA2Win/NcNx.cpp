@@ -103,7 +103,7 @@ void CNcNx::DebugOut(CString s)
 	gDlg.pUIDlg->SaveDebugLog( s );
 	}
 
-#define PAP_MAX		0
+#define PAP_MAX		3
 #define BOARD_MAX	8
 #define GATE_MAX	3
 #define PARAM_MAX	5000

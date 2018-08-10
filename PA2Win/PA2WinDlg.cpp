@@ -294,7 +294,10 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{		pSCM[i] = NULL;		}
 	for (i = 0; i < MAX_CLIENTS; i++)
-		{		pCCM[i] = NULL;		}
+		{		
+		pCCM[i] = NULL;	
+		gbActualClientConnection[i] = 0xff;
+		}
 
 	// DEFAULT VALUES - CAN BE OVERWRIDDEN WITH COMMAND FROM PAG
 	gMaxChnlsPerMainBang	= MAX_CHNLS_PER_MAIN_BANG;
@@ -2321,6 +2324,15 @@ void CPA2WinDlg::DebugToNcNxDlg( CString s )
 // message specifies which board will receive the message. The PAP uses that information
 // to route the message to the correct board.
 //
+// 2018-08-10 Now can have IP addresses which do not dictate the client connection
+// This will result because of the use of DHCP to set PAP IP addresses.
+// In this send procedure map the intended client number into the actual number in the 
+// stSCM[0] is the NcNx server for all PAP's, stSCM[1] is the server for All wall inspection data
+// the client number in this call is the logical nClientNumber..0 would be the first Pap, 1 would be the 2nd etc
+// Because the connection of  the client to the server no longer determines the client number, there must
+// be a mapping between physical client number and the connection client number
+// Use an array gbActualClientConnection[MAX_CLIENTS_PER_SERVER] to map the logical client number
+// to the physical connection number generated when a client connects.
 BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 	{
 	CString s;
@@ -2332,15 +2344,22 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 	pHeader = (GenericPacketHeader*)pMsg;
 	nLen = pHeader->wByteCount;
 
-	if ( (nClientNumber < 0) || (nClientNumber >= MAX_CLIENTS))
+	// map the logical connection number to the physical connection number
+	BYTE bPhyCon = gbActualClientConnection[nClientNumber];
+
+
+	if ( (bPhyCon < 0) || (bPhyCon >= MAX_CLIENTS))
 		{
-		s.Format(_T("CPA2WinDlg::SendMsgToPAP FAIL, n = %d\n"),nClientNumber );
+		s.Format(_T("CPA2WinDlg::SendMsgToPAP FAIL, bad client = %d\n"), bPhyCon);
 		TRACE(s);
 		if (gDlg.pNcNx)
 			gDlg.pNcNx->DebugOut(s);		
 		delete pMsg;	// clean up the mess
 		return FALSE;
 		}
+
+	nClientNumber = bPhyCon;	// set connection number to the physical number
+
 
 		// assuming server # 0 = ePAP_Server is the PAP server
 	if (NULL == stSCM[ePAP_Server].pClientConnection[nClientNumber])

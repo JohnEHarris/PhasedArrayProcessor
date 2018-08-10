@@ -232,10 +232,23 @@ void CServerSocketOwnerThread::AttachSocket(WPARAM w, LPARAM lParam)
 	{
 	m_hConnectionSocket = (SOCKET) lParam;
 	ST_SERVERS_CLIENT_CONNECTION *pscc = GetpSCC();
+	pscc->bSocketDestructorOnly = 1;
 	if (pscc->pSocket)
-		pscc->pSocket->Attach(m_hConnectionSocket);
+		{
+		closesocket((SOCKET)pscc->pSocket);
+		//pscc->pSocket->Close();
+		if (pscc->pSocket->Attach(m_hConnectionSocket))
+			pscc->bConnected = 2;
+		else pscc->bConnected = 0;
+		}
 	else
-		TRACE(_T("AttachSocket failed... pSocket = 0"));
+		{
+		TRACE(_T("Create new pSocket\n"));
+		pscc->pSocket = new CServerSocket(m_pSCM, eServerConnection);
+		if (pscc->pSocket)
+			pscc->pSocket->Attach(m_hConnectionSocket);
+		}
+	pscc->bSocketDestructorOnly = 0;
 	}
 #endif
 /***********************************************************************/

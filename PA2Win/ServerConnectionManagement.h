@@ -151,7 +151,8 @@ typedef struct
 	DWORD ServerRcvListThreadID;	// the ID of the rcv thread... allows posting messages w/o thread ptr
 	int m_nClientIndex;				// which instance of this we are?
 	BYTE m_bIsClosing;				// got a tcpip close -- in progress
-	BYTE bStopSendRcv;				// have socket throw away all input/output data
+	BYTE bStopSendRcv;				// have socket throw away all input/output data -- maybe not use
+	BYTE bSocketDestructorOnly;		// Let ServerThread destroy socket without destroying any other objects
 
 	BYTE bConnected;				// eNotConnected, eNotConfigured, eConfigured .. detected in receive thread.
 	WORD wMsgSeqCnt;				// sequential number of sent message to this client

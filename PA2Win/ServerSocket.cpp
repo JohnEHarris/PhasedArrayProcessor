@@ -273,7 +273,7 @@ CServerSocket::~CServerSocket()
 
 
 	// only get here if socket type is eServerConnection
-	if (nShutDown)
+	if (nShutDown && (m_nOwningThreadType == eServerConnection) && (m_pSCC->bSocketDestructorOnly == 0))
 		{
 
 		if (0 == KillLinkedList( m_pSCC->pCSRcvPkt, m_pSCC->pRcvPktList ))
@@ -561,7 +561,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 			pscc->sClientIP4 = Ip4;
 			pscc->uClientIP4 = uIp4;
 			pscc->m_nClientIndex = m_nClientIndex;
-			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept Client\n"), m_nMyServer, m_nClientIndex);
+			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept Client IP = s\n"), m_nMyServer, m_nClientIndex, Ip4);
 			t = s;
 			TRACE(t);
 
@@ -583,10 +583,13 @@ void CServerSocket::OnAccept(int nErrorCode)
 			pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];	// we know its not null
 			if (pscc->uClientIP4 == uIp4)
 				{
+				pscc->bSocketDestructorOnly = 1;
 				CServerSocketOwnerThread * pThread = pscc->pServerSocketOwnerThread;
 				hConnectionSocket = Asocket.Detach();
+				// causes 
 				pThread->PostThreadMessageW(WM_USER_ATTACH_SERVER_SOCKET, 0, (LPARAM)hConnectionSocket);
 				Sleep(50);
+				SetpSCC(pscc);
 				CAsyncSocket::OnAccept(nErrorCode);
 				return;
 				}
@@ -635,9 +638,9 @@ void CServerSocket::OnAccept(int nErrorCode)
 			pThread->m_nMyServer= m_pSCM->m_pstSCM->pSCM->m_nMyServer;
 			pThread->m_pSCC		= m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];
 			pThread->m_nClientIndex	= m_nClientIndex;
-			pThread->m_pSCC->pSocket = new CServerSocket(m_pSCM, eServerConnection); ;
+			pThread->m_pSCC->pSocket = new CServerSocket(m_pSCM, eServerConnection); 
 			s.Format( _T( "CServerSocket::OnAccept, pThread->m_pSCC->pSocket = 0x%08x\n" ), pThread->m_pSCC->pSocket );
-			TRACE(s);
+			TRACE(s); // m_hSocket = all f's right now
 	
 
 			//pThread->m_pSCC->pSocket = NULL;

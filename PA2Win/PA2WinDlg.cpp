@@ -2327,6 +2327,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 	int nLen;		// how long will the returned message be?
 	int rc;
 	GenericPacketHeader *pHeader;
+	ST_SMALL_CMD *pSmallCmd = (ST_SMALL_CMD *)pMsg;
 
 	pHeader = (GenericPacketHeader*)pMsg;
 	nLen = pHeader->wByteCount;

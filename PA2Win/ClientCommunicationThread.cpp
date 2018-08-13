@@ -986,6 +986,9 @@ void CClientCommunicationThread::StartTCPCommunication()
 			//s.Format(_T("SysCP or %s: connected using socket at 0x%08x sizeof=%d.\n"), 
 				m_sSrv, m_pSocket, sizeof(CClientSocket));
 			TRACE(s);   //DebugMsg(s)	// Connect to server named xxx at ip = yyyy
+			// once connected, shoud start sending fake data msg every 500 ms to tell server
+			// what my pap number is since it is no longer inferred by the IP address 2018-08-10 ymd
+			// however, if adc present, Idata messages will be sent so no need to timer to send fake data
 			}
 
 	}

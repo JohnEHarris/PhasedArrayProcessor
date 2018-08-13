@@ -166,6 +166,7 @@ CServerConnectionManagement::CServerConnectionManagement(int nMyServerIndex)
 	i = sizeof(m_pstSCM->pCSDebugIn);	// = 
 	i = sizeof(m_pstSCM->pInDebugMessageList);	// = 
 
+
 	//  This is all done in CServerSocket::OnAcceptInitializeConnectionStats on individual socket basis
 	for (i = 0; i < MAX_CLIENTS_PER_SERVER; i++)
 		{
@@ -173,7 +174,7 @@ CServerConnectionManagement::CServerConnectionManagement(int nMyServerIndex)
 		m_pstSCM->nComThreadExited[i]	= 0;
 		// new 2018-08-03 to support DHCP on PAP boxes. Only applies to PAG/UUI
 		// PAP servers still have hard coded IP address and so to their clients (Sam's NIOS hardware)
-		m_pstSCM->nPapNum2ConnectionNum[i] = -1;
+		m_pstSCM->bActualClientConnection[i] = -1;
 		}
 
 	};

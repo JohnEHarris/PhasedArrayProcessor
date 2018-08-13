@@ -1180,10 +1180,10 @@ void CServerSocket::OnReceive(int nErrorCode)
 			// connection order may not match PAP order since not using hard code IP address in real system
 			BYTE bClientIndex = (BYTE)m_pSCC->m_nClientIndex;	// the order in which the clients connected
 			BYTE bPap = pHeader->bPapNumber;	// the machine ID number from 0 to MAX_CLIENTS -1
+			// The client itself knows its client number, assigned by humans with a usb stick.
 
 			if ((bPap < MAX_CLIENTS) && (bClientIndex < MAX_CLIENTS))
-				gbActualClientConnection[bPap] = bClientIndex;
-
+				m_pSCM->m_pstSCM->bActualClientConnection[bPap] = bClientIndex;
 
 			m_nLastSeqCnt = pHeader->wMsgSeqCnt;
 			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used

@@ -1,0 +1,20 @@
+3:17 PM 8/7/2018
+Server thread creation;
+
+1. Listening socket Accepts a connection in OnAccept
+2. OnAccept creates a new ST_SERVERS_CLIENT_CONNECTION() structure
+3. OnAccept then creates a ServerSocketOwnerThread
+
+4. If ServerSocketOwnerThread is created, it 
+   creates a permanent serversocket and attaches it to the ServerSocketOwnerThread
+
+5. ServerSocketOwnerThread creates the ServerRcvListThread
+6. ServerRcvListThread creates a hwtimer if it is in the PhasedArrayProcessor (PAP) system
+
+
+Linked lists and critical sections are created by the 
+ServerConnectionManagement constructor so they do not have to be destroyed until 
+the application closes.
+
+7. Virtual channels are created in OnAcceptInitializeConnectionStats() called from
+  Listening socket OnAccept()

@@ -279,7 +279,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_PA2WIN_DIALOG, pParent)
 	{
-	int i;
+	int i,j;
 	nLoc = 20;
 	m_ptheApp = (CPA2WinApp *) AfxGetApp();
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
@@ -292,11 +292,17 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	//memset((void*)stCCM, 0, sizeof(stCCM)*MAX_CLIENTS);
 
 	for ( i = 0; i < MAX_SERVERS; i++)
-		{		pSCM[i] = NULL;		}
+		{		
+		pSCM[i] = NULL;
+		for (j = 0; j < MAX_CLIENTS; j++)
+			{
+			stSCM[i].bActualClientConnection[j] = 0xff;	// a static structure
+			}
+		}
+
 	for (i = 0; i < MAX_CLIENTS; i++)
 		{		
 		pCCM[i] = NULL;	
-		gbActualClientConnection[i] = 0xff;
 		}
 
 	// DEFAULT VALUES - CAN BE OVERWRIDDEN WITH COMMAND FROM PAG
@@ -2333,7 +2339,11 @@ void CPA2WinDlg::DebugToNcNxDlg( CString s )
 // be a mapping between physical client number and the connection client number
 // Use an array gbActualClientConnection[MAX_CLIENTS_PER_SERVER] to map the logical client number
 // to the physical connection number generated when a client connects.
-BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
+// 2018-08-13 now use stSCM[ePAP_Server].bActualClientConnection[nClientNumber] to map client  number to actual
+// connection
+
+// Assumes the server for PAP is stSCM[0] which for now is trure
+BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the client is the PAP
 	{
 	CString s;
 	int nLen;		// how long will the returned message be?
@@ -2345,7 +2355,9 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)
 	nLen = pHeader->wByteCount;
 
 	// map the logical connection number to the physical connection number
-	BYTE bPhyCon = gbActualClientConnection[nClientNumber];
+	// must know connection pap .. ePAP_Server = 0
+
+	BYTE bPhyCon = stSCM[ePAP_Server].bActualClientConnection[nClientNumber];
 
 
 	if ( (bPhyCon < 0) || (bPhyCon >= MAX_CLIENTS))

@@ -222,6 +222,12 @@ typedef struct
 	//CRITICAL_SECTION *pCS_ClientConnectionRcvList[MAX_CLIENTS_PER_SERVER];	// created by the app with new
 	//CPtrList* pRcvPktList[MAX_CLIENTS_PER_SERVER];	// created by the app with new
 	//CPtrList* pSendPktList[MAX_CLIENTS_PER_SERVER];	// created by the app with new
+
+	// If using DHCP instead of assigned IP address, the connection number is not tied to the
+	// IP address of the device connecting. Hence the following mapping maps the connection to the
+	// correct client. 8-13-2018
+	BYTE bActualClientConnection[MAX_CLIENTS_PER_SERVER];
+
 	ST_SERVERS_CLIENT_CONNECTION *pClientConnection[MAX_CLIENTS_PER_SERVER];	// an array of pointers to 
 									// information about individual clients connected to this server.
 									// not all potential clients may be connected. These client connections will be
@@ -235,8 +241,6 @@ typedef struct
 	CRITICAL_SECTION *pCSDebugOut;
 	CPtrList* pInDebugMessageList;	// input operations put messages into this list.. common for all connections
 	CPtrList* pOutDebugMessageList;
-
-	int nPapNum2ConnectionNum[MAX_CLIENTS_PER_SERVER];
 	CServerConnectionManagement *pSCM;	// point to ourself. This is important. Pointer to a CLASS  -- not created with 'new'
 
 	}	ST_SERVER_CONNECTION_MANAGEMENT;

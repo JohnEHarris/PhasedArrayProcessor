@@ -77,7 +77,7 @@ class CPA2WinDlg;
 //#define MAIN_DLG_NAME	PA2WinDlg
 
 // edit this value if more client connections to servers are needed
-#define	MAX_SERVERS							1
+#define	MAX_SERVERS							2
 #define MAX_CLIENTS_PER_SERVER				8
 extern THE_APP_CLASS theApp;
 

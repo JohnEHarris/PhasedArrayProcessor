@@ -117,8 +117,8 @@ PubExt int gnFifoCnt, gnAsyncSocketCnt;
 PubExt WORD gwMsgSeqCnt;
 PubExt BYTE gbStartSeqNumber;	// starting sequence number for next Idata packet
 PubExt BYTE gbStartSeqNumberIncrement;
-PubExt WORD gwLastCmdId;	// keep cmd ID of last command executer by NIOS
-PubExt WORD gw1stWordCmd;	// keep 1st cmd word of last command executer by NIOS
+PubExt WORD gwLastCmdId;	// keep cmd ID of last command executed by NIOS
+PubExt WORD gw1stWordCmd;	// keep 1st cmd word of last command executed by NIOS
 PubExt BYTE gbCmdSeq;
 PubExt BYTE gbCmdChnl;
 PubExt BYTE gbCmdGate;

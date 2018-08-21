@@ -537,6 +537,7 @@ BOOL CPA2WinDlg::OnInitDialog()
 	Sleep(50);
 	//PAP will get its PAP number (0-7) by reading a memory stick -- not a very reliable way
 	//PAP will get its IP address via DHCP. Hence, PAP number will not be tied to IP address
+	// At present (2018-08-13) both servers use the same NIC for PAP
 //#ifdef I_AM_PAP
 	ReadPAPnumber();
 //#endif

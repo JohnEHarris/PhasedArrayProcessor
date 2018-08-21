@@ -337,15 +337,20 @@ int CServerSocket::OnAcceptPrep(void)
 		if (hMyThreadID == stSCM[nMyServer].ListenThreadID)
 			{	// found myself
 			m_pSCM = pSCM[nMyServer];
-			m_nMyServer = nMyServer;
+			m_nMyServer = nMyServer;	// only place where m_nMyServer is set
 			//m_pstSCM = m_pSCM->m_pstSCM;	// ptr to specific entry in global structure
 			break;
 			}
+		// if m_nMyServer is not set, we bail out of OnAcceptPrep with a failure and On Accept aborts
 		if (nMyServer >= MAX_SERVERS)
 			{
 			s = _T("Could not determine MyServer Number\n");
 			TRACE(s);
 			pMainDlg->SaveDebugLog(s);
+			CAsyncSocket dummy;
+			Accept(dummy);
+			dummy.Close();	// should we close after CAsyncSocket::OnAccept ??? 2016-08-29 jeh
+			CAsyncSocket::OnAccept(100);			
 			return 0;
 			}
 		}
@@ -428,13 +433,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 	Sleep( 20 );
 
-//	CServerSocket Asocket(m_pSCM, eOnStack);	// a temporary Async socket of our fashioning ON THE STACK
-//	Asocket.m_nOwningThreadType = eOnStack;
-//	CAsyncSocket Asocket;
-	// Asocket.m_pSCM = m_pSCM;
-	// Asocket.m_pstSCM = m_pstSCM; built in constructor
-	// ACCEPT the connection from our client into the temporary socket Asocket
-	// ACCEPT the connection from our client into the temporary socket Asocket
+
 	// ACCEPT the connection from our client into the temporary socket Asocket
 	// We have to do this in order to get the client index number.
 	sockerr = Accept(Asocket, &SockAddr, &SockAddrLen);
@@ -741,13 +740,14 @@ void CServerSocket::OnAccept(int nErrorCode)
 		BOOL bufBOOL;
 		bufBOOLsize = &bufBOOL;
 		*bufBOOLsize = TRUE;
-		int nMyServer;
+		//int nMyServer;
 		int sockerr;
 		SOCKADDR SockAddr;
 		int SockAddrLen = sizeof(SOCKADDR);
 		//int i;
 		CString Ip4, s, t, sOut;
 		BYTE bIsClosing = 0;
+		CAsyncSocket Asocket;
 
 
 		// how are we going to set our pSCM pointer???
@@ -763,13 +763,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 		Sleep(20);
 
-		//	CServerSocket Asocket(m_pSCM, eOnStack);	// a temporary Async socket of our fashioning ON THE STACK
-		//	Asocket.m_nOwningThreadType = eOnStack;
-		CAsyncSocket Asocket;
-		// Asocket.m_pSCM = m_pSCM;
-		// Asocket.m_pstSCM = m_pstSCM; built in constructor
-		// ACCEPT the connection from our client into the temporary socket Asocket
-		// ACCEPT the connection from our client into the temporary socket Asocket
+
 		// ACCEPT the connection from our client into the temporary socket Asocket
 		// We have to do this in order to get the client index number.
 		sockerr = Accept(Asocket, &SockAddr, &SockAddrLen);
@@ -794,11 +788,11 @@ void CServerSocket::OnAccept(int nErrorCode)
 			with the same wMsg value used for messages.
 #endif
 
-			UINT uPort;
+		UINT uPort;
 		int nClientPortIndex;					// which client are we connecting to? Derive from IP address
 		UINT uClientBaseAddress;		// what is the 32 bit index of the 1st PA Master?
 		WORD wClientBaseAddress[8];
-		char *pIpBase = gServerArray[nMyServer].ClientBaseIp;
+		char *pIpBase = gServerArray[m_nMyServer].ClientBaseIp;
 
 #ifdef CLIENT_AND_SERVER_ON_SAME_MACHINE
 		uClientBaseAddress = inet_addr(pIpBase);	// Instrument base "192.168.10.201", PAG is "192.168.10.10"
@@ -926,11 +920,11 @@ void CServerSocket::OnAccept(int nErrorCode)
 		if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == NULL)	// first time thru
 			{
 			pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] = new ST_SERVERS_CLIENT_CONNECTION();
-			OnAcceptInitializeConnectionStats(pscc, nMyServer, m_nClientIndex);
+			OnAcceptInitializeConnectionStats(pscc, m_nMyServer, m_nClientIndex);
 			pscc->sClientIP4 = Ip4;
 			pscc->m_nClientIndex = m_nClientIndex;
 
-			s.Format(_T("PAPSrv[%d]:Instrument[%d]"), nMyServer, m_nClientIndex);
+			s.Format(_T("PAPSrv[%d]:Instrument[%d]"), m_nMyServer, m_nClientIndex);
 			t = s + _T("  OnAccept() creating critical sections/lists/vChannels\n");
 
 			TRACE(t);
@@ -957,7 +951,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 										//pThread->m_bAutoDelete = 0;
 
 			s.Format(_T("CServerSocketOwnerThread[%d][%d]= 0x%08x, Id=0x%04x was created\n"),
-				nMyServer, m_nClientIndex, pThread, pThread->m_nThreadID);
+				m_nMyServer, m_nClientIndex, pThread, pThread->m_nThreadID);
 			TRACE(s);
 			// Init some things in the thread before it runs. We are now accessing things inside the new thread, not in this thread
 			if (pThread)

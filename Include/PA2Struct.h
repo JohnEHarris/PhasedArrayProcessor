@@ -179,6 +179,7 @@ typedef struct
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
@@ -197,7 +198,7 @@ typedef struct
 	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info		
 
 	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
-	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
+	WORD wSendQDepth;		// Are packets accumulating in send queue.... 28 bytes to here
 
 	// Pipe position information
 	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
@@ -216,7 +217,7 @@ typedef struct
 	BYTE bCmdChnl;		// channel in sequence selected for command
 	BYTE bCmdGate;		// gate addressed by last command
 	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
-	WORD wSpare[3];
+	WORD wSpare[2];
 
 	SEQ_DATA Seq[32];	// 32 sequences each of 8 virtual channels. 32*32 = 1024
 	} IDATA_FROM_HW;	// sizeof = 1024 + 64 byte header = 1088
@@ -231,6 +232,7 @@ typedef struct
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type	
+	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
@@ -268,9 +270,154 @@ typedef struct
 	BYTE bCmdChnl;		// channel in sequence selected for command
 	BYTE bCmdGate;		// gate addressed by last command
 	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
-	WORD wSpare[3];
+	WORD wSpare[2];
 
 	} IDATA_FROM_HW_HDR;		//sizeof = 64 bytes
+
+/****************************************************************************************************************/
+
+
+	// peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure
+	// Processed data sent from the PAP. One stPeakChnlPAP structure for every virtual channel
+	// Nc_Nx processing receives 1 wall reading per AScan but produces a max and min reading 
+	// after 16 AScans.
+	// 2017-08-14 reduce size of PeakData to match input data from NIOS front end
+	// 2017-10-24 in future have id/od flaw, max, min wall and seq number where found for each one.
+	// Then structure size = 10
+	// Will limit max seq modulo to 16 or 128 channels
+
+typedef struct
+	{
+	//	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
+	// ie, PAP did not service PeakData fast enough
+	//	BYTE bG1;		// Gate 1 interface gate -- FUTURE FEATURE. place holder in 2017 version
+	BYTE bStatus;	// to be determined
+	BYTE bChNum;	// 0-255. bChNum = SeqNum*8 + Chnl. SeqNum = [0,15], Chnl  = [0,7]--goes away in future
+	BYTE bId2;		// Gate 2 peak held data 0-255
+	BYTE bOd3;		// Gate 3 peak held data 0-255
+	WORD wTofMin;	// gate 4 min
+	WORD wTofMax;	// gate 4 max -- joins sturcture in future-- then sizeof = 10
+	} stPeakChnlPAP;	// sizeof = 8  -- From PAP
+
+typedef struct
+	{
+	//	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
+	// ie, PAP did not service PeakData fast enough
+	//	BYTE bG1;		// Gate 1 interface gate -- FUTURE FEATURE. place holder in 2017 version
+	//	BYTE bStatus;	// to be determined
+	BYTE bChNum;	// 0-255. bChNum = SeqNum*8 + Chnl. SeqNum = [0,15], Chnl  = [0,7]--goes away in future
+	BYTE bId2;		// Gate 2 peak held data 0-255
+	BYTE bOd3;		// Gate 3 peak held data 0-255
+	WORD wTofMin;	// gate 4 min
+					//WORD wTofMax;	// gate 4 max -- joins sturcture in future-- then sizeof = 10
+	} stPeakChnlNIOS;	// sizeof = 5  -- From ADC
+
+
+typedef struct
+	{
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
+	UINT uSync;			// 0x5CEBDAAD													8
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		12
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
+	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
+							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
+	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
+	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		
+								// Some sequence points may have channel type NOTHING
+	BYTE bStartChannel;	// First virtual channel in peak data PeakChnl--always 0 for this hardware
+	BYTE bSeqPerPacket;	// Nominally 32 sequences but can be less. Data at back end of packet is invalid
+						// Maintains packet size of 1088. All seq valid when bSeqPerPacket = 32
+	BYTE bNiosGlitchCnt;
+	BYTE bCmdQDepthS;	// How deep is the Small command queue in the instrument NIOS processor
+	BYTE bCmdQDepthL;	// How deep is the Large command queue in the instrument NIOS processor
+						// NIOS has limited memory. Msg Q likely to be 
+						// Large, [8][1056] = 16896 bytes, Small [128][32] = 4096
+
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
+	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info	..30	
+
+	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
+	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
+
+						// Pipe position information
+	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+	BYTE bSpare;
+	WORD wLocation;		// x location in motion pulses
+	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
+	WORD wPeriod;		// unit in .2048ms
+	WORD wRotationCnt;	// Number of rotations since pipe present signal
+	WORD wStatus;		// see below
+	WORD wVersionHW;	// Sams altera code version
+	WORD wVersionSW;	// Johns C++ code version ..50
+						// Debugging command activation in instrument
+	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
+	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
+	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
+	BYTE bCmdChnl;		// channel in sequence selected for command
+	BYTE bCmdGate;		// gate addressed by last command
+	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
+	WORD wSpare[2];
+	stPeakChnlPAP PeakChnl[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 
+	} IDATA_PAP;	// sizeof = 1024 + 64 =1088
+
+
+typedef struct
+	{
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
+	UINT uSync;			// 0x5CEBDAAD													8
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
+	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		
+						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
+						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
+	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
+							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
+	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
+	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		
+								// Some sequence points may have channel type NOTHING
+	BYTE bStartChannel;	// First virtual channel in peak data PeakChnl--always 0 for this hardware ... 16
+	BYTE bSeqPerPacket;	// Nominally 32 sequences but can be less. Data at back end of packet is invalid
+						// Maintains packet size of 1088. All seq valid when bSeqPerPacket = 32
+	BYTE bNiosGlitchCnt;
+	BYTE bCmdQDepthS;	// How deep is the Small command queue in the instrument NIOS processor
+	BYTE bCmdQDepthL;	// How deep is the Large command queue in the instrument NIOS processor
+						// NIOS has limited memory. Msg Q likely to be 
+						// Large, [8][1056] = 16896 bytes, Small [128][32] = 4096
+
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
+	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info .. 30		
+
+	WORD wLastCmdSeqCnt;//last command sequence cnt received by this PAP
+	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
+
+						// Pipe position information
+	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+	BYTE bSpare;
+	WORD wLocation;		// x location in motion pulses
+	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
+	WORD wPeriod;		// unit in .2048ms
+	WORD wRotationCnt;	// Number of rotations since pipe present signal
+	WORD wStatus;		// see below
+	WORD wVersionHW;	// Sams altera code version
+	WORD wVersionSW;	// Johns C++ code version
+						// Debugging command activation in instrument
+	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
+	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
+	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
+	BYTE bCmdChnl;		// channel in sequence selected for command
+	BYTE bCmdGate;		// gate addressed by last command
+	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
+	WORD wSpare[2];
+	} IDATA_PAP_HDR;	// sizeof = 64
 
 // Ascan data has same basic structure as Idata 
 typedef struct
@@ -282,6 +429,7 @@ typedef struct
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bSeqNumber;
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id  15
@@ -308,7 +456,7 @@ typedef struct
 	BYTE bScopeGates;	// 1 or more gates to display. Selected by bits -- from cmd 26
 						// 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
 
-	WORD wSpare[8];		// 64 bytes to here
+	WORD wSpare[7];		// 64 bytes to here
 	char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA;		// sizeof() = 1088
@@ -323,6 +471,7 @@ typedef struct
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bSeqNumber;	//for this vChnl
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
@@ -348,7 +497,7 @@ typedef struct
 	BYTE bChCmd24;		// chnl selected by cmd 24 only for Ascan, not for gates -- from cmd 24
 	BYTE bScopeGates;	// 1 or more gates to display. Selected by bits -- from cmd 26
 						// 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
-	WORD wSpare[8];		// 64 bytes to here
+	WORD wSpare[7];		// 64 bytes to here
 	//char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA_HDR;	
@@ -364,12 +513,13 @@ typedef struct
 	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
 						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
 						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bSeqNumber;
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
 /* Change here from format of ASCAN_DATA_HDR */
 	WORD wReadBackID;	// Read back ID for the command data requested
 
-	WORD wScopeSetting;	// inform about trigger, thold, other scope settings
+	//WORD wScopeSetting;	// inform about trigger, thold, other scope settings ... replaced by wBoardType
 	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
 
 						// Pipe position information
@@ -432,40 +582,6 @@ typedef struct // MAX_SEQ_COUNT = 3 in 2018 hardware
 #define DEFAULT_CFG		 ( 1 << 3)		// Nc Nx have default constructor values
 #define STATUS_CLEAR_MASK	~SET_OVERRUN
 
-// peak held data collected over 16 AScans for a single virtual channel and held in PeakData structure
-// Processed data sent from the PAP. One stPeakChnlPAP structure for every virtual channel
-// Nc_Nx processing receives 1 wall reading per AScan but produces a max and min reading 
-// after 16 AScans.
-// 2017-08-14 reduce size of PeakData to match input data from NIOS front end
-// 2017-10-24 in future have id/od flaw, max, min wall and seq number where found for each one.
-// Then structure size = 10
-// Will limit max seq modulo to 16 or 128 channels
-typedef struct
-	{
-//	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
-					// ie, PAP did not service PeakData fast enough
-//	BYTE bG1;		// Gate 1 interface gate -- FUTURE FEATURE. place holder in 2017 version
-	BYTE bStatus;	// to be determined
-	BYTE bChNum;	// 0-255. bChNum = SeqNum*8 + Chnl. SeqNum = [0,15], Chnl  = [0,7]--goes away in future
-	BYTE bId2;		// Gate 2 peak held data 0-255
-	BYTE bOd3;		// Gate 3 peak held data 0-255
-	WORD wTofMin;	// gate 4 min
-	WORD wTofMax;	// gate 4 max -- joins sturcture in future-- then sizeof = 10
-	} stPeakChnlPAP;	// sizeof = 8  -- From PAP
-
-typedef struct
-	{
-	//	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
-	// ie, PAP did not service PeakData fast enough
-	//	BYTE bG1;		// Gate 1 interface gate -- FUTURE FEATURE. place holder in 2017 version
-	//	BYTE bStatus;	// to be determined
-	BYTE bChNum;	// 0-255. bChNum = SeqNum*8 + Chnl. SeqNum = [0,15], Chnl  = [0,7]--goes away in future
-	BYTE bId2;		// Gate 2 peak held data 0-255
-	BYTE bOd3;		// Gate 3 peak held data 0-255
-	WORD wTofMin;	// gate 4 min
-	//WORD wTofMax;	// gate 4 max -- joins sturcture in future-- then sizeof = 10
-	} stPeakChnlNIOS;	// sizeof = 5  -- From ADC
-
 // legacy structure
 typedef struct
 	{
@@ -482,109 +598,6 @@ typedef struct
 // IDATA_PAP is the peak held data from the PAP and sent after 16 ascans
 // IDATA_PAP is the input to the down stream system, ie goes to the GUI
 // PAP receives 5 bytes for every channel
-typedef struct
-	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
-	UINT uSync;			// 0x5CEBDAAD													8
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		12
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
-	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
-							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
-	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
-	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		
-								// Some sequence points may have channel type NOTHING
-	BYTE bStartChannel;	// First virtual channel in peak data PeakChnl--always 0 for this hardware
-	BYTE bSeqPerPacket;	// Nominally 32 sequences but can be less. Data at back end of packet is invalid
-						// Maintains packet size of 1088. All seq valid when bSeqPerPacket = 32
-	BYTE bNiosGlitchCnt;
-	BYTE bCmdQDepthS;	// How deep is the Small command queue in the instrument NIOS processor
-	BYTE bCmdQDepthL;	// How deep is the Large command queue in the instrument NIOS processor
-						// NIOS has limited memory. Msg Q likely to be 
-						// Large, [8][1056] = 16896 bytes, Small [128][32] = 4096
-
-	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
-	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info	..30	
-
-	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
-	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
-
-						// Pipe position information
-	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
-	BYTE bSpare;
-	WORD wLocation;		// x location in motion pulses
-	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
-	WORD wPeriod;		// unit in .2048ms
-	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	WORD wStatus;		// see below
-	WORD wVersionHW;	// Sams altera code version
-	WORD wVersionSW;	// Johns C++ code version ..50
-						// Debugging command activation in instrument
-	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
-	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
-	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
-	BYTE bCmdChnl;		// channel in sequence selected for command
-	BYTE bCmdGate;		// gate addressed by last command
-	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
-	WORD wSpare[3];	
-	stPeakChnlPAP PeakChnl[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 
-	} IDATA_PAP;	// sizeof = 1024 + 64 =1088
-
-
-typedef struct
-	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
-	UINT uSync;			// 0x5CEBDAAD													8
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
-	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
-							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
-	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
-	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		
-								// Some sequence points may have channel type NOTHING
-	BYTE bStartChannel;	// First virtual channel in peak data PeakChnl--always 0 for this hardware ... 16
-	BYTE bSeqPerPacket;	// Nominally 32 sequences but can be less. Data at back end of packet is invalid
-						// Maintains packet size of 1088. All seq valid when bSeqPerPacket = 32
-	BYTE bNiosGlitchCnt;
-	BYTE bCmdQDepthS;	// How deep is the Small command queue in the instrument NIOS processor
-	BYTE bCmdQDepthL;	// How deep is the Large command queue in the instrument NIOS processor
-						// NIOS has limited memory. Msg Q likely to be 
-						// Large, [8][1056] = 16896 bytes, Small [128][32] = 4096
-
-	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
-	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info .. 30		
-
-	WORD wLastCmdSeqCnt;//last command sequence cnt received by this PAP
-	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
-
-						// Pipe position information
-	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
-	BYTE bSpare;
-	WORD wLocation;		// x location in motion pulses
-	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
-	WORD wPeriod;		// unit in .2048ms
-	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	WORD wStatus;		// see below
-	WORD wVersionHW;	// Sams altera code version
-	WORD wVersionSW;	// Johns C++ code version
-						// Debugging command activation in instrument
-	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
-	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
-	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
-	BYTE bCmdChnl;		// channel in sequence selected for command
-	BYTE bCmdGate;		// gate addressed by last command
-	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
-	WORD wSpare[3];
-	} IDATA_PAP_HDR;	// sizeof = 64
 
 						
 // Gates read back data structure

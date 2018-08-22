@@ -100,6 +100,10 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 			switch (i)
 				{
 			case 0:		// the client connection to PAG
+				// force connection by Normal Nx data processing first so that
+				// PAG/UUI WILL see the first connection as client connection 0
+				// do this by not waking the All Wall connection until the Nx connection
+				// is made
 				if ((pCCM_PAG) &&
 					(nShutDown == 0))
 					{
@@ -107,6 +111,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 					}
 				break;
 			case 1:
+				if (pCCM_PAG == NULL) break;	// must connect Nx process first.
 				if ((pCCM_PAG_AW) &&
 					(nShutDown == 0))
 					{

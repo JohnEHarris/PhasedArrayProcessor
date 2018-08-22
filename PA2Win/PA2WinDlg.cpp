@@ -417,6 +417,7 @@ END_MESSAGE_MAP()
 // Look for usb stick starting on G drive assuming the PAP code/Windows machine
 // has only a C hard drive. File content is a single number from 0 to 7
 // Default pap number is held in file on C drive
+// Clive/Robert chage file format to be n.
 
 void CPA2WinDlg::ReadPAPnumber(void)
 	{

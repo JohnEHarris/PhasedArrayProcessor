@@ -112,8 +112,9 @@ CServerSocket::~CServerSocket()
 	void *pv = 0;
 	int i, j;
 	int nDummy;
+	SOCKET hThis;
 	i = j = 0;
-	int nId = AfxGetThread()->m_nThreadID;
+	DWORD nId = AfxGetThread()->m_nThreadID;
 	// for listener socket, m_pSCC is null
 	t.Format(_T("Thread Id=%d - m_pSCC= %x "), nId, m_pSCC);
 
@@ -122,6 +123,7 @@ CServerSocket::~CServerSocket()
 	if (m_pSCM->m_pstSCM == nullptr)
 		ASSERT( 0 );
 
+	hThis = this->m_hSocket;
 	switch (m_nOwningThreadType)
 		{
 		
@@ -137,6 +139,8 @@ CServerSocket::~CServerSocket()
 		if (m_pSCM->m_pstSCM->pServerListenSocket == 0)
 			{
 			TRACE( _T( "m_pSCM->m_pstSCM->pServerListenSocket = 0\n" ) );
+			s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
+			TRACE(s);
 			return;
 			}
 		else
@@ -176,12 +180,16 @@ CServerSocket::~CServerSocket()
 			}	// pServerListenSocket != 0
 
 		m_pSCM->m_pstSCM->pServerListenSocket = 0;
+		s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
+		TRACE(s);
 		return;
 
 	case eOnStack:
 		s = _T( "Temporary socket to create ServerConnection\n" );
 		t += s;
 		TRACE( t );
+		s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
+		TRACE(s);
 		return;	// don't want to proceed and delete all we just built
 
 	case eServerConnection:
@@ -268,6 +276,8 @@ CServerSocket::~CServerSocket()
 		s = _T("Unknown Socket Destructor called \n");
 		TRACE( s );
 		nDummy = 3;
+		s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
+		TRACE(s);
 		return;
 		}
 
@@ -316,7 +326,8 @@ CServerSocket::~CServerSocket()
 		}	// if (nShutDown)
 	if (m_pSCC->pSocket)		// sometimes crashes here ??
 		m_pSCC->pSocket = 0;
-
+	s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
+	TRACE(s);
 	}
 
 // CServerSocket member functions
@@ -560,7 +571,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 			pscc->sClientIP4 = Ip4;
 			pscc->uClientIP4 = uIp4;
 			pscc->m_nClientIndex = m_nClientIndex;
-			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept Client IP = s\n"), m_nMyServer, m_nClientIndex, Ip4);
+			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept Client IP = %s\n"), m_nMyServer, m_nClientIndex, Ip4);
 			t = s;
 			TRACE(t);
 
@@ -745,7 +756,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 		SOCKADDR SockAddr;
 		int SockAddrLen = sizeof(SOCKADDR);
 		//int i;
-		CString Ip4, s, t, sOut;
+		CString Ip4S, Ip4C, s, t, sOut;
 		BYTE bIsClosing = 0;
 		CAsyncSocket Asocket;
 
@@ -788,7 +799,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 			with the same wMsg value used for messages.
 #endif
 
-		UINT uPort;
+		UINT uPortS, uPortC;
 		int nClientPortIndex;					// which client are we connecting to? Derive from IP address
 		UINT uClientBaseAddress;		// what is the 32 bit index of the 1st PA Master?
 		WORD wClientBaseAddress[8];
@@ -807,28 +818,30 @@ void CServerSocket::OnAccept(int nErrorCode)
 			}
 		else
 			{
-			TRACE(_T("InetPton success in OnAccept\n"));
+//			TRACE(_T("InetPton success in OnAccept\n"));
 			uClientBaseAddress = ntohl(*(u_long*)&wClientBaseAddress);	// same value as uClientBaseAddress
 			}
 
 
 #endif
 
-		Asocket.GetSockName(Ip4, uPort);	// my socket info??
-		s.Format(_T("Server side socket %s : %d\n"), Ip4, uPort);	// crash here 7-14-16 on reconnect by instrument
-		TRACE(s);
-		Asocket.GetPeerName(Ip4, uPort);	// connecting clients info??
-		s.Format(_T("Client side socket %s : %d\n"), Ip4, uPort);
-		TRACE(s);
+		Asocket.GetSockName(Ip4S, uPortS);	// my socket info??
+		s.Format(_T("Server side socket %s : %d\n"), Ip4S, uPortS);	// crash here 7-14-16 on reconnect by instrument
+//		TRACE(s);
+		Asocket.GetPeerName(Ip4C, uPortC);	// connecting clients info??
+		s.Format(_T("Client side socket %s : %d\n"), Ip4C, uPortC);
+//		TRACE(s);
 		int ntmp;
-		s = Ip4;
+		s = Ip4C;
 		if (1 != InetPton(AF_INET, s, &wClientBaseAddress))
 			{
 			TRACE(_T("InetPton error\n"));		return;
 			}
 		else
 			{
-			TRACE(_T("InetPton success in OnAccept ... CLIENT CONNECTED ******************\n"));
+			s.Format(_T("InetPton success client %s:%d connected to server %s:%d******\n"),
+				Ip4C, uPortC, Ip4S, uPortS);
+			TRACE(s);
 			ntmp = ntohl(*(u_long*)&wClientBaseAddress);
 			}
 
@@ -921,7 +934,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 			{
 			pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] = new ST_SERVERS_CLIENT_CONNECTION();
 			OnAcceptInitializeConnectionStats(pscc, m_nMyServer, m_nClientIndex);
-			pscc->sClientIP4 = Ip4;
+			pscc->sClientIP4 = Ip4C;
 			pscc->m_nClientIndex = m_nClientIndex;
 
 			s.Format(_T("PAPSrv[%d]:Instrument[%d]"), m_nMyServer, m_nClientIndex);
@@ -932,7 +945,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 			//		theApp.SaveDebugLog(t);
 			pMainDlg->SaveDebugLog(t);
 			pscc->szSocketName = s;
-			pscc->uClientPort = uPort;
+			pscc->uClientPort = uPortC;
 			m_pstSCM->nComThreadExited[m_nClientIndex] = 0;
 			SetpSCC(pscc);
 
@@ -964,7 +977,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 				pThread->m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];
 				pThread->m_nClientIndex = m_nClientIndex;
 				pThread->m_pSCC->pSocket = new CServerSocket(m_pSCM, eServerConnection); ;
-				s.Format(_T("CServerSocket::OnAccept, pThread->m_pSCC->pSocket = 0x%08x\n"), pThread->m_pSCC->pSocket);
+				s.Format(_T("CServerSocket::OnAccept, pThread->m_pSCC->pSocket = 0x%08x, Handle = 0x%08x\n"), 
+					pThread->m_pSCC->pSocket, pThread->m_pSCC->pSocket->m_hSocket);
 				TRACE(s);
 
 
@@ -989,17 +1003,17 @@ void CServerSocket::OnAccept(int nErrorCode)
 				}
 
 			// Display the connect socket IP and port
-			Asocket.GetSockName(Ip4, uPort);	// my socket info??
+			Asocket.GetSockName(Ip4C, uPortC);	// my socket info??
 			pThread->m_pSCC->bConnected = eConfigured;
 
 			char buffer[80], txt[64];
 			strcpy(buffer, GetTimeStringPtr());
-			CstringToChar(Ip4, txt);
+			CstringToChar(Ip4C, txt);
 			printf("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n",
-				m_nClientIndex, txt, uPort, buffer);
+				m_nClientIndex, txt, uPortC, buffer);
 			sOut = buffer;
 			s.Format(_T("\nInstrument Client[%d]  on socket %s : %d accepted by server at %s\n"),
-				m_nClientIndex, Ip4, uPort, sOut);
+				m_nClientIndex, Ip4C, uPortC, sOut);
 			TRACE(s);
 			pMainDlg->SaveDebugLog(s);
 			Sleep(10);
@@ -1170,15 +1184,16 @@ void CServerSocket::OnReceive(int nErrorCode)
 				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
 				}
-
+#ifdef I_AM_PAP
 			// connection order may not match PAP order since not using hard code IP address in real system
-			BYTE bClientIndex = (BYTE)m_pSCC->m_nClientIndex;	// the order in which the clients connected
-			BYTE bPap = pHeader->bPapNumber;	// the machine ID number from 0 to MAX_CLIENTS -1
-			// The client itself knows its client number, assigned by humans with a usb stick.
+			// In the PAP, the servers system receives Idata and sends to the GUI using a client component
+			pHeader->bPapNumber = gbAssignedPAPnumber;	// 
 
-			if ((bPap < MAX_CLIENTS) && (bClientIndex < MAX_CLIENTS))
-				m_pSCM->m_pstSCM->bActualClientConnection[bPap] = bClientIndex;
-
+#else
+			// This is PAG and its connection index number (in 2018 since only one PAP) is 0
+//			if ((bPap < MAX_CLIENTS) && (bClientIndex < MAX_CLIENTS))
+//				m_pSCM->m_pstSCM->bActualClientConnection[bPap] = bClientIndex;
+#endif
 			m_nLastSeqCnt = pHeader->wMsgSeqCnt;
 			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
 			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
@@ -1203,6 +1218,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 					{
 					AddTailRcvPkt(pB);	// put the buffer into the recd data linked list
 					nWholePacketQty++;
+					m_pSCC->bConnected = 2;
 					// WM_USER_SERVERSOCKET_PKT_RECEIVED
 					// the posted message will be processed by: CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
 					// ProcessRcvList needs to be of lower priority than OnReceive in order for OnReceive to quickly

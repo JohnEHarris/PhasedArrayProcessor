@@ -94,7 +94,8 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 	// waiting for ServiceApp::ShutDown to issue ::SetEvent(m_pTestThread->g_hTimerTick);
 	//
 	while( (::WaitForSingleObject(g_hTimerTick, 100) != WAIT_OBJECT_0 ) /*&& (nShutDown == 0)*/ )
-		{
+		{	// while
+#ifdef I_AM_PAP
 		for ( i = 0; i < MAX_CLIENTS; i++)
 			{
 			switch (i)
@@ -108,6 +109,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 					(nShutDown == 0))
 					{
 					pCCM_PAG->TimerTick(eRestartPAPtoPAG);
+					Sleep(20);
 					}
 				break;
 			case 1:
@@ -123,8 +125,8 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 				break;
 				}	// switch end
 			}
-
-		}
+#endif
+		}	// while
 	s = _T("Exit Hello World\n");
 	TRACE(s);
 	nShutDown = 2;

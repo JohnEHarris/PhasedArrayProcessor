@@ -1176,9 +1176,11 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				if (m_pstCCM->uPacketsSent < 10)
 					{
 					if (pSendPkt->wMsgID < 4)
-						s.Format(_T("[%d]CCT::PAP sent PAG %d bytes\n"), m_pstCCM->uPacketsSent, nSent);
+						s.Format(_T("[%d]CCT::PAP sent PAG %d bytes.. MsgId=%d\n"), 
+							m_pstCCM->uPacketsSent, nSent, pSendPkt->wMsgID);
 					else
-						s.Format(_T("[%d]CCT::PAP_AW sent PAG %d bytes\n"), m_pstCCM->uPacketsSent, nSent);
+						s.Format(_T("[%d]CCT::PAP_AW sent PAG %d bytes.. MsgId=%d\n"),
+							m_pstCCM->uPacketsSent, nSent, pSendPkt->wMsgID);
 					TRACE(s);
 					}
 				//NxNx data and all wall have already been copied to a global

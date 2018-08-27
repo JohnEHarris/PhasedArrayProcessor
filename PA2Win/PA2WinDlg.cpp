@@ -417,56 +417,80 @@ END_MESSAGE_MAP()
 // Look for usb stick starting on G drive assuming the PAP code/Windows machine
 // has only a C hard drive. File content is a single number from 0 to 7
 // Default pap number is held in file on C drive
-// Clive/Robert chage file format to be n.
+// Clive/Robert chage file format to be EITHER n.Soco or n.wall where n is the machine number.
+// This make searching more tedious. The PAP will only search directories (D, E, F an finally C)
+// In each directory I will search for n.wall where n ranges from 1-8
+// For my purposes, I will subtract 1 for a range of 0-7
 
+
+#ifdef I_AM_PAP
 void CPA2WinDlg::ReadPAPnumber(void)
 	{
 	//m_PapNumberFile
 	CString sPath, s;
-	char FileName[64] = "G:\\PAP0_7.txt";
-	char Buf[32];
+	char PathName[16] = "G:\\1.wall";		//"G:\\PAP0_7.txt"; -- number in 4th position
+	char FileName[16];
 	CFileException fileException;
-	int i;
+	int i, j;
 	gbAssignedPAPnumber = 128;	// INVALID PAP number
 
 	for (i = 5; i > 0; i--)
-		{
-		sPath = FileName;
-		if (!m_PapNumberFile.Open(sPath, CFile::modeRead | CFile::shareDenyNone, &fileException))
+		{	// drive letter loop 
+		memcpy(FileName, PathName, 16);
+		for (j = 0; j < 8; j++)	// look for 1-8
 			{
-			TRACE(_T("Can't open file %s, error = %u\n"),
-				sPath, fileException.m_cause);
+			sPath = FileName;
+			if (!m_PapNumberFile.Open(sPath, CFile::modeRead | CFile::shareDenyNone, &fileException))
+				{
+				//				TRACE(_T("Can't open file %s, error = %u\n"),
+				//					sPath, fileException.m_cause);
+				FileName[3]++;	// increment the number in the file name
+				}
+			// found it
+			else
+				{
+				s.Format(_T("Found file %s\n"), sPath);
+				TRACE(s);
+				gbAssignedPAPnumber = FileName[3] - '1';	// map 1-8 to 0-7
+				m_PapNumberFile.Close();
+				return;
+				}
 			}
-		else break;
-		FileName[0]--;	// setp thru drive letters.
+		PathName[0]--;	// setp thru drive letters.
+		}	// (i = 5; i > 0; i--) loop thru drive letters
+	if (i == 0)
+		{
+//		TRACE(_T("Can't open file %s, error = %u\n"),
+//				sPath, fileException.m_cause);
+		FileName[3]++;	// increment the number in the file name
 		}
+	// found it
+	else 
+		{
+		s.Format(_T("Found file %s\n"), sPath);
+		TRACE(s);
+		gbAssignedPAPnumber = FileName[3] - '1';	// map 1-8 to 0-7
+		m_PapNumberFile.Close();
+		return;
+		}
+	}
+		PathName[0]--;	// setp thru drive letters.
+		}	// (i = 5; i > 0; i--) loop thru drive letters
 	if (i == 0)
 		{
 		TRACE(_T("Failed to find file name and thus PAP number\n"));
 		gbAssignedPAPnumber = 8;	//INVALID
 		return;
 		}
-	// found the file name. Try to read contents
-	s = _T("Found file PAP0_7.txt on drive ");
-	s += FileName[0];
-	s += "\n";
-	TRACE(s);
-	i = m_PapNumberFile.Read(Buf, 16);
-	m_PapNumberFile.Close();
-	if (i)
-		{
-		i = atoi(Buf);
-		gbAssignedPAPnumber = i;
-		s.Format(_T("gbAssignedPAPnumber = %d\n"), i);
-		TRACE(s);
-		}
-	else
-		{
-		TRACE(_T("Failed to find file name and thus PAP number\n"));
-		gbAssignedPAPnumber = 128;	//INVALID
-		return;
-		}
+	return;
 	}
+#else
+
+void CPA2WinDlg::ReadPAPnumber(void)
+	{
+	gbAssignedPAPnumber = 0;
+	}
+#endif
 
 // Display a matrix of n rows of servers with m columns of connected clients.
 void CPA2WinDlg::ShowConnectedClients(void)
@@ -586,7 +610,11 @@ void CPA2WinDlg::GetServerConnectionManagementInfo(void)
 		gServerArray[i].nPacketSize = gDlg.pTuboIni->GetProfileInt(sSrvSection,szI,INSTRUMENT_PACKET_SIZE);
 
 		szI.Format(_T("%d-Client_Base_IP"), i);
-		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection,szI, _T("192.168.11.40"));
+#ifdef I_AM_PAP
+		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection,szI, _T("192.168.10.201"));
+#else
+		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection, szI, _T("192.168.11.40"));
+#endif
 		CstringToChar(szIp,gServerArray[i].ClientBaseIp);
 		}
 	}
@@ -1129,7 +1157,7 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			if (pSCM[i])
 				{
 				s = gServerArray[i].Ip;			// a global static table of ip addresses
-				pSCM[i]->SetServerIP4(s);		// _T("192.168.11.20"));
+				pSCM[i]->SetServerIP4(s);		// if PAP _T("192.168.10.10")); if PAG _T("192.168.11.20")
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7501);
 				pSCM[i]->SetServerType(ePhaseArrayMaster);
@@ -2352,6 +2380,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the 
 	int rc;
 	GenericPacketHeader *pHeader;
 	ST_SMALL_CMD *pSmallCmd = (ST_SMALL_CMD *)pMsg;
+	ST_SERVER_CONNECTION_MANAGEMENT &pSCC = stSCM[0];
 
 	pHeader = (GenericPacketHeader*)pMsg;
 	nLen = pHeader->wByteCount;

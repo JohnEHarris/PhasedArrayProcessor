@@ -128,8 +128,9 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	m_pSCC->pSocket->m_nOwningThreadType = eServerConnection;
 
 #ifdef _DEBUG
-		s.Format(_T("\n**********  Client socket at %s : %d connected to server at %s :%d ***********\n"), 
-			Ip4, uPort, stSCM[m_nMyServer].sServerIP4, stSCM[m_nMyServer].uServerPort);
+		s.Format(_T("\n**********  Client socket at %s : %d connected to server at %s :%d with Handle: 0x%08x***********\n"), 
+			Ip4, uPort, stSCM[m_nMyServer].sServerIP4, stSCM[m_nMyServer].uServerPort,
+			m_hConnectionSocket);
 		TRACE(s);
 		s = m_pSCC->szSocketName;
 		s += _T("\n");

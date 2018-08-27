@@ -114,10 +114,14 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 				break;
 			case 1:
 				if (pCCM_PAG == NULL) break;	// must connect Nx process first.
-				if ((pCCM_PAG_AW) &&
-					(nShutDown == 0))
+				if (pCCM_PAG->m_pstCCM->bConnected)
 					{
-					pCCM_PAG_AW->TimerTick(eRestartPAPtoPAG);
+
+					if ((pCCM_PAG_AW) &&
+						(nShutDown == 0))
+						{
+						pCCM_PAG_AW->TimerTick(eRestartPAPtoPAG);
+						}
 					}
 				break;
 

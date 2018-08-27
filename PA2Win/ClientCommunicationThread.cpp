@@ -578,7 +578,7 @@ void CClientCommunicationThread::CreateSocket(WPARAM w, LPARAM lParam)
 		// make a new 'connect' client socket
 	}
 
-// Call the socket connect function from the receiver thread
+// Call the socket connect function from StartTCPCommunication
 void CClientCommunicationThread::ConnectSocket(WPARAM w, LPARAM lParam)
 	{
 	CString s,t;
@@ -1114,7 +1114,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		m_pMyCCM->UnLockSendPktList();	// give a higher priority thread a chance to add packets
 
 #ifdef I_AM_PAP
-		pSendPkt->bPAPNumber = gbAssignedPAPnumber;
+		pSendPkt->bBoardNumber = gbAssignedBoardNumber;
 #endif
 
 		// examine the MsgId of the extracted packet to see what type message it really is

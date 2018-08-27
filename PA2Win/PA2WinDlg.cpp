@@ -420,7 +420,7 @@ END_MESSAGE_MAP()
 // Clive/Robert chage file format to be EITHER n.Soco or n.wall where n is the machine number.
 // This make searching more tedious. The PAP will only search directories (D, E, F an finally C)
 // In each directory I will search for n.wall where n ranges from 1-8
-// For my purposes, I will subtract 1 for a range of 0-7
+// For my purposes, I will subtract 1 for a range of 0-7  -- NOT
 
 
 #ifdef I_AM_PAP
@@ -451,7 +451,7 @@ void CPA2WinDlg::ReadPAPnumber(void)
 				{
 				s.Format(_T("Found file %s\n"), sPath);
 				TRACE(s);
-				gbAssignedPAPnumber = FileName[3] - '1';	// map 1-8 to 0-7
+				gbAssignedBoardNumber = FileName[3] - '0';	// map 1-8 to 0-7 -- NOT
 				m_PapNumberFile.Close();
 				return;
 				}
@@ -479,7 +479,7 @@ void CPA2WinDlg::ReadPAPnumber(void)
 	if (i == 0)
 		{
 		TRACE(_T("Failed to find file name and thus PAP number\n"));
-		gbAssignedPAPnumber = 8;	//INVALID
+		gbAssignedBoardNumber = 8;	//INVALID
 		return;
 		}
 	return;
@@ -488,7 +488,7 @@ void CPA2WinDlg::ReadPAPnumber(void)
 
 void CPA2WinDlg::ReadPAPnumber(void)
 	{
-	gbAssignedPAPnumber = 0;
+	gbAssignedBoardNumber = 0;
 	}
 #endif
 
@@ -1865,6 +1865,9 @@ void CPA2WinDlg::CloseFakeData(void)
 	m_nFakeDataExists = 0;
 	}
 
+// This timer only runs the PA2WinDlg screen.
+// Timed connection attempts to PAG if this is PAP are done by pings from the TestThread
+// TestThread calls 
 void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 	{
 	// TODO: Add your message handler code here and/or call default

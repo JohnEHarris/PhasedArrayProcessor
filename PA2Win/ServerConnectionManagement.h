@@ -226,7 +226,7 @@ typedef struct
 	// If using DHCP instead of assigned IP address, the connection number is not tied to the
 	// IP address of the device connecting. Hence the following mapping maps the connection to the
 	// correct client. 8-13-2018
-	BYTE bActualClientConnection[MAX_CLIENTS_PER_SERVER];
+	//BYTE bActualClientConnection[MAX_CLIENTS_PER_SERVER];
 
 	ST_SERVERS_CLIENT_CONNECTION *pClientConnection[MAX_CLIENTS_PER_SERVER];	// an array of pointers to 
 									// information about individual clients connected to this server.

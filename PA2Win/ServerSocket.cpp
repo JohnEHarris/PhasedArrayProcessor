@@ -139,7 +139,7 @@ CServerSocket::~CServerSocket()
 		if (m_pSCM->m_pstSCM->pServerListenSocket == 0)
 			{
 			TRACE( _T( "m_pSCM->m_pstSCM->pServerListenSocket = 0\n" ) );
-			s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
+			s.Format(_T("Server Socket %d Listener Destructor exit\n"), hThis);
 			TRACE(s);
 			return;
 			}

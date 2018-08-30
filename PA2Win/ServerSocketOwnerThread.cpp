@@ -227,13 +227,14 @@ BOOL CServerSocketOwnerThread::InitInstance()
 /***********************************************************************/
 // After detaching old socket in ServerSocket::OnAccept, use this call
 // to attach the new socket
-// WPARAM w = 0, lParam = new socket handle
+// WPARAM w = owning thread number, lParam = new socket handle
 // Necessitated by using DHCP for PAP. Only needed for PAP code at this time 2018-08-08
 #if 1
 void CServerSocketOwnerThread::AttachSocket(WPARAM w, LPARAM lParam)
 	{
 	m_hConnectionSocket = (SOCKET) lParam;
 	ST_SERVERS_CLIENT_CONNECTION *pscc = GetpSCC();
+	int nOwningThread = (int) w;
 	pscc->bSocketDestructorOnly = 1;
 	if (pscc->pSocket)
 		{
@@ -246,9 +247,12 @@ void CServerSocketOwnerThread::AttachSocket(WPARAM w, LPARAM lParam)
 	else
 		{
 		TRACE(_T("Create new pSocket\n"));
-		pscc->pSocket = new CServerSocket(m_pSCM, eServerConnection);
+		pscc->pSocket = new CServerSocket(m_pSCM, nOwningThread);
 		if (pscc->pSocket)
+			{
 			pscc->pSocket->Attach(m_hConnectionSocket);
+			pscc->bConnected = 1;
+			}
 		}
 	pscc->bSocketDestructorOnly = 0;
 	}

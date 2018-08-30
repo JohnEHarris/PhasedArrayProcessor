@@ -328,6 +328,8 @@ CServerSocket::~CServerSocket()
 		m_pSCC->pSocket = 0;
 	s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
 	TRACE(s);
+	for (i = 0; i < 100; i++)
+		nDummy++;
 	}
 
 // CServerSocket member functions
@@ -426,7 +428,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	SOCKADDR SockAddr;
 	int SockAddrLen = sizeof(SOCKADDR);
 	//int i;
-	CString Ip4,s,t,sOut;
+	CString Ip4S, Ip4C, s, t, sOut;
 	UINT uIp4 = 0;
 	BYTE bIsClosing = 0;
 	CAsyncSocket Asocket;
@@ -469,7 +471,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	with the same wMsg value used for messages.
 #endif
 
-	UINT uPort;
+	UINT uPortS, uPortC;
 	int nClientPortIndex;			// which client are we connecting to? Derive from IP address
 	UINT uClientBaseAddress;		// what is the 32 bit index of the 1st PA Master?
 	WORD wClientBaseAddress[8];
@@ -496,18 +498,21 @@ void CServerSocket::OnAccept(int nErrorCode)
 #endif
 
 
-	Asocket.GetSockName(Ip4,uPort);	// my socket info??
-	s.Format(_T("Server side socket %s : %d\n"), Ip4, uPort);	// crash here 7-14-16 on reconnect by instrument
+	Asocket.GetSockName(Ip4S,uPortS);	// my socket info??
+	s.Format(_T("Server side socket %s : %d\n"), Ip4S, uPortS);	// crash here 7-14-16 on reconnect by instrument
 	TRACE(s);
-	Asocket.GetPeerName(Ip4,uPort);	// connecting clients info??
-	s.Format(_T("Client side socket %s : %d\n"), Ip4, uPort);
+	Asocket.GetPeerName(Ip4C,uPortC);	// connecting clients info??
+	s.Format(_T("Client side socket %s : %d\n"), Ip4C, uPortC);
 	TRACE(s);
 	int ntmp = 0;
-	s = Ip4;
+	s = Ip4C;
 	if (1 != InetPton(AF_INET, s, &wClientBaseAddress) )
 		{	TRACE(_T("InetPton error\n"));		return;		}
 	else
-		{	TRACE(_T("InetPton success in OnAccept ... CLIENT CONNECTED ******************\n"));
+		{	
+		s.Format(_T("InetPton success client %s:%d connected to server %s:%d******\n"),
+			Ip4C, uPortC, Ip4S, uPortS);
+		TRACE(s);
 		ntmp = uClientBaseAddress = ntohl(*(u_long*)&wClientBaseAddress);
 		uIp4 = uClientBaseAddress;
 		}
@@ -568,17 +573,17 @@ void CServerSocket::OnAccept(int nErrorCode)
 			{
 			pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] = new ST_SERVERS_CLIENT_CONNECTION();
 			OnAcceptInitializeConnectionStats(pscc, m_nMyServer, m_nClientIndex);
-			pscc->sClientIP4 = Ip4;
+			pscc->sClientIP4 = Ip4C;
 			pscc->uClientIP4 = uIp4;
 			pscc->m_nClientIndex = m_nClientIndex;
-			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept Client IP = %s\n"), m_nMyServer, m_nClientIndex, Ip4);
+			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept Client IP = %s\n"), m_nMyServer, m_nClientIndex, Ip4C);
 			t = s;
 			TRACE(t);
 
 			//		theApp.SaveDebugLog(t);
 			pMainDlg->SaveDebugLog(t);
 			pscc->szSocketName = s;
-			pscc->uClientPort = uPort;
+			pscc->uClientPort = uPortC;
 			m_pstSCM->nComThreadExited[m_nClientIndex] = 0;
 			SetpSCC(pscc);
 
@@ -591,13 +596,13 @@ void CServerSocket::OnAccept(int nErrorCode)
 			// Now the Owner thread is not suspended.
 			SOCKET hConnectionSocket;
 			pscc = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];	// we know its not null
-			if (pscc->uClientIP4 == uIp4)
+			if ((pscc->uClientIP4 == uIp4) && (uPortS == m_pstSCM->uServerPort))
 				{
 				pscc->bSocketDestructorOnly = 1;
 				CServerSocketOwnerThread * pThread = pscc->pServerSocketOwnerThread;
 				hConnectionSocket = Asocket.Detach();
-				// causes 
-				pThread->PostThreadMessageW(WM_USER_ATTACH_SERVER_SOCKET, 0, (LPARAM)hConnectionSocket);
+				// causes CServerSocketOwnerThread::AttachSocket() to run
+				pThread->PostThreadMessageW(WM_USER_ATTACH_SERVER_SOCKET, (WPARAM) m_nMyServer, (LPARAM)hConnectionSocket);
 				Sleep(50);
 				SetpSCC(pscc);
 				CAsyncSocket::OnAccept(nErrorCode);
@@ -674,17 +679,17 @@ void CServerSocket::OnAccept(int nErrorCode)
 			}
 		
 		// Display the connect socket IP and port
-		Asocket.GetSockName(Ip4,uPort);	// my socket info??
+		Asocket.GetSockName(Ip4C,uPortC);	// my socket info??
 		pThread->m_pSCC->bConnected = eConfigured;
 		
 		char buffer [80], txt[64];
 		strcpy(buffer,GetTimeStringPtr());
-		CstringToChar(Ip4, txt);
+		CstringToChar(Ip4C, txt);
 		printf("Instrument Client[%d]  on socket %s : %d accepted to server at %s\n", 
-			m_nClientIndex, txt, uPort, buffer);
+			m_nClientIndex, txt, uPortC, buffer);
 		sOut = buffer;
 		s.Format(_T("\nInstrument Client[%d]  on socket %s : %d accepted by server at %s\n"), 
-			m_nClientIndex,Ip4, uPort, sOut);
+			m_nClientIndex,Ip4C, uPortC, sOut);
 		TRACE(s);
 		pMainDlg->SaveDebugLog(s);
 		Sleep(10);

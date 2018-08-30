@@ -432,7 +432,7 @@ void CPA2WinDlg::ReadPAPnumber(void)
 	char FileName[16];
 	CFileException fileException;
 	int i, j;
-	gbAssignedPAPnumber = 128;	// INVALID PAP number
+	gbAssignedBoardNumber = 128;	// INVALID PAP number
 
 	for (i = 5; i > 0; i--)
 		{	// drive letter loop 
@@ -458,24 +458,7 @@ void CPA2WinDlg::ReadPAPnumber(void)
 			}
 		PathName[0]--;	// setp thru drive letters.
 		}	// (i = 5; i > 0; i--) loop thru drive letters
-	if (i == 0)
-		{
-//		TRACE(_T("Can't open file %s, error = %u\n"),
-//				sPath, fileException.m_cause);
-		FileName[3]++;	// increment the number in the file name
-		}
-	// found it
-	else 
-		{
-		s.Format(_T("Found file %s\n"), sPath);
-		TRACE(s);
-		gbAssignedPAPnumber = FileName[3] - '1';	// map 1-8 to 0-7
-		m_PapNumberFile.Close();
-		return;
-		}
-	}
-		PathName[0]--;	// setp thru drive letters.
-		}	// (i = 5; i > 0; i--) loop thru drive letters
+
 	if (i == 0)
 		{
 		TRACE(_T("Failed to find file name and thus PAP number\n"));

@@ -232,9 +232,10 @@ BOOL CServerSocketOwnerThread::InitInstance()
 #if 1
 void CServerSocketOwnerThread::AttachSocket(WPARAM w, LPARAM lParam)
 	{
+	// thread type is usually eServerConnection as opposed to a listner socket
 	m_hConnectionSocket = (SOCKET) lParam;
 	ST_SERVERS_CLIENT_CONNECTION *pscc = GetpSCC();
-	int nOwningThread = (int) w;
+	int nOwningThreadType = (int) w;
 	pscc->bSocketDestructorOnly = 1;
 	if (pscc->pSocket)
 		{
@@ -247,11 +248,13 @@ void CServerSocketOwnerThread::AttachSocket(WPARAM w, LPARAM lParam)
 	else
 		{
 		TRACE(_T("Create new pSocket\n"));
-		pscc->pSocket = new CServerSocket(m_pSCM, nOwningThread);
+		pscc->pSocket = new CServerSocket(m_pSCM, nOwningThreadType);
 		if (pscc->pSocket)
 			{
 			pscc->pSocket->Attach(m_hConnectionSocket);
 			pscc->bConnected = 1;
+			pscc->pSocket->m_pSCC = m_pSCC;
+			m_pSCC->pSocket = pscc->pSocket;
 			}
 		}
 	pscc->bSocketDestructorOnly = 0;

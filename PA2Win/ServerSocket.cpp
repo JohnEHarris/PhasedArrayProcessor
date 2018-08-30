@@ -576,7 +576,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 			pscc->sClientIP4 = Ip4C;
 			pscc->uClientIP4 = uIp4;
 			pscc->m_nClientIndex = m_nClientIndex;
-			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept Client IP = %s\n"), m_nMyServer, m_nClientIndex, Ip4C);
+			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept Client IP = %s server port %d\n"), 
+				m_nMyServer, m_nClientIndex, Ip4C, uPortS);
 			t = s;
 			TRACE(t);
 
@@ -589,7 +590,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 			break;
 			}
-		else  // this might be the same IP address as was previously connecdted
+		else  // this might be the same IP address as was previously connected
 			{	
 			// In that case, detach the existing socket and connect to a new socket
 			// Could NOT just set pThread->socket = detatched value before because that thread was suspended
@@ -601,9 +602,9 @@ void CServerSocket::OnAccept(int nErrorCode)
 				pscc->bSocketDestructorOnly = 1;
 				CServerSocketOwnerThread * pThread = pscc->pServerSocketOwnerThread;
 				hConnectionSocket = Asocket.Detach();
-				// causes CServerSocketOwnerThread::AttachSocket() to run
-				pThread->PostThreadMessageW(WM_USER_ATTACH_SERVER_SOCKET, (WPARAM) m_nMyServer, (LPARAM)hConnectionSocket);
-				Sleep(50);
+				// next causes CServerSocketOwnerThread::AttachSocket() to run
+				pThread->PostThreadMessageW(WM_USER_ATTACH_SERVER_SOCKET, (WPARAM) eServerConnection, (LPARAM)hConnectionSocket);
+				Sleep(10);
 				SetpSCC(pscc);
 				CAsyncSocket::OnAccept(nErrorCode);
 				return;

@@ -1114,6 +1114,11 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		m_pMyCCM->UnLockSendPktList();	// give a higher priority thread a chance to add packets
 
 #ifdef I_AM_PAP
+		// This is the only place where the board number in Robert's sense of the word gets used
+		// It could also be thought of as the PAP number. It is assigned from a memory stick
+		// and is used only by the UUI to determine which data stream it is receiving. 2018-08-31
+		// On commands from Robert, the target board number is changed to 0 and the instrument boxes
+		// (ADC board and pulser have their IP address offsets set to 0
 		pSendPkt->bBoardNumber = gbAssignedBoardNumber;
 #endif
 

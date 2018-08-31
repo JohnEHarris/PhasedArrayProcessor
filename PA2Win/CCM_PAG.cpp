@@ -154,9 +154,13 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 			// stSCM[1].  use [0] for initial testing
 #ifdef NEW_SOCKET
+			// 2018-08-31 since bBoardNumber is now assigned from usb stick, it doesn't correspond to
+			// the real connection which under assumed operating conditions is boardNumber 0
+			pMmiCmd->bBoardNumber = 0;
 			CServerSocket *pSocket = stSCM[1].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
 			CServerSocketOwnerThread *pThread = stSCM[1].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
 #else
+			// should pMmiCmd->bBoardNumber be 0 ??
 			CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
 			CServerSocketOwnerThread *pThread = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
 #endif
@@ -202,7 +206,9 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		
 		else
 			{	// command for ADC board
-
+				// 2018-08-31 since bBoardNumber is now assigned from usb stick, it doesn't correspond to
+				// the real connection which under assumed operating conditions is boardNumber 0
+			pMmiCmd->bBoardNumber = 0;
 			if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber] == nullptr)
 				{
 				s.Format(_T("No Client Connection ptr for ADC board number=%d\n"), pMmiCmd->bBoardNumber);
@@ -258,7 +264,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 					// virtual channels exist in Server side structure only
 					// Server side connects to Adc and other hardware data sources
 					pCmdS = (ST_NX_CMD *)pMmiCmd;	// cast this message to Nx command format
-					nInst = pCmdS->bBoardNumber;	// which instrument
+					nInst = pCmdS->bBoardNumber;	// which instrument -- after Aug 2018 always 0
 
 					// For now server[0] connects to Adc clients
 					// Not going to send info to client, but does process that clients data with these parameters

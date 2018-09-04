@@ -1119,7 +1119,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		// and is used only by the UUI to determine which data stream it is receiving. 2018-08-31
 		// On commands from Robert, the target board number is changed to 0 and the instrument boxes
 		// (ADC board and pulser have their IP address offsets set to 0
-		pSendPkt->bBoardNumber = gbAssignedBoardNumber;
+		pSendPkt->bPAPNumber = gbAssignedPAPNumber;
 #endif
 
 		// examine the MsgId of the extracted packet to see what type message it really is

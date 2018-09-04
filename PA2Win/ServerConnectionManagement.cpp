@@ -432,7 +432,7 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 		// Killing the socket on shut down will also kill the owner thread
 		if (0 == KillServerSocket( nMyServer, i, 100 ))
 			{
-			s.Format( _T( "Timed out w/o killing ServerSocket[i]\n" ), i );
+			s.Format( _T( "Timed out w/o killing ServerSocket[%d]\n" ), i );
 			TRACE(s);
 			}
 #if 0

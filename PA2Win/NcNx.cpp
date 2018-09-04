@@ -623,7 +623,7 @@ void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 			ST_LARGE_CMD *pSend = new ST_LARGE_CMD;
 			memset((void*)pSend, 0, sizeof(ST_LARGE_CMD));
 			memcpy((void*)pSend, (void*)pMsg, pMsg->wByteCount);
-			gDlg.pUIDlg->SendMsgToPAP((int)pMsg->bPapNumber, pMsg->wMsgID, (void *)pSend);
+			gDlg.pUIDlg->SendMsgToPAP((int)pMsg->bPAPNumber, pMsg->wMsgID, (void *)pSend);
 			//delete pSend; auto deleted in sending function
 			}
 		}
@@ -664,14 +664,14 @@ void CNcNx::GateCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	m_GateCmd.Head.wByteCount = 32;
 	m_GateCmd.Head.uSync = SYNC;
 //		m_GateCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
-	m_GateCmd.Head.bPapNumber = nPap;
+	m_GateCmd.Head.bPAPNumber = nPap;
 	m_GateCmd.Head.bBoardNumber = nBoard;
 	m_GateCmd.bSeq = nSeq;
 	m_GateCmd.bChnl = nCh;
 	m_GateCmd.bGateNumber = nGate;
 	m_GateCmd.wDelay = nValue;	// called delay but now can be one of many
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d, Ch=%d, Gate=%d, Value=%5d\n"),
-		m_GateCmd.Head.wMsgID, m_GateCmd.Head.wByteCount, m_GateCmd.Head.bPapNumber,
+		m_GateCmd.Head.wMsgID, m_GateCmd.Head.wByteCount, m_GateCmd.Head.bPAPNumber,
 		m_GateCmd.Head.bBoardNumber, m_GateCmd.bSeq, m_GateCmd.bChnl,
 		m_GateCmd.bGateNumber, m_GateCmd.wDelay);
 	t = sym + s;
@@ -722,14 +722,14 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	m_TcgCmd.Head.wByteCount = 32;
 	m_TcgCmd.Head.uSync = SYNC;
 //		m_TcgCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
-	m_TcgCmd.Head.bPapNumber = nPap;
+	m_TcgCmd.Head.bPAPNumber = nPap;
 	m_TcgCmd.Head.bBoardNumber = nBoard;
 	m_TcgCmd.bSeq = nSeq;
 	m_TcgCmd.bChnl = nCh;
 	m_TcgCmd.bGateNumber = nGate;
 	m_TcgCmd.wDelay = nValue;	// called delay but now can be one of many
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d, Ch=%d, Gate=%d, Value=%5d\n"),
-		m_TcgCmd.Head.wMsgID, m_TcgCmd.Head.wByteCount, m_TcgCmd.Head.bPapNumber,
+		m_TcgCmd.Head.wMsgID, m_TcgCmd.Head.wByteCount, m_TcgCmd.Head.bPAPNumber,
 		m_TcgCmd.Head.bBoardNumber, m_TcgCmd.bSeq, m_TcgCmd.bChnl,
 		m_TcgCmd.bGateNumber, m_TcgCmd.wDelay);
 	t = sym + s;
@@ -747,12 +747,12 @@ void CNcNx::ReadBackCmd(int nPap, int nBoard, int nCmd, int nValue)
 	m_RdBkCmd.Head.wByteCount = 32;
 	m_RdBkCmd.Head.uSync = SYNC;
 	//		m_TcgCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
-	m_RdBkCmd.Head.bPapNumber = nPap;
+	m_RdBkCmd.Head.bPAPNumber = nPap;
 	m_RdBkCmd.Head.bBoardNumber = nBoard;
 	m_RdBkCmd.wReadBackID = nValue;	// this is the nValue parameter
 
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, RdBkCmd = 13, RdBkID = %2d\n"),
-		m_RdBkCmd.Head.wMsgID, m_RdBkCmd.Head.wByteCount, m_RdBkCmd.Head.bPapNumber,
+		m_RdBkCmd.Head.wMsgID, m_RdBkCmd.Head.wByteCount, m_RdBkCmd.Head.bPAPNumber,
 		m_RdBkCmd.Head.bBoardNumber, m_RdBkCmd.wReadBackID);
 	t = sym + s;
 	m_lbOutput.AddString(t);
@@ -781,7 +781,7 @@ void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	m_GateCmd.Head.wByteCount = 32;
 	m_GateCmd.Head.uSync = SYNC;
 //		m_GateCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
-	m_GateCmd.Head.bPapNumber = nPap;
+	m_GateCmd.Head.bPAPNumber = nPap;
 	m_GateCmd.Head.bBoardNumber = nBoard;
 	m_GateCmd.bSeq = nSeq & 0x1f;	// starting seq number
 	m_GateCmd.bChnl = nCh;	// does not matter
@@ -789,7 +789,7 @@ void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	if (nValue > 32)	nValue = 32;
 	m_GateCmd.bSpare = nValue; // the last valid seq number before restart + 1.. the modulo
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Start_Seq#=%d, (Param)SeqModulo = %d\n"),
-		m_GateCmd.Head.wMsgID, m_GateCmd.Head.wByteCount, m_GateCmd.Head.bPapNumber,
+		m_GateCmd.Head.wMsgID, m_GateCmd.Head.wByteCount, m_GateCmd.Head.bPAPNumber,
 		m_GateCmd.Head.bBoardNumber, m_GateCmd.bSeq, m_GateCmd.bSpare);
 	t = sym + s;
 	m_lbOutput.AddString(t);
@@ -811,7 +811,7 @@ void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 	int i, j, k;
 	for (i = 0; i < 16; i++)
 		{
-		sml[i].Head.bPapNumber = 0;	// always for testing
+		sml[i].Head.bPAPNumber = 0;	// always for testing
 		sml[i].Head.bBoardNumber = nBoard;
 		sml[i].Head.wByteCount = 32;
 		sml[i].Head.uSync = SYNC;
@@ -902,14 +902,14 @@ void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	m_WordCmd.Head.wByteCount = 32;
 	m_WordCmd.Head.uSync = SYNC;
 	//		m_WordCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
-	m_WordCmd.Head.bPapNumber = nPap;
+	m_WordCmd.Head.bPAPNumber = nPap;
 	m_WordCmd.Head.bBoardNumber = nBoard;
 	m_WordCmd.bSeq = nSeq & 0x1f;	// starting seq number
 	m_WordCmd.bChnl = nCh;	// does not matter
 	m_WordCmd.bGateNumber = nGate;	// does not matter
 	m_WordCmd.wCmd = nValue;
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Start_Seq#=%d, (Param)WordCmd = %d\n"),
-		m_WordCmd.Head.wMsgID, m_WordCmd.Head.wByteCount, m_WordCmd.Head.bPapNumber,
+		m_WordCmd.Head.wMsgID, m_WordCmd.Head.wByteCount, m_WordCmd.Head.bPAPNumber,
 		m_WordCmd.Head.bBoardNumber, m_WordCmd.bSeq, m_WordCmd.wCmd);
 	t = sym + s;
 	m_lbOutput.AddString(t);
@@ -975,14 +975,14 @@ void CNcNx::PulserCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 	m_WordCmd.Head.wByteCount = 32;
 	m_WordCmd.Head.uSync = SYNC;
 	//		m_WordCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
-	m_WordCmd.Head.bPapNumber = nPap;
+	m_WordCmd.Head.bPAPNumber = nPap;
 	m_WordCmd.Head.bBoardNumber = nBoard;
 	m_WordCmd.bSeq = nSeq & 0x1f;	// starting seq number
 	m_WordCmd.bChnl = nCh;	// does not matter
 	m_WordCmd.bGateNumber = nGate;	// does not matter
 	m_WordCmd.wCmd = wValue;
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Start_Seq#=%d, (Param)WordCmd = %d\n"),
-		m_WordCmd.Head.wMsgID, m_WordCmd.Head.wByteCount, m_WordCmd.Head.bPapNumber,
+		m_WordCmd.Head.wMsgID, m_WordCmd.Head.wByteCount, m_WordCmd.Head.bPAPNumber,
 		m_WordCmd.Head.bBoardNumber, m_WordCmd.bSeq, m_WordCmd.wCmd);
 	t = sym + s;
 	m_lbOutput.AddString(t);

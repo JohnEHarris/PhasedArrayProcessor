@@ -1193,7 +1193,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 #ifdef I_AM_PAP
 			// connection order may not match PAP order since not using hard code IP address in real system
 			// In the PAP, the servers system receives Idata and sends to the GUI using a client component
-			pHeader->bBoardNumber = gbAssignedBoardNumber;	// 
+			pHeader->bPAPNumber = gbAssignedPAPNumber;	// 
 
 #else
 			// This is PAG and its connection index number (in 2018 since only one PAP) is 0

@@ -127,7 +127,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
-	BYTE bPapNumber;	// which PAP is the command for
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read	
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 	}	GenericPacketHeader;	// 12 bytes
 
@@ -160,7 +160,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
-	BYTE bPapNumber;	// which PAP is the command for
+	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -185,9 +185,9 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 
 	BYTE bSpare[4];		// 16
 	WORD wCmd[8];		// 16	
@@ -200,9 +200,9 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 
 	BYTE bSpare[4];		// 16
 	WORD wNx;			// length of averaging filter  0 < wNx < 9
@@ -219,9 +219,9 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 
 	BYTE bSpare[20];	// sequence number at beginning of stPeakChnlPAP PeakChnl[] // 32 bytes to here
 	BYTE bMsg[1024];	// Max unique sets of Nc Nx data per instrument.
@@ -547,9 +547,9 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 
 	BYTE bSpare[4];		// 16
 	ST_NC_NX stNcNx[52];		// 20*52 = 1040	
@@ -562,9 +562,9 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlgPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 
 	BYTE bSpare[4];		// 16
 	ST_NC_NX stNcNx[52];		// 1040	

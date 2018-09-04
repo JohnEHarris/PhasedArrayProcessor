@@ -177,8 +177,9 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
@@ -230,8 +231,9 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type	
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
@@ -320,10 +322,9 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		12
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
@@ -374,10 +375,9 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-						// PAP-0 = 192.168.10.40, PAP-1=...41, PAP-2=...42
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP		
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
@@ -427,8 +427,9 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count	10
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bSeqNumber;
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
@@ -468,9 +469,9 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count	10
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bSeqNumber;	//for this vChnl
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
@@ -510,9 +511,9 @@ typedef struct
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count
 	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
-	BYTE bBoardNumber;	// 0-255. 0 based ip address of instruments for each PAP
-						// Flaw-0=192.168.10.200, Flaw-1=...201, Flaw-2=...202 AnlogPlsr=...206
-						// Wall = ...210 DigPlsr=...212, gaps allow for more of each board type
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
 	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bSeqNumber;
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?

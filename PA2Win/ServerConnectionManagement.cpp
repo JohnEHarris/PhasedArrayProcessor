@@ -174,7 +174,7 @@ CServerConnectionManagement::CServerConnectionManagement(int nMyServerIndex)
 		m_pstSCM->nComThreadExited[i]	= 0;
 		// new 2018-08-03 to support DHCP on PAP boxes. Only applies to PAG/UUI
 		// PAP servers still have hard coded IP address and so to their clients (Sam's NIOS hardware)
-		//m_pstSCM->bActualClientConnection[i] = -1;
+		m_pstSCM->bActualClientConnection[i] = -1;
 		}
 
 	};

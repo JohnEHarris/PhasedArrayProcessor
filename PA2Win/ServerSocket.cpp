@@ -1190,15 +1190,20 @@ void CServerSocket::OnReceive(int nErrorCode)
 				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
 				}
-#ifdef I_AM_PAP
+
+#if 1
 			// connection order may not match PAP order since not using hard code IP address in real system
-			// In the PAP, the servers system receives Idata and sends to the GUI using a client component
-			pHeader->bPAPNumber = gbAssignedPAPNumber;	// 
+			BYTE bClientIndex = (BYTE)m_pSCC->m_nClientIndex;	// the order in which the clients connected
+			BYTE bPap = pHeader->bPapNumber;	// the machine ID number from 0 to MAX_CLIENTS -1
+			// The client itself knows its client number, assigned by humans with a usb stick.
+
+			if ((bPap < MAX_CLIENTS) && (bClientIndex < MAX_CLIENTS))
+				m_pSCM->m_pstSCM->bActualClientConnection[bPap] = bClientIndex;
 
 #else
 			// This is PAG and its connection index number (in 2018 since only one PAP) is 0
-//			if ((bPap < MAX_CLIENTS) && (bClientIndex < MAX_CLIENTS))
-//				m_pSCM->m_pstSCM->bActualClientConnection[bPap] = bClientIndex;
+			if ((bPap < MAX_CLIENTS) && (bClientIndex < MAX_CLIENTS))
+				m_pSCM->m_pstSCM->bActualClientConnection[bPap] = bClientIndex;
 #endif
 			m_nLastSeqCnt = pHeader->wMsgSeqCnt;
 			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used

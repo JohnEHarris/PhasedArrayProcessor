@@ -176,7 +176,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -199,7 +199,7 @@ typedef struct
 	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info		
 
 	WORD wLastCmdSeqCnt;	//last command sequence cnt received by this PAP
-	WORD wSendQDepth;		// Are packets accumulating in send queue.... 28 bytes to here
+	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
 
 	// Pipe position information
 	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
@@ -230,7 +230,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -321,7 +321,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -374,7 +374,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -426,7 +426,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count	10
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -468,7 +468,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
 	UINT uSync;			// 0x5CEBDAAD													8
 	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count	10
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -510,7 +510,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215

@@ -644,7 +644,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		case SEQ_TCG_GAIN_CMD_ID:
 		case TCG_GAIN_CMD_ID:
 			s.Format( _T( "Valid Large CMD, ID= %3d, PAP= %d, Board= %d, seq=%2d, wCmd[0]= %d, PktListSize= %4d\n" ),
-					pCmd->wMsgID, pCmd->bPAPNumber, pCmd->bBoardNumber,
+					pCmd->wMsgID, pCmd->bPapNumber, pCmd->bBoardNumber,
 					pCmd->wMsgSeqCnt, pCmd->wCmd[0], pCmd->wByteCount );
 			//theApp.SaveDebugLog(s);
 			pMainDlg->SaveDebugLog( s );

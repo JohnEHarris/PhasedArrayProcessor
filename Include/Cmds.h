@@ -127,7 +127,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read	
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read	
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 	}	GenericPacketHeader;	// 12 bytes
 
@@ -141,7 +141,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -160,7 +160,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -184,7 +184,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -199,7 +199,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -218,7 +218,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -546,7 +546,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
@@ -561,7 +561,7 @@ typedef struct
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
-	BYTE bPAPNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215

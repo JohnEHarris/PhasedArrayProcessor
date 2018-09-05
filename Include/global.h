@@ -153,6 +153,6 @@ PubExt BYTE gbChCmd25;
 PubExt WORD gwSeqCmd25;	// cmd 25
 PubExt BYTE bAppIsClosing;
 // PAP number now obtained by reading a file
-PubExt BYTE gbAssignedPAPNumber;	// every board/pap has it own unique code set
+PubExt BYTE gbAssignedPAPNumber;	// every PAP has it own unique code set
 //PubExt BYTE gbActualClientConnection[MAX_CLIENTS_PER_SERVER];
  #endif /* GLOBAL_H_ */

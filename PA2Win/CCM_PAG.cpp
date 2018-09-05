@@ -264,7 +264,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 					// virtual channels exist in Server side structure only
 					// Server side connects to Adc and other hardware data sources
 					pCmdS = (ST_NX_CMD *)pMmiCmd;	// cast this message to Nx command format
-					nInst = pCmdS->bBoardNumber;	// which instrument -- after Aug 2018 always 0
+					nInst = pCmdS->bBoardNumber;	// which instrument
 
 					// For now server[0] connects to Adc clients
 					// Not going to send info to client, but does process that clients data with these parameters
@@ -409,7 +409,7 @@ void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 
 	ST_SERVER_CONNECTION_MANAGEMENT *pPAM_SCM = GetPAM_SCM();
 
-	nPam		= pPamInstChnlInfo->bPAPNumber;
+	nPam		= pPamInstChnlInfo->bPapNumber;
 	nInst		= pPamInstChnlInfo->bBoardNumber;
 	msgcnt		= 0;
 

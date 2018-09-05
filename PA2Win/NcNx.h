@@ -105,6 +105,7 @@ public:
 	CEdit m_edParam;
 	//int m_nAscanCnt;
 	void IncrementAscanCnt(void);
+	void ShowIdataSource(void);
 	afx_msg void OnBnClickedRbSmallcmd();
 	afx_msg void OnBnClickedRbLargecmds();
 	int m_nWhichTypeCmd;

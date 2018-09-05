@@ -427,7 +427,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->wByteCount = pIData->bSeqModulo * pIData->bMaxVChnlsPerSequence * sizeof(stPeakChnlPAP) + sizeof(IDATA_FROM_HW_HDR);
 		m_pIdataPacket->uSync = SYNC;
 		m_pIdataPacket->wMsgSeqCnt = 0;	// properly incremented when sent by CClientCommunicationThread::TransmitPackets
-		m_pIdataPacket->bPAPNumber = gbAssignedPAPNumber;		// pIData->bPAPNumber; only 1 PAP for now in 2018
+		m_pIdataPacket->bPapNumber = gbAssignedPAPNumber;		// pIData->bPapNumber; only 1 PAP for now in 2018
 		m_pIdataPacket->bBoardNumber = pIdata->bBoardNumber;
 		m_pIdataPacket->wBoardType = 1;		// wall, 0 = socomate
 
@@ -974,8 +974,8 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 		// NcNx server
 		if (pIdata->wMsgID == NC_NX_IDATA_ID)
 			{
-			s.Format(_T("wByteCount=%d, wMsgSeqCnt=%d, bPAPNumber=%d, bBoardNumber=%d, bStartSeqNumber=%d\n"),
-				pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->bPAPNumber, pIdata->bBoardNumber, pIdata->bStartSeqNumber);
+			s.Format(_T("wByteCount=%d, wMsgSeqCnt=%d, bPapNumber=%d, bBoardNumber=%d, bStartSeqNumber=%d\n"),
+				pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->bPapNumber, pIdata->bBoardNumber, pIdata->bStartSeqNumber);
 			// use debugger to view
 			if ((pIdata->wMsgSeqCnt & 0x7ff) == 0) 
 				{

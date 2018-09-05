@@ -296,7 +296,7 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 		pSCM[i] = NULL;
 		for (j = 0; j < MAX_CLIENTS; j++)
 			{
-//			stSCM[i].bActualClientConnection[j] = 0xff;	// a static structure
+			stSCM[i].bActualClientConnection[j] = 0xff;	// a static structure
 			}
 		}
 
@@ -1859,7 +1859,10 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 	UpdateTimeDate( &m_tTimeNow );
 	// update ascan for scope output on NcNx screen if it is open
 	if (gDlg.pNcNx)
+		{
 		gDlg.pNcNx->IncrementAscanCnt();
+		gDlg.pNcNx->ShowIdataSource();
+		}
 
 #ifdef I_AM_PAP
 	if (gDlg.pNcNx)	return;		// don't show when NcNx dialog on screen
@@ -2374,7 +2377,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the 
 	// map the logical connection number to the physical connection number
 	// must know connection pap .. ePAP_Server = 0
 
-	BYTE bPhyCon = 0; // stSCM[ePAP_Server].bActualClientConnection[nClientNumber];
+	BYTE bPhyCon = stSCM[ePAP_Server].bActualClientConnection[nClientNumber];
 
 
 	if ( (bPhyCon < 0) || (bPhyCon >= MAX_CLIENTS))

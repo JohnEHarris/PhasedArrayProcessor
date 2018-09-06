@@ -428,7 +428,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->uSync = SYNC;
 		m_pIdataPacket->wMsgSeqCnt = 0;	// properly incremented when sent by CClientCommunicationThread::TransmitPackets
 		m_pIdataPacket->bPapNumber = gbAssignedPAPNumber;		// pIData->bPapNumber; only 1 PAP for now in 2018
-		m_pIdataPacket->bBoardNumber = pIdata->bBoardNumber;
+		m_pIdataPacket->bBoardNumber = pIData->bBoardNumber;
 		m_pIdataPacket->wBoardType = 1;		// wall, 0 = socomate
 
 		m_pIdataPacket->bStartSeqNumber = pChannel->m_bSeq;	// the key to correctly mapping the data to the output packet	

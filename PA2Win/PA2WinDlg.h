@@ -173,7 +173,8 @@ public:
 	//void SetMy_PAP_Number(CString &Ip4, UINT uPort);
 	//int  GetMy_PAP_Number(void)	{ return m_nPapNumber;	}  never called
 	//UINT GetMy_PAP_Port(void)	{ return m_uPapPort;	}
-	
+	CString m_sPktRate[2];
+
 	time_t m_tTimeNow;
 	void StartTimer();
 	void StopTimer();

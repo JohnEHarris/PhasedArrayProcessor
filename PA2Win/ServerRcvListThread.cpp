@@ -455,6 +455,13 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->wVersionHW = pIData->wVersionHW;
 		m_pIdataPacket->wVersionSW = pIData->wVersionSW;
 
+		m_pIdataPacket->wLastCmdId = pIData->wLastCmdId;
+		m_pIdataPacket->w1stWordCmd = pIData->w1stWordCmd;
+		m_pIdataPacket->bCmdSeq = pIData->bCmdSeq;
+		m_pIdataPacket->bCmdChnl = pIData->bCmdChnl;
+		m_pIdataPacket->bCmdGate = pIData->bCmdGate;
+		m_pIdataPacket->bCmdSpare = pIData->bCmdSpare;
+
 		//m_IdataInPt					= 0;	// insertion index in output data structrure-- not after 2017-08-22
 		m_nStoredChannelCount = 0;
 		//
@@ -974,11 +981,12 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 		// NcNx server
 		if (pIdata->wMsgID == NC_NX_IDATA_ID)
 			{
-			s.Format(_T("wByteCount=%d, wMsgSeqCnt=%d, bPapNumber=%d, bBoardNumber=%d, bStartSeqNumber=%d\n"),
-				pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->bPapNumber, pIdata->bBoardNumber, pIdata->bStartSeqNumber);
-			// use debugger to view
+
 			if ((pIdata->wMsgSeqCnt & 0x7ff) == 0) 
 				{
+				s.Format(_T("wByteCount=%d, wMsgSeqCnt=%d, bPapNumber=%d, bBoardNumber=%d, bStartSeqNumber=%d\n"),
+					pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->bPapNumber, pIdata->bBoardNumber, pIdata->bStartSeqNumber);
+				// use debugger to view
 				TRACE(s);
 				s.Format(_T("bSeqModulo=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
 					pIdata->bSeqModulo, pIdata->bStartChannel, pIdata->bMaxVChnlsPerSequence);

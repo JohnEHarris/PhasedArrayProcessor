@@ -162,6 +162,7 @@ typedef struct
 	UINT uMaxPacketReceived;		// how big was biggest received packet
 	UINT uInvalidPacketReceived;	// we don't know what this packet is
 	UINT uLostReceivedPackets;		// count the jumps in message sequence count
+	UINT uLostSentPackets;
 	UINT uDuplicateReceivedPackets;	// same packet received again
 	UINT uBytesSent;
 	UINT uPacketsSent;				// if this resets it means the instrument has disconnected/reconnected

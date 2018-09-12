@@ -143,8 +143,8 @@ typedef struct
 	UINT uPacketsPerSecond;			// received packets
 	UINT uMaxPacketReceived;		// how big was biggest received packet
 	UINT uInvalidPacketReceived;	// we don't know what this packet is
-	UINT uLostReceivedPackets;
-	// count the jumps in message sequence count
+	UINT uLostReceivedPackets;		// count the jumps in message sequence count
+	UINT uLostSentPackets;
 	UINT uDuplicateReceivedPackets;	// same packet received again
 	UINT uPacketsSent;
 	UINT uBytesSent;

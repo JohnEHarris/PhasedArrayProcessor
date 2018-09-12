@@ -151,6 +151,7 @@ CClientConnectionManagement::CClientConnectionManagement(int nMyConnection, USHO
 	m_pstCCM->uIdataAcksSent			= 0;
 	m_pstCCM->uInvalidPacketReceived	= 0;
 	m_pstCCM->uLostReceivedPackets		= 0;
+	m_pstCCM->uLostSentPackets			= 0;
 	m_pstCCM->uMaxPacketReceived		= 0;
 	m_pstCCM->uPacketsReceived			= 0;
 	m_pstCCM->bConnected				= 0;

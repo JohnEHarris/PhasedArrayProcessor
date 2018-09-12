@@ -1135,16 +1135,24 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 			if (pSendPkt->wMsgID == eAscanID)
 				j = 3;
 
-#if 0
+
 			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0)		m_pElapseTimer->Start();
 			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0x7ff)	// originally 0xff
 				{
 				m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
 				float fPksPerSec = 2048000000.0f/( (float) m_nElapseTime);	// originally 256
+#if 1				
 				s.Format(_T("Nx data Transmit Packets/sec = %6.1f\n"), fPksPerSec);
 				TRACE(s);
-				}
 #endif
+	
+					gPksPerSec[0].fPksPerSec = fPksPerSec;
+					gPksPerSec[0].nClientIndx = 0;
+					gPksPerSec[0].wMsgSeqCnt = pSendPkt->wMsgSeqCnt;
+					gPksPerSec[0].nElapseTime = m_nElapseTime;
+					gPksPerSec[0].uPktsSent = m_pstCCM->uPacketsSent;
+					gPksPerSec[0].nTrigger = 1;	// cause main dlg to display. Main dlg clears
+				}
 			break;
 
 
@@ -1152,17 +1160,23 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 			// All wall data
 			pIdataHw->wMsgSeqCnt = m_wMsgSeqCountAW++;
 			pIdataHw->wMsgID = ADC_DATA_ID;
-#if 0
 			// this processing cause significant dropped all - wall packets
 			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0)		m_pElapseTimer->Start();
 			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0x7ff)	// originally 0xff
 				{
 				m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
 				float fPksPerSec = 2048000000.0f / ((float)m_nElapseTime);	// originally 256-now 2048
+#if 1
 				s.Format(_T("All Wall data Transmit Packets/sec = %6.1f\n"), fPksPerSec);
 				TRACE(s);
-				}
 #endif
+				gPksPerSec[1].fPksPerSec = fPksPerSec;
+				gPksPerSec[1].nClientIndx = 0;
+				gPksPerSec[1].wMsgSeqCnt = pSendPkt->wMsgSeqCnt;
+				gPksPerSec[1].nElapseTime = m_nElapseTime;
+				gPksPerSec[1].uPktsSent = m_pstCCM->uPacketsSent;
+				gPksPerSec[1].nTrigger = 1;	// cause main dlg to display. Main dlg clears				
+				}
 
 			break;
 			}
@@ -1219,7 +1233,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				break;
 				}	//if (nSent == pSendPkt->wByteCount)
 
-			Sleep(1);
+			Sleep(10);
 			j = m_pstCCM->pSendPktList->GetCount();
 			if ((j > 5) && (m_DebugLimit < 10))
 				{
@@ -1233,6 +1247,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 
 		if (i == RETRY_COUNT)
 			{
+			m_pstCCM->uLostSentPackets++;
 			if (pSendPkt->wMsgID == 4)
 				{
 				s.Format(_T("Failed to send AW packet  # = %d after %d attempts\n"), m_wMsgSeqCountAW - 1, i);

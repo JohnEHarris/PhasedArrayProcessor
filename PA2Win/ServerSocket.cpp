@@ -1256,11 +1256,27 @@ void CServerSocket::OnReceive(int nErrorCode)
 						m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 2048 packets
 						float fPksPerSec = 2048000000.0f/( (float) m_nElapseTime);
 						m_pSCC->uPacketsPerSecond = (UINT)fPksPerSec;
+						// move this info to main dialog and output on timer.. see if this stops loss of all wall data
+						// 2018-09-07
+
 						s.Format(_T("[%5d]Server[%d]Socket[%d]::OnReceive - [SeqCnt=%5d] Packets/sec = %6.1f\n"), 
 							m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nClientIndex, 
 							pIdataPacket->wMsgSeqCnt, fPksPerSec);
 						TRACE(s);
 						pMainDlg->SaveDebugLog(s);
+#if 0
+						if ((m_pSCM->m_nMyServer < 2) && (m_pSCM->m_nMyServer >= 0) )
+							{
+							gPksPerSec[m_pSCM->m_nMyServer].fPksPerSec = fPksPerSec;
+							gPksPerSec[m_pSCM->m_nMyServer].uPktsPerSec = m_pSCC->uPacketsPerSecond;
+							gPksPerSec[m_pSCM->m_nMyServer].nClientIndx = m_pSCC->m_nClientIndex;
+							gPksPerSec[m_pSCM->m_nMyServer].wMsgSeqCnt = pIdataPacket->wMsgSeqCnt;
+							gPksPerSec[m_pSCM->m_nMyServer].nElapseTime = m_nElapseTime;
+							gPksPerSec[m_pSCM->m_nMyServer].uPktsSent = m_pSCC->uPacketsReceived;
+							gPksPerSec[m_pSCM->m_nMyServer].nTrigger = 1;	// cause main dlg to display. Main dlg clears
+							}
+#endif
+
 						}
 					}
 				}	// if (m_pSCC)
@@ -1471,7 +1487,8 @@ void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTI
 	pscc->uPacketsPerSecond			= 0;			
 	pscc->uMaxPacketReceived		= 0;		
 	pscc->uInvalidPacketReceived	= 0;	
-	pscc->uLostReceivedPackets		= 0;		
+	pscc->uLostReceivedPackets		= 0;
+	pscc->uLostSentPackets			= 0;
 	pscc->uDuplicateReceivedPackets	= 0;
 	pscc->uPacketsSent				= 0;
 	pscc->uBytesSent				= 0;

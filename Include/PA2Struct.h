@@ -683,6 +683,20 @@ typedef struct
 // Effectively the associated channel will be a flaw channel or nothing
 //
 
+
+// A structure to hold packets per second info. Used to move screen output out of
+// real time thread into main dialog output on time
+// Need one structure for all wall and another for Nx data
+typedef struct
+	{
+	float fPksPerSec;	// = 2048000000.0f / ((float)m_nElapseTime);
+	UINT uPktsPerSec;	// computed in server socket m_pSCC->uPacketsPerSecond = (UINT)fPksPerSec; 	
+	int nClientIndx;
+	WORD wMsgSeqCnt;
+	int nElapseTime;
+	UINT uPktsSent;
+	int nTrigger;		// 0 = no update in main dlg. 1 = update in main dialog
+	} PACKET_PER_SEC;	// sizeof = 26
 /*****************	STRUCTURES	END *********************/
 
 

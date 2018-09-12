@@ -197,6 +197,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				{
 				s.Format(_T("No Pulser command recognized ID = %d\nDeleting command from Phased Array GUI\n"), MsgId);
 				delete pMmiCmd;
+				pMainDlg->SaveDebugLog(s);
 				}
 			}
 
@@ -214,6 +215,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				s.Format(_T("No Client Connection ptr for ADC board number=%d\n"), pMmiCmd->bBoardNumber);
 				TRACE(s);
 				DebugOut(s);
+				pMainDlg->SaveDebugLog(s);
 				delete pMmiCmd;
 				return;
 				}
@@ -225,6 +227,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				s = _T("No socket or no thread for ADC CServerSocketOwnerThread\n");
 				TRACE(s);
 				DebugOut(s);
+				pMainDlg->SaveDebugLog(s);
 				delete pMmiCmd;
 				return;
 				}
@@ -274,6 +277,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 						s.Format(_T("pSCC = stSCM[0].pClientConnection[%d] is null\n"), nInst);
 						TRACE(s);
 						DebugOut(s);
+						pMainDlg->SaveDebugLog(s);
 						delete pMmiCmd;
 						return;
 						}
@@ -293,7 +297,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 					//case 2-8:	// Gate commands from PAG TO PAP then PAP to Board
 
 				default:
-					if (MsgId > 0x200)
+					if (MsgId >= 0x200)
 						{
 						// Large message.. forward to NIOS boards
 						if (MsgId <= LAST_LARGE_COMMAND + 0X200)
@@ -342,6 +346,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 					else
 						{
 						s.Format(_T("No command recognized ID = %d\nDeleting command from Phased Array GUI\n"), MsgId);
+						pMainDlg->SaveDebugLog(s);
 						delete pMmiCmd;
 						}
 				}	// end switch(MsgId)			delete pMmiCmd;
@@ -498,6 +503,7 @@ BOOL CCCM_PAG::SendSlaveMsg(int nWhichInstrument, ST_LARGE_CMD *pCmd)
 		ASSERT(0);
 		s.Format(_T("pCmd->bBoardNumber=%d, m_nWhichInstrument=%d\n"), pCmd->bBoardNumber, nWhichInstrument);
 		TRACE(s);
+		pMainDlg->SaveDebugLog(s);
 		delete pCmd;
 		return FALSE;
 		}
@@ -506,6 +512,7 @@ BOOL CCCM_PAG::SendSlaveMsg(int nWhichInstrument, ST_LARGE_CMD *pCmd)
 		ASSERT(0);
 		s.Format(_T("pCmd->bBoardNumber=%d, MAX_CLIENTS_PER_SERVER=%d\n"), pCmd->bBoardNumber, MAX_CLIENTS_PER_SERVER);
 		TRACE(s);
+		pMainDlg->SaveDebugLog(s);
 		delete pCmd;
 		return FALSE;
 		}
@@ -549,6 +556,7 @@ BOOL CCCM_PAG::SendSlaveMsg(int nWhichInstrument, ST_LARGE_CMD *pCmd)
 				{
 				s =_T("CCCM_PAG::SendSlaveMsg - pSocket is NULL\n");
 				TRACE(s);
+				pMainDlg->SaveDebugLog(s);
 				delete pCmd;
 				return FALSE;
 				}
@@ -556,6 +564,7 @@ BOOL CCCM_PAG::SendSlaveMsg(int nWhichInstrument, ST_LARGE_CMD *pCmd)
 				{
 				s =_T("CCCM_PAG::SendSlaveMsg - pThread is NULL\n");
 				TRACE(s);
+				pMainDlg->SaveDebugLog(s);
 				delete pCmd;
 				return FALSE;
 				}
@@ -569,6 +578,7 @@ BOOL CCCM_PAG::SendSlaveMsg(int nWhichInstrument, ST_LARGE_CMD *pCmd)
 		{
 		s.Format(_T("CCCM_PAG::SendSlaveMsg - stSCM[0].pClientConnection[%d] is NULL\n"), pCmd->bBoardNumber);
 		TRACE(s);
+		pMainDlg->SaveDebugLog(s);
 		delete pCmd;
 		return FALSE;
 		}

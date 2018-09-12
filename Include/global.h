@@ -155,4 +155,5 @@ PubExt BYTE bAppIsClosing;
 // PAP number now obtained by reading a file
 PubExt BYTE gbAssignedPAPNumber;	// every PAP has it own unique code set
 //PubExt BYTE gbActualClientConnection[MAX_CLIENTS_PER_SERVER];
+PubExt PACKET_PER_SEC gPksPerSec[2];	//[0] = Nx data, [1] = AllWall data
  #endif /* GLOBAL_H_ */

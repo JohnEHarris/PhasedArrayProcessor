@@ -523,6 +523,8 @@ BOOL CPA2WinDlg::OnInitDialog()
 	//  when the application's main window is not a dialog
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
+	i = sizeof(gPksPerSec);
+	memset((void *)&gPksPerSec, 0, sizeof(gPksPerSec));
 
 	// TODO: Add extra initialization here
 	m_lbOutput.ResetContent();
@@ -1066,6 +1068,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			uServerPort = GetServerPort(i) & 0xffff;	// port on the PAG server that we will try to connect to
 														// Make a specific child class of CCM to handle the Phased Array GUI - PAG
 			pCCM_PAG_AW = (CCCM_PAG *) new CCCM_PAG(i);
+			pCCM[1] = pCCM_PAG_AW;
 			j = sizeof(CCCM_PAG);
 			if (NULL == pCCM_PAG_AW)
 				{
@@ -2249,12 +2252,39 @@ void CPA2WinDlg::ShowIdata(void)
 			gwMax0 = gwZeroCnt = gwNot0 = 0;
 			m_nMsgSeqCnt = gwMsgSeqCnt;
 #else
+		// Generate paket rate here but output at end of list box
+		for (i = 0; i < 2; i++)
+			{
+			if (gPksPerSec[i].nTrigger)
+				{
+				uLost = uGood = 0;
+				if (pCCM[i])
+					{
+					if (pCCM[i]->m_pstCCM)
+						{
+						if (i == 1)
+							uLost = 0;
+						uLost = pCCM[i]->m_pstCCM->uLostSentPackets;
+						uGood = pCCM[i]->m_pstCCM->uPacketsSent;
+						}
+					}
+				gPksPerSec[i].nTrigger = 0;
+				m_sPktRate[i].Format(
+				_T("[%08d]Server[%d]Socket[%d]::OnReceive - [SeqCnt=%05d] Packets/sec = %6.1f  Good = %06d Lost =%04d\n"),
+					gPksPerSec[i].uPktsSent, i, gPksPerSec[i].nClientIndx,
+					gPksPerSec[i].wMsgSeqCnt, gPksPerSec[i].fPksPerSec, uGood, uLost);
+				TRACE(m_sPktRate[i]);
+				pMainDlg->SaveDebugLog(m_sPktRate[i]);
+				}
+			}
+
+
 		// Show the current flaw gate values for all channels going to PT. erase first so no scrolling
 		m_lbOutput.ResetContent();
 		t = _T("");
 		for (i = 0; i < 8; i++)	// label chnl on top line
 			{
-			s.Format(_T("Ch%d                                "), i);
+			s.Format(_T("Ch%d                   "), i);
 			t += s;
 			}
 
@@ -2268,7 +2298,7 @@ void CPA2WinDlg::ShowIdata(void)
 				mn = gLastIdataPap.PeakChnl[j * 8 + i].wTofMin;
 				if (mn > 999) mn = 999;
 				mx = gLastIdataPap.PeakChnl[j * 8 + i].wTofMax;
-				s.Format(_T("Min=%03d  Max=%03d      "), 
+				s.Format(_T("Min=%04d  Max=%04d    "), 
 					mn, mx );
 				t += s;
 				}
@@ -2293,7 +2323,7 @@ void CPA2WinDlg::ShowIdata(void)
 			mn = gLastAllWall.Seq[j].vChnl[i].wTof;
 			if (mn > 999) mn = 999;
 
-			s.Format(_T("AllWall[0][%d]=%03d         "), i,mn);
+			s.Format(_T("AllWall[0][%d]=%04d    "), i,mn);
 			t += s;
 			}
 		m_lbOutput.AddString(t);
@@ -2306,7 +2336,7 @@ void CPA2WinDlg::ShowIdata(void)
 		if (gLastIdataPap.bDin & HD_SAM) hd = 1;
 		// Hardware input status
 		//       0123456 89012345 78901234 678901  456789012
-		s = _T( "Digital    PP  IE  HD  Location Angle    Period     RotateCnt   MsgSeq  Glitch  LastCmdId  1stWord" );
+		s = _T( "Digital PP  IE  HD     Location Angle    Period   RotateCnt     MsgSeq  Glitch  LastCmdId  1stWord" );
 		t = s;
 		//m_lbOutput.AddString(t);	// show top line
 		//s.Format(_T("    MsgCnt = %d, GlitchCnt = %d  CmdId  1stWord"),
@@ -2314,15 +2344,31 @@ void CPA2WinDlg::ShowIdata(void)
 		//	gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd);
 		//t += s;
 		m_lbOutput.AddString(t);
-		s.Format( _T( "0x%04x  %d    %d    %d    %05d    %04d     %06d   %05d" ),
+		s.Format( _T( "0x%04x  %d   %d   %d      %05d    %04d     %06d   %05d" ),
 			gLastIdataPap.bDin, pp, ie, hd, gLastIdataPap.wLocation, gLastIdataPap.wAngle,
 			gLastIdataPap.wPeriod, gLastIdataPap.wRotationCnt );
 		t = s;
-		s.Format(_T("          %05d    %03d            %03d        %05d"),
+		s.Format(_T("          %05d    %03d   %03d        %05d"),
 			gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
 			gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd);
 		t += s;
 		m_lbOutput.AddString(t);
+
+		// on next 2 lines, display the packet/second for Nx data and all wall data
+		// skip one line
+		s = _T(" ");
+		m_lbOutput.AddString(s);
+		for (i = 0; i < 2; i++)
+			{
+			switch (i)
+				{
+			case 0:
+				s = _T("NcNx Wall:  ");		s += m_sPktRate[i];		break;
+			case 1:
+				s = _T("All  Wall:  ");		s += m_sPktRate[i];		break;
+				}
+			m_lbOutput.AddString(s);
+			}
 		}	// if (gLastIdataPap.wMsgID == eNcNxInspID)
 #endif
 	}

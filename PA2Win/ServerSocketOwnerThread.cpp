@@ -42,6 +42,7 @@ CServerSocketOwnerThread::CServerSocketOwnerThread()
 	nDebug = 0;
 	m_nConfigMsgQty = 0;
 	m_pHwTimer = 0;
+	m_bSmallCmdSent = m_bLargeCmdSent = 0;
 	//m_pHwTimer = new CHwTimer();
 	}
 
@@ -673,8 +674,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 
 		pCmd->wMsgSeqCnt = m_pSCC->wMsgSeqCnt++;
 
-		// up to 50 attempts to send
-		for ( i = 0; i < 50; i++)
+		// up to 8 attempts to send
+		for ( i = 0; i < 8; i++)
 			{
 			if (m_pSCC == NULL)				break;
 			if (m_pSCC->pSocket == NULL)	break;
@@ -690,12 +691,32 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 #ifdef I_AM_PAG
 					s.Format(_T("\nServerSocketOwnerThread Pkts sent to PAP[%d] board[%d] = %d, lost = %d\n"),
 					m_pSCC->m_nClientIndex, pCmd->bBoardNumber, m_pSCC->uPacketsSent, m_pSCC->uUnsentPackets);
+					TRACE(s);
 #else
 					// Must be PAP, skip my client index number
-					s.Format(_T("\nServerSocketOwnerThread Pkts sent to board[%d] = %d, lost = %d\n"),
-					pCmd->bBoardNumber, m_pSCC->uPacketsSent, m_pSCC->uUnsentPackets);
+					// every 32nd small command pause 30 ms
+					// every  8th large command pause 30 ms
+					if (pCmd->wMsgID < TOTAL_COMMANDS)
+						{
+						m_bSmallCmdSent++;
+						if (1)	//((m_bSmallCmdSent & 0x1f) == 0)
+							{
+							//s = _T("Sleep after 32 small commands\n");
+							//pMainDlg->SaveCommandLog(s);
+							Sleep(10);
+							}
+						}
+					else if (pCmd->wMsgID < TOTAL_LARGE_COMMANDS + 0x200)
+						{
+						m_bLargeCmdSent++;
+						if(1)		// ((m_bLargeCmdSent & 0x7) == 0)
+							{
+							//s = _T("Sleep after 8 large commands\n");
+							//pMainDlg->SaveCommandLog(s);
+							Sleep(10);
+							}
+						}
 #endif
-					TRACE(s);
 					}
 
 				break;	// takes us to the end of the for () loop
@@ -709,14 +730,14 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			nError = GetLastError();
 			if (nError == WSAEWOULDBLOCK)
 				{
-				Sleep(10);	// 10035L
+				Sleep(20);	// 10035L
 				if (nDebug++ < 2) 
 					TRACE1("Error Code = %d\n", nError);
 				}
 			else TRACE1("Error Code = %d\n", nError);
 
 			// if here we are having a problem sending
-			if ( i == 49)	// last time thru loop.. loose packet after this
+			if ( i == 7)	// last time thru loop.. loose packet after this
 				{
 				m_pSCC->uUnsentPackets++;
 				s.Format(_T("ServerSocketOwnerThread Sent=%d, list cnt=%d, Pkts sent=%d, Pkts lost=%d, msgSeq=%d, Error=%d\n"),
@@ -726,7 +747,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				pMainDlg->SaveDebugLog(s);
 				}
 			// 10054L is forcibly closed by remote host
-			}	// for ( i = 0; i < 50; i++)
+			}	// for ( i = 0; i < 8; i++)
 DELETE_CMD:
 		delete pCmd;		
 		}	// while (i = m_pConnectionSocket->m_pSCC->pSendPktList->GetCount() > 0 )
@@ -737,6 +758,7 @@ DELETE_CMD:
 void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	{
 	CString s;
+	ST_LARGE_CMD *pCmdL = (ST_LARGE_CMD *)pCmd;
 	
 	switch (pCmd->wMsgID)
 		{
@@ -750,8 +772,8 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case 9: MsgPrint(pCmd, "nullTCGChnlTrig<9> wCmd=step time");break;
 	case 10: MsgPrint(pCmd, "TCGGainClock<10> wCmd=step time");	break;
 	case 11: MsgPrint(pCmd, "TCGBeamGainDelay<11> wCmd=delay");	break;
-	case 12: MsgPrint(pCmd, "ProcNull<12>");					break;		// moved
-	case 13: MsgPrint(pCmd, "ProcNullReadBack<13>");				break;	// moved
+	case 12: MsgPrint(pCmd, "Blast300<12>");					break;		// moved
+	case 13: MsgPrint(pCmd, "DebugPring<13>");					break;	// moved
 	case 14: MsgPrint(pCmd, "SetTcgClockRate<14> wCmd=step time");	break;
 	case 15: MsgPrint(pCmd, "TCGTriggerDelay<15> wCmd=delay time");	break;
 	case 16: MsgPrint(pCmd, "Pow2Gain<16> wCmd=gain");				break;
@@ -766,6 +788,8 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case 28: MsgPrint(pCmd, "WallNx <28> wCmd = Nx");				break;
 	case 29: MsgPrint(pCmd, "TCGBeamGainAll <29> wCmd = gain");		break;
 	case 30: MsgPrint(pCmd, "ReadBack <30> wCmd = ?");				break;
+	case TCG_GAIN_CMD_ID:	  MsgPrintLarge(pCmdL, "TCGBeamGain <516> wCmd[0..3]");		break;
+	case SEQ_TCG_GAIN_CMD_ID: MsgPrintLarge(pCmdL, "SetSeqTCGGain <517> wCmd[0..3]");	break;
 
 	// Pulser commands
 	case PULSER_PRF_CMD_ID:		MsgPrint(pCmd, "PulserPrf<0+300h>");		break;
@@ -789,6 +813,19 @@ void CServerSocketOwnerThread::MsgPrint(ST_SMALL_CMD *pCmd, char *msg)
 	s += t;
 	t.Format(_T(" Seq=%d, Ch=%d, Gate=%d, wCmd=%d\n"),	 
 		pwCmd->bSeq, pwCmd->bChnl, pwCmd->bGateNumber, pwCmd->wCmd);
+	s += t;
+	pMainDlg->SaveCommandLog(s);
+	}
+
+void CServerSocketOwnerThread::MsgPrintLarge(ST_LARGE_CMD *pCmd, char *msg)
+	{
+	CString s, t;
+	ST_LARGE_CMD *pwCmd = (ST_LARGE_CMD *)pCmd;
+	t = msg;
+	s.Format(_T("ID=%d "), pCmd->wMsgID);	
+	s += t;
+	t.Format(_T(" W0=%d, W1=%d, W2=%d, W3=%d\n"),
+		pwCmd->wCmd[0], pwCmd->wCmd[1], pwCmd->wCmd[2], pwCmd->wCmd[3]);
 	s += t;
 	pMainDlg->SaveCommandLog(s);
 	}

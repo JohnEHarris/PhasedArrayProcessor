@@ -46,13 +46,14 @@ CServerSocket::CServerSocket(CServerConnectionManagement *pSCM, int nOwningThrea
 		m_pElapseTimer = new CHwTimer();
 		strcpy( m_pElapseTimer->tag, "CServerSocket55 " );
 
-		m_nSeqIndx = m_nLastSeqCnt = 0;
+		m_nSeqIndx = m_wLastSeqCnt = 0;
 		memset( &m_nSeqCntDbg[0], 0, sizeof( m_nSeqCntDbg ) );
 		m_nListCount = m_nListCountChanged = 0;
 		m_nAsyncSocketCnt = gnAsyncSocketCnt++;
 		m_nOwningThreadId = AfxGetThread()->m_nThreadID;
 		s.Format( _T( "Server Fifo cnt=%d, Async cnt=%d, ThreadID=%d\n" ),
 			m_pFifo->m_nFifoCnt, m_nAsyncSocketCnt, m_nOwningThreadId );
+		//m_wLastSeqCnt = 0xffff;
 		}
 	else
 		{
@@ -69,7 +70,7 @@ CServerSocket::CServerSocket()
 	//m_pFifo = new CCmdFifo(INSTRUMENT_PACKET_SIZE);		// FIFO control for receiving instrument packets
 	//m_pFifo->m_nOwningThreadId = AfxGetThread()->m_nThreadID;
 
-	//m_nSeqIndx = m_nLastSeqCnt = 0;
+	//m_nSeqIndx = m_wLastSeqCnt = 0;
 	//memset(&m_nSeqCntDbg[0], 0, sizeof(m_nSeqCntDbg));
 	m_nListCount = m_nListCountChanged = 0;
 	m_nAsyncSocketCnt = gnAsyncSocketCnt++;
@@ -761,11 +762,16 @@ void CServerSocket::OnAccept(int nErrorCode)
 		int sockerr;
 		SOCKADDR SockAddr;
 		int SockAddrLen = sizeof(SOCKADDR);
-		//int i;
+		int i;
 		CString Ip4S, Ip4C, s, t, sOut;
 		BYTE bIsClosing = 0;
 		CAsyncSocket Asocket;
 
+		if (m_pSCM->m_nMyServer == 1)
+			{
+			if (m_pSCM->m_pstSCM->pClientConnection[1] == NULL)
+				i = 0;
+			}
 
 		// how are we going to set our pSCM pointer???
 		// get our threadID of the thread running me
@@ -881,7 +887,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 												// even when the client disconnects/reconnects
 
 		if (m_nClientIndex == 0)
-			TRACE(_T("m_nClientIndex == 0 Since nClientPortIndex=0 in OnAccept )\n"));
+			TRACE(_T("m_nClientIndex == 0 Since nClientPortIndex=0 in OnAccept \n"));
 #if 0
 		winsock2.h
 #define SO_DEBUG        0x0001          /* turn on debugging info recording */
@@ -1181,14 +1187,20 @@ void CServerSocket::OnReceive(int nErrorCode)
 			s.Format(_T("OnReceive MsgSeqCnt = %5d\n"), pHeader->wMsgSeqCnt);
 			//pMainDlg->SaveDebugLog(s);
 
-			if ((pHeader->wMsgSeqCnt - (m_nLastSeqCnt+1)) != 0) 
+			if ((pHeader->wMsgSeqCnt - (m_wLastSeqCnt+1)) != 0) 
 				{
-				n = m_nSeqIndx;
-				int j = GetRcvListCount();
-				s.Format(_T("Lost Packet, Socket %d OnReceive got MsgSeqCnt %d, expected %d..RcvList Count = %5d\n"),
-					m_pSCM->GetServerPort(),  pHeader->wMsgSeqCnt, (m_nLastSeqCnt + 1), j);
-				TRACE(s);
-				pMainDlg->SaveDebugLog(s);
+				WORD wLast1 =(WORD) (m_wLastSeqCnt+1); // last seq is 32 bit. casting to word cause 16 bit wrap around
+				if (wLast1 != pHeader->wMsgSeqCnt)
+					{
+					n = pHeader->wMsgSeqCnt - wLast1;
+					m_pSCC->uLostReceivedPackets += n;
+					n = m_nSeqIndx;
+					int j = GetRcvListCount();
+					s.Format(_T("Lost Packet, Socket %d OnReceive got MsgSeqCnt %d, expected %d..RcvList Count = %5d, Lost = %5d\n"),
+						m_pSCM->GetServerPort(), pHeader->wMsgSeqCnt, (m_wLastSeqCnt + 1), j, m_pSCC->uLostReceivedPackets);
+					TRACE(s);
+					pMainDlg->SaveDebugLog(s);
+					}
 				}
 
 #if 1
@@ -1205,7 +1217,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 			if ((bPap < MAX_CLIENTS) && (bClientIndex < MAX_CLIENTS))
 				m_pSCM->m_pstSCM->bActualClientConnection[bPap] = bClientIndex;
 #endif
-			m_nLastSeqCnt = pHeader->wMsgSeqCnt;
+			m_wLastSeqCnt = pHeader->wMsgSeqCnt;
 			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
 			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
 			//InputRawDataPacket *pIdataPacket = (InputRawDataPacket *) pB;
@@ -1259,11 +1271,12 @@ void CServerSocket::OnReceive(int nErrorCode)
 						// move this info to main dialog and output on timer.. see if this stops loss of all wall data
 						// 2018-09-07
 
-						s.Format(_T("[%5d]Server[%d]Socket[%d]::OnReceive - [SeqCnt=%5d] Packets/sec = %6.1f\n"), 
+						s.Format(_T("[%08d]Server[%d]Socket[%d]::OnReceive - [SeqCnt=%5d] Packets/sec = %6.1f\n"), 
 							m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nClientIndex, 
 							pIdataPacket->wMsgSeqCnt, fPksPerSec);
 						TRACE(s);
-						pMainDlg->SaveDebugLog(s);
+						if ((m_pSCC->uPacketsReceived & 0x1fff) == 0x1fff)
+							pMainDlg->SaveDebugLog(s);
 #if 0
 						if ((m_pSCM->m_nMyServer < 2) && (m_pSCM->m_nMyServer >= 0) )
 							{

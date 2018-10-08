@@ -110,7 +110,7 @@ public:
 	int m_nOnAcceptClientIndex;		// cheating to let OnAccept pass info to OnClose
 	int m_nSeqCntDbg[1024];
 	int m_nSeqIndx;
-	USHORT m_nLastSeqCnt;
+	WORD m_wLastSeqCnt;
 
 	// debugging 
 	GenericPacketHeader m_HeaderDbg[8];

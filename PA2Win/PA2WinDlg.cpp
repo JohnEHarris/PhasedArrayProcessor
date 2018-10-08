@@ -20,6 +20,8 @@
 #include "..\Include\PA2Struct.h"
 #include "TuboIni.h"
 #include "ServerConnectionManagement.h"
+#include <synchapi.h>	// get/set system clock interval in ms
+#include <timeapi.h>
 
 
 
@@ -338,6 +340,17 @@ Here, ClientBaseIp[16] = 192.168.10.201
 
 	GetClientConnectionManagementInfo();
 	SaveClientConnectionManagementInfo();
+#if 0
+	// apparently only for multimedia apps
+	TIMECAPS tc;	// tc.wPeriodMin; tc.wPeriodMax in milliseconds
+	j = sizeof(tc);
+	i = timeGetDevCaps(&tc, j);
+	if (i == MMSYSERR_NOERROR)
+		{
+		UINT min = tc.wPeriodMin;
+		UINT max = tc.wPeriodMax;
+		}
+#endif
 	}
 
 CPA2WinDlg::~CPA2WinDlg()
@@ -491,6 +504,8 @@ BOOL CPA2WinDlg::OnInitDialog()
 	CDialogEx::OnInitDialog();
 	int i;
 	s.Format( PA2_VERSION );
+	i = sizeof(ASCAN_DATA);
+	i = sizeof(IDATA_FROM_HW);
 #ifdef I_AM_PAG
 	sDlgName = _T( "PA2Win -- Phase Array GUI Version -- PAG " );
 	#else
@@ -560,6 +575,8 @@ BOOL CPA2WinDlg::OnInitDialog()
 	TRACE(s);
 	DlgDebugOut(s);
 
+	memset((void*)guPktAttempts, 0, sizeof(guPktAttempts));
+	i = sizeof(guPktAttempts);
 	return TRUE;  // return TRUE  unless you set the focus to a control
 	}
 
@@ -2239,6 +2256,7 @@ void CPA2WinDlg::ShowIdata(void)
 	CString s,t;
 	int i,j,mn, mx;
 	int hd, pp, ie;
+	UINT uGood, uLost;
 	if (gLastIdataPap.wMsgID == eNcNxInspID)
 		{
 #ifdef SHOW_CH0_ALL_SEQ
@@ -2266,13 +2284,25 @@ void CPA2WinDlg::ShowIdata(void)
 							uLost = 0;
 						uLost = pCCM[i]->m_pstCCM->uLostSentPackets;
 						uGood = pCCM[i]->m_pstCCM->uPacketsSent;
+#if 0
+						fAvgAttempts = 0.0;	// this really did reveal much info
+						// better to show number of attempts
+						// compute avg number of xmit to get packet sent
+						for (j = 0; j < 10; j++)
+							{
+							fAvgAttempts += float(guPktAttempts[i][j]);
+							}
+						if (uGood) 
+							fAvgAttempts = (fAvgAttempts + (float) (uLost*6))/ (float)uGood;
+#endif
 						}
 					}
 				gPksPerSec[i].nTrigger = 0;
 				m_sPktRate[i].Format(
-				_T("[%08d]Server[%d]Socket[%d]::OnReceive - [SeqCnt=%05d] Packets/sec = %6.1f  Good = %06d Lost =%04d\n"),
+				_T("[%08d]Server[%d]Socket[%d]::ShowIdata - [SeqCnt=%05d] Packets/sec = %6.1f  Good = %06d Lost =%04d  Attempts[ %d,%d,%d,%d,%d,%d]\n"),
 					gPksPerSec[i].uPktsSent, i, gPksPerSec[i].nClientIndx,
-					gPksPerSec[i].wMsgSeqCnt, gPksPerSec[i].fPksPerSec, uGood, uLost);
+					gPksPerSec[i].wMsgSeqCnt, gPksPerSec[i].fPksPerSec, uGood, uLost, 
+					guPktAttempts[i][0], guPktAttempts[i][1], guPktAttempts[i][2], guPktAttempts[i][3], guPktAttempts[i][4], guPktAttempts[i][5] );
 				TRACE(m_sPktRate[i]);
 				pMainDlg->SaveDebugLog(m_sPktRate[i]);
 				}
@@ -2336,7 +2366,7 @@ void CPA2WinDlg::ShowIdata(void)
 		if (gLastIdataPap.bDin & HD_SAM) hd = 1;
 		// Hardware input status
 		//       0123456 89012345 78901234 678901  456789012
-		s = _T( "Digital PP  IE  HD     Location Angle    Period   RotateCnt     MsgSeq  Glitch  LastCmdId  1stWord" );
+		s = _T( "Digital PP  IE  HD     Location Angle    Period   RotateCnt     MsgSeq  Glitch  LastCmdId  1stWord  Seq  Chnl  Gate" );
 		t = s;
 		//m_lbOutput.AddString(t);	// show top line
 		//s.Format(_T("    MsgCnt = %d, GlitchCnt = %d  CmdId  1stWord"),
@@ -2348,9 +2378,10 @@ void CPA2WinDlg::ShowIdata(void)
 			gLastIdataPap.bDin, pp, ie, hd, gLastIdataPap.wLocation, gLastIdataPap.wAngle,
 			gLastIdataPap.wPeriod, gLastIdataPap.wRotationCnt );
 		t = s;
-		s.Format(_T("          %05d    %03d   %03d        %05d"),
+		s.Format(_T("         %05d   %03d     %03d        %05d    %02d   %02d    %02d"),
 			gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
-			gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd);
+			gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd,
+			gLastIdataPap.bCmdSeq, gLastIdataPap.bCmdChnl, gLastIdataPap.bCmdGate);
 		t += s;
 		m_lbOutput.AddString(t);
 
@@ -2502,7 +2533,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the 
 		// Instrument can only take 5 commands at a time.
 		// Check feedback info in Idata to see how deep Instruments fifo is
 		// temporary fix??
-		Sleep(10); // WAS 50
+		//Sleep(10); // WAS 50 put delay into PAP instead of PAG
 		return TRUE;
 		}
 

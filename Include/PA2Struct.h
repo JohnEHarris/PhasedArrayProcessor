@@ -89,7 +89,7 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define MAX_RESULTS						128			// before 8/14/17 was 176
 
 #define INSTRUMENT_PACKET_SIZE			1088		//old 1040.. 1460 is max TCPIP size
-#define MASTER_PACKET_SIZE				1088		// 1260
+//#define MASTER_PACKET_SIZE				1088		// 1260
 #define SYNC							0x5CEBDAAD
 #define CMD_FIFO_MEM_SIZE				0x4000		// must be greater than 0x1800
 #define NC_NX_STRUCT_SIZE				52
@@ -456,8 +456,8 @@ typedef struct
 	BYTE bChCmd24;		// chnl selected by cmd 24 only for Ascan, not for gates -- from cmd 24
 	BYTE bScopeGates;	// 1 or more gates to display. Selected by bits -- from cmd 26
 						// 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
-
-	WORD wSpare[7];		// 64 bytes to here
+	UINT uCmdsProcessed;	// number of commands processed by the ADC board
+	WORD wSpare[3];		// 64 bytes to here
 	char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA;		// sizeof() = 1088
@@ -498,7 +498,8 @@ typedef struct
 	BYTE bChCmd24;		// chnl selected by cmd 24 only for Ascan, not for gates -- from cmd 24
 	BYTE bScopeGates;	// 1 or more gates to display. Selected by bits -- from cmd 26
 						// 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
-	WORD wSpare[7];		// 64 bytes to here
+	UINT uCmdsProcessed;	// number of commands processed by the ADC board
+	WORD wSpare[3];		// 64 bytes to here
 	//char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA_HDR;	

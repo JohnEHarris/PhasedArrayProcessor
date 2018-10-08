@@ -74,8 +74,8 @@ the PAP and PAG
 // define PROC_NULL					9		-- WAS WALL_NX
 #define TCG_GAIN_CLOCK_CMD_ID		10		// TCGGainClock
 #define TCG_BEAM_GAIN_DELAY_ID		11		// what is this in adc board?
-//		?????						12
-// #define TCG_TRIGGER_CMD_ID		13		//does it exist in adc board?
+#define BLAST_CMDS_ID				12		// Blast test commands.. Send 300 canned commands
+#define DEBUG_PRINT_CMD_ID			13		// turn on/off debuggin in ADC debug console
 #define SET_TCG_CLOCK_RATE_CMD_ID	14		// SetTcgClockRate
 #define TCG_TRIGGER_DELAY_CMD_ID	15		// TCGTriggerDelay
 #define POW2_GAIN_CMD_ID			16		// Pow2GainBoost
@@ -188,7 +188,7 @@ typedef struct
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
-
+	
 	BYTE bSpare[4];		// 16
 	WORD wCmd[8];		// 16	
 	} ST_SMALL_CMD;		// sizeof() = 32
@@ -493,6 +493,23 @@ typedef struct
 	WORD wReadBackID;	// specifies the read back sets defined elsewhere
 	WORD wFill[7];	// all 0
 	} ST_READ_BACK_CMD;	// sizeof() = 32
+
+// Used to turn on debugging output from Eclipes/NIOS debug output
+typedef struct
+	{
+	WORD wMsgID;		// commands are identified by their ID
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD 
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
+
+	BYTE bSpare[4];		// 16
+	WORD wDbgFlag;		// 0 = no debug output, !0 means debug output. sets gbPrintMsgFlag in ADC globals
+	WORD wCmd[7];		// 16	
+	} ST_DEBUG_CMD;		// sizeof() = 32
 
 //
 

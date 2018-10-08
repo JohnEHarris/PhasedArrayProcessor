@@ -531,6 +531,12 @@ void CClientCommunicationThread::CreateSocket(WPARAM w, LPARAM lParam)
 		{	// Socket created
 
 		nSockOpt = 1;
+		// Limit size of packet from the servers to the PAP. Slows rate of packet
+		// arrival and prevents burst of packets to the NIOS instruments
+#ifdef I_AM_PAP
+		sockerr = m_pSocket->SetSockOpt(SO_RCVBUF, &nSockOpt, sizeof(ST_LARGE_CMD), SOL_SOCKET);
+		if (sockerr == SOCKET_ERROR) TRACE1("Socket Error SO_RCVBUF = %0x\n", sockerr);
+#endif
 		// need to be able to reuse the ip address
 		sockerr = m_pSocket->SetSockOpt( SO_REUSEADDR, &nSockOpt, sizeof( int ), SOL_SOCKET );
 		if (sockerr == SOCKET_ERROR) TRACE1( "Socket Error SO_REUSEADDR = %0x\n", sockerr );
@@ -737,10 +743,21 @@ void CClientCommunicationThread::StartTCPCommunication()
 		return;
 
 	// It there is no receiver thread we are unable to do anything further
-	// It should be running. If not, perhaps create it here
+	// It should be running. If not, perhaps create it here 2018-10-02 mod
 	if (m_pstCCM->pReceiveThread == 0)
 		{
 		TRACE( _T( "m_pstCCM->pReceiveThread == 0\n" ) );
+#if 0
+		TRACE(_T("CreateReceiveThread from StartTCPCommunication()\n"));
+		m_pstCCM->pCCM->CreateReceiveThread();
+		if (m_pstCCM->pSendThread == 0)
+			{
+			m_pstCCM->pCCM->CreateSendThread();
+			TRACE(_T("CreateSendThread from StartTCPCommunication()\n"));
+			}
+		//return;
+		Sleep(100);
+#endif
 		return;
 		}
 
@@ -1084,7 +1101,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 	if ((!m_pstCCM->pSocket) || (m_pstCCM->bConnected == 0))
 		{
 		// kill the recently added members of the linked list
-
+		m_pstCCM->bConnected = 0;
 		m_pMyCCM->LockSendPktList();
 		while (m_pstCCM->pSendPktList->GetCount() > 0)
 			{
@@ -1179,19 +1196,31 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				}
 
 			break;
-			}
+			}	// end of switch (m_pMyCCM->m_nMyConnection)
 
-		// take up to 6 attempts to deliver the packet linked list is empty??? 2018-06-18
+		// take up to 6 attempts to deliver the packet linked list is empty??? 2.5x10-5 error
+		// try 4 attempts at 20 ms each  2018-09-13  5.2X10-5 error
+		// 8 attempts @ 10 ms 5x10-5
+		// 6 @ 15 ms 7.5x10-5
 		for (i = 0; i < RETRY_COUNT; i++)
 			{	// loop till good xmit
 			if (m_pstCCM == NULL)	break;
 			if (m_pstCCM->pSocket == NULL)	break;
 			if (pSendPkt == NULL)	break;
+
+			if (pSendPkt->wMsgID < 4)	
+				guPktAttempts[0][i]++;	// Nx wall data
+			else 
+				guPktAttempts[1][i]++;	// All wall data
+
 			nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
 			if (nSent == pSendPkt->wByteCount)
 				{
 				m_pstCCM->uBytesSent += nSent;
 				m_pstCCM->uPacketsSent++;
+				//if (pSendPkt->wMsgID < 4)	guPktAttempts[0][i]++;	// Nx wall data
+				//else guPktAttempts[1][i]++;	// All wall data
+
 				if (m_pstCCM->uPacketsSent < 10)
 					{
 					if (pSendPkt->wMsgID < 4)
@@ -1223,14 +1252,14 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				case 4:
 					m_nConsecutiveFailedXmitAW = 0;
 					break;
-					}
+					}	// end of switch (pSendPkt->wMsgID)
 
 
 				// capture output to PAG for Yanming
 				delete pSendPkt;
 				pSendPkt = 0;
 				pIdataHw = 0;
-				break;
+				break;	// break from for loop
 				}	//if (nSent == pSendPkt->wByteCount)
 
 			Sleep(10);
@@ -1259,6 +1288,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				m_nConsecutiveFailedXmit++;
 				}
 			TRACE(s);
+			pMainDlg->SaveDebugLog(s);
 			if ((m_nConsecutiveFailedXmit >= 50) || (m_nConsecutiveFailedXmitAW >= 50))
 				{
 #if 0

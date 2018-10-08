@@ -103,10 +103,10 @@ void CNcNx::DebugOut(CString s)
 	gDlg.pUIDlg->SaveDebugLog( s );
 	}
 
-#define PAP_MAX		3
+#define PAP_MAX		8
 #define BOARD_MAX	8
 #define GATE_MAX	3
-#define PARAM_MAX	5000
+#define PARAM_MAX	20000
 
 BOOL CNcNx::OnInitDialog()
 	{
@@ -349,8 +349,8 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("null TCGChnlTrigger"));m_cbCommand.AddString(s);	//9  TCGProbeTrigger T("TCGChnlTrigger")
 		s.Format(_T("TCGGainClock"));		m_cbCommand.AddString(s);	//10
 		s.Format(_T("TCGChnlGainDelay"));	m_cbCommand.AddString(s);	//11
-		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//12
-		s.Format(_T("null ReadBack"));		m_cbCommand.AddString(s);	//13
+		s.Format(_T("Blast300"));			m_cbCommand.AddString(s);	//12 Send 300 commands
+		s.Format(_T("DebugPrint"));			m_cbCommand.AddString(s);	//13
 		s.Format(_T("SetTcgClockRate"));	m_cbCommand.AddString(s);	//14
 		s.Format(_T("TCGTriggerDelay"));	m_cbCommand.AddString(s);	//15
 		s.Format(_T("Powr2Gain"));			m_cbCommand.AddString(s);	//16
@@ -500,11 +500,18 @@ void CNcNx::OnCbnSelchangeCbCmds()
 					// TCG commands
 				case 10:
 				case 11:
-				case 12:
 					TcgCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 					break;
+				case 12:
+					// Blast 300 cmds
+					Blast(m_nPAP, m_nBoard);
+					break;
 				case 13:
+					DebugPrint(m_nPAP, m_nBoard, m_nCmdId, m_nParam);
+					break;
+				case 30:
 					ReadBackCmd(m_nPAP, m_nBoard, m_nCmdId, m_nParam);
+					break;
 				default:
 					break;
 				}
@@ -712,7 +719,7 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	default:		sym = _T( "???" );				return;
 	case 10:		sym = _T("TcgClockRate: "); 		break;
 	case 11:	sym = _T("TCGBeamGainDelay: "); 		break;
-	case 12:	sym = _T("TCGBeamGainAll: : "); 		break;
+	//case 12:	sym = _T("TCGBeamGainAll: : "); 		break;
 	case 14:	sym = _T("TCGClockRate: "); 			break;
 	case 15:	sym = _T("TCGTriggerDelay: "); 				break;
 		}
@@ -735,6 +742,71 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	t = sym + s;
 	m_lbOutput.AddString(t);
 	SendMsg((GenericPacketHeader*)&m_TcgCmd);
+	}
+
+
+// cmd 12
+void CNcNx::Blast(int m_nPAP, int m_nBoard)
+	{
+	int i;
+	ST_SMALL_CMD Cmd;
+	ST_LARGE_CMD CmdL;
+	ST_WORD_CMD *pCmdW = (ST_WORD_CMD *)&Cmd;
+	CString s;
+
+	Cmd.uSync = CmdL.uSync = SYNC;
+	Cmd.wByteCount = 32;
+	CmdL.wByteCount = 1056;
+	Cmd.bPapNumber = CmdL.bPapNumber = m_nPAP;
+	Cmd.bBoardNumber = CmdL.bBoardNumber = m_nBoard;
+	for (i = 0; i < 300; i++ )
+		{
+		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
+		Cmd.wCmd[0] = i;
+		if ((i % 10) == 0)
+			{
+			CmdL.wMsgID = 516;
+			CmdL.wCmd[0] = i;
+			CmdL.wCmd[1] = i+1;
+			CmdL.wCmd[2] = i+2;
+			CmdL.wCmd[3] = i+3;
+			s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, wCmd[4] = %4d, %4d, %4d, %4d\n"),
+				CmdL.wMsgID, CmdL.wByteCount, CmdL.bPapNumber, CmdL.bBoardNumber,
+				CmdL.wCmd[0], CmdL.wCmd[1], CmdL.wCmd[2], CmdL.wCmd[3]);
+			m_lbOutput.AddString(s);
+			SendMsg((GenericPacketHeader*)&CmdL);
+			}
+		else
+			{
+			Cmd.wCmd[0] = i;
+			pCmdW->bChnl = i & 7;
+			pCmdW->bGateNumber = i & 3;
+			pCmdW->bSeq = i % 3;
+			s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d, Ch=%d, Gate=%d, wCmd=%5d\n"),
+				Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.bBoardNumber,
+				pCmdW->bSeq, pCmdW->bChnl, pCmdW->bGateNumber, Cmd.wCmd[0]);
+			m_lbOutput.AddString(s);
+			SendMsg((GenericPacketHeader*)&Cmd);
+			}
+		}
+
+	}
+
+// cmd 13
+void CNcNx::DebugPrint(int nPap, int nBoard, int nCmd, int nValue)
+	{
+	CString s;
+	ST_DEBUG_CMD Dbg;
+	Dbg.wMsgID = nCmd;// DEBUG_PRINT_CMD_ID;
+	Dbg.uSync = SYNC;
+	Dbg.wByteCount = 32;
+	Dbg.bPapNumber = nPap;
+	Dbg.bBoardNumber = nBoard;
+	Dbg.wDbgFlag = nValue;
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, PrintFlag=%5d\n"),
+		Dbg.wMsgID, Dbg.wByteCount, Dbg.bPapNumber, Dbg.bBoardNumber, Dbg.wDbgFlag);
+	m_lbOutput.AddString(s);
+	SendMsg((GenericPacketHeader*)&Dbg);
 	}
 
 // Readback has sub commands. Top read back ID is 13

@@ -41,6 +41,7 @@ public:
 	afx_msg void TransmitPackets(WPARAM w, LPARAM lParam);
 	void CommandLogMsg(ST_SMALL_CMD *pCmd);
 	void MsgPrint(ST_SMALL_CMD *pCmd, char *msg);
+	void MsgPrintLarge(ST_LARGE_CMD *pCmd, char *msg);
 	//afx_msg void Exit2(WPARAM w, LPARAM lParam);
 	afx_msg void KillServerSocket(WPARAM w, LPARAM lParam);
 	afx_msg void KillServerSocketOwner(WPARAM w, LPARAM lParam);
@@ -67,6 +68,8 @@ public:
 	int nDebug;
 	class CHwTimer *m_pHwTimer;
 	int m_nConfigMsgQty;						// how many command in a config file download
+	BYTE m_bSmallCmdSent;		// count small cmds. after every 32nd, sleep 10
+	BYTE m_bLargeCmdSent;		// count large cmds. after every 8th, sleep 10
 
 protected:
 

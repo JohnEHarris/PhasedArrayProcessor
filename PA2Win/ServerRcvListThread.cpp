@@ -529,6 +529,7 @@ void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata, int nWhic
 	{
 #ifdef I_AM_PAP
 	int i;
+	CString s;
 	CClientCommunicationThread *pThread;
 	IDATA_FROM_HW *pHwData = 0;
 
@@ -554,16 +555,26 @@ void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata, int nWhic
 			{
 			// restart client connection  .. how
 			delete pIdata;
-			TRACE(_T("pCCM_PAG->m_pstCCM->pSocket == NULL.. ignore and keep going\n"));
+			TRACE(_T("pCCM_PAG->m_pstCCM->pSocket == NULL.. attempt restart of connection\n"));
 			if (pCCM_PAG->m_pstCCM->pReceiveThread == NULL)
 				{
 				// destroy CCM and start all over?
-				TRACE(_T("pCCM_PAG->m_pstCCM->pReceiveThread == NULL.. Oh My\n"));
+				s = _T("pCCM_PAG->m_pstCCM->pReceiveThread == NULL.. Oh My\n");
+				TRACE(s);
+				pMainDlg->SaveDebugLog(s);
+				//pCCM_PAG->InitReceiveThread();
 				//ASSERT(0);
 				}
 			else
 				{
 				pCCM_PAG->m_pstCCM->bConnected = 0;	// causes a timed reconnect attempt ?
+				s = _T("SendIdataToPag() attempt connection restart\n");
+				TRACE(s);
+				/**********************************/
+				pMainDlg->SaveDebugLog(s);
+				pCCM_PAG->InitReceiveThread();
+				/**********************************/
+
 				}
 			return;
 			}
@@ -611,6 +622,12 @@ void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata, int nWhic
 			else
 				{
 				pCCM_PAG_AW->m_pstCCM->bConnected = 0;	// causes a timed reconnect attempt ?
+				s = _T("SendIdataToPag() attempt connection restart\n");
+				TRACE(s);
+				/**********************************/
+				pMainDlg->SaveDebugLog(s);
+				pCCM_PAG_AW->InitReceiveThread();
+				/**********************************/
 				}
 			return;
 			}
@@ -1048,6 +1065,7 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 				}
 #endif
 			// show some piece of all wall data 
+#if 0
 			if ((pAllWall->wMsgSeqCnt & 0xff) == 0)
 				{
 				i = pAllWall->wByteCount;
@@ -1057,6 +1075,7 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 				//SaveDebugLog(s);
 				//TRACE(s);
 				}
+#endif
 			}
 		break;
 

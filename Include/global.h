@@ -156,4 +156,8 @@ PubExt BYTE bAppIsClosing;
 PubExt BYTE gbAssignedPAPNumber;	// every PAP has it own unique code set
 //PubExt BYTE gbActualClientConnection[MAX_CLIENTS_PER_SERVER];
 PubExt PACKET_PER_SEC gPksPerSec[2];	//[0] = Nx data, [1] = AllWall data
+PubExt UINT guPktAttempts[2][10];	//[0]=Nx, [1]=All wall count number of attempt to send to PAG
+								//[][0] is 1st attempt, [][1] is 2nd etc
+PubExt UINT guCmdsProcessed;	// number of commands processed by the ADC board
+PubExt BYTE gbPrintMsgFlag;			// if not 0, print message info as they are executed.
  #endif /* GLOBAL_H_ */

@@ -2,7 +2,7 @@
 
 
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			7
+#define BUILD_VERSION			8
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -13,6 +13,7 @@
 #define PA2_VERSION _T("Version =   %d_%02d_%03d"), VERSION_MAJOR, VERSION_MINOR, VERSION_BUILD 
 /*
 Show the version number of this program. Newest version on TOP
+1.0.008 2018-10-10 Debugging blast commands to ADC and PULSER
 1.0.007 2018-08-21 Read machine type from file, rearrange order of PA2Struct.h
 1.0.006	2018-08-13 Simulate DHCP assignment of PAP IP address for All Wall-mostly done with ini file
 1.0.005 2018-07-26 Supports All Wall data and controls pulser from one PAP

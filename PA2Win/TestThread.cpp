@@ -67,7 +67,7 @@ afx_msg void CTestThread::Bail(WPARAM w, LPARAM lParam)
 afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually added jeh 10-24-2012
 	{
 	CString s;
-	int i;
+	int i, j;	// , n;
 #ifdef _DEBUG
 	printf("Hello World from Test Thread\n");
 	cout << "Hello World from Test Thread using std\n" << endl;
@@ -128,8 +128,39 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 			default:
 				break;
 				}	// switch end
-			}
+			}	// for ( i = 0; i < MAX_CLIENTS; i++)
 #endif
+		// Sometimes messages stagnate in linked lists
+		// Check linked list for stored messages and post messages 
+		// to thread with waiting linked lists
+		// Start with server to send commands to clients (ADC & Pulser)
+		for (i = 0; i < MAX_SERVERS; i++)
+			{
+			for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
+				{ 
+				if (stSCM[i].pClientConnection[j])
+					{
+					if (stSCM[i].pClientConnection[j]->pSendPktList)	
+						{
+						if (stSCM[i].pClientConnection[j]->pSendPktList->GetCount())	//there are packets to send
+							{
+							CServerSocket *pSocket = stSCM[i].pClientConnection[j]->pSocket;
+							CServerSocketOwnerThread *pThread = stSCM[i].pClientConnection[j]->pServerSocketOwnerThread;
+							if ((pSocket == 0) || (pThread == 0))
+								{
+								s = _T("No socket or No Thread so send packet from Server to Client\n");
+								TRACE(s);
+								break;
+								}
+
+							pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
+							s = _T("Command sent from idle loop\n");
+							TRACE(s);
+							}	//there are packets to send
+						}	// pSendPktList exists
+					}	// if (stSCM[i].pClientConnection[j])
+				}	// j loop on clients
+			}	// i loop on servers
 		}	// while
 	s = _T("Exit Hello World\n");
 	TRACE(s);

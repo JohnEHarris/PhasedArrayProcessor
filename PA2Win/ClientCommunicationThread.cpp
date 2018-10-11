@@ -533,10 +533,12 @@ void CClientCommunicationThread::CreateSocket(WPARAM w, LPARAM lParam)
 		nSockOpt = 1;
 		// Limit size of packet from the servers to the PAP. Slows rate of packet
 		// arrival and prevents burst of packets to the NIOS instruments
-#ifdef I_AM_PAP
-		sockerr = m_pSocket->SetSockOpt(SO_RCVBUF, &nSockOpt, sizeof(ST_LARGE_CMD), SOL_SOCKET);
+#if 0		//#ifdef I_AM_PAP
+		nSockOpt = 1514;
+		sockerr = m_pSocket->SetSockOpt(SO_RCVBUF, &nSockOpt, sizeof(int), SOL_SOCKET);
 		if (sockerr == SOCKET_ERROR) TRACE1("Socket Error SO_RCVBUF = %0x\n", sockerr);
 #endif
+		nSockOpt = 1;
 		// need to be able to reuse the ip address
 		sockerr = m_pSocket->SetSockOpt( SO_REUSEADDR, &nSockOpt, sizeof( int ), SOL_SOCKET );
 		if (sockerr == SOCKET_ERROR) TRACE1( "Socket Error SO_REUSEADDR = %0x\n", sockerr );

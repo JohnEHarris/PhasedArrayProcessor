@@ -42,7 +42,7 @@ CServerSocketOwnerThread::CServerSocketOwnerThread()
 	nDebug = 0;
 	m_nConfigMsgQty = 0;
 	m_pHwTimer = 0;
-	m_bSmallCmdSent = m_bLargeCmdSent = 0;
+	m_bSmallCmdSent = m_bLargeCmdSent = m_bPulserCmdSent = 0;
 	//m_pHwTimer = new CHwTimer();
 	}
 
@@ -685,6 +685,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				m_pSCC->uBytesSent += nSent;
 				m_pSCC->uPacketsSent++;
 				m_nConfigMsgQty++;
+				Sleep(10);
 				// debug info to trace output.. losing connection when attempting to download config file
 				if ((m_pSCC->uPacketsSent))	// &0xff) == 0)
 					{
@@ -694,8 +695,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 					TRACE(s);
 #else
 					// Must be PAP, skip my client index number
-					// every 32nd small command pause 30 ms
-					// every  8th large command pause 30 ms
+					// every 32nd small command pause 10 ms
+					// every  8th large command pause 10 ms
 					if (pCmd->wMsgID < TOTAL_COMMANDS)
 						{
 						m_bSmallCmdSent++;
@@ -716,6 +717,16 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 							Sleep(10);
 							}
 						}
+					else if (pCmd->wMsgID < TOTAL_PULSER_COMMANDS + 0x300)
+						{
+						m_bPulserCmdSent++;
+						if (1)		// ((m_bLargeCmdSent & 0x7) == 0)
+							{
+							//s = _T("Sleep after 8 large commands\n");
+							//pMainDlg->SaveCommandLog(s);
+							Sleep(10);
+							}
+						}
 #endif
 					}
 
@@ -730,7 +741,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			nError = GetLastError();
 			if (nError == WSAEWOULDBLOCK)
 				{
-				Sleep(20);	// 10035L
+				Sleep(10);	// 10035L
 				if (nDebug++ < 2) 
 					TRACE1("Error Code = %d\n", nError);
 				}

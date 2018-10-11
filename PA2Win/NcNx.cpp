@@ -103,7 +103,7 @@ void CNcNx::DebugOut(CString s)
 	gDlg.pUIDlg->SaveDebugLog( s );
 	}
 
-#define PAP_MAX		8
+#define PAP_MAX		7
 #define BOARD_MAX	8
 #define GATE_MAX	3
 #define PARAM_MAX	20000
@@ -131,7 +131,7 @@ BOOL CNcNx::OnInitDialog()
 	m_spSeq.SetRange( 0, gMaxSeqCount-1 );		// number of sequence in firing scheme
 	m_spCh.SetRange( 0, gMaxChnlsPerMainBang-1 );		// number of channel in each sequence
 	m_spGate.SetRange( 0, 3 );		// number of gates in each channel
-	m_spParam.SetRange( 1, PARAM_MAX );	// depends of command selected from list box
+	m_spParam.SetRange( 0, PARAM_MAX );	// depends of command selected from list box
 
 	m_lbOutput.ResetContent();
 	m_cbCommand.ResetContent();
@@ -759,6 +759,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	CmdL.wByteCount = 1056;
 	Cmd.bPapNumber = CmdL.bPapNumber = m_nPAP;
 	Cmd.bBoardNumber = CmdL.bBoardNumber = m_nBoard;
+#if 1
 	for (i = 0; i < 300; i++ )
 		{
 		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
@@ -788,7 +789,32 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 			m_lbOutput.AddString(s);
 			SendMsg((GenericPacketHeader*)&Cmd);
 			}
-		}
+		}	// for (i = 0; i < 300; i++ )
+#endif
+#if 1
+	// Now send 49 pulser commands
+	for (i = 0; i < 49; i++)
+		{
+		Cmd.wMsgID = 0x300 + (i % 7);
+		
+		switch (i % 7)
+			{
+			case 0:		Cmd.wCmd[0] = (i * 5) + 10; break;	//prf
+			case 1:		
+			case 2:		Cmd.wCmd[0] = i & 1; // HV & Polarity
+				break;
+			case 3:		Cmd.wCmd[0] = i;	break;	// SHAPE
+			case 4:		Cmd.wCmd[0] = i+1;	break;	// width
+			case 5:		Cmd.wCmd[0] = 3;	break;	// seq len
+			case 6:		Cmd.wCmd[0] = 4;	break;	// socomate pulse len
+			}
+		s.Format(_T("ID=%d, Bytes=%d, PAP=%d, wCmd=%5d\n"),
+			Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.wCmd[0]);
+		m_lbOutput.AddString(s);
+		SendMsg((GenericPacketHeader*)&Cmd);
+
+		}	// pulser command loop
+#endif
 
 	}
 
@@ -802,7 +828,7 @@ void CNcNx::DebugPrint(int nPap, int nBoard, int nCmd, int nValue)
 	Dbg.wByteCount = 32;
 	Dbg.bPapNumber = nPap;
 	Dbg.bBoardNumber = nBoard;
-	Dbg.wDbgFlag = nValue;
+	Dbg.wDbgFlag = m_nParam;
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, PrintFlag=%5d\n"),
 		Dbg.wMsgID, Dbg.wByteCount, Dbg.bPapNumber, Dbg.bBoardNumber, Dbg.wDbgFlag);
 	m_lbOutput.AddString(s);

@@ -70,6 +70,7 @@ public:
 	int m_nConfigMsgQty;						// how many command in a config file download
 	BYTE m_bSmallCmdSent;		// count small cmds. after every 32nd, sleep 10
 	BYTE m_bLargeCmdSent;		// count large cmds. after every 8th, sleep 10
+	BYTE m_bPulserCmdSent;		// count large cmds. after every 8th, sleep 10
 
 protected:
 

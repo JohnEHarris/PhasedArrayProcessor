@@ -216,7 +216,16 @@ afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
 			pV = m_pSCC->pRcvPktList->RemoveHead();
 			m_pSCC->pSocket->UnLockRcvPktList();
 			pIdata = (IDATA_FROM_HW *)pV;
-			ProcessInstrumentData(pIdata);	// local call to this class memeber
+			if (pIdata->wMsgID >= 0x300)
+				{
+				CString s;
+				PULSER_DATA *pPulserData = (PULSER_DATA *)pIdata;
+				s = _T("Pulser Feedback Data");
+				ProcessPulserData(pPulserData);
+				}
+			else
+				ProcessInstrumentData(pIdata);	// local call to this class memeber
+			
 			if (pIdata)	
 				delete pIdata;
 			m_pSCC->pSocket->LockRcvPktList();
@@ -946,6 +955,13 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			{
 			ASCAN_DATA *pIdataPacket = new (ASCAN_DATA);
 			memcpy((void*)pIdataPacket, (void *)pIData, sizeof(ASCAN_DATA));
+			// attach lastest Pulser data to this packet 2018-10-19
+
+			pIdataPacket->wPulserCmds	= gwPulserCmds;
+			pIdataPacket->wFPGA_Version = gwFPGA_Version;
+			pIdataPacket->wNIOS_Version = gwNIOS_Version;
+			pIdataPacket->wCPU_Temp		= gwCPU_Temp;
+
 			SendIdataToPag((GenericPacketHeader *)pIdataPacket, 0);
 			memcpy((void *)&gLastAscanPap, (void *)pIdataPacket, sizeof(ASCAN_DATA));
 			delete m_pIdataPacket;
@@ -978,6 +994,21 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 		}
 
 	}	// CServerRcvListThread::ProcessInstrumentData(void *pData)
+
+	// Maybe not general purpose, but put pulser status into global data
+	// Only one pulser for the system and data is slow moving  2018-10-19
+void  CServerRcvListThread::ProcessPulserData(PULSER_DATA *pPulserData)
+	{
+	gwPulserCmds	= pPulserData->wPulserCmds;
+	gwFPGA_Version	= pPulserData->wFPGA_Version;
+	gwNIOS_Version	= pPulserData->wNIOS_Version;
+	gwCPU_Temp		= pPulserData->wCPU_Temp;
+	//CString s;
+	//s.Format(_T(" Pulser Temp = %d\n"), gwCPU_Temp);
+	//TRACE(s);
+	}
+
+
 #endif
 
 

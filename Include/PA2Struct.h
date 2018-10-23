@@ -384,7 +384,7 @@ typedef struct
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
 	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		
 								// Some sequence points may have channel type NOTHING
-	BYTE bStartChannel;	// First virtual channel in peak data PeakChnl--always 0 for this hardware ... 16
+	BYTE bStartChannel;	// First virtual channel in peak data PeakChnl--always 0 for this hardware
 	BYTE bSeqPerPacket;	// Nominally 32 sequences but can be less. Data at back end of packet is invalid
 						// Maintains packet size of 1088. All seq valid when bSeqPerPacket = 32
 	BYTE bNiosGlitchCnt;
@@ -394,7 +394,7 @@ typedef struct
 						// Large, [8][1056] = 16896 bytes, Small [128][32] = 4096
 
 	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
-	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info .. 30		
+	BYTE bNiosFeedback[9];// eg. FPGA version, C version, self-test info	..30	
 
 	WORD wLastCmdSeqCnt;//last command sequence cnt received by this PAP
 	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
@@ -446,7 +446,7 @@ typedef struct
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	WORD wFPGATemp;
+	WORD wFPGATemp;		// ADC board
 	WORD wBoardTemp;
 	WORD wStatus;		
 
@@ -456,8 +456,13 @@ typedef struct
 	BYTE bChCmd24;		// chnl selected by cmd 24 only for Ascan, not for gates -- from cmd 24
 	BYTE bScopeGates;	// 1 or more gates to display. Selected by bits -- from cmd 26
 						// 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
-	UINT uCmdsProcessed;	// number of commands processed by the ADC board
-	WORD wSpare[3];		// 64 bytes to here
+	WORD wLargeCmds;	// number of large commands since reset
+	WORD wSmallCmds;	// number of small commands since reset
+	WORD wPulserCmds;	// number of pulser commands since reset
+	WORD wFPGA_Version;	// Pulser fpga version
+	WORD wNIOS_Version;	// Pulser NIOS version
+	WORD wCPU_Temp;		// Pulser cpu temp
+	WORD wSpare[1];		// 64 bytes to here
 	char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA;		// sizeof() = 1088
@@ -488,9 +493,9 @@ typedef struct
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	WORD wFPGATemp;
+	WORD wFPGATemp;		// ADC board
 	WORD wBoardTemp;
-	WORD wStatus;		
+	WORD wStatus;
 
 	BYTE bBeamType;		// 0=rf 1=fw  2=peak hold,  4 = gate out-- from cmd 23
 	BYTE bChCmd25;		// chnl  -- from cmd 25
@@ -498,9 +503,14 @@ typedef struct
 	BYTE bChCmd24;		// chnl selected by cmd 24 only for Ascan, not for gates -- from cmd 24
 	BYTE bScopeGates;	// 1 or more gates to display. Selected by bits -- from cmd 26
 						// 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
-	UINT uCmdsProcessed;	// number of commands processed by the ADC board
-	WORD wSpare[3];		// 64 bytes to here
-	//char ascan[1024];	// 1024 8-bit scope amplitude samples
+	WORD wLargeCmds;	// number of large commands since reset
+	WORD wSmallCmds;	// number of small commands since reset
+	WORD wPulserCmds;	// number of pulser commands since reset
+	WORD wFPGA_Version;	// Pulser fpga version
+	WORD wNIOS_Version;	// Pulser NIOS version
+	WORD wCPU_Temp;		// Pulser cpu temp
+	WORD wSpare[1];		// 64 bytes to here
+						//char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA_HDR;	
 
@@ -531,13 +541,33 @@ typedef struct
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	WORD wFPGATemp;
+	WORD wFPGATemp;		// ADC board
 	WORD wBoardTemp;
 	//WORD wStatus;		// see below
 	//WORD wSpare[11];	// 64 bytes to here
 	BYTE ReadBack[1048];	// 1048 byte. Info depends on what is requested to be read back
 
 	} READBACK_DATA;		// sizeof() = 1088
+
+							// A packet of data sent from the Pulser to the PAP server updating pulser status
+typedef struct
+	{
+	WORD wMsgID;		// commands are identified by their ID 0x300
+	WORD wByteCount;	// Number of bytes in this packet. 64
+	UINT uSync;			// 0x5CEBDAAD 
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
+	WORD wPulserCmds;	// number of pulser commands received since reset
+	WORD wFPGA_Version;	// Maj.Minor.Build  FpgaVersion = (0x0 << 12) + (2 << 8) + 0; //0.2.0  -- nibble, nibble, byte
+	WORD wNIOS_Version;	// nibble, nibble, byte maj.min.build
+	WORD wCPU_Temp;		// in Celsius
+	WORD wSpare[23];
+	}	PULSER_DATA;
+
+
+
+/*************************************************************/
+
+
 
 // The settings for one gate
 typedef struct

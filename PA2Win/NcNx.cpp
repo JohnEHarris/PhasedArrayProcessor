@@ -350,7 +350,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("TCGGainClock"));		m_cbCommand.AddString(s);	//10
 		s.Format(_T("TCGChnlGainDelay"));	m_cbCommand.AddString(s);	//11
 		s.Format(_T("Blast300"));			m_cbCommand.AddString(s);	//12 Send 300 commands
-		s.Format(_T("DebugPrint"));			m_cbCommand.AddString(s);	//13
+		s.Format(_T("ProcNull"));			m_cbCommand.AddString(s);	//13 DebugPrint moved to 29 per RAC
 		s.Format(_T("SetTcgClockRate"));	m_cbCommand.AddString(s);	//14
 		s.Format(_T("TCGTriggerDelay"));	m_cbCommand.AddString(s);	//15
 		s.Format(_T("Powr2Gain"));			m_cbCommand.AddString(s);	//16
@@ -367,8 +367,11 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("ASCAN_GATE_OUTPUT"));		m_cbCommand.AddString(s);	//26
 		s.Format(_T("ASCAN_REP_RATE"));			m_cbCommand.AddString(s);	//27
 		s.Format(_T("WallNx"));					m_cbCommand.AddString(s);	//28
-		s.Format(_T("TcgBeamGainAll"));			m_cbCommand.AddString(s);	//29
+		s.Format(_T("DebugPrint"));				m_cbCommand.AddString(s);	//29 replace TcgBeamGainAll with DebugPrint
 		s.Format(_T("ReadBack"));				m_cbCommand.AddString(s);	//30
+		s.Format(_T("TcgBeamGainAll"));			m_cbCommand.AddString(s);	//31
+		s.Format(_T("ProcNull"));				m_cbCommand.AddString(s);	//32
+		s.Format(_T("ProcNull"));				m_cbCommand.AddString(s);	//33
 
 		m_cbCommand.SetCurSel(2);
 		break;
@@ -380,6 +383,8 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("PULSE_WIDTH"));			m_cbCommand.AddString(s);	// 4+300h
 		s.Format(_T("SEQUENCE_LEN"));			m_cbCommand.AddString(s);	// 5+300h
 		s.Format(_T("SOCOMATE_SYNC"));			m_cbCommand.AddString(s);	// 6+300h
+		s.Format(_T("PULSER_OnOff"));			m_cbCommand.AddString(s);	// 7+300h
+		s.Format(_T("DEBUG_PRINT"));			m_cbCommand.AddString(s);	// 8+300h
 		m_cbCommand.SetCurSel(0);
 		break;
 
@@ -463,7 +468,8 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			case 7: s.Format(_T("Gate %d Polarity %d"), m_nGate, m_nParam); break;
 			case 8: s.Format(_T("Gate %d TOF %d"), m_nGate, m_nParam); break;
 			case 9: s.Format(_T("Nx = %d"), m_nParam);				break;
-			case 13: s.Format(_T("ReadBk SubCmd %d"), m_nParam);	break;
+			case 29: s.Format(_T("ReadBk SubCmd %d"), m_nParam);	break;
+			case 31: s.Format(_T("TcgBeamGainAll %d"), m_nParam);	break;
 			case 0x204: s = _T("TCG_BEAM_GAIN");					break;
 			case 0x205: s = _T("TCG_SEQ_GAIN");						break;
 			default:	s = t;		break;
@@ -506,7 +512,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 					// Blast 300 cmds
 					Blast(m_nPAP, m_nBoard);
 					break;
-				case 13:
+				case 29:
 					DebugPrint(m_nPAP, m_nBoard, m_nCmdId, m_nParam);
 					break;
 				case 30:
@@ -719,7 +725,7 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	default:		sym = _T( "???" );				return;
 	case 10:		sym = _T("TcgClockRate: "); 		break;
 	case 11:	sym = _T("TCGBeamGainDelay: "); 		break;
-	//case 12:	sym = _T("TCGBeamGainAll: : "); 		break;
+	case 31:	sym = _T("TCGBeamGainAll: : "); 		break;
 	case 14:	sym = _T("TCGClockRate: "); 			break;
 	case 15:	sym = _T("TCGTriggerDelay: "); 				break;
 		}
@@ -745,7 +751,8 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	}
 
 
-// cmd 12
+// cmd 12 -- changed to 28 per RAC
+// sort of a pseudo command since it generates real instrument commands for the PAG/UUI side
 void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	{
 	int i;
@@ -760,7 +767,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	Cmd.bPapNumber = CmdL.bPapNumber = m_nPAP;
 	Cmd.bBoardNumber = CmdL.bBoardNumber = m_nBoard;
 #if 1
-	for (i = 0; i < 300; i++ )
+	for (i = 0; i < 3000; i++ )
 		{
 		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
 		Cmd.wCmd[0] = i;
@@ -791,34 +798,46 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 			}
 		}	// for (i = 0; i < 300; i++ )
 #endif
-#if 1
+#if 0
 	// Now send 49 pulser commands
-	for (i = 0; i < 49; i++)
+	int iStart, iStop;
+	// set a break point here to manage loop limits:0,7 7,14 14,21 21,28 28,35 35,42  42,39
+	iStart = 0;
+	iStop = iStart + 49;
+	// only prf, shape, and width are affected by changing start/stop limits
+	for (i = iStart; i < iStop; i++)
 		{
 		Cmd.wMsgID = 0x300 + (i % 7);
 		
 		switch (i % 7)
 			{
-			case 0:		Cmd.wCmd[0] = (i * 5) + 10; break;	//prf
+			case 0:		Cmd.wCmd[0] = (i * 50) + 10; break;	//prf
 			case 1:		
 			case 2:		Cmd.wCmd[0] = i & 1; // HV & Polarity
 				break;
-			case 3:		Cmd.wCmd[0] = i;	break;	// SHAPE
+#if 1
+			case 3:		Cmd.wCmd[0] = i & 0xf;	break;	// SHAPE
 			case 4:		Cmd.wCmd[0] = i+1;	break;	// width
 			case 5:		Cmd.wCmd[0] = 3;	break;	// seq len
 			case 6:		Cmd.wCmd[0] = 4;	break;	// socomate pulse len
+#endif
+			default:
+				break;
 			}
 		s.Format(_T("ID=%d, Bytes=%d, PAP=%d, wCmd=%5d\n"),
 			Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.wCmd[0]);
 		m_lbOutput.AddString(s);
 		SendMsg((GenericPacketHeader*)&Cmd);
+		Sleep(10);
 
 		}	// pulser command loop
 #endif
 
 	}
 
-// cmd 13
+// cmd 13 -- changed to 29 per RAC
+// bit 0 turn on/off printf in NIOS code
+// bit 1 set resets command count
 void CNcNx::DebugPrint(int nPap, int nBoard, int nCmd, int nValue)
 	{
 	CString s;
@@ -828,7 +847,7 @@ void CNcNx::DebugPrint(int nPap, int nBoard, int nCmd, int nValue)
 	Dbg.wByteCount = 32;
 	Dbg.bPapNumber = nPap;
 	Dbg.bBoardNumber = nBoard;
-	Dbg.wDbgFlag = m_nParam;
+	Dbg.wDbgFlag = nValue;
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, PrintFlag=%5d\n"),
 		Dbg.wMsgID, Dbg.wByteCount, Dbg.bPapNumber, Dbg.bBoardNumber, Dbg.wDbgFlag);
 	m_lbOutput.AddString(s);
@@ -1067,6 +1086,8 @@ void CNcNx::PulserCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 		case 4 + 0x300:			sym = _T("PULSE_WIDTH ");				break;
 		case 5 + 0x300:			sym = _T("SEQUENCE_LEN ");				break;
 		case 6 + 0x300:			sym = _T("SOCOMATE_SYNC ");				break;
+		case 7 + 0x300:			sym = _T("PULSER ON/OFF ");				break;
+		case 8 + 0x300:			sym = _T("Debug Print ");				break;
 		default:				sym = _T("UNKNOWN CMD ");				break;
 
 		}

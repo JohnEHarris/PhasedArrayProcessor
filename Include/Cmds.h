@@ -75,7 +75,7 @@ the PAP and PAG
 #define TCG_GAIN_CLOCK_CMD_ID		10		// TCGGainClock
 #define TCG_BEAM_GAIN_DELAY_ID		11		// what is this in adc board?
 #define BLAST_CMDS_ID				12		// Blast test commands.. Send 300 canned commands
-#define DEBUG_PRINT_CMD_ID			13		// turn on/off debuggin in ADC debug console
+#define DEBUG_PRINT_CMD_ID			29		// turn on/off debuggin in ADC debug console.. was 13
 #define SET_TCG_CLOCK_RATE_CMD_ID	14		// SetTcgClockRate
 #define TCG_TRIGGER_DELAY_CMD_ID	15		// TCGTriggerDelay
 #define POW2_GAIN_CMD_ID			16		// Pow2GainBoost
@@ -91,7 +91,9 @@ the PAP and PAG
 #define	SET_ASCAN_GATE_OUTPUT_ID	26		// SetAscanGateOut -- set_ascan_gateout_reg
 #define ASCAN_REP_RATE_ID			27		// AscanRepRate
 #define SET_WALL_NX_CMD_ID			28		// only runs on PAP, not in the Nios
-#define TCG_BEAM_GAIN_ALL_CMD_ID	29		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
+#define DEBUG_PRINT_CMD_ID			29		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
+											// Moved to 31. DebugPrint moves into 29
+#define TCG_BEAM_GAIN_ALL_CMD_ID	31		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
 //*******************************************
 
 // Small command format
@@ -118,6 +120,8 @@ the PAP and PAG
 #define PULSE_WIDTH_CMD_ID			4+0x300		// How wide is pulse in clock cycles at 80 Mhz
 #define SEQUENCE_LEN_CMD_ID			5+0x300		// 3 for current system
 #define SOCOMATE_SYNC_PULSE_CMD_ID	6+0x300		// Default is 4
+#define PULSER_ON_OFF_CMD_ID		7+0x300
+#define PULSER_DEBUG_PRINT_CMD_ID	8+0x300	// bit 0 enables printing in NIOS debug, bit 1 resets cmds
 
 /*************** Command Structures **************/
 
@@ -507,7 +511,9 @@ typedef struct
 						// 192.168.10.200+boardNumber  range is .200-.215
 
 	BYTE bSpare[4];		// 16
-	WORD wDbgFlag;		// 0 = no debug output, !0 means debug output. sets gbPrintMsgFlag in ADC globals
+	// To make my PAG interface work easier, DbgFlag is a bit field
+	WORD wDbgFlag;		// bit 0=0 no dbg output sets gbPrintMsgFlag in ADC globals
+						// bit 1=1 reset command counters in ADC and PULSER
 	WORD wCmd[7];		// 16	
 	} ST_DEBUG_CMD;		// sizeof() = 32
 
@@ -712,6 +718,7 @@ void set_beam_gain_delay( int value );
 
 void set_sel_bit_cut_reg(int value); //default cut 0-4
 void Pow2GainBoost(void);
+void DebugPrint(void);
 
 void set_PRF( WORD wPrf );	// Set prf in Hertz. Range 10-10,000 -- on pulser board
 /*	SMALL TCG commands	*/

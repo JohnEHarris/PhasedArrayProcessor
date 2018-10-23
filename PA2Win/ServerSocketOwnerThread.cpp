@@ -685,7 +685,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				m_pSCC->uBytesSent += nSent;
 				m_pSCC->uPacketsSent++;
 				m_nConfigMsgQty++;
-				Sleep(10);
+				if ((pCmd->wMsgSeqCnt & 7) == 0)
+					Sleep(10);
 				// debug info to trace output.. losing connection when attempting to download config file
 				if ((m_pSCC->uPacketsSent))	// &0xff) == 0)
 					{
@@ -809,7 +810,11 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case PULSE_SHAPE_CMD_ID:	MsgPrint(pCmd, "PulserShape<3+300h>");		break;
 	case PULSE_WIDTH_CMD_ID:	MsgPrint(pCmd, "PulserWidth<4+300h>");		break;
 	case SEQUENCE_LEN_CMD_ID:	MsgPrint(pCmd, "SeqLen<5+300h>");			break;
-	case SOCOMATE_SYNC_PULSE_CMD_ID: MsgPrint(pCmd, "SocoSync<6+300h>");	break;
+	case SOCOMATE_SYNC_PULSE_CMD_ID: 
+								MsgPrint(pCmd, "SocoSync<6+300h>");			break;
+	case PULSER_ON_OFF_CMD_ID:	MsgPrint(pCmd, "PulserOn/Off<7+300h>");		break;
+	case PULSER_DEBUG_PRINT_CMD_ID:
+								MsgPrint(pCmd, "PulserDebug<8+300h>");		break;
 	default: MsgPrint(pCmd, "Unknown command");								break;
 		}
 

@@ -2195,35 +2195,36 @@ void CPA2WinDlg::StructSizes( void )
 	{
 	int i;
 	CString s;
-	i = sizeof(CCmdFifo);	// 16543
+	i = sizeof(CCmdFifo);	// 16544
 	s.Format( _T( "sizeof(CCmdFifo) %d" ), i );
 	DlgDebugOut( s );
+	i = sizeof(PULSER_DATA);			// 64
 	i = sizeof(CRITICAL_SECTION);		// 24
 	i = sizeof(CPtrList);					// 28
 	i = sizeof(CClientConnectionManagement);//16
-	i = sizeof(CClientCommunicationThread);//164
+	i = sizeof(CClientCommunicationThread);//168
 	i = sizeof(CClientSocket);				//36
 	i = sizeof(CCmdProcessThread);			//76
-	i = sizeof(CCCM_PAG);					//28
-	i = sizeof(CHwTimer);	// 492
+	i = sizeof(CCCM_PAG);					//32
+	i = sizeof(CHwTimer);	// 496
 	i = sizeof( CIniFile );	// 12
 	i = sizeof( CInspState ); // 12
-	i = sizeof(CNcNx);	// 488 -> 1608->2692
+	i = sizeof(CNcNx);	// 2800
 	i = sizeof(CServerConnectionManagement);	// 12
 	i = sizeof(CServerListenThread);	// 80
-	i = sizeof(CServerRcvListThread);	// 153
-	i = sizeof(CServerSocket);	// 4278
-	i = sizeof(CServerSocketOwnerThread);	// 108 -> 104
-	i = sizeof(CvChannel);	// 153
+	i = sizeof(CServerRcvListThread);	// 220
+	i = sizeof(CServerSocket);	// 4276
+	i = sizeof(CServerSocketOwnerThread);	// 108
+	i = sizeof(CvChannel);	// 160
 	i = sizeof(CTestThread); // 72
 	i = sizeof(CTuboIni); // 12
-	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 2168 -> 1141
-	i = sizeof( ST_SERVER_CONNECTION_MANAGEMENT ); // 148
-	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 157
+	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 640
+	i = sizeof( ST_SERVER_CONNECTION_MANAGEMENT ); // 160
+	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 172
 	i = sizeof( CPA2WinApp );	// 204
-	i = sizeof( CPA2WinDlg );	// 588
+	i = sizeof( CPA2WinDlg );	// 720
 	i = sizeof( Nc_FIFO );	// 24 but 3 copies
-	i = sizeof( Nx_FIFO );	// 48
+	i = sizeof( Nx_FIFO );	// 52
 	i = sizeof( PAP_INST_CHNL_NCNX );	// 1056
 	i = sizeof( CIniSectionA );	// 44
 	i = sizeof( CIniKeyA );	// 60
@@ -2366,7 +2367,7 @@ void CPA2WinDlg::ShowIdata(void)
 		if (gLastIdataPap.bDin & HD_SAM) hd = 1;
 		// Hardware input status
 		//       0123456 89012345 78901234 678901  456789012
-		s = _T( "Digital PP  IE  HD     Location Angle    Period   RotateCnt     MsgSeq  Glitch  LastCmdId  1stWord  Seq  Chnl  Gate" );
+		s = _T( "Digital PP  IE  HD     Location Angle    Period   RotateCnt     MsgSeq  Glitch  LastCmdId  1stWord  Seq  Chnl  Gate  (CMDS) Small Large  Pulser" );
 		t = s;
 		//m_lbOutput.AddString(t);	// show top line
 		//s.Format(_T("    MsgCnt = %d, GlitchCnt = %d  CmdId  1stWord"),
@@ -2382,6 +2383,9 @@ void CPA2WinDlg::ShowIdata(void)
 			gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
 			gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd,
 			gLastIdataPap.bCmdSeq, gLastIdataPap.bCmdChnl, gLastIdataPap.bCmdGate);
+		t += s;
+		// count of commands received by ADC & Pulser board. Pulser absent as of 2018-11-16
+		s.Format(_T("           %05d %05d  %05d"), gLastAscanPap.wSmallCmds, gLastAscanPap.wLargeCmds, gLastAscanPap.wPulserCmds);
 		t += s;
 		m_lbOutput.AddString(t);
 

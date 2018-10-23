@@ -58,6 +58,7 @@ public:
 	void NullpSCC(void)								{m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  0;}
 
 	void ProcessInstrumentData(IDATA_FROM_HW *pIData);
+	void ProcessPulserData(PULSER_DATA *pPulserData);
 	void CheckSequences(IDATA_PAP *pIdataPacket);
 	
 	void MakeFakeDataHead(IDATA_FROM_HW *pData);

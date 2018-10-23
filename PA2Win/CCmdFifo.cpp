@@ -153,6 +153,7 @@ int CCmdFifo::GetPacketSize(void)
 		s += _T("\n");
 		TRACE(s);
 		pMainDlg->SaveDebugLog(s);
+		// 2018-10-15 count lost sync's. 4 in a row, send packet to reset wiznet
 		return 0;
 		}
 	m_PacketSize = pHeader->wByteCount;

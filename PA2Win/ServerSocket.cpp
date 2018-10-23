@@ -1124,6 +1124,11 @@ void CServerSocket::OnReceive(int nErrorCode)
 			m_pSCC->bConnected = (BYTE) eNotConnected;
 			}
 
+	// debugging, break on the Pulser server getting a packet from the pulser
+	if (m_pSCM->m_pstSCM->uServerPort == 7602)
+		{
+		s = _T("Getting Pulser Status Messages");
+		}
 	// A real hardware FIFO would shift data to the output side instantly
 	m_pFifo->Shift();
 	BYTE *pCmd = m_pFifo->GetInLoc();

@@ -8,8 +8,8 @@
 #define VERSION_MINOR           0
 #define VERSION_BUILD           BUILD_VERSION
 
-#define VERSION16				(VERSION_MAJOR<<13) | (VERSION_MINOR<<10) | (BUILD_VERSION & 0x1ff)
-#define VERSION32				(VERSION_MAJOR<<29) | (VERSION_MINOR<<24) | (BUILD_VERSION & 7fffff)
+#define VERSION16				(VERSION_MAJOR<<12) | (VERSION_MINOR<<8) | (BUILD_VERSION & 0xff)
+#define VERSION32				(VERSION_MAJOR<<28) | (VERSION_MINOR<<24) | (BUILD_VERSION & 7fffff)
 #define PA2_VERSION _T("Version =   %d_%02d_%03d"), VERSION_MAJOR, VERSION_MINOR, VERSION_BUILD 
 /*
 Show the version number of this program. Newest version on TOP

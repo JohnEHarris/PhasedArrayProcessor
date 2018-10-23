@@ -128,6 +128,7 @@ PubExt WORD gwStatusHoldCnt;	// set to non-zero when status changes
 PubExt WORD gwSmallCmdLost, gwLargeCmdLost;
 // track max command depth
 PubExt BYTE gbSmallCmdQ, gbSmallCmdQPrior, gbLargeCmdQ, gbLargeCmdQPrior;
+PubExt WORD gwSmallCmds, gwLargeCmds;	// count commands received
 PubExt BYTE gbIntrMask;
 
 
@@ -160,4 +161,11 @@ PubExt UINT guPktAttempts[2][10];	//[0]=Nx, [1]=All wall count number of attempt
 								//[][0] is 1st attempt, [][1] is 2nd etc
 PubExt UINT guCmdsProcessed;	// number of commands processed by the ADC board
 PubExt BYTE gbPrintMsgFlag;			// if not 0, print message info as they are executed.
- #endif /* GLOBAL_H_ */
+
+// Pulser global variables
+PubExt WORD gwPulserCmds;
+PubExt WORD gwFPGA_Version;
+PubExt WORD gwNIOS_Version;
+PubExt WORD gwCPU_Temp;
+
+#endif /* GLOBAL_H_ */

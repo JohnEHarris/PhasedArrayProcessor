@@ -770,7 +770,8 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	CmdL.wByteCount = 1056;
 	Cmd.bPapNumber = CmdL.bPapNumber = m_nPAP;
 	Cmd.bBoardNumber = CmdL.bBoardNumber = m_nBoard;
-	DebugPrint(m_nPAP, m_nBoard, 29, 2);	// turn off debug in adc and clear counters
+	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 2);	// turn off debug in adc and clear counters
+	Sleep(40);
 #if 1
 	for (i = 0; i < 3000; i++ )
 		{
@@ -805,15 +806,18 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		}	// for (i = 0; i < 300; i++ )
 #endif
 
+	Sleep(20);
 	// reset ADC board to initial condition
 	//SamInitAdc(m_nPAP, m_nBoard);
 
-#if 0
+#if 1
 	// Now send 49 pulser commands
 	int iStart, iStop;
 	// set a break point here to manage loop limits:0,7 7,14 14,21 21,28 28,35 35,42  42,39
 	iStart = 0;
-	iStop = iStart + 49;
+	iStop = iStart + 7;
+	DebugPrint(m_nPAP, m_nBoard, PULSER_DEBUG_PRINT_CMD_ID, 2);	// turn off debug in adc and clear counters
+	Sleep(40);
 	// only prf, shape, and width are affected by changing start/stop limits
 	for (i = iStart; i < iStop; i++)
 		{
@@ -821,13 +825,13 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		
 		switch (i % 7)
 			{
-			case 0:		Cmd.wCmd[0] = (i * 50) + 10; break;	//prf
+			case 0:		Cmd.wCmd[0] = (i * 50) + 1000; break;	//prf
 			case 1:		
 			case 2:		Cmd.wCmd[0] = i & 1; // HV & Polarity
 				break;
 #if 1
 			case 3:		Cmd.wCmd[0] = i & 0xf;	break;	// SHAPE
-			case 4:		Cmd.wCmd[0] = i+1;	break;	// width
+			case 4:		Cmd.wCmd[0] = i+20;	break;	// width
 			case 5:		Cmd.wCmd[0] = 3;	break;	// seq len
 			case 6:		Cmd.wCmd[0] = 4;	break;	// socomate pulse len
 #endif

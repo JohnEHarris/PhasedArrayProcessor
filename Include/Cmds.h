@@ -42,7 +42,7 @@ the PAP and PAG
 
 
 /*****************	COMMANDS *********************/
-#define TOTAL_COMMANDS				32		// small commands
+#define TOTAL_COMMANDS				33		// small commands
 #define LAST_SMALL_COMMAND			TOTAL_COMMANDS - 1
 
 #define TOTAL_LARGE_COMMANDS		11
@@ -91,9 +91,12 @@ the PAP and PAG
 #define	SET_ASCAN_GATE_OUTPUT_ID	26		// SetAscanGateOut -- set_ascan_gateout_reg
 #define ASCAN_REP_RATE_ID			27		// AscanRepRate
 #define SET_WALL_NX_CMD_ID			28		// only runs on PAP, not in the Nios
-#define DEBUG_PRINT_CMD_ID			29		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
-											// Moved to 31. DebugPrint moves into 29
+#define DEBUG_PRINT_CMD_ID			29		// TCGBeamGainAll  Moved to 31
+											// DebugPrint moves into 29
 #define TCG_BEAM_GAIN_ALL_CMD_ID	31		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
+#define ADC_INIT_CMD_ID				32		// ADC hw init w/o wiznet init
+											
+											
 //*******************************************
 
 // Small command format
@@ -121,7 +124,8 @@ the PAP and PAG
 #define SEQUENCE_LEN_CMD_ID			5+0x300		// 3 for current system
 #define SOCOMATE_SYNC_PULSE_CMD_ID	6+0x300		// Default is 4
 #define PULSER_ON_OFF_CMD_ID		7+0x300
-#define PULSER_DEBUG_PRINT_CMD_ID	8+0x300	// bit 0 enables printing in NIOS debug, bit 1 resets cmds
+#define PULSER_DEBUG_PRINT_CMD_ID	8+0x300		// bit 0 enables printing in NIOS debug, bit 1 resets cmds
+#define PULSER_INIT_CMD_ID			9+0x300		// bit0=0, pulser board w/o wiznet init bit 0 set, reset wiznet also
 
 /*************** Command Structures **************/
 

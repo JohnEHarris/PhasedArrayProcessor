@@ -1155,11 +1155,11 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				j = 3;
 
 
-			if ((m_pstCCM->uPacketsSent & 0x1ff) == 0)		m_pElapseTimer->Start();
-			if ((m_pstCCM->uPacketsSent & 0x1ff) == 0x1ff)	// originally 0xff
+			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0)		m_pElapseTimer->Start();
+			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0x7ff)	// originally 0xff
 				{
 				m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
-				float fPksPerSec = 512000000.0f/( (float) m_nElapseTime);	// originally 256
+				float fPksPerSec = 2048000000.0f/( (float) m_nElapseTime);	// originally 256
 #if 1				
 				s.Format(_T("Nx data Transmit Packets/sec = %6.1f\n"), fPksPerSec);
 				TRACE(s);
@@ -1180,11 +1180,11 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 			pIdataHw->wMsgSeqCnt = m_wMsgSeqCountAW++;
 			pIdataHw->wMsgID = ADC_DATA_ID;
 			// this processing cause significant dropped all - wall packets
-			if ((m_pstCCM->uPacketsSent & 0x1ff) == 0)		m_pElapseTimer->Start();
-			if ((m_pstCCM->uPacketsSent & 0x1ff) == 0x1ff)	// originally 0xff
+			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0)		m_pElapseTimer->Start();
+			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0x7ff)	// originally 0xff
 				{
 				m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 256 packets
-				float fPksPerSec = 512000000.0f / ((float)m_nElapseTime);	// originally 256-now 2048
+				float fPksPerSec = 2048000000.0f / ((float)m_nElapseTime);	// originally 256-now 2048
 #if 1
 				s.Format(_T("All Wall data Transmit Packets/sec = %6.1f\n"), fPksPerSec);
 				TRACE(s);

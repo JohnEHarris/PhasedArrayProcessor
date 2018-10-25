@@ -685,7 +685,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				m_pSCC->uBytesSent += nSent;
 				m_pSCC->uPacketsSent++;
 				m_nConfigMsgQty++;
-				if ((pCmd->wMsgSeqCnt & 7) == 0)
+				// sleep every other packet
+				if ((pCmd->wMsgID & 7) == 0)
 					Sleep(10);
 				// debug info to trace output.. losing connection when attempting to download config file
 				if ((m_pSCC->uPacketsSent))	// &0xff) == 0)
@@ -705,7 +706,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 							{
 							//s = _T("Sleep after 32 small commands\n");
 							//pMainDlg->SaveCommandLog(s);
-							Sleep(10);
+							//Sleep(10);
 							}
 						}
 					else if (pCmd->wMsgID < TOTAL_LARGE_COMMANDS + 0x200)
@@ -800,6 +801,7 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case 28: MsgPrint(pCmd, "WallNx <28> wCmd = Nx");				break;
 	case 29: MsgPrint(pCmd, "TCGBeamGainAll <29> wCmd = gain");		break;
 	case 30: MsgPrint(pCmd, "ReadBack <30> wCmd = ?");				break;
+	case 32: MsgPrint(pCmd, "SamInitAdc <32>");						break;
 	case TCG_GAIN_CMD_ID:	  MsgPrintLarge(pCmdL, "TCGBeamGain <516> wCmd[0..3]");		break;
 	case SEQ_TCG_GAIN_CMD_ID: MsgPrintLarge(pCmdL, "SetSeqTCGGain <517> wCmd[0..3]");	break;
 
@@ -815,6 +817,7 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case PULSER_ON_OFF_CMD_ID:	MsgPrint(pCmd, "PulserOn/Off<7+300h>");		break;
 	case PULSER_DEBUG_PRINT_CMD_ID:
 								MsgPrint(pCmd, "PulserDebug<8+300h>");		break;
+	case  PULSER_INIT_CMD_ID:	MsgPrint(pCmd, "PulserInit<9+300h>");		break;
 	default: MsgPrint(pCmd, "Unknown command");								break;
 		}
 

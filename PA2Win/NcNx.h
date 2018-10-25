@@ -96,6 +96,8 @@ public:
 
 	void Blast(int m_nPAP, int m_nBoard);	// blast a lot of commands to test FIFO's
 	void CNcNx::DebugPrint(int nPap, int nBoard, int nCmd, int nValue);
+	void SamInitAdc(int nPap, int nBoard);
+	void SamInitPulser(int nPap, int nBoard);
 
 	void FakeData( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue );
 	// WordCmd, use nValue to assign to hardware functions

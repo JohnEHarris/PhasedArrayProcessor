@@ -37,7 +37,8 @@ CServerSocket::CServerSocket(CServerConnectionManagement *pSCM, int nOwningThrea
 	m_nOwningThreadType = nOwningThreadType;
 	if (nOwningThreadType == eServerConnection)
 		{
-		m_pFifo = new CCmdFifo( INSTRUMENT_PACKET_SIZE );		// FIFO control for receiving instrument packets
+		//m_pFifo = new CCmdFifo( INSTRUMENT_PACKET_SIZE );		// FIFO control for receiving instrument packets
+		m_pFifo = new CCmdFifo(INSTRUMENT_PACKET_SIZE, 'S', m_nMyServer,0);	// set nClient when client connects
 		m_pFifo->m_nOwningThreadId = AfxGetThread()->m_nThreadID;
 		strcpy( m_pFifo->tag, "New m_pFifoSrvSkt 48\n" );
 		s = m_pFifo->tag;
@@ -939,6 +940,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 			return;
 			}
 
+
 		// CREATE THE STRUCTURE to hold the ST_SERVERS_CLIENT_CONNECTION info
 		ST_SERVERS_CLIENT_CONNECTION *pscc;
 
@@ -1005,6 +1007,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 				pThread->m_pSCC->pSocket->m_pSCM = pThread->m_pSCM;
 				pThread->m_pSCC->pSocket->m_pstSCM = pThread->m_pstSCM;
 				pThread->m_pSCC->pSocket->m_nClientIndex = m_nClientIndex;
+				// fix the fifo client number for this connetion
+				pThread->m_pSCC->pSocket->m_pFifo->SetClientNumber(m_nClientIndex);
 				pThread->ResumeThread();
 				}
 			else

@@ -407,8 +407,9 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 														 m_pCCM->m_pstCCM->sClientIP4, 
 														 m_pCCM->m_pstCCM->uClientPort);
 #endif
-			// create the fifo and timer
-		m_pFifo = new CCmdFifo(1460);
+		// create the fifo and timer
+		// a fifo that gets inspection data from an instrument and sends to a server eg PAG or UUI
+		m_pFifo = new CCmdFifo(1460, 'C', m_pCCM->m_nMyConnection, 0);
 		m_pFifo->m_nOwningThreadId = AfxGetThread()->m_nThreadID;
 		strcpy( m_pFifo->tag, "New m_pFifoClntSkt 407 " );
 		s = m_pFifo->tag;

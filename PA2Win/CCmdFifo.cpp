@@ -5,7 +5,7 @@ bytes in it to make a whole packet.
 
 Author:		jeh
 Date:		2016-11-03
-Revised:	
+Revised:	2018-10-22 add character for Client or Server and counter for which client or which server instance
 
 
 */
@@ -19,17 +19,29 @@ Revised:
 #include "PA2WinDlg.h"
 #endif
 
-CCmdFifo::CCmdFifo(int PacketSize)
+
+// insert debug info for fifos
+// C = this fifo used by CCM, S = SRvConnThread, which client_com or which server, and for a server, which client to the server
+CCmdFifo::CCmdFifo(int PacketSize, char CS, int nWhichCS, int nClient)
 	{
 	//m_PacketSize = PacketSize;
-	m_In = m_Out = m_Size = 0;
+	m_In = m_Out = m_Size = m_nLostSyncCnt = 0;
 	Reset();
 	m_nFifoCnt = gnFifoCnt++;
+	if (toupper(CS) == 'C') m_Type = 'C';
+	else m_Type = 'S';
+	m_CSnum = nWhichCS;
+	m_SrvClientNum = nClient;
 	};
 
 CCmdFifo::~CCmdFifo()
 	{
 	};
+
+void CCmdFifo::SetClientNumber(int nClient)
+	{
+	m_SrvClientNum = nClient;
+	}
 
 // What if fragment of packet still in FIFO	
 // With the cases listed below (size>packet, size>0, size==0) we can call Reset after every packet access.
@@ -154,6 +166,14 @@ int CCmdFifo::GetPacketSize(void)
 		TRACE(s);
 		pMainDlg->SaveDebugLog(s);
 		// 2018-10-15 count lost sync's. 4 in a row, send packet to reset wiznet
+		m_nLostSyncCnt++;
+		if (m_nLostSyncCnt >= 4)
+			{
+			m_Out = m_In = m_Size = m_nLostSyncCnt = 0;
+			s = _T("Reinitialize FIFO\n");
+			TRACE(s);
+			pMainDlg->SaveDebugLog(s);
+			}
 		return 0;
 		}
 	m_PacketSize = pHeader->wByteCount;
@@ -180,6 +200,7 @@ int CCmdFifo::GetPacketSize(void)
 		}
 #endif
 	m_wMsgSeqCnt = pIdata->wMsgSeqCnt;
+	m_nLostSyncCnt = 0;
 	return m_PacketSize;
 	}
 
@@ -233,7 +254,7 @@ BYTE *CCmdFifo::GetNextPacket(void)
 		s = _T( "Lost Sync or wrong packet size\n" );
 		pMainDlg->SaveDebugLog(s);
 		TRACE(s);
-
+		// If this happens twice in a row, send message to adc board to reset Wiznet
 		return NULL;
 		}
 	m_PacketSize = pHeader->wByteCount;

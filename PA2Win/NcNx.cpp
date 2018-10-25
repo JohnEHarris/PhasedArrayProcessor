@@ -370,7 +370,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("DebugPrint"));				m_cbCommand.AddString(s);	//29 replace TcgBeamGainAll with DebugPrint
 		s.Format(_T("ReadBack"));				m_cbCommand.AddString(s);	//30
 		s.Format(_T("TcgBeamGainAll"));			m_cbCommand.AddString(s);	//31
-		s.Format(_T("ProcNull"));				m_cbCommand.AddString(s);	//32
+		s.Format(_T("InitADC"));				m_cbCommand.AddString(s);	//32
 		s.Format(_T("ProcNull"));				m_cbCommand.AddString(s);	//33
 
 		m_cbCommand.SetCurSel(2);
@@ -385,6 +385,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("SOCOMATE_SYNC"));			m_cbCommand.AddString(s);	// 6+300h
 		s.Format(_T("PULSER_OnOff"));			m_cbCommand.AddString(s);	// 7+300h
 		s.Format(_T("DEBUG_PRINT"));			m_cbCommand.AddString(s);	// 8+300h
+		s.Format(_T("SAM_INIT"));				m_cbCommand.AddString(s);	// 9+300h
 		m_cbCommand.SetCurSel(0);
 		break;
 
@@ -470,6 +471,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			case 9: s.Format(_T("Nx = %d"), m_nParam);				break;
 			case 29: s.Format(_T("ReadBk SubCmd %d"), m_nParam);	break;
 			case 31: s.Format(_T("TcgBeamGainAll %d"), m_nParam);	break;
+			case 32: s = _T("ADC Init");							break;
 			case 0x204: s = _T("TCG_BEAM_GAIN");					break;
 			case 0x205: s = _T("TCG_SEQ_GAIN");						break;
 			default:	s = t;		break;
@@ -477,7 +479,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		//m_lbOutput.AddString( s );
 
 
-		if (m_nCmdId + nCmdOffset < 14)
+		if (m_nCmdId + nCmdOffset < 33)	// limit number has to be adjusted
 			{
 			switch (m_nCmdId + nCmdOffset)
 				{
@@ -517,6 +519,8 @@ void CNcNx::OnCbnSelchangeCbCmds()
 					break;
 				case 30:
 					ReadBackCmd(m_nPAP, m_nBoard, m_nCmdId, m_nParam);
+				case 32:
+					SamInitAdc(m_nPAP, m_nBoard);
 					break;
 				default:
 					break;
@@ -559,7 +563,7 @@ void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 	{
 #ifdef I_AM_PAG
 	CString s;
-	if (pMsg->wMsgID >= 0x300 + LAST_PULSER_COMMAND)
+	if (pMsg->wMsgID > 0x300 + LAST_PULSER_COMMAND)
 		{
 		s.Format(_T("Pulser command 0x%0x is invalid... deleting\n"), pMsg->wMsgID);
 		TRACE(s);
@@ -766,6 +770,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	CmdL.wByteCount = 1056;
 	Cmd.bPapNumber = CmdL.bPapNumber = m_nPAP;
 	Cmd.bBoardNumber = CmdL.bBoardNumber = m_nBoard;
+	DebugPrint(m_nPAP, m_nBoard, 29, 2);	// turn off debug in adc and clear counters
 #if 1
 	for (i = 0; i < 3000; i++ )
 		{
@@ -783,6 +788,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 				CmdL.wCmd[0], CmdL.wCmd[1], CmdL.wCmd[2], CmdL.wCmd[3]);
 			m_lbOutput.AddString(s);
 			SendMsg((GenericPacketHeader*)&CmdL);
+			//Sleep(10);
 			}
 		else
 			{
@@ -798,6 +804,10 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 			}
 		}	// for (i = 0; i < 300; i++ )
 #endif
+
+	// reset ADC board to initial condition
+	//SamInitAdc(m_nPAP, m_nBoard);
+
 #if 0
 	// Now send 49 pulser commands
 	int iStart, iStop;
@@ -832,7 +842,8 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 
 		}	// pulser command loop
 #endif
-
+	// restore Pulser to initial condition
+	//SamInitPulser(m_nPAP, m_nBoard);
 	}
 
 // cmd 13 -- changed to 29 per RAC
@@ -842,6 +853,7 @@ void CNcNx::DebugPrint(int nPap, int nBoard, int nCmd, int nValue)
 	{
 	CString s;
 	ST_DEBUG_CMD Dbg;
+	memset(&Dbg, 0, sizeof(ST_DEBUG_CMD));
 	Dbg.wMsgID = nCmd;// DEBUG_PRINT_CMD_ID;
 	Dbg.uSync = SYNC;
 	Dbg.wByteCount = 32;
@@ -853,6 +865,39 @@ void CNcNx::DebugPrint(int nPap, int nBoard, int nCmd, int nValue)
 	m_lbOutput.AddString(s);
 	SendMsg((GenericPacketHeader*)&Dbg);
 	}
+
+// No command arguments. Runs Sam's init code on adc board
+// Omits initializing wiznet. Cmd 32
+void CNcNx::SamInitAdc(int nPap, int nBoard)
+	{
+	CString s;
+	ST_SMALL_CMD Init;
+	Init.uSync = SYNC;
+	Init.wByteCount = 32;
+	Init.wMsgID = ADC_INIT_CMD_ID;
+	Init.bPapNumber = nPap;
+	Init.bBoardNumber = nBoard;
+	s.Format(_T("Init ADC Board %d, PAP %d\n"), nBoard, nPap);
+	m_lbOutput.AddString(s);
+	SendMsg((GenericPacketHeader*)&Init);
+	}
+
+// No command arguments. Runs Sam's init code on pulser board
+// Omits initializing wiznet -- PULSER CMD 9
+void CNcNx::SamInitPulser(int nPap, int nBoard)
+	{
+	CString s;
+	ST_SMALL_CMD Init;
+	Init.uSync = SYNC;
+	Init.wByteCount = 32;
+	Init.wMsgID = PULSER_INIT_CMD_ID;
+	Init.bPapNumber = nPap;
+	Init.bBoardNumber = nBoard;
+	s = _T("Init Pulser Board\n");
+	m_lbOutput.AddString(s);
+	SendMsg((GenericPacketHeader*)&Init);
+	}
+
 
 // Readback has sub commands. Top read back ID is 13
 // nRbId is nValue from NcNx parameters
@@ -1088,6 +1133,7 @@ void CNcNx::PulserCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 		case 6 + 0x300:			sym = _T("SOCOMATE_SYNC ");				break;
 		case 7 + 0x300:			sym = _T("PULSER ON/OFF ");				break;
 		case 8 + 0x300:			sym = _T("Debug Print ");				break;
+		case 9 + 0x300:			sym = _T("Pulser Init ");				break;
 		default:				sym = _T("UNKNOWN CMD ");				break;
 
 		}

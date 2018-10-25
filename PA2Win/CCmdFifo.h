@@ -20,8 +20,14 @@ class CCmdFifo
 		int m_Size;		// number of bytes unread in FIFO
 		int m_PacketSize;	// FIFO holds bytes but bytes should only be made available in PacketSize chunks
 		BYTE m_bError;	// bit 0= overflow, bit 1=Lost Sync, bit 2=wrong size
+		char m_Type;	// 'C' or 'S'
+		short m_CSnum;	// which client or which server
+		short m_SrvClientNum;	// Client number for this server
 	public:
-		CCmdFifo(int PacketSize);
+		// if a client fifo, which client do I belong to: CS='C', my client number, nClient = don't care 
+		// if a server fifo, which server and which client is filling the fifo: CS='S', my server number, the client
+		// for that server number
+		CCmdFifo(int PacketSize, char CS, int nWhichCS, int nClient);	// old CCmdFifo(int PacketSize);
 		virtual ~CCmdFifo();
 		void Reset(void);
 		BYTE *GetInLoc(void);	// { return (&m_Mem[m_In]); }	// starting point where next packet will be stored
@@ -35,9 +41,11 @@ class CCmdFifo
 		void Shift(void);
 		BYTE GetError( void );	// return error to caller and reset error byte
 
+		void SetClientNumber(int nClient);
 		int m_nFifoCnt;
 		int m_nOwningThreadId;			// debugging
 		char tag[128];		// tell who created and who destroyed.
+		int m_nLostSyncCnt;
 	};
 
 #endif

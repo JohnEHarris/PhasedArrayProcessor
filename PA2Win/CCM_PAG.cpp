@@ -177,11 +177,13 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				{
 				ST_WORD_CMD *pSmall;
 				pSmall = (ST_WORD_CMD *)pMmiCmd;
+#if 0
 				s.Format(_T("Received from GUI: Cmd= %2d board= %d Seq= %2d Ch= %d G= %d wCmd= %d\n"),
 					MsgId, pSmall->Head.bBoardNumber, pSmall->bSeq,
 					pSmall->bChnl, pSmall->bGateNumber, pSmall->wCmd);	// 1st word in command values
 				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
+#endif
 
 				pSocket->LockSendPktList();	// server sockets linked list for sending commands
 				pSocket->AddTailSendPkt(pMmiCmd);
@@ -306,10 +308,12 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 							// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
 							pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
+#if 0
 							s.Format(_T("Received Large Cmd %d for board %d from Phased Array GUI\n"),
 								MsgId, pMmiCmd->bBoardNumber);
 							TRACE(s);
 							pMainDlg->SaveDebugLog(s);
+#endif
 							}
 
 						else
@@ -326,11 +330,13 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 						{
 						ST_WORD_CMD *pSmall;
 						pSmall = (ST_WORD_CMD *)pMmiCmd;
+#if 0
 						s.Format(_T("Received from GUI: Cmd= %2d board= %d Seq= %2d Ch= %d G= %d wCmd= %d\n"),
 							MsgId, pSmall->Head.bBoardNumber, pSmall->bSeq,
 							pSmall->bChnl, pSmall->bGateNumber, pSmall->wCmd);	// 1st word in command values
 						TRACE(s);
 						pMainDlg->SaveDebugLog(s);
+#endif
 
 						pSocket->LockSendPktList();	// server sockets linked list for sending
 						pSocket->AddTailSendPkt(pMmiCmd);

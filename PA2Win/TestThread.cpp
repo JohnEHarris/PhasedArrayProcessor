@@ -98,7 +98,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 #ifdef I_AM_PAP
 		for ( i = 0; i < MAX_CLIENTS; i++)
 			{
-			switch (i)
+			switch (i & 1)
 				{
 			case 0:		// the client connection to PAG
 				// force connection by Normal Nx data processing first so that
@@ -154,7 +154,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 								}
 
 							pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
-							s = _T("Command sent from idle loop\n");
+							s.Format( _T("Command from Srv%d sent to Client%d from idle loop\n"), i,j);
 							TRACE(s);
 							}	//there are packets to send
 						}	// pSendPktList exists

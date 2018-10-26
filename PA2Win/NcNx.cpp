@@ -773,7 +773,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 2);	// turn off debug in adc and clear counters
 	Sleep(40);
 #if 1
-	for (i = 0; i < 3000; i++ )
+	for (i = 0; i < 30000; i++ )
 		{
 		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
 		Cmd.wCmd[0] = i;
@@ -811,12 +811,12 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	//SamInitAdc(m_nPAP, m_nBoard);
 
 #if 1
-	// Now send 49 pulser commands
+	// Now send 7 pulser commands
 	int iStart, iStop;
 	// set a break point here to manage loop limits:0,7 7,14 14,21 21,28 28,35 35,42  42,39
 	iStart = 0;
 	iStop = iStart + 7;
-	DebugPrint(m_nPAP, m_nBoard, PULSER_DEBUG_PRINT_CMD_ID, 2);	// turn off debug in adc and clear counters
+	DebugPrint(m_nPAP, m_nBoard, PULSER_DEBUG_PRINT_CMD_ID, 2);	// turn off debug in pulser and clear counters
 	Sleep(40);
 	// only prf, shape, and width are affected by changing start/stop limits
 	for (i = iStart; i < iStop; i++)
@@ -826,23 +826,27 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		switch (i % 7)
 			{
 			case 0:		Cmd.wCmd[0] = (i * 50) + 1000; break;	//prf
-			case 1:		
-			case 2:		Cmd.wCmd[0] = i & 1; // HV & Polarity
+			case 1:		break;		// uncertain how and why to set HV - for now will resend prf
+			case 2:		Cmd.wCmd[0] = 0; // Polarity
 				break;
 #if 1
-			case 3:		Cmd.wCmd[0] = i & 0xf;	break;	// SHAPE
-			case 4:		Cmd.wCmd[0] = i+20;	break;	// width
+			case 3:		Cmd.wCmd[0] = 255;	break;	// SHAPE
+			case 4:		Cmd.wCmd[0] = 6;	break;	// width
 			case 5:		Cmd.wCmd[0] = 3;	break;	// seq len
 			case 6:		Cmd.wCmd[0] = 4;	break;	// socomate pulse len
 #endif
 			default:
 				break;
 			}
-		s.Format(_T("ID=%d, Bytes=%d, PAP=%d, wCmd=%5d\n"),
-			Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.wCmd[0]);
-		m_lbOutput.AddString(s);
-		SendMsg((GenericPacketHeader*)&Cmd);
-		Sleep(10);
+		
+		if ((i % 7) != 1)	// skip hv setting for now
+			{
+			s.Format(_T("ID=%d, Bytes=%d, PAP=%d, wCmd=%5d\n"),
+				Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.wCmd[0]);
+			m_lbOutput.AddString(s);
+			SendMsg((GenericPacketHeader*)&Cmd);
+			Sleep(10);
+			}
 
 		}	// pulser command loop
 #endif
@@ -872,6 +876,7 @@ void CNcNx::DebugPrint(int nPap, int nBoard, int nCmd, int nValue)
 
 // No command arguments. Runs Sam's init code on adc board
 // Omits initializing wiznet. Cmd 32
+// Probably crashed the NIOS code with unhandled interrupt message.
 void CNcNx::SamInitAdc(int nPap, int nBoard)
 	{
 	CString s;
@@ -888,6 +893,7 @@ void CNcNx::SamInitAdc(int nPap, int nBoard)
 
 // No command arguments. Runs Sam's init code on pulser board
 // Omits initializing wiznet -- PULSER CMD 9
+// Probably crashed the NIOS code with unhandled interrupt message.
 void CNcNx::SamInitPulser(int nPap, int nBoard)
 	{
 	CString s;

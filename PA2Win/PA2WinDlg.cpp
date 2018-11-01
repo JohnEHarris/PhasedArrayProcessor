@@ -577,6 +577,25 @@ BOOL CPA2WinDlg::OnInitDialog()
 
 	memset((void*)guPktAttempts, 0, sizeof(guPktAttempts));
 	i = sizeof(guPktAttempts);
+	// Set priority to lower maybe good?
+	DWORD dwError, dwThreadPri;
+
+	if (!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL))
+		{
+		dwError = GetLastError();
+		if (ERROR_THREAD_MODE_ALREADY_BACKGROUND == dwError)
+			_tprintf(TEXT("Already in background mode\n"));
+		else _tprintf(TEXT("Failed to enter background mode (%d)\n"), dwError);
+		//goto Cleanup;
+		}
+
+	// Display thread priority
+
+	dwThreadPri = GetThreadPriority(GetCurrentThread());
+
+	_tprintf(TEXT("Current thread priority is 0x%x\n"), dwThreadPri);
+
+
 	return TRUE;  // return TRUE  unless you set the focus to a control
 	}
 

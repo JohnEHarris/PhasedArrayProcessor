@@ -773,7 +773,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 2);	// turn off debug in adc and clear counters
 	Sleep(40);
 #if 1
-	for (i = 0; i < 30000; i++ )
+	for (i = 0; i < 3000; i++ )
 		{
 		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
 		Cmd.wCmd[0] = i;
@@ -815,7 +815,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	int iStart, iStop;
 	// set a break point here to manage loop limits:0,7 7,14 14,21 21,28 28,35 35,42  42,39
 	iStart = 0;
-	iStop = iStart + 7;
+	iStop = iStart + 70;
 	DebugPrint(m_nPAP, m_nBoard, PULSER_DEBUG_PRINT_CMD_ID, 2);	// turn off debug in pulser and clear counters
 	Sleep(40);
 	// only prf, shape, and width are affected by changing start/stop limits

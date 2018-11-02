@@ -2280,6 +2280,31 @@ void CPA2WinDlg::DlgDebugOut( CString s )
 	m_lbOutput.AddString( s );
 	}
 
+
+int CPA2WinDlg::GetAdcCmdQ(void)		// return number of commands queued for ADC
+	{
+	// ADC command q services by SRV[0]
+	int i = 0;
+	if (stSCM[0].pClientConnection[0]->pSendPktList)
+		{
+		i = stSCM[0].pClientConnection[0]->pSendPktList->GetCount();
+		}
+	return i;
+	}
+
+
+int CPA2WinDlg::GetPulserCmdQ(void)
+	{
+	// pulser command q services by SRV[1]
+	int i = 0;
+	if (stSCM[1].pClientConnection[0]->pSendPktList)
+		{
+		i = stSCM[1].pClientConnection[0]->pSendPktList->GetCount();
+		}
+	return i;
+	}
+
+
 // Show Idata on Pa2win dlg when running as PAP
 // CALLED FROM 1 SECOND TIMER
 void CPA2WinDlg::ShowIdata(void)
@@ -2303,6 +2328,23 @@ void CPA2WinDlg::ShowIdata(void)
 			gwMax0 = gwZeroCnt = gwNot0 = 0;
 			m_nMsgSeqCnt = gwMsgSeqCnt;
 #else
+
+
+		// Check the command queues for the ADC and Pulser. If any commands are waiting
+		// exit this routine
+		s = _T(" *** BUSY SENDING COMMANDS ***");
+		if (GetAdcCmdQ())
+			{
+			m_lbOutput.AddString(s);
+			return;
+			}
+		if (GetPulserCmdQ())
+			{
+			m_lbOutput.AddString(s);
+			return;
+			}
+
+
 		// Generate paket rate here but output at end of list box
 		for (i = 0; i < 2; i++)
 			{
@@ -2425,6 +2467,22 @@ void CPA2WinDlg::ShowIdata(void)
 		// skip one line
 		s = _T(" ");
 		m_lbOutput.AddString(s);
+		// Check the command queues for the ADC and Pulser. If any commands are waiting
+		// exit this routine
+		s = _T(" *** BUSY SENDING COMMANDS ***");
+		if (GetAdcCmdQ())
+			{
+			m_lbOutput.AddString(s);
+			return;
+			}
+		if (GetPulserCmdQ()) 
+			{
+			m_lbOutput.AddString(s);
+			return;
+			}
+		// on next 2 lines, display the packet/second for Nx data and all wall data
+		// skip one line
+
 		for (i = 0; i < 2; i++)
 			{
 			switch (i)
@@ -2441,11 +2499,11 @@ void CPA2WinDlg::ShowIdata(void)
 #if 1
 		t = _T("");
 		m_lbOutput.AddString(t);
-		s = _T("ADC: [  VerHW     VerSW    TempCPU  TempBd]   PULSER: [  VerHW     VerSW   TempCPU         PRF ]");
+		s = _T("ADC: [  VerHW     VerSW     TempCPU  TempBd]  PULSER: [  VerHW     VerSW     TempCPU       PRF ]");
 		m_lbOutput.AddString(s);
 		wVerH = gLastAscanPap.wFPGA_VersionA;
 		wVerS = gLastAscanPap.wNIOS_VersionA;
-		s.Format(_T("     [  %01d.%01d.%03d   %01d.%01d.%03d   %02d C     %02d C ]"),
+		s.Format(_T("     [  %01d.%01d.%03d   %01d.%01d.%03d   %02d C     %02d C  ]"),
 			MAJVER(wVerH), MINVER(wVerH), BLDVER(wVerH),
 			MAJVER(wVerS), MINVER(wVerS), BLDVER(wVerS),
 			gLastAscanPap.bFPGATempA, gLastAscanPap.bBoardTempA);
@@ -2453,7 +2511,7 @@ void CPA2WinDlg::ShowIdata(void)
 #if 1
 		wVerH = gLastAscanPap.wFPGA_VersionP;
 		wVerS = gLastAscanPap.wNIOS_VersionP;
-		s.Format(_T("           [  %01d.%01d.%03d   %01d.%01d.%03d  %02d C         %5d ]"),
+		s.Format(_T("          [  %01d.%01d.%03d   %01d.%01d.%03d   %02d C        %5d ]"),
 			MAJVER(wVerH), MINVER(wVerH), BLDVER(wVerH),
 			MAJVER(wVerS), MINVER(wVerS), BLDVER(wVerS),
 			gLastAscanPap.wCPU_TempP,

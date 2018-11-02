@@ -183,8 +183,11 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 					pSmall->bChnl, pSmall->bGateNumber, pSmall->wCmd);	// 1st word in command values
 				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
-#endif
 
+				// special case for PAP -- grab prf as it goes thru to pusler and display on PAP screen
+				if (MsgId == 0x300 + 0)
+					gwPap_Prf = pSmall->wCmd;
+#endif
 				pSocket->LockSendPktList();	// server sockets linked list for sending commands
 				pSocket->AddTailSendPkt(pMmiCmd);
 				pSocket->UnLockSendPktList();

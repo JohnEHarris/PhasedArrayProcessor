@@ -817,7 +817,8 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case PULSER_ON_OFF_CMD_ID:	MsgPrint(pCmd, "PulserOn/Off<7+300h>");		break;
 	case PULSER_DEBUG_PRINT_CMD_ID:
 								MsgPrint(pCmd, "PulserDebug<8+300h>");		break;
-	case  PULSER_INIT_CMD_ID:	MsgPrint(pCmd, "PulserInit<9+300h>");		break;
+	case  PULSER_WIZ_RESET_CMD_ID:	
+								MsgPrint(pCmd, "PulserInit<9+300h>");		break;
 	default: MsgPrint(pCmd, "Unknown command");								break;
 		}
 

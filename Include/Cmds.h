@@ -45,14 +45,8 @@ the PAP and PAG
 #define TOTAL_COMMANDS				33		// small commands
 #define LAST_SMALL_COMMAND			TOTAL_COMMANDS - 1
 
-#define TOTAL_LARGE_COMMANDS		11
-#define LAST_LARGE_COMMAND			TOTAL_LARGE_COMMANDS - 1
 
-#define TOTAL_READ_BACK_COMMANDS	10
-#define LAST_READ_BACK_COMMAND		TOTAL_READ_BACK_COMMANDS - 1
 
-#define TOTAL_PULSER_COMMANDS		10
-#define LAST_PULSER_COMMAND			TOTAL_PULSER_COMMANDS - 1
 
 // SMALL
 // modify Cmds.h and Cmds.cpp in the NIOS code files
@@ -94,10 +88,14 @@ the PAP and PAG
 #define DEBUG_PRINT_CMD_ID			29		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
 											// Moved to 31. DebugPrint moves into 29
 #define TCG_BEAM_GAIN_ALL_CMD_ID	31		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
-#define ADC_INIT_CMD_ID				32		// ADC hw init w/o wiznet init
+#define ADC_WIZ_RESET_CMD_ID		32		// bit0=0, ADC board Wiznet ONLY init. bit 0 set, reset ADC BRD also
 											
 											
 //*******************************************
+
+
+#define TOTAL_READ_BACK_COMMANDS	10
+#define LAST_READ_BACK_COMMAND		TOTAL_READ_BACK_COMMANDS - 1
 
 // Small command format
 #define READBACK_CMD_ID				30		// ReadBackCmdData
@@ -106,13 +104,23 @@ the PAP and PAG
 #define NX_READBACK_ID				0		// returns Nx settings for all channels
 #define GET_GATE_DATA_ID			1		// returns all gate data for all channels of bSeq = n
 
-									
+
+//*******************************************
+
+#define TOTAL_LARGE_COMMANDS		11
+#define LAST_LARGE_COMMAND			TOTAL_LARGE_COMMANDS - 1
+
 // LARGE
 #define NC_NX_TEST					1+0x200
 #define TCG_GAIN_CMD_ID				4+0x200		// TCGBeamGain
 #define SEQ_TCG_GAIN_CMD_ID			5+0x200		// SetSeqTCGGain
 //#define SET_ASCAN_BEAMFORM_DELAY_ID	4+0x200		// SetAscanBeamFormDelay
 
+
+//*******************************************
+
+#define TOTAL_PULSER_COMMANDS		10
+#define LAST_PULSER_COMMAND			TOTAL_PULSER_COMMANDS - 1
 
 // Small command format
 // PULSER CMDS
@@ -125,7 +133,7 @@ the PAP and PAG
 #define SOCOMATE_SYNC_PULSE_CMD_ID	6+0x300		// Default is 4
 #define PULSER_ON_OFF_CMD_ID		7+0x300
 #define PULSER_DEBUG_PRINT_CMD_ID	8+0x300		// bit 0 enables printing in NIOS debug, bit 1 resets cmds
-#define PULSER_INIT_CMD_ID			9+0x300		// bit0=0, pulser board w/o wiznet init bit 0 set, reset wiznet also
+#define PULSER_WIZ_RESET_CMD_ID		9+0x300		// bit0=0, pulser board Wiznet ONLY init. bit 0 set, reset PULSER BRD also
 
 /*************** Command Structures **************/
 

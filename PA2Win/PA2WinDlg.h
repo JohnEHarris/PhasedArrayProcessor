@@ -225,6 +225,9 @@ public:
 	void DlgDebugOut( CString s );
 	void ShowIdata(void);
 	void DebugToNcNxDlg( CString s );
+	int GetAdcCmdQ(void);		// return number of commands queued for ADC
+	int GetPulserCmdQ(void);	// return number of commands queued for Pulser
+
 #ifdef I_AM_PAG
 	BOOL SendMsgToPAP( int nClientNumber, int nMsgID, void *pMsg );
 	// as of 3/1/18 can send msgs to PAP dialog screen to output debug info for Yanming and Qingshan

@@ -527,7 +527,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 				case 30:
 					ReadBackCmd(m_nPAP, m_nBoard, m_nCmdId, m_nParam);
 				case 32:
-					SamInitAdc(m_nPAP, m_nBoard);
+					SamInitAdc(m_nPAP, m_nBoard, m_nParam);
 					break;
 				default:
 					break;
@@ -780,7 +780,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 2);	// turn off debug in adc and clear counters
 	Sleep(40);
 #if 1
-	for (i = 0; i < 3000; i++ )
+	for (i = 0; i < 1000; i++ )
 		{
 		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
 		Cmd.wCmd[0] = i;
@@ -832,7 +832,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		
 		switch (i % 7)
 			{
-			case 0:		Cmd.wCmd[0] = (i * 2) + 1000; break;	//prf
+			case 0:		Cmd.wCmd[0] = (i * 50) + 1000; break;	//prf
 			case 1:		break;		// uncertain how and why to set HV - for now will resend prf
 			case 2:		Cmd.wCmd[0] = 0; // Polarity
 				break;
@@ -881,36 +881,43 @@ void CNcNx::DebugPrint(int nPap, int nBoard, int nCmd, int nValue)
 	SendMsg((GenericPacketHeader*)&Dbg);
 	}
 
-// No command arguments. Runs Sam's init code on adc board
-// Omits initializing wiznet. Cmd 32
+// Runs Sam's init code on adc board
 // Probably crashed the NIOS code with unhandled interrupt message.
-void CNcNx::SamInitAdc(int nPap, int nBoard)
+// bit0=0, ADC board Wiznet ONLY init. bit 0 set, reset ADC BRD also
+void CNcNx::SamInitAdc(int nPap, int nBoard, int nSel)
 	{
 	CString s;
 	ST_SMALL_CMD Init;
 	Init.uSync = SYNC;
 	Init.wByteCount = 32;
-	Init.wMsgID = ADC_INIT_CMD_ID;
+	Init.wMsgID = ADC_WIZ_RESET_CMD_ID;
 	Init.bPapNumber = nPap;
 	Init.bBoardNumber = nBoard;
-	s.Format(_T("Init ADC Board %d, PAP %d\n"), nBoard, nPap);
+	Init.wCmd[0] = nSel;
+	if (nSel)
+		s.Format(_T("Init ADC Board %d, PAP %d\n"), nBoard, nPap);
+	else
+		s.Format(_T("Init only Wianet onADC Board %d, PAP %d\n"), nBoard, nPap);
 	m_lbOutput.AddString(s);
 	SendMsg((GenericPacketHeader*)&Init);
 	}
 
-// No command arguments. Runs Sam's init code on pulser board
-// Omits initializing wiznet -- PULSER CMD 9
 // Probably crashed the NIOS code with unhandled interrupt message.
-void CNcNx::SamInitPulser(int nPap, int nBoard)
+// bit0=0, pulser board Wiznet ONLY init. bit 0 set, reset PULSER BRD also
+void CNcNx::SamInitPulser(int nPap, int nBoard, int nSel)
 	{
 	CString s;
 	ST_SMALL_CMD Init;
 	Init.uSync = SYNC;
 	Init.wByteCount = 32;
-	Init.wMsgID = PULSER_INIT_CMD_ID;
+	Init.wMsgID = PULSER_WIZ_RESET_CMD_ID;
 	Init.bPapNumber = nPap;
 	Init.bBoardNumber = nBoard;
-	s = _T("Init Pulser Board\n");
+	Init.wCmd[0] = nSel;
+	if (nSel)
+		s.Format(_T("Init Pulser Board %d, PAP %d\n"), nBoard, nPap);
+	else
+		s.Format(_T("Init only Wianet on Pulser Board %d, PAP %d\n"), nBoard, nPap);
 	m_lbOutput.AddString(s);
 	SendMsg((GenericPacketHeader*)&Init);
 	}

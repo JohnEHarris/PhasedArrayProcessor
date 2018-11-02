@@ -46,6 +46,9 @@ CNcNx::CNcNx(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_NCNX_PA, pParent)
 //	, m_nAscanCnt(0)
 , m_nRecordLabel(0)
+, m_PulserCmdTxt(_T(""))
+, m_SmallTxt(_T(""))
+, m_LargeTxt(_T(""))
 	{
 	m_DlgLocationKey = _T("NC_NX_PA2");
 	m_DlgLocationSection = _T("Dialog Locations");	// Section is always this string for all dlgs
@@ -60,17 +63,21 @@ CNcNx::~CNcNx()
 
 void CNcNx::DoDataExchange(CDataExchange* pDX)
 {
-CDialogEx::DoDataExchange( pDX );
-DDX_Control( pDX, IDC_SP_PAP, m_spPap );
-DDX_Control( pDX, IDC_SP_SEQ, m_spSeq );
-DDX_Control( pDX, IDC_SP_CH, m_spCh );
-DDX_Control( pDX, IDC_SP_GATE, m_spGate );
-DDX_Control( pDX, IDC_SP_PARAM, m_spParam );
-DDX_Control( pDX, IDC_LB_NCNX, m_lbOutput );
-DDX_Control( pDX, IDC_CB_CMDS, m_cbCommand );
-DDX_Control( pDX, IDC_SP_BOARD, m_spBoard );
-DDX_Control( pDX, IDC_BN_DONOTHING, m_bnDoNoting );
-DDX_Control( pDX, IDC_ED_PARAM, m_edParam );
+	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_SP_PAP, m_spPap);
+	DDX_Control(pDX, IDC_SP_SEQ, m_spSeq);
+	DDX_Control(pDX, IDC_SP_CH, m_spCh);
+	DDX_Control(pDX, IDC_SP_GATE, m_spGate);
+	DDX_Control(pDX, IDC_SP_PARAM, m_spParam);
+	DDX_Control(pDX, IDC_LB_NCNX, m_lbOutput);
+	DDX_Control(pDX, IDC_CB_CMDS, m_cbCommand);
+	DDX_Control(pDX, IDC_SP_BOARD, m_spBoard);
+	DDX_Control(pDX, IDC_BN_DONOTHING, m_bnDoNoting);
+	DDX_Control(pDX, IDC_ED_PARAM, m_edParam);
+	DDX_Control(pDX, IDC_EDSMAL_CMD, m_SmallCmdTxt);
+	DDX_Control(pDX, IDC_EDLARGE_CMD, m_LargeCmdTxt);
+	DDX_Text(pDX, IDC_EDSMAL_CMD, m_SmallTxt);
+	DDX_Text(pDX, IDC_EDLARGE_CMD, m_LargeTxt);
 	}
 
 
@@ -773,7 +780,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 2);	// turn off debug in adc and clear counters
 	Sleep(40);
 #if 1
-	for (i = 0; i < 1000; i++ )
+	for (i = 0; i < 3000; i++ )
 		{
 		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
 		Cmd.wCmd[0] = i;
@@ -825,7 +832,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		
 		switch (i % 7)
 			{
-			case 0:		Cmd.wCmd[0] = (i * 50) + 1000; break;	//prf
+			case 0:		Cmd.wCmd[0] = (i * 2) + 1000; break;	//prf
 			case 1:		break;		// uncertain how and why to set HV - for now will resend prf
 			case 2:		Cmd.wCmd[0] = 0; // Polarity
 				break;
@@ -1188,6 +1195,22 @@ void CNcNx::ShowIdataSource(void)
 	SetDlgItemInt(IDC_EN_PAP, gLastIdataPap.bPapNumber, 0);
 	SetDlgItemInt(IDC_EN_BOARD, gLastIdataPap.bBoardNumber, 0);
 	}
+
+void CNcNx::ShowSmallCmds(void)
+	{
+	SetDlgItemInt(IDC_EDSMAL_CMD, gLastAscanPap.wSmallCmds, 0);
+	}
+void CNcNx::ShowLargeCmds(void)
+	{
+	SetDlgItemInt(IDC_EDLARGE_CMD, gLastAscanPap.wLargeCmds, 0);
+	}
+void CNcNx::ShowPulserCmds(void)
+	{
+	SetDlgItemInt(IDC_EDPULSER_CMD, gLastAscanPap.wPulserCmds, 0);
+	}
+
+
+
 
 
 void CNcNx::OnBnClickedRbSmallcmd()

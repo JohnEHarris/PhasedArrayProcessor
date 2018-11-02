@@ -587,7 +587,7 @@ BOOL CPA2WinDlg::OnInitDialog()
 	DWORD dwClassPriority = GetPriorityClass(hProcess);		// = normal = 0x20
 	HANDLE hThread = GetCurrentThread();		// = -2
 	int nPriority = GetThreadPriority(hThread); // = 0
-#if 0
+#if 1
 	if (!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL))
 		{
 		dwError = GetLastError();
@@ -1910,6 +1910,9 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 		{
 		gDlg.pNcNx->IncrementAscanCnt();
 		gDlg.pNcNx->ShowIdataSource();
+		gDlg.pNcNx->ShowSmallCmds();
+		gDlg.pNcNx->ShowLargeCmds();
+		gDlg.pNcNx->ShowPulserCmds();
 		}
 
 #ifdef I_AM_PAP

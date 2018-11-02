@@ -686,8 +686,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				m_pSCC->uPacketsSent++;
 				m_nConfigMsgQty++;
 				// sleep every other 4th packet
-				if ((pCmd->wMsgID & 7) == 0)
-					Sleep(10);
+				if ((pCmd->wMsgSeqCnt & 3) == 0)
+				//	Sleep(10);
 				// debug info to trace output.. losing connection when attempting to download config file
 				if ((m_pSCC->uPacketsSent))	// &0xff) == 0)
 					{

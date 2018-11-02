@@ -112,6 +112,11 @@ public:
 	//int m_nAscanCnt;
 	void IncrementAscanCnt(void);
 	void ShowIdataSource(void);
+	void CNcNx::ShowSmallCmds(void);
+	void CNcNx::ShowLargeCmds(void);
+	void CNcNx::ShowPulserCmds(void);
+
+
 	afx_msg void OnBnClickedRbSmallcmd();
 	afx_msg void OnBnClickedRbLargecmds();
 	int m_nWhichTypeCmd;
@@ -121,4 +126,9 @@ public:
 	afx_msg void OnBnClickedBnRecord();
 	int m_nRecordLabel;
 	afx_msg void OnBnClickedRbPulsercmd();
+	CEdit m_SmallCmdTxt;
+	CEdit m_LargeCmdTxt;
+	CString m_PulserCmdTxt;
+	CString m_SmallTxt;
+	CString m_LargeTxt;
 };

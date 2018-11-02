@@ -184,9 +184,6 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
 #endif
-				// special case for PAP -- grab prf as it goes thru to pusler and display on PAP screen
-				if (MsgId == 0x300 + 0)
-					gwPap_Prf = pSmall->wCmd;
 
 				pSocket->LockSendPktList();	// server sockets linked list for sending commands
 				pSocket->AddTailSendPkt(pMmiCmd);

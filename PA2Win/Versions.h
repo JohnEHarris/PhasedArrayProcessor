@@ -2,17 +2,18 @@
 
 
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			8
+#define BUILD_VERSION			9
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
 #define VERSION_BUILD           BUILD_VERSION
 
 #define VERSION16				(VERSION_MAJOR<<12) | (VERSION_MINOR<<8) | (BUILD_VERSION & 0xff)
-#define VERSION32				(VERSION_MAJOR<<28) | (VERSION_MINOR<<24) | (BUILD_VERSION & 7fffff)
+#define VERSION32				(VERSION_MAJOR<<28) | (VERSION_MINOR<<24) | (BUILD_VERSION & 0x7ffff)
 #define PA2_VERSION _T("Version =   %d_%02d_%03d"), VERSION_MAJOR, VERSION_MINOR, VERSION_BUILD 
 /*
 Show the version number of this program. Newest version on TOP
+1.0.009	2018-11-02 Lower PA2WinDlg to below normal. Allows other threads to run first
 1.0.008 2018-10-10 Debugging blast commands to ADC and PULSER
 1.0.007 2018-08-21 Read machine type from file, rearrange order of PA2Struct.h
 1.0.006	2018-08-13 Simulate DHCP assignment of PAP IP address for All Wall-mostly done with ini file

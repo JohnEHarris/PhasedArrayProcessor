@@ -579,7 +579,12 @@ BOOL CPA2WinDlg::OnInitDialog()
 	i = sizeof(guPktAttempts);
 	// Set priority to lower maybe good?
 	DWORD dwError, dwThreadPri;
-
+	// curious to know process priority and thread priority
+	HANDLE hProcess = GetCurrentProcess();			// = -1
+	DWORD dwClassPriority = GetPriorityClass(hProcess);		// = normal = 0x20
+	HANDLE hThread = GetCurrentThread();		// = -2
+	int nPriority = GetThreadPriority(hThread); // = 0
+#if 0
 	if (!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL))
 		{
 		dwError = GetLastError();
@@ -588,10 +593,11 @@ BOOL CPA2WinDlg::OnInitDialog()
 		else _tprintf(TEXT("Failed to enter background mode (%d)\n"), dwError);
 		//goto Cleanup;
 		}
+#endif
 
 	// Display thread priority
 
-	dwThreadPri = GetThreadPriority(GetCurrentThread());
+	dwThreadPri = GetThreadPriority(GetCurrentThread());	// -1 = THREAD_PRIORITY_BELOW_NORMAL
 
 	_tprintf(TEXT("Current thread priority is 0x%x\n"), dwThreadPri);
 

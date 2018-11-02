@@ -11,6 +11,11 @@
 #define VERSION16				(VERSION_MAJOR<<12) | (VERSION_MINOR<<8) | (BUILD_VERSION & 0xff)
 #define VERSION32				(VERSION_MAJOR<<28) | (VERSION_MINOR<<24) | (BUILD_VERSION & 0x7ffff)
 #define PA2_VERSION _T("Version =   %d_%02d_%03d"), VERSION_MAJOR, VERSION_MINOR, VERSION_BUILD 
+
+#define MAJVER(n)	((n >> 12) & 0xf)
+#define MINVER(n)	((n >> 8)  & 0xf)
+#define BLDVER(n)	( n & 0xff)
+
 /*
 Show the version number of this program. Newest version on TOP
 1.0.009	2018-11-02 Lower PA2WinDlg to below normal. Allows other threads to run first

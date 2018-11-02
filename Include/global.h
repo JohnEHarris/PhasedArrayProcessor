@@ -54,13 +54,13 @@ Revised:
 
 
 #ifndef BYTE
-typedef unsigned char BYTE;
+typedef unsigned char  BYTE;
 #endif
 #ifndef WORD
 typedef unsigned short WORD;
 #endif
 #ifndef UINT
-typedef unsigned int UINT;
+typedef unsigned int	UINT;
 #endif
 
 #ifdef I_AM_THE_INSTURMENT
@@ -160,12 +160,18 @@ PubExt PACKET_PER_SEC gPksPerSec[2];	//[0] = Nx data, [1] = AllWall data
 PubExt UINT guPktAttempts[2][10];	//[0]=Nx, [1]=All wall count number of attempt to send to PAG
 								//[][0] is 1st attempt, [][1] is 2nd etc
 PubExt UINT guCmdsProcessed;	// number of commands processed by the ADC board
-PubExt BYTE gbPrintMsgFlag;			// if not 0, print message info as they are executed.
+PubExt BYTE gbDebugMode;		// if not 0, print message info as they are executed.
 
 // Pulser global variables
 PubExt WORD gwPulserCmds;
-PubExt WORD gwFPGA_Version;
-PubExt WORD gwNIOS_Version;
+PubExt WORD gwFPGA_VersionP;
+PubExt WORD gwNIOS_VersionP;
 PubExt WORD gwCPU_Temp;
+PubExt WORD gwPap_Prf;
+
+
+//#define SYNC							0x5CEBDAAD
+//#define PRINT_MSG		(1 << 0)
+//#define RESET_CMD_CNT	(1 << 1)
 
 #endif /* GLOBAL_H_ */

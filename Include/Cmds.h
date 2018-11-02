@@ -91,8 +91,8 @@ the PAP and PAG
 #define	SET_ASCAN_GATE_OUTPUT_ID	26		// SetAscanGateOut -- set_ascan_gateout_reg
 #define ASCAN_REP_RATE_ID			27		// AscanRepRate
 #define SET_WALL_NX_CMD_ID			28		// only runs on PAP, not in the Nios
-#define DEBUG_PRINT_CMD_ID			29		// TCGBeamGainAll  Moved to 31
-											// DebugPrint moves into 29
+#define DEBUG_PRINT_CMD_ID			29		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
+											// Moved to 31. DebugPrint moves into 29
 #define TCG_BEAM_GAIN_ALL_CMD_ID	31		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
 #define ADC_INIT_CMD_ID				32		// ADC hw init w/o wiznet init
 											
@@ -516,7 +516,7 @@ typedef struct
 
 	BYTE bSpare[4];		// 16
 	// To make my PAG interface work easier, DbgFlag is a bit field
-	WORD wDbgFlag;		// bit 0=0 no dbg output sets gbPrintMsgFlag in ADC globals
+	WORD wDbgFlag;		// bit 0=0 no dbg output sets gbDebugMode in ADC globals
 						// bit 1=1 reset command counters in ADC and PULSER
 	WORD wCmd[7];		// 16	
 	} ST_DEBUG_CMD;		// sizeof() = 32
@@ -742,8 +742,8 @@ BYTE GetbDin();
 short GetXLoc();
 WORD GetAngle();
 WORD GetPeriod();
-WORD GetFPGATemp();
-WORD GetBoardTemp();
+BYTE GetFPGATemp();
+BYTE GetBoardTemp();
 WORD GetSpinCount();
 WORD GetScopeSetting();
 WORD GetVersionHw();

@@ -56,6 +56,7 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define HD_RC		(1 << 3)
 #define FWD_RC		(1 << 2)
 #define IE_RC		(1 << 1)
+
 #define PP_RC		(1 << 0)
 
 
@@ -446,8 +447,11 @@ typedef struct
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	WORD wFPGATemp;		// ADC board
-	WORD wBoardTemp;
+	BYTE bFPGATempA;		// ADC board
+	BYTE bBoardTempA;
+	WORD wFPGA_VersionA;	// adc hw version
+	WORD wNIOS_VersionA;	// adc NIOS version
+
 	WORD wStatus;		
 
 	BYTE bBeamType;		// 0=rf 1=fw  2=peak hold,  4 = gate out-- from cmd 23
@@ -459,10 +463,10 @@ typedef struct
 	WORD wLargeCmds;	// number of large commands since reset
 	WORD wSmallCmds;	// number of small commands since reset
 	WORD wPulserCmds;	// number of pulser commands since reset
-	WORD wFPGA_Version;	// Pulser fpga version
-	WORD wNIOS_Version;	// Pulser NIOS version
-	WORD wCPU_Temp;		// Pulser cpu temp
-	WORD wSpare[1];		// 64 bytes to here
+	WORD wFPGA_VersionP;	// Pulser fpga version
+	WORD wNIOS_VersionP;	// Pulser NIOS version
+	WORD wCPU_TempP;		// Pulser cpu temp
+							//	WORD wSpare[1];		// 64 bytes to here
 	char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA;		// sizeof() = 1088
@@ -480,8 +484,8 @@ typedef struct
 	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bSeqNumber;	//for this vChnl
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
-	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
-	BYTE bNiosFeedback[7];// eg. FPGA version, C version, self-test info	  30	
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id  15
+	BYTE bNiosFeedback[7];// eg. FPGA version, C version, self-test info	  22	
 
 	WORD wScopeSetting;	// inform about trigger, thold, other scope settings
 	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
@@ -493,8 +497,11 @@ typedef struct
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	WORD wFPGATemp;		// ADC board
-	WORD wBoardTemp;
+	BYTE bFPGATempA;		// ADC board
+	BYTE bBoardTempA;
+	WORD wFPGA_VersionA;	// adc hw version
+	WORD wNIOS_VersionA;	// adc NIOS version
+
 	WORD wStatus;
 
 	BYTE bBeamType;		// 0=rf 1=fw  2=peak hold,  4 = gate out-- from cmd 23
@@ -506,12 +513,11 @@ typedef struct
 	WORD wLargeCmds;	// number of large commands since reset
 	WORD wSmallCmds;	// number of small commands since reset
 	WORD wPulserCmds;	// number of pulser commands since reset
-	WORD wFPGA_Version;	// Pulser fpga version
-	WORD wNIOS_Version;	// Pulser NIOS version
-	WORD wCPU_Temp;		// Pulser cpu temp
-	WORD wSpare[1];		// 64 bytes to here
-						//char ascan[1024];	// 1024 8-bit scope amplitude samples
-
+	WORD wFPGA_VersionP;	// Pulser fpga version
+	WORD wNIOS_VersionP;	// Pulser NIOS version
+	WORD wCPU_TempP;		// Pulser cpu temp
+							// 64 bytes to here
+	//char ascan[1024];	// 1024 8-bit scope amplitude samples
 	} ASCAN_DATA_HDR;	
 
 // Read Back Data is loaded by NIOS and not by a dma process
@@ -541,8 +547,8 @@ typedef struct
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	WORD wFPGATemp;		// ADC board
-	WORD wBoardTemp;
+	BYTE bFPGATempA;		// ADC board
+	BYTE bBoardTempA;
 	//WORD wStatus;		// see below
 	//WORD wSpare[11];	// 64 bytes to here
 	BYTE ReadBack[1048];	// 1048 byte. Info depends on what is requested to be read back

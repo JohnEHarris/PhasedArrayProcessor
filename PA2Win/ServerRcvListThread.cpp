@@ -958,9 +958,9 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			// attach lastest Pulser data to this packet 2018-10-19
 
 			pIdataPacket->wPulserCmds	= gwPulserCmds;
-			pIdataPacket->wFPGA_Version = gwFPGA_Version;
-			pIdataPacket->wNIOS_Version = gwNIOS_Version;
-			pIdataPacket->wCPU_Temp		= gwCPU_Temp;
+			pIdataPacket->wFPGA_VersionP = gwFPGA_VersionP;
+			pIdataPacket->wNIOS_VersionP = gwNIOS_VersionP;
+			pIdataPacket->wCPU_TempP	= gwCPU_Temp;
 
 			SendIdataToPag((GenericPacketHeader *)pIdataPacket, 0);
 			memcpy((void *)&gLastAscanPap, (void *)pIdataPacket, sizeof(ASCAN_DATA));
@@ -1000,8 +1000,8 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 void  CServerRcvListThread::ProcessPulserData(PULSER_DATA *pPulserData)
 	{
 	gwPulserCmds	= pPulserData->wPulserCmds;
-	gwFPGA_Version	= pPulserData->wFPGA_Version;
-	gwNIOS_Version	= pPulserData->wNIOS_Version;
+	gwFPGA_VersionP	= pPulserData->wFPGA_Version;
+	gwNIOS_VersionP	= pPulserData->wNIOS_Version;
 	gwCPU_Temp		= pPulserData->wCPU_Temp;
 	//CString s;
 	//s.Format(_T(" Pulser Temp = %d\n"), gwCPU_Temp);

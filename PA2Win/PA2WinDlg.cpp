@@ -577,6 +577,9 @@ BOOL CPA2WinDlg::OnInitDialog()
 
 	memset((void*)guPktAttempts, 0, sizeof(guPktAttempts));
 	i = sizeof(guPktAttempts);
+	gwPap_Prf = 10;		// just a guess until PAG sets prf. Will steal the value out of msg to Pulser
+
+
 	// Set priority to lower maybe good?
 	DWORD dwError, dwThreadPri;
 	// curious to know process priority and thread priority
@@ -833,7 +836,7 @@ void CPA2WinDlg::StartTimer()
 	if (m_uStatTimer)	return;	// already running
 
 	// 70 ticks per second
-	m_uStatTimer = (UINT)SetTimer(IDT_TIMER, 1000, NULL);
+	m_uStatTimer = (UINT)SetTimer(IDT_TIMER, 2000, NULL);
 	if (!m_uStatTimer) MessageBox(_T("Failed to start timer"));
 	m_nTimerCount = 0;
 	}
@@ -2282,6 +2285,7 @@ void CPA2WinDlg::ShowIdata(void)
 	CString s,t;
 	int i,j,mn, mx;
 	int hd, pp, ie;
+	WORD wVerH, wVerS;	// hardware/software version temps
 	UINT uGood, uLost;
 	if (gLastIdataPap.wMsgID == eNcNxInspID)
 		{
@@ -2429,6 +2433,33 @@ void CPA2WinDlg::ShowIdata(void)
 				}
 			m_lbOutput.AddString(s);
 			}
+
+		// Next line show ADC versions & temp then Pulser versions & temp
+#if 1
+		t = _T("");
+		m_lbOutput.AddString(t);
+		s = _T("ADC: [  VerHW     VerSW    TempCPU  TempBd]   PULSER: [  VerHW     VerSW   TempCPU         PRF ]");
+		m_lbOutput.AddString(s);
+		wVerH = gLastAscanPap.wFPGA_VersionA;
+		wVerS = gLastAscanPap.wNIOS_VersionA;
+		s.Format(_T("     [  %01d.%01d.%03d   %01d.%01d.%03d   %02d C     %02d C ]"),
+			MAJVER(wVerH), MINVER(wVerH), BLDVER(wVerH),
+			MAJVER(wVerS), MINVER(wVerS), BLDVER(wVerS),
+			gLastAscanPap.bFPGATempA, gLastAscanPap.bBoardTempA);
+		t += s;
+#if 1
+		wVerH = gLastAscanPap.wFPGA_VersionP;
+		wVerS = gLastAscanPap.wNIOS_VersionP;
+		s.Format(_T("           [  %01d.%01d.%03d   %01d.%01d.%03d  %02d C         %5d ]"),
+			MAJVER(wVerH), MINVER(wVerH), BLDVER(wVerH),
+			MAJVER(wVerS), MINVER(wVerS), BLDVER(wVerS),
+			gLastAscanPap.wCPU_TempP,
+			gwPap_Prf);		//gwPap_Prf swiped from message to pulser. Not fed back from pulser
+		t += s;
+#endif
+		m_lbOutput.AddString(t);
+#endif
+
 		}	// if (gLastIdataPap.wMsgID == eNcNxInspID)
 #endif
 	}

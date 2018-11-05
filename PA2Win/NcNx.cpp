@@ -777,10 +777,58 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	CmdL.wByteCount = 1056;
 	Cmd.bPapNumber = CmdL.bPapNumber = m_nPAP;
 	Cmd.bBoardNumber = CmdL.bBoardNumber = m_nBoard;
+
+#if 1
+	// Now send 7 pulser commands
+	int iStart, iStop;
+	// set a break point here to manage loop limits:0,7 7,14 14,21 21,28 28,35 35,42  42,39
+	iStart = 0;
+	iStop = iStart + 70;
+	DebugPrint(m_nPAP, m_nBoard, PULSER_DEBUG_PRINT_CMD_ID, 2);	// turn off debug in pulser and clear counters
+	Sleep(40);
+	// only prf, shape, and width are affected by changing start/stop limits
+	for (i = iStart; i < iStop; i++)
+		{
+		Cmd.wMsgID = 0x300 + (i % 7);
+
+		switch (i % 7)
+			{
+			case 0:		Cmd.wCmd[0] = (i * 50) + 1000; break;	//prf
+			case 1:		break;		// uncertain how and why to set HV - for now will resend prf
+			case 2:		Cmd.wCmd[0] = 0; // Polarity
+				break;
+#if 1
+			case 3:		Cmd.wCmd[0] = 255;	break;	// SHAPE
+			case 4:		Cmd.wCmd[0] = 6;	break;	// width
+			case 5:		Cmd.wCmd[0] = 3;	break;	// seq len
+			case 6:		Cmd.wCmd[0] = 4;	break;	// socomate pulse len
+#endif
+			default:
+				break;
+			}
+
+		if ((i % 7) != 1)	// skip hv setting for now
+			{
+			s.Format(_T("ID=%d, Bytes=%d, PAP=%d, wCmd=%5d\n"),
+				Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.wCmd[0]);
+			m_lbOutput.AddString(s);
+			SendMsg((GenericPacketHeader*)&Cmd);
+			Sleep(10);
+			}
+
+		}	// pulser command loop
+#endif
+
+
+	Cmd.uSync = CmdL.uSync = SYNC;
+	Cmd.wByteCount = 32;
+	CmdL.wByteCount = 1056;
+	Cmd.bPapNumber = CmdL.bPapNumber = m_nPAP;
+	Cmd.bBoardNumber = CmdL.bBoardNumber = m_nBoard;
 	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 2);	// turn off debug in adc and clear counters
 	Sleep(40);
 #if 1
-	for (i = 0; i < 1000; i++ )
+	for (i = 0; i < 3000; i++ )
 		{
 		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
 		Cmd.wCmd[0] = i;
@@ -817,7 +865,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	// reset ADC board to initial condition
 	//SamInitAdc(m_nPAP, m_nBoard);
 
-#if 1
+#if 0
 	// Now send 7 pulser commands
 	int iStart, iStop;
 	// set a break point here to manage loop limits:0,7 7,14 14,21 21,28 28,35 35,42  42,39

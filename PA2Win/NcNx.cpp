@@ -819,6 +819,14 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		}	// pulser command loop
 #endif
 
+	// After pulser commands sent, drop to 10 Hz prf
+	Cmd.wMsgID = 0x300;
+	Cmd.wCmd[0] = 10;
+	m_lbOutput.AddString(s);
+	SendMsg((GenericPacketHeader*)&Cmd);
+	Sleep(20);
+
+	// Next a variable number of ADC commands
 
 	Cmd.uSync = CmdL.uSync = SYNC;
 	Cmd.wByteCount = 32;
@@ -828,7 +836,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 2);	// turn off debug in adc and clear counters
 	Sleep(40);
 #if 1
-	for (i = 0; i < 3000; i++ )
+	for (i = 0; i < 1000; i++ )
 		{
 		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
 		Cmd.wCmd[0] = i;
@@ -907,6 +915,12 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 #endif
 	// restore Pulser to initial condition
 	//SamInitPulser(m_nPAP, m_nBoard);
+
+	Cmd.wMsgID = 0x300;
+	Cmd.wCmd[0] = 8000;
+	m_lbOutput.AddString(s);
+	SendMsg((GenericPacketHeader*)&Cmd);
+
 	}
 
 // cmd 13 -- changed to 29 per RAC

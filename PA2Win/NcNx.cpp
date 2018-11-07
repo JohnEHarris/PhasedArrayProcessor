@@ -783,7 +783,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	int iStart, iStop;
 	// set a break point here to manage loop limits:0,7 7,14 14,21 21,28 28,35 35,42  42,39
 	iStart = 0;
-	iStop = iStart + 70;
+	iStop = iStart + 7;
 	DebugPrint(m_nPAP, m_nBoard, PULSER_DEBUG_PRINT_CMD_ID, 2);	// turn off debug in pulser and clear counters
 	Sleep(40);
 	// only prf, shape, and width are affected by changing start/stop limits
@@ -793,7 +793,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 
 		switch (i % 7)
 			{
-			case 0:		Cmd.wCmd[0] = (i * 50) + 1000; break;	//prf
+			case 0:		Cmd.wCmd[0] = 3200;	// (i * 50) + 1000; break;	//prf
 			case 1:		break;		// uncertain how and why to set HV - for now will resend prf
 			case 2:		Cmd.wCmd[0] = 0; // Polarity
 				break;
@@ -813,18 +813,21 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 				Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.wCmd[0]);
 			m_lbOutput.AddString(s);
 			SendMsg((GenericPacketHeader*)&Cmd);
-			Sleep(10);
+			if ((i % 7) == 0) Sleep(500);	// let prf settle at 320
+			else Sleep(10);
 			}
 
 		}	// pulser command loop
 #endif
 
 	// After pulser commands sent, drop to 10 Hz prf
+#if 0
 	Cmd.wMsgID = 0x300;
 	Cmd.wCmd[0] = 10;
 	m_lbOutput.AddString(s);
 	SendMsg((GenericPacketHeader*)&Cmd);
 	Sleep(20);
+#endif
 
 	// Next a variable number of ADC commands
 
@@ -918,6 +921,9 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 
 	Cmd.wMsgID = 0x300;
 	Cmd.wCmd[0] = 8000;
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, wCmd=%5d\n"),
+		Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.wCmd[0]);
+
 	m_lbOutput.AddString(s);
 	SendMsg((GenericPacketHeader*)&Cmd);
 

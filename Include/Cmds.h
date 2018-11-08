@@ -778,6 +778,9 @@ void MsgPrint(char *msg);
 void BuildReadBackHeader(READBACK_DATA *pHdr);
 void GetGateSettings(void);
 
+// 2018-11-05 reset wiznet from PAP or UUI
+void ResetWiznetCmd(void);
+
 #endif
 
 

@@ -570,6 +570,7 @@ void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 	{
 #ifdef I_AM_PAG
 	CString s;
+	int i;
 	if (pMsg->wMsgID > 0x300 + LAST_PULSER_COMMAND)
 		{
 		s.Format(_T("Pulser command 0x%0x is invalid... deleting\n"), pMsg->wMsgID);
@@ -620,6 +621,8 @@ void CNcNx::SendMsg(GenericPacketHeader *pMsg)//, int nChTypes)
 			break;
 		case 0x205:	// SetSeqTCGGain
 			s.Format(_T("SetSeqTCGGain PAP=%d, Board=%d\n"), pSend->bPapNumber, pSend->bBoardNumber);
+			for (i = 0; i < 128; i++)
+				pSend->wCmd[i] = i;
 			break;
 
 		default:
@@ -793,7 +796,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 
 		switch (i % 7)
 			{
-			case 0:		Cmd.wCmd[0] = 3200;	// (i * 50) + 1000; break;	//prf
+			case 0:		Cmd.wCmd[0] = 300;	// (i * 50) + 1000; break;	//prf
 			case 1:		break;		// uncertain how and why to set HV - for now will resend prf
 			case 2:		Cmd.wCmd[0] = 0; // Polarity
 				break;
@@ -839,7 +842,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 2);	// turn off debug in adc and clear counters
 	Sleep(40);
 #if 1
-	for (i = 0; i < 1000; i++ )
+	for (i = 0; i < 5000; i++ )
 		{
 		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
 		Cmd.wCmd[0] = i;
@@ -952,20 +955,21 @@ void CNcNx::DebugPrint(int nPap, int nBoard, int nCmd, int nValue)
 // Runs Sam's init code on adc board
 // Probably crashed the NIOS code with unhandled interrupt message.
 // bit0=0, ADC board Wiznet ONLY init. bit 0 set, reset ADC BRD also
-void CNcNx::SamInitAdc(int nPap, int nBoard, int nSel)
+void CNcNx::SamInitAdc(int nPap, int nBoard, int m_nParam)
 	{
 	CString s;
 	ST_SMALL_CMD Init;
+	memset(&Init, 0, sizeof(Init));
 	Init.uSync = SYNC;
 	Init.wByteCount = 32;
 	Init.wMsgID = ADC_WIZ_RESET_CMD_ID;
 	Init.bPapNumber = nPap;
 	Init.bBoardNumber = nBoard;
-	Init.wCmd[0] = nSel;
-	if (nSel)
-		s.Format(_T("Init ADC Board %d, PAP %d\n"), nBoard, nPap);
+	Init.wCmd[0] = m_nParam;
+	if (m_nParam)
+		s.Format(_T("ID=%d, Init ADC Board %d, PAP %d\n"), Init.wMsgID, nBoard, nPap);
 	else
-		s.Format(_T("Init only Wianet onADC Board %d, PAP %d\n"), nBoard, nPap);
+		s.Format(_T("ID=%d, Init only Wiznet on ADC Board %d, PAP %d\n"), Init.wMsgID, nBoard, nPap);
 	m_lbOutput.AddString(s);
 	SendMsg((GenericPacketHeader*)&Init);
 	}

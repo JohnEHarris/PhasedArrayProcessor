@@ -42,6 +42,8 @@ public:
 	void CommandLogMsg(ST_SMALL_CMD *pCmd);
 	void MsgPrint(ST_SMALL_CMD *pCmd, char *msg);
 	void MsgPrintLarge(ST_LARGE_CMD *pCmd, char *msg);
+	afx_msg void FlushCmdQueue(WPARAM w, LPARAM lParam);
+
 	//afx_msg void Exit2(WPARAM w, LPARAM lParam);
 	afx_msg void KillServerSocket(WPARAM w, LPARAM lParam);
 	afx_msg void KillServerSocketOwner(WPARAM w, LPARAM lParam);

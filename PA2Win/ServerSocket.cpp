@@ -1096,6 +1096,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 // Packets received are "repackaged" to include the length of the packet as the first item in the new packet
 // [length of packet = n][packet data ... n bytes] 2016-12-13 included in new definition of packets
+// Servers receive data from clients and send commands to clients
 void CServerSocket::OnReceive(int nErrorCode)
 	{
 	// TODO: Add your specialized code here and/or call the base class

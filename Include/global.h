@@ -142,7 +142,7 @@ PubExt BYTE AscanSel;
 PubExt UINT guAscanMsgCnt;		// only used in PAG
 PubExt UINT guRdBkMsgCnt;		// only used in PAG
 
-PubExt short gnFpgaTemp;	// temp of FPGA chip
+PubExt short gnFpgaTemp;	// temp of FPGA chip ADC
 PubExt short gnBoardTemp;	// temp of ADC board
 //PubExt WORD gwPeakSelect;	// differentiates between gates and ut signal for Ascan display --new gwBeamType
 // probably need to lower prf before requesting read back of command data.

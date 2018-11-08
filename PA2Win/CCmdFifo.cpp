@@ -154,19 +154,35 @@ int CCmdFifo::GetPacketSize(void)
 		m_Out = 0;
 		m_Size = 0;
 		m_bError = 2;	// lost sync
+		// POST thread message to ServerSocketOwner thread to flush the command queue and send reset msg to
+		// ADC or Pulser board. Wiznet looses sync and dma's data on the back of another data packet
+		// which data stream is this?
+
 		s = _T("");
-		t = _T("No OverFlow");
-		if (pHeader->uSync != SYNC)		s = _T( "Lost Sync .. " );
+		t = _T("No OverFlow ");
+		if (pHeader->uSync != SYNC)
+			s = _T( "Lost Sync .. " );
 		if (pHeader->wByteCount > CMD_FIFO_MEM_SIZE)
 			{
-			t = _T("FIFO OVERFLOW");
+			t = _T("FIFO OVERFLOW ");
 			}
 		s += t;
-		s += _T("\n");
+		if (m_Type == 'C')
+			{
+			t.Format(_T("Client[%d]\n"), m_CSnum);
+			}
+		else
+			{
+			t.Format(_T("Srv[%d].Client[%d]\n"), m_CSnum, m_SrvClientNum);
+			CServerSocketOwnerThread *pThread = stSCM[m_CSnum].pClientConnection[m_SrvClientNum]->pServerSocketOwnerThread;
+			pThread->PostThreadMessage(WM_USER_SERVER_FLUSH_CMD_PACKETS, (WORD)m_SrvClientNum, 0L);
+			}
+		s += t;
 		TRACE(s);
 		pMainDlg->SaveDebugLog(s);
 		// 2018-10-15 count lost sync's. 4 in a row, send packet to reset wiznet
 		m_nLostSyncCnt++;
+#if 0
 		if (m_nLostSyncCnt >= 4)
 			{
 			m_Out = m_In = m_Size = m_nLostSyncCnt = 0;
@@ -174,6 +190,8 @@ int CCmdFifo::GetPacketSize(void)
 			TRACE(s);
 			pMainDlg->SaveDebugLog(s);
 			}
+#endif
+
 		return 0;
 		}
 	m_PacketSize = pHeader->wByteCount;

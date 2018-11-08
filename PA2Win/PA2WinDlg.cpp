@@ -541,6 +541,7 @@ BOOL CPA2WinDlg::OnInitDialog()
 	i = sizeof(gPksPerSec);
 	memset((void *)&gPksPerSec, 0, sizeof(gPksPerSec));
 
+	m_sHwVerAdc = m_sSwVerAdc = m_sHwVerPulser = m_sSwVerPulser = _T("");
 	// TODO: Add extra initialization here
 	m_lbOutput.ResetContent();
 	StartTimer();
@@ -578,7 +579,8 @@ BOOL CPA2WinDlg::OnInitDialog()
 	memset((void*)guPktAttempts, 0, sizeof(guPktAttempts));
 	i = sizeof(guPktAttempts);
 	gwPap_Prf = 10;		// just a guess until PAG sets prf. Will steal the value out of msg to Pulser
-
+	m_uMsgSeqCntChange = 0;		// wait til adc running and then store version numbers as strings
+#if 0
 
 	// Set priority to lower maybe good?
 	DWORD dwError, dwThreadPri;
@@ -604,7 +606,7 @@ BOOL CPA2WinDlg::OnInitDialog()
 
 	_tprintf(TEXT("Current thread priority is 0x%x\n"), dwThreadPri);
 
-
+#endif
 	return TRUE;  // return TRUE  unless you set the focus to a control
 	}
 
@@ -836,7 +838,7 @@ void CPA2WinDlg::StartTimer()
 	if (m_uStatTimer)	return;	// already running
 
 	// 70 ticks per second
-	m_uStatTimer = (UINT)SetTimer(IDT_TIMER, 2000, NULL);
+	m_uStatTimer = (UINT)SetTimer(IDT_TIMER, 1000, NULL);
 	if (!m_uStatTimer) MessageBox(_T("Failed to start timer"));
 	m_nTimerCount = 0;
 	}
@@ -1905,6 +1907,7 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 	m_nTimerCount++;
 	time(&m_tTimeNow);
 	UpdateTimeDate( &m_tTimeNow );
+
 	// update ascan for scope output on NcNx screen if it is open
 	if (gDlg.pNcNx)
 		{
@@ -1916,8 +1919,30 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 		}
 
 #ifdef I_AM_PAP
+	WORD wVerH, wVerS;	// hardware/software version temps
 	if (gDlg.pNcNx)	return;		// don't show when NcNx dialog on screen
-	// update last Idata packet to list box.
+								// update last Idata packet to list box.
+	// All this to save processing time in displaying data on screen
+	// Do it once so no extra time for conversions of numbers to text
+	//m_sHwVerAdc = m_sSwVerAdc = m_sHwVerPulser = m_sSwVerPulse
+	if ((gLastAscanPap.wFPGA_VersionA != 0) && (m_sHwVerAdc.GetLength() == 0))
+		{
+		wVerH = gLastAscanPap.wFPGA_VersionA;
+		wVerS = gLastAscanPap.wNIOS_VersionA;
+		m_sHwVerAdc.Format(_T("[%01d.%01d.%03d"), MAJVER(wVerH), MINVER(wVerH), BLDVER(wVerH));
+		m_sSwVerAdc.Format(_T("    %01d.%01d.%03d"), MAJVER(wVerS), MINVER(wVerS), BLDVER(wVerS));
+		return;
+		}
+	
+	if ((gwFPGA_VersionP != 0) && (m_sHwVerPulser.GetLength() == 0))
+		{
+		wVerH = gwFPGA_VersionP;
+		wVerS = gwNIOS_VersionP;
+		m_sHwVerPulser.Format(_T("		          [%01d.%01d.%03d "), MAJVER(wVerH), MINVER(wVerH), BLDVER(wVerH));
+		m_sSwVerPulser.Format(_T("   %01d.%01d.%03d"), MAJVER(wVerS), MINVER(wVerS), BLDVER(wVerS));
+		return;
+		}
+	// grab hw/sw version numbers from packet data
 	ShowIdata();
 
 #endif
@@ -2313,7 +2338,6 @@ void CPA2WinDlg::ShowIdata(void)
 	CString s,t;
 	int i,j,mn, mx;
 	int hd, pp, ie;
-	WORD wVerH, wVerS;	// hardware/software version temps
 	UINT uGood, uLost;
 	if (gLastIdataPap.wMsgID == eNcNxInspID)
 		{
@@ -2345,7 +2369,7 @@ void CPA2WinDlg::ShowIdata(void)
 			}
 
 
-		// Generate paket rate here but output at end of list box
+		// Generate packet rate here but output at end of list box
 		for (i = 0; i < 2; i++)
 			{
 			if (gPksPerSec[i].nTrigger)
@@ -2463,8 +2487,6 @@ void CPA2WinDlg::ShowIdata(void)
 		t += s;
 		m_lbOutput.AddString(t);
 
-		// on next 2 lines, display the packet/second for Nx data and all wall data
-		// skip one line
 		s = _T(" ");
 		m_lbOutput.AddString(s);
 		// Check the command queues for the ADC and Pulser. If any commands are waiting
@@ -2501,21 +2523,12 @@ void CPA2WinDlg::ShowIdata(void)
 		m_lbOutput.AddString(t);
 		s = _T("ADC: [  VerHW     VerSW     TempCPU  TempBd]  PULSER: [  VerHW     VerSW     TempCPU       PRF ]");
 		m_lbOutput.AddString(s);
-		wVerH = gLastAscanPap.wFPGA_VersionA;
-		wVerS = gLastAscanPap.wNIOS_VersionA;
-		s.Format(_T("     [  %01d.%01d.%03d   %01d.%01d.%03d   %02d C     %02d C  ]"),
-			MAJVER(wVerH), MINVER(wVerH), BLDVER(wVerH),
-			MAJVER(wVerS), MINVER(wVerS), BLDVER(wVerS),
-			gLastAscanPap.bFPGATempA, gLastAscanPap.bBoardTempA);
+		s.Format(_T("     %s %s   %02d C     %02d C  ]"), m_sHwVerAdc, m_sSwVerAdc,
+					gLastAscanPap.bFPGATempA, gLastAscanPap.bBoardTempA);
 		t += s;
 #if 1
-		wVerH = gLastAscanPap.wFPGA_VersionP;
-		wVerS = gLastAscanPap.wNIOS_VersionP;
-		s.Format(_T("          [  %01d.%01d.%03d   %01d.%01d.%03d   %02d C        %5d ]"),
-			MAJVER(wVerH), MINVER(wVerH), BLDVER(wVerH),
-			MAJVER(wVerS), MINVER(wVerS), BLDVER(wVerS),
-			gLastAscanPap.wCPU_TempP,
-			gwPap_Prf);		//gwPap_Prf swiped from message to pulser. Not fed back from pulser
+		s.Format(_T("%s %s   %02d C        %5d ]"), m_sHwVerPulser, m_sSwVerPulser,
+			gLastAscanPap.wCPU_TempP, gwPap_Prf);	//gwPap_Prf swiped from message to pulser. Not fed back from pulser
 		t += s;
 #endif
 		m_lbOutput.AddString(t);

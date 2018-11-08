@@ -385,7 +385,9 @@ int CServerSocketOwnerThread::ExitInstance()
 BEGIN_MESSAGE_MAP(CServerSocketOwnerThread, CWinThread)
 
 	//ON_THREAD_MESSAGE(WM_USER_INIT_COMMUNICATION_THREAD,InitCommunicationThread)
+	// The packet transmitted by a server are commands to clients
 	ON_THREAD_MESSAGE(WM_USER_SERVER_SEND_PACKET, TransmitPackets)
+	ON_THREAD_MESSAGE(WM_USER_SERVER_FLUSH_CMD_PACKETS, FlushCmdQueue)
 	ON_THREAD_MESSAGE(WM_USER_KILL_OWNER_SOCKET, KillServerSocket)
 	ON_THREAD_MESSAGE(WM_USER_KILL_OWNER_SOCKET_THREAD, KillServerSocketOwner)
 	ON_THREAD_MESSAGE(WM_USER_ATTACH_SERVER_SOCKET, AttachSocket)
@@ -582,7 +584,7 @@ afx_msg void Hello( WPARAM w, LPARAM lParam )
 // set flag for TestThread loop to restart the TransmitPacket operation
 afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	{
-	int nClientIndex = (int) w;
+	//int nClientIndex = (int) w;
 	CString s;
 	int nSent;
 	int nMsgSize;
@@ -679,15 +681,16 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			{
 			if (m_pSCC == NULL)				break;
 			if (m_pSCC->pSocket == NULL)	break;
+			if (i == 1) Sleep(10);
 			nSent = m_pSCC->pSocket->Send( (void *) pCmd, nMsgSize,0);
 			if (nSent == nMsgSize)
 				{
 				m_pSCC->uBytesSent += nSent;
 				m_pSCC->uPacketsSent++;
 				m_nConfigMsgQty++;
-				// sleep every other 4th packet
-				if ((pCmd->wMsgSeqCnt & 3) == 0)
-				//	Sleep(10);
+				// sleep every other 8th packet
+				if ((pCmd->wMsgSeqCnt & 7) == 0)
+					Sleep(10);
 				// debug info to trace output.. losing connection when attempting to download config file
 				if ((m_pSCC->uPacketsSent))	// &0xff) == 0)
 					{
@@ -702,17 +705,17 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 					if (pCmd->wMsgID < TOTAL_COMMANDS)
 						{
 						m_bSmallCmdSent++;
-						if (1)	//((m_bSmallCmdSent & 0x1f) == 0)
+						if ((m_bSmallCmdSent & 7) == 0)
 							{
 							//s = _T("Sleep after 32 small commands\n");
 							//pMainDlg->SaveCommandLog(s);
-							//Sleep(10);
+							Sleep(10);
 							}
 						}
 					else if (pCmd->wMsgID < TOTAL_LARGE_COMMANDS + 0x200)
 						{
 						m_bLargeCmdSent++;
-						if(1)		// ((m_bLargeCmdSent & 0x7) == 0)
+						if((m_bLargeCmdSent & 0x3) == 0)
 							{
 							//s = _T("Sleep after 8 large commands\n");
 							//pMainDlg->SaveCommandLog(s);
@@ -726,7 +729,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 							{
 							//s = _T("Sleep after 8 large commands\n");
 							//pMainDlg->SaveCommandLog(s);
-							Sleep(10);
+							//Sleep(10);
 							}
 						}
 #endif
@@ -848,4 +851,48 @@ void CServerSocketOwnerThread::MsgPrintLarge(ST_LARGE_CMD *pCmd, char *msg)
 		pwCmd->wCmd[0], pwCmd->wCmd[1], pwCmd->wCmd[2], pwCmd->wCmd[3]);
 	s += t;
 	pMainDlg->SaveCommandLog(s);
+	}
+
+// If wiznet looses sync on Idata transmission, killed the command queue
+// w= 0 reset only wiznet, w=1 reinit client
+void CServerSocketOwnerThread::FlushCmdQueue(WPARAM w, LPARAM lParam)
+	{
+	int i;
+	ST_SMALL_CMD  *pCmd;
+	if (m_pSCC->pSocket == NULL)
+		{
+		TRACE(_T("TransmitPackets m_pSCC->pSocket == NULL\n"));
+		return;
+		}
+	if (i = m_pSCC->pSendPktList->GetCount())
+		{
+		m_pSCC->pSocket->LockSendPktList();
+		while (i = m_pSCC->pSendPktList->GetCount() > 0)
+			{
+			pCmd = (ST_SMALL_CMD *)m_pSCC->pSendPktList->RemoveHead();
+			delete pCmd;
+			}
+		}
+	// insert a reset cmd here
+	pCmd = new (ST_SMALL_CMD);
+	i = m_pSCC->uClientPort;
+	if (i == 7502)	//adc
+		{
+		pCmd->wMsgID = ADC_WIZ_RESET_CMD_ID;
+		pCmd->wByteCount = 32;
+		pCmd->uSync = SYNC;
+		pCmd->wMsgSeqCnt = 1;
+		pCmd->bPapNumber = 0;	// don't care at this point
+		pCmd->bBoardNumber = 0;	// don't care
+		pCmd->wCmd[0] = 0;		// reset wiznet only
+		m_pSCC->pSendPktList->AddHead(pCmd);
+		TransmitPackets(0, 0L);
+		}
+	else // pulser
+		{
+		
+		}
+	
+	m_pSCC->pSocket->UnLockSendPktList();
+	// Send wiznet reset command to 
 	}

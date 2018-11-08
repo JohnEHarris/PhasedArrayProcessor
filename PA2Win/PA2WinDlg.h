@@ -90,6 +90,8 @@ using namespace std;
 #define WM_USER_INIT_RUNNING_AVERAGE				WM_USER+0x219		// not used in PAG
 #define WM_USER_SERVERSOCKET_PKT_RECEIVED			WM_USER+0x21A
 #define WM_USER_KILL_OWNER_SOCKET					WM_USER+0x21B
+#define WM_USER_SERVER_FLUSH_CMD_PACKETS			WM_USER+0x226
+
 
 // ClientConnectionManagement
 #define WM_USER_KILL_CMD_PROCESS_THREAD				WM_USER+0x21C
@@ -170,10 +172,12 @@ public:
 	int m_nPapNumber;		// the PAP number of this machine, the one running the ServiceApp
 	UINT m_uPapPort;		// the port number for the PAP being serviced by this machine (PC)
 	UINT m_wMsgSeqCnt;	// counter to uniquely identify each packet. Used by PamSendToPag()
+	UINT m_uMsgSeqCntChange;	//detect connection to adc and store version numbers
 	//void SetMy_PAP_Number(CString &Ip4, UINT uPort);
 	//int  GetMy_PAP_Number(void)	{ return m_nPapNumber;	}  never called
 	//UINT GetMy_PAP_Port(void)	{ return m_uPapPort;	}
 	CString m_sPktRate[2];
+	CString m_sHwVerAdc, m_sSwVerAdc, m_sHwVerPulser, m_sSwVerPulser;
 
 	time_t m_tTimeNow;
 	void StartTimer();

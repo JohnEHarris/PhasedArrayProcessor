@@ -300,6 +300,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 					//case 2-8:	// Gate commands from PAG TO PAP then PAP to Board
 
 				default:
+					// Add the command to the linked list associated with/belonging to the socket
 					if (MsgId >= 0x200)
 						{
 						// Large message.. forward to NIOS boards

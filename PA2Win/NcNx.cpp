@@ -875,6 +875,23 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		}	// for (i = 0; i < 300; i++ )
 #endif
 
+	// final blast of 50 pulser commands - not prf
+	s = _T("Final blast of 50 large commands\n");
+	m_lbOutput.AddString(s);
+	for (i = 0; i < 50; i++)
+		{
+		CmdL.wMsgID = 516;
+		CmdL.wCmd[0] = i;
+		CmdL.wCmd[1] = i + 1;
+		CmdL.wCmd[2] = i + 2;
+		CmdL.wCmd[3] = i + 3;
+		s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, wCmd[4] = %4d, %4d, %4d, %4d\n"),
+			CmdL.wMsgID, CmdL.wByteCount, CmdL.bPapNumber, CmdL.bBoardNumber,
+			CmdL.wCmd[0], CmdL.wCmd[1], CmdL.wCmd[2], CmdL.wCmd[3]);
+		m_lbOutput.AddString(s);
+		SendMsg((GenericPacketHeader*)&CmdL);
+		}
+
 	Sleep(20);
 	// reset ADC board to initial condition
 	//SamInitAdc(m_nPAP, m_nBoard);
@@ -1288,6 +1305,18 @@ void CNcNx::ShowPulserCmds(void)
 	SetDlgItemInt(IDC_EDPULSER_CMD, gLastAscanPap.wPulserCmds, 0);
 	}
 
+void CNcNx::ShowSmallQ(void)
+	{
+	SetDlgItemInt(IDC_EN_SMALLQ, gLastIdataPap.bCmdQDepthS, 0);
+	}
+void CNcNx::ShowLargeQ(void)
+	{
+	SetDlgItemInt(IDC_EN_LARGEQ, gLastIdataPap.bCmdQDepthL, 0);
+	}
+void CNcNx::ShowPulserQ(void)
+	{
+	SetDlgItemInt(IDC_EN_PULSERQ, gLastIdataPap.bCmdQDepthP, 0);
+	}
 
 
 

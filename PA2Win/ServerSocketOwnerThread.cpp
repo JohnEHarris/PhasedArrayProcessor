@@ -589,6 +589,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	int nSent;
 	int nMsgSize;
 	int i = -1;
+	int j;
 	int nError;
 	ST_LARGE_CMD *pCmd;
 	ST_SMALL_CMD *pCmdS;
@@ -690,7 +691,10 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				m_nConfigMsgQty++;
 				// sleep every other 8th packet
 				if ((pCmd->wMsgSeqCnt & 7) == 0)
+					{
 					Sleep(10);
+					j = 0;
+					}
 				// debug info to trace output.. losing connection when attempting to download config file
 				if ((m_pSCC->uPacketsSent))	// &0xff) == 0)
 					{
@@ -710,16 +714,18 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 							//s = _T("Sleep after 32 small commands\n");
 							//pMainDlg->SaveCommandLog(s);
 							Sleep(10);
+							j = 1;
 							}
 						}
 					else if (pCmd->wMsgID < TOTAL_LARGE_COMMANDS + 0x200)
 						{
 						m_bLargeCmdSent++;
-						if((m_bLargeCmdSent & 0x3) == 0)
+						if((m_bLargeCmdSent & 0x7) == 0)
 							{
 							//s = _T("Sleep after 8 large commands\n");
 							//pMainDlg->SaveCommandLog(s);
 							Sleep(10);
+							j = 3;
 							}
 						}
 					else if (pCmd->wMsgID < TOTAL_PULSER_COMMANDS + 0x300)
@@ -750,7 +756,11 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				if (nDebug++ < 2) 
 					TRACE1("Error Code = %d\n", nError);
 				}
-			else TRACE1("Error Code = %d\n", nError);
+			else
+				{
+				TRACE1("Error Code = %d\n", nError);
+				i = nError;
+				}
 
 			// if here we are having a problem sending
 			if ( i == 7)	// last time thru loop.. loose packet after this
@@ -761,6 +771,9 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 					m_pSCC->uUnsentPackets, pCmd->wMsgSeqCnt, nError);
 				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
+				// Try closing socket on this side and restarting
+				if (m_pSCC->pSocket)
+					m_pSCC->pSocket->Close();
 				}
 			// 10054L is forcibly closed by remote host
 			}	// for ( i = 0; i < 8; i++)
@@ -855,6 +868,10 @@ void CServerSocketOwnerThread::MsgPrintLarge(ST_LARGE_CMD *pCmd, char *msg)
 
 // If wiznet looses sync on Idata transmission, killed the command queue
 // w= 0 reset only wiznet, w=1 reinit client
+// CCmdFifo::GetPacketSize(void) post a thread message to flush the command queue
+// CServerSocketOwnerThread *pThread = stSCM[m_CSnum].pClientConnection[m_SrvClientNum]->pServerSocketOwnerThread;
+// pThread->PostThreadMessage(WM_USER_SERVER_FLUSH_CMD_PACKETS, (WORD)m_SrvClientNum, 0L);
+//
 void CServerSocketOwnerThread::FlushCmdQueue(WPARAM w, LPARAM lParam)
 	{
 	int i;

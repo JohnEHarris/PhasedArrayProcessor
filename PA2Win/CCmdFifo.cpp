@@ -174,15 +174,18 @@ int CCmdFifo::GetPacketSize(void)
 		else
 			{
 			t.Format(_T("Srv[%d].Client[%d]\n"), m_CSnum, m_SrvClientNum);
-			CServerSocketOwnerThread *pThread = stSCM[m_CSnum].pClientConnection[m_SrvClientNum]->pServerSocketOwnerThread;
-			pThread->PostThreadMessage(WM_USER_SERVER_FLUSH_CMD_PACKETS, (WORD)m_SrvClientNum, 0L);
+			if (stSCM[m_CSnum].pClientConnection[m_SrvClientNum]->pSocket)
+				stSCM[m_CSnum].pClientConnection[m_SrvClientNum]->pSocket->Close();
+
+			//CServerSocketOwnerThread *pThread = stSCM[m_CSnum].pClientConnection[m_SrvClientNum]->pServerSocketOwnerThread;
+			//pThread->PostThreadMessage(WM_USER_SERVER_FLUSH_CMD_PACKETS, (WORD)m_SrvClientNum, 0L);
 			}
 		s += t;
 		TRACE(s);
 		pMainDlg->SaveDebugLog(s);
 		// 2018-10-15 count lost sync's. 4 in a row, send packet to reset wiznet
 		m_nLostSyncCnt++;
-#if 0
+#if 1
 		if (m_nLostSyncCnt >= 4)
 			{
 			m_Out = m_In = m_Size = m_nLostSyncCnt = 0;

@@ -199,6 +199,7 @@ END_MESSAGE_MAP()
 // comes from CServerSocket::OnReceive()
 
 #ifdef I_AM_PAP
+// Receives inspection packets from inspection machines and status info from pulser
 afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
 	{
 	void *pV;
@@ -455,7 +456,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->wLastCmdSeqCnt = pIData->wLastCmdSeqCnt;
 		// map Sams bDin to Roberts
 		m_pIdataPacket->bDin = pIData->bDin;//  bDinMap[pIData->bDin & 0x3f]; 5/23/18 allow all jeh
-		m_pIdataPacket->bSpare	= pIData->bSpare;	// Come from gate board in header with gates and wall reading
+		m_pIdataPacket->bCmdQDepthP = pIData->bCmdQDepthP;	// Come from gate board in header with gates and wall reading
 		m_pIdataPacket->wLocation = pIData->wLocation;		//m_pSCC->InstrumentStatus.wLoc;
 		m_pIdataPacket->wAngle = pIData->wAngle;	//m_pSCC->InstrumentStatus.wAngle;
 		m_pIdataPacket->wPeriod = pIData->wPeriod;	// m_pSCC->InstrumentStatus.wPeriod;
@@ -738,6 +739,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			//
 #if 1
 
+			pIData->bCmdQDepthP = gbCmdQDepthP;
 			// packet all good to seq mod, but  Pap = 1,startSeq=0x40, modulo = 4
 			if (pIData->bNiosGlitchCnt != m_bNiosGlitchCnt)
 				{
@@ -938,7 +940,6 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 				m_Seq = (nLastSeq + 1) % gnSeqModulo;
 				}
 
-
 			m_nElapseTime = m_pElapseTimer->Stop();		// elapse time in uSec for 128 AScans
 #if 0
 			s.Format(_T("Nc Nx processing for 256 VChnls in %d uSec\n"), m_nElapseTime);
@@ -1003,6 +1004,7 @@ void  CServerRcvListThread::ProcessPulserData(PULSER_DATA *pPulserData)
 	gwFPGA_VersionP	= pPulserData->wFPGA_Version;
 	gwNIOS_VersionP	= pPulserData->wNIOS_Version;
 	gwCPU_Temp		= pPulserData->wCPU_Temp;
+	gbCmdQDepthP	= pPulserData->bPulserCmdQ;
 	//CString s;
 	//s.Format(_T(" Pulser Temp = %d\n"), gwCPU_Temp);
 	//TRACE(s);

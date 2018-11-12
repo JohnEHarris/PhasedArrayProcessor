@@ -168,6 +168,7 @@ PubExt WORD gwFPGA_VersionP;
 PubExt WORD gwNIOS_VersionP;
 PubExt WORD gwCPU_Temp;
 PubExt WORD gwPap_Prf;
+PubExt BYTE gbCmdQDepthP;
 
 
 //#define SYNC							0x5CEBDAAD

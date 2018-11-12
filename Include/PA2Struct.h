@@ -204,8 +204,8 @@ typedef struct
 
 	// Pipe position information
 	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
-	BYTE bSpare;
-    WORD wLocation;		// x location in motion pulses
+	BYTE bCmdQDepthP;	// Pulser cmd Q depth
+	WORD wLocation;		// x location in motion pulses
     WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
     WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
@@ -258,7 +258,7 @@ typedef struct
 
 						// Pipe position information
 	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
-	BYTE bSpare;
+	BYTE bCmdQDepthP;	// Pulser cmd Q depth
 	WORD wLocation;		// x location in motion pulses
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
@@ -349,7 +349,7 @@ typedef struct
 
 						// Pipe position information
 	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
-	BYTE bSpare;
+	BYTE bCmdQDepthP;	// Pulser cmd Q depth
 	WORD wLocation;		// x location in motion pulses
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
@@ -402,7 +402,7 @@ typedef struct
 
 						// Pipe position information
 	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
-	BYTE bSpare;
+	BYTE bCmdQDepthP;	// Pulser cmd Q depth
 	WORD wLocation;		// x location in motion pulses
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
@@ -442,7 +442,7 @@ typedef struct
 
 						// Pipe position information
 	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
-	BYTE bSpare;
+	BYTE bCmdQDepthP;	// Pulser cmd Q depth
 	WORD wLocation;		// x location in motion pulses
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
@@ -492,7 +492,7 @@ typedef struct
 
 						// Pipe position information
 	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
-	BYTE bSpare;
+	BYTE bCmdQDepthP;	// Pulser cmd Q depth
 	WORD wLocation;		// x location in motion pulses
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
@@ -542,7 +542,7 @@ typedef struct
 
 						// Pipe position information
 	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
-	BYTE bSpare;
+	BYTE bCmdQDepthP;	// Pulser cmd Q depth
 	WORD wLocation;		// x location in motion pulses
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
@@ -566,9 +566,10 @@ typedef struct
 	WORD wFPGA_Version;	// Maj.Minor.Build  FpgaVersion = (0x0 << 12) + (2 << 8) + 0; //0.2.0  -- nibble, nibble, byte
 	WORD wNIOS_Version;	// nibble, nibble, byte maj.min.build
 	WORD wCPU_Temp;		// in Celsius
-	WORD wSpare[23];
+	BYTE bPulserCmdQ;
+	BYTE bSpare;
+	WORD wSpare[22];
 	}	PULSER_DATA;
-
 
 
 /*************************************************************/

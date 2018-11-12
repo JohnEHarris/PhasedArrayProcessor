@@ -1216,7 +1216,7 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 				// wait a while until listening
 				for (j = 0; j < 100; j++)
 					{
-					Sleep(10);
+					Sleep(40);
 					if (pSCM[i]->m_pstSCM->nServerIsListening)	break;
 					}
 				if (j < 100)	break;
@@ -1265,6 +1265,7 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 #else
 			// PAP server for Pulser board
 		case ePAP_Pulser_server:		// For PAP, becomes command server for Pulser Board
+			Sleep(500);		// hope ADC connects before pulser
 			pSCM[i] = new CServerConnectionManagement(i);
 			j = sizeof(pSCM[i]);
 			j = sizeof(CServerConnectionManagement);
@@ -1904,6 +1905,7 @@ void CPA2WinDlg::CloseFakeData(void)
 void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 	{
 	// TODO: Add your message handler code here and/or call default
+	WORD wVerH, wVerS;	// hardware/software version temps
 	m_nTimerCount++;
 	time(&m_tTimeNow);
 	UpdateTimeDate( &m_tTimeNow );
@@ -1916,12 +1918,14 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 		gDlg.pNcNx->ShowSmallCmds();
 		gDlg.pNcNx->ShowLargeCmds();
 		gDlg.pNcNx->ShowPulserCmds();
+		gDlg.pNcNx->ShowSmallQ();
+		gDlg.pNcNx->ShowLargeQ();
+		gDlg.pNcNx->ShowPulserQ();
 		}
 
 #ifdef I_AM_PAP
-	WORD wVerH, wVerS;	// hardware/software version temps
 	if (gDlg.pNcNx)	return;		// don't show when NcNx dialog on screen
-								// update last Idata packet to list box.
+	// update last Idata packet to list box.
 	// All this to save processing time in displaying data on screen
 	// Do it once so no extra time for conversions of numbers to text
 	//m_sHwVerAdc = m_sSwVerAdc = m_sHwVerPulser = m_sSwVerPulse
@@ -2308,7 +2312,7 @@ void CPA2WinDlg::DlgDebugOut( CString s )
 
 int CPA2WinDlg::GetAdcCmdQ(void)		// return number of commands queued for ADC
 	{
-	// ADC command q services by SRV[0]
+	// ADC command q serviced by SRV[0]
 	int i = 0;
 	if (stSCM[0].pClientConnection[0]->pSendPktList)
 		{
@@ -2356,14 +2360,15 @@ void CPA2WinDlg::ShowIdata(void)
 
 		// Check the command queues for the ADC and Pulser. If any commands are waiting
 		// exit this routine
-		s = _T(" *** BUSY SENDING COMMANDS ***");
-		if (GetAdcCmdQ())
+		if (i = GetAdcCmdQ()) // apparently only adc has much in queue
 			{
+			s.Format(_T(" *** BUSY SENDING COMMANDS. ADC cmd Q = %d ***"), i);
 			m_lbOutput.AddString(s);
 			return;
 			}
-		if (GetPulserCmdQ())
+		if (i = GetPulserCmdQ())
 			{
+			s.Format(_T(" *** BUSY SENDING COMMANDS. Pulser cmd Q = %d ***"), i);
 			m_lbOutput.AddString(s);
 			return;
 			}

@@ -1038,7 +1038,7 @@ afx_msg void CClientCommunicationThread::RestartTcpComDlg(WPARAM w, LPARAM lPara
 // instructing the thread to check the linked list and send all queued messages.
 // WPARAM and  LPARAM are unused at this time
 
-#define RETRY_COUNT			6
+#define RETRY_COUNT			4
 
 afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 	{

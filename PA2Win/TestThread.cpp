@@ -67,7 +67,7 @@ afx_msg void CTestThread::Bail(WPARAM w, LPARAM lParam)
 afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually added jeh 10-24-2012
 	{
 	CString s;
-	int i, j;	// , n;
+	int i, j, k;	// , n;
 #ifdef _DEBUG
 	printf("Hello World from Test Thread\n");
 	cout << "Hello World from Test Thread using std\n" << endl;
@@ -142,7 +142,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 					{
 					if (stSCM[i].pClientConnection[j]->pSendPktList)	
 						{
-						if (stSCM[i].pClientConnection[j]->pSendPktList->GetCount())	//there are packets to send
+						if (k = stSCM[i].pClientConnection[j]->pSendPktList->GetCount())	//there are packets to send
 							{
 							CServerSocket *pSocket = stSCM[i].pClientConnection[j]->pSocket;
 							CServerSocketOwnerThread *pThread = stSCM[i].pClientConnection[j]->pServerSocketOwnerThread;
@@ -152,9 +152,9 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 								TRACE(s);
 								break;
 								}
-
+							// invoke CServerSocketOwnerThread::TransmitPackets()
 							pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
-							s.Format( _T("Command from Srv%d sent to Client%d from idle loop\n"), i,j);
+							s.Format( _T("Command from Srv%d sent to Client%d from idle loop, GetCount = %d\n"), i,j, k);
 							TRACE(s);
 							}	//there are packets to send
 						}	// pSendPktList exists

@@ -112,9 +112,13 @@ public:
 	//int m_nAscanCnt;
 	void IncrementAscanCnt(void);
 	void ShowIdataSource(void);
-	void CNcNx::ShowSmallCmds(void);
-	void CNcNx::ShowLargeCmds(void);
-	void CNcNx::ShowPulserCmds(void);
+	void ShowSmallCmds(void);
+	void ShowLargeCmds(void);
+	void ShowPulserCmds(void);
+
+	void ShowSmallQ(void);
+	void ShowLargeQ(void);
+	void ShowPulserQ(void);
 
 
 	afx_msg void OnBnClickedRbSmallcmd();

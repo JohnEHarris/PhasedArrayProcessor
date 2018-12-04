@@ -1203,7 +1203,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		// take up to 6 attempts to deliver the packet linked list is empty??? 2.5x10-5 error
 		// try 4 attempts at 20 ms each  2018-09-13  5.2X10-5 error
 		// 8 attempts @ 10 ms 5x10-5
-		// 6 @ 15 ms 7.5x10-5
+		// 6 @ 15 ms 7.5x10-5 replace usb ethernet with real ethernet connection and errors go away
 		for (i = 0; i < RETRY_COUNT; i++)
 			{	// loop till good xmit
 			if (m_pstCCM == NULL)	break;

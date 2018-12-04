@@ -123,6 +123,7 @@ PubExt BYTE gbCmdSeq;
 PubExt BYTE gbCmdChnl;
 PubExt BYTE gbCmdGate;
 PubExt WORD gwStatus;		// bit field of error sent with Idata
+PubExt WORD gwBadSync;
 PubExt WORD gwStatusHoldCnt;	// set to non-zero when status changes
 			// main task manager will hold status bits for output until Hold Cnt decrements to 0
 PubExt WORD gwSmallCmdLost, gwLargeCmdLost;
@@ -169,8 +170,11 @@ PubExt WORD gwNIOS_VersionP;
 PubExt WORD gwCPU_Temp;
 PubExt WORD gwPap_Prf;
 PubExt BYTE gbCmdQDepthP;
+PubExt WORD gwPapPulserCmds, gwPapLargeCmds, gwPapSmallCmds;		// count commands going thru PAP
 
-
+// These error counts should reset on DebugPrint msg bit 1
+PubExt BYTE gbAdcMsgIdErrorCntPAP;		// count number of times adc msg lost in PAP
+PubExt BYTE gbAdcMsgIdErrorCntADC;		// count number of times adc msg lost in ADC
 //#define SYNC							0x5CEBDAAD
 //#define PRINT_MSG		(1 << 0)
 //#define RESET_CMD_CNT	(1 << 1)

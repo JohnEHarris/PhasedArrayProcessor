@@ -470,7 +470,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->bCmdSeq = pIData->bCmdSeq;
 		m_pIdataPacket->bCmdChnl = pIData->bCmdChnl;
 		m_pIdataPacket->bCmdGate = pIData->bCmdGate;
-		m_pIdataPacket->bCmdSpare = pIData->bCmdSpare;
+		m_pIdataPacket->bAdcMsgIdErrorCntPAP = pIData->bCmdSpare;
 
 		//m_IdataInPt					= 0;	// insertion index in output data structrure-- not after 2017-08-22
 		m_nStoredChannelCount = 0;

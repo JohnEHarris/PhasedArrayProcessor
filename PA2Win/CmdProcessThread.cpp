@@ -60,7 +60,7 @@ END_MESSAGE_MAP()
 
 
 // CCmdProcessThread message handlers
-// Assume the first client connection for every PAM is to the PAG server. Thus
+// Assume the first client connection for every PAP is to the PAG server. Thus
 // processing receive messages would be processing instrument command messages
 // this thread functions is activated by CClientConnectionManagement::OnReceive()
 // which got a command from PAG

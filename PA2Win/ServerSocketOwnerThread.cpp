@@ -500,7 +500,7 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 #endif
 	}
 
-// w = client index and lParam = pClientConnection
+// w = client index and lParam = pClientConnection -- called from KillServerSocket
 afx_msg void CServerSocketOwnerThread::KillServerSocketOwner( WPARAM w, LPARAM lParam )
 	{
 	CString t, s = _T("KillServerSocketOwner is running\n");
@@ -696,7 +696,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 					j = 0;
 					}
 				// debug info to trace output.. losing connection when attempting to download config file
-				if ((m_pSCC->uPacketsSent))	// &0xff) == 0)
+				if ((m_pSCC->uPacketsSent & 0xff) == 0)
 					{
 #ifdef I_AM_PAG
 					s.Format(_T("\nServerSocketOwnerThread Pkts sent to PAP[%d] board[%d] = %d, lost = %d\n"),
@@ -720,9 +720,9 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 					else if (pCmd->wMsgID < TOTAL_LARGE_COMMANDS + 0x200)
 						{
 						m_bLargeCmdSent++;
-						if((m_bLargeCmdSent & 0x7) == 0)
+						//if((m_bLargeCmdSent & 0x1) == 0)
 							{
-							//s = _T("Sleep after 8 large commands\n");
+							//s = _T("Sleep after 4 large commands\n");
 							//pMainDlg->SaveCommandLog(s);
 							Sleep(10);
 							j = 3;
@@ -756,6 +756,19 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				if (nDebug++ < 2) 
 					TRACE1("Error Code = %d\n", nError);
 				}
+			// WSAENOTSOCK
+#if 0
+			// this didn't work if we attempt to delete the socket?
+			else if (nError == WSAENOTSOCK)
+				{
+				if (m_pSCC->pSocket)
+					{
+					m_pSCC->pSocket->Close();
+					//delete m_pSCC->pSocket;
+					}
+				TRACE1("Error Code = %d -- attempt to close.. WSAENOTSOCK\n", nError);
+				}
+#endif
 			else
 				{
 				TRACE1("Error Code = %d\n", nError);

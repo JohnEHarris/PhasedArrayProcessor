@@ -2001,7 +2001,7 @@ void CPA2WinDlg::DestroyCCM( void )
 		{
 		// every client connetion to an external server will likely have different characteristics
 		// Thus each connection will involve different shut down operations
-		// Assume the firs connection is to the test GUI aka PAG
+		// Assume the first connection is to the test GUI aka PAG
 
 		switch (iClient)
 			{
@@ -2326,9 +2326,12 @@ int CPA2WinDlg::GetPulserCmdQ(void)
 	{
 	// pulser command q services by SRV[1]
 	int i = 0;
-	if (stSCM[1].pClientConnection[0]->pSendPktList)
+	if (stSCM[1].pClientConnection[0])
 		{
-		i = stSCM[1].pClientConnection[0]->pSendPktList->GetCount();
+		if (stSCM[1].pClientConnection[0]->pSendPktList)
+			{
+			i = stSCM[1].pClientConnection[0]->pSendPktList->GetCount();
+			}
 		}
 	return i;
 	}
@@ -2470,7 +2473,7 @@ void CPA2WinDlg::ShowIdata(void)
 		if (gLastIdataPap.bDin & HD_SAM) hd = 1;
 		// Hardware input status
 		//       0123456 89012345 78901234 678901  456789012
-		s = _T( "Digital PP  IE  HD     Location Angle    Period   RotateCnt     MsgSeq  Glitch  LastCmdId  1stWord  Seq  Chnl  Gate  (CMDS) Small Large  Pulser" );
+		s = _T( "Digital PP  IE  HD   X-Loc Angle  Period   RotateCnt     MsgSeq  Glitch  LastCmd  1stWord  Seq  Chnl  Gate  (NIOS)Small Large  Pulser  (PAP)Small Large  Pulser" );
 		t = s;
 		//m_lbOutput.AddString(t);	// show top line
 		//s.Format(_T("    MsgCnt = %d, GlitchCnt = %d  CmdId  1stWord"),
@@ -2478,17 +2481,20 @@ void CPA2WinDlg::ShowIdata(void)
 		//	gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd);
 		//t += s;
 		m_lbOutput.AddString(t);
-		s.Format( _T( "0x%04x  %d   %d   %d      %05d    %04d     %06d   %05d" ),
+		s.Format( _T( "0x%04x  %d   %d   %d    %05d %04d   %06d   %05d" ),
 			gLastIdataPap.bDin, pp, ie, hd, gLastIdataPap.wLocation, gLastIdataPap.wAngle,
 			gLastIdataPap.wPeriod, gLastIdataPap.wRotationCnt );
 		t = s;
-		s.Format(_T("         %05d   %03d     %03d        %05d    %02d   %02d    %02d"),
+		s.Format(_T("         %05d   %03d     %03d      %05d    %02d   %02d    %02d"),
 			gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
 			gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd,
-			gLastIdataPap.bCmdSeq, gLastIdataPap.bCmdChnl, gLastIdataPap.bCmdGate);
+			(gLastIdataPap.bCmdSeq % 10), (gLastIdataPap.bCmdChnl % 10), gLastIdataPap.bCmdGate&3);
 		t += s;
 		// count of commands received by ADC & Pulser board. Pulser absent as of 2018-11-16
-		s.Format(_T("           %05d %05d  %05d"), gLastAscanPap.wSmallCmds, gLastAscanPap.wLargeCmds, gLastAscanPap.wPulserCmds);
+		s.Format(_T("          %05d %05d  %05d"), gLastAscanPap.wSmallCmds, gLastAscanPap.wLargeCmds, gLastAscanPap.wPulserCmds);
+		t += s;
+		// Show number of cmds received by PAP 
+		s.Format(_T("        %05d %05d  %05d"), gwPapSmallCmds, gwPapLargeCmds, gwPapPulserCmds);
 		t += s;
 		m_lbOutput.AddString(t);
 

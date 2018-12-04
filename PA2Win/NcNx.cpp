@@ -764,16 +764,23 @@ void CNcNx::TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	SendMsg((GenericPacketHeader*)&m_TcgCmd);
 	}
 
+ST_SMALL_CMD Cmd;
+ST_LARGE_CMD CmdL;
 
 // cmd 12 -- changed to 28 per RAC
 // sort of a pseudo command since it generates real instrument commands for the PAG/UUI side
 void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	{
 	int i;
-	ST_SMALL_CMD Cmd;
-	ST_LARGE_CMD CmdL;
 	ST_WORD_CMD *pCmdW = (ST_WORD_CMD *)&Cmd;
+	WORD *pW = (WORD *)&CmdL;
+	BYTE *pB = (BYTE *)&Cmd;
 	CString s;
+
+	for (i = 0; i < sizeof(ST_LARGE_CMD); i++)
+		pW[i] = i;
+	for (i = 0; i < sizeof(ST_SMALL_CMD); i++)
+		pB[i] = i;
 
 	Cmd.uSync = CmdL.uSync = SYNC;
 	Cmd.wByteCount = 32;
@@ -796,7 +803,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 
 		switch (i % 7)
 			{
-			case 0:		Cmd.wCmd[0] = 300;	// (i * 50) + 1000; break;	//prf
+			case 0:		Cmd.wCmd[0] = 300;	//prf
 			case 1:		break;		// uncertain how and why to set HV - for now will resend prf
 			case 2:		Cmd.wCmd[0] = 0; // Polarity
 				break;
@@ -842,7 +849,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 2);	// turn off debug in adc and clear counters
 	Sleep(40);
 #if 1
-	for (i = 0; i < 5000; i++ )
+	for (i = 0; i < 5000; i++ )	// was 5000
 		{
 		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
 		Cmd.wCmd[0] = i;
@@ -878,7 +885,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	// final blast of 50 pulser commands - not prf
 	s = _T("Final blast of 50 large commands\n");
 	m_lbOutput.AddString(s);
-	for (i = 0; i < 50; i++)
+	for (i = 0; i < 100; i++)
 		{
 		CmdL.wMsgID = 516;
 		CmdL.wCmd[0] = i;
@@ -946,6 +953,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 
 	m_lbOutput.AddString(s);
 	SendMsg((GenericPacketHeader*)&Cmd);
+	Sleep(500);
 
 	}
 

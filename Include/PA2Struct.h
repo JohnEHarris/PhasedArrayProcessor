@@ -171,7 +171,7 @@ typedef struct
 // This is the structure format of data transmitted from the hardware front end
 // If Wiznet is reset, this causes a glitch in serial stream. Must flush PAP process and start anew to 
 // keep data synchronized with location information
-typedef struct 
+typedef struct	// IDATA_FROM_HW
 	{
 	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
@@ -225,7 +225,7 @@ typedef struct
 	} IDATA_FROM_HW;	// sizeof = 1024 + 64 byte header = 1088
 
 // Estimated 13 uSec to copy header into Wiznet
-typedef struct 
+typedef struct	// IDATA_FROM_HW_HDR
 	{
 	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
@@ -289,7 +289,7 @@ typedef struct
 	// Then structure size = 10
 	// Will limit max seq modulo to 16 or 128 channels
 
-typedef struct
+typedef struct // stPeakChnlPAP
 	{
 	//	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
 	// ie, PAP did not service PeakData fast enough
@@ -302,7 +302,7 @@ typedef struct
 	WORD wTofMax;	// gate 4 max -- joins sturcture in future-- then sizeof = 10
 	} stPeakChnlPAP;	// sizeof = 8  -- From PAP
 
-typedef struct
+typedef struct // stPeakChnlNIOS
 	{
 	//	BYTE bStatus;	// bits 0..3 bad wall reading count, bit 5 wall dropout, bit 6 data over-run. 
 	// ie, PAP did not service PeakData fast enough
@@ -316,7 +316,7 @@ typedef struct
 	} stPeakChnlNIOS;	// sizeof = 5  -- From ADC
 
 
-typedef struct
+typedef struct // IDATA_PAP
 	{
 	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
@@ -363,13 +363,13 @@ typedef struct
 	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
 	BYTE bCmdChnl;		// channel in sequence selected for command
 	BYTE bCmdGate;		// gate addressed by last command
-	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
+	BYTE bAdcMsgIdErrorCntPAP;		// does the PAP lose msg receiving from UUI
 	WORD wSpare[2];
 	stPeakChnlPAP PeakChnl[MAX_RESULTS];	// Some "channels" at the end may be channel-type NONE 
 	} IDATA_PAP;	// sizeof = 1024 + 64 =1088
 
 
-typedef struct
+typedef struct // IDATA_PAP_HDR
 	{
 	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
@@ -416,12 +416,12 @@ typedef struct
 	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
 	BYTE bCmdChnl;		// channel in sequence selected for command
 	BYTE bCmdGate;		// gate addressed by last command
-	BYTE bCmdSpare;		// maintain 16/32 bit boundaries
+	BYTE bAdcMsgIdErrorCntPAP;		// does the PAP lose msg receiving from UUI
 	WORD wSpare[2];
 	} IDATA_PAP_HDR;	// sizeof = 64
 
 // Ascan data has same basic structure as Idata 
-typedef struct
+typedef struct // ASCAN_DATA
 	{
 	WORD wMsgID;		// commands and data are identified by their ID	= eAscanID		2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
@@ -434,8 +434,8 @@ typedef struct
 	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bSeqNumber;
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
-	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id  15
-	BYTE bNiosFeedback[7];// eg. FPGA version, C version, self-test info	  22	
+	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
+	BYTE bNiosFeedback[7];// eg. FPGA version, C version, self-test info	
 
 	WORD wScopeSetting;	// inform about trigger, thold, other scope settings
 	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
@@ -471,7 +471,7 @@ typedef struct
 
 	} ASCAN_DATA;		// sizeof() = 1088
 
-typedef struct
+typedef struct // ASCAN_DATA_HDR
 	{
 	WORD wMsgID;		// commands and data are identified by their ID	= eAscanID		2
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
@@ -521,7 +521,7 @@ typedef struct
 	} ASCAN_DATA_HDR;	
 
 // Read Back Data is loaded by NIOS and not by a dma process
-typedef struct
+typedef struct // READBACK_DATA
 	{
 	WORD wMsgID;		// commands and data are identified by their ID	= eReadBackID = 3
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
@@ -556,7 +556,7 @@ typedef struct
 	} READBACK_DATA;		// sizeof() = 1088
 
 							// A packet of data sent from the Pulser to the PAP server updating pulser status
-typedef struct
+typedef struct // PULSER_DATA
 	{
 	WORD wMsgID;		// commands are identified by their ID 0x300
 	WORD wByteCount;	// Number of bytes in this packet. 64
@@ -664,7 +664,7 @@ Bit		Meaning when bit is set
 // bMaxTemp is the max value in the FIFO w/o regard to Nc. If we have less than Nc AboveThld and bMaxTemp > thold
 // then bMax is set to 80% of bThold. If we meet Nc count above thold then bMax = bMaxTemp and is returned by the 
 // FifoInput() function
-typedef struct
+typedef struct // Nc_FIFO
 	{
 	BYTE bCell[16];	// data cells containing input amplitudes 
 	BYTE bInPt;		// next location to fill in the FIFO
@@ -692,7 +692,7 @@ typedef struct
 // Machine hardware readings for bad wall therefore are w < 27 or w > 1377
 //
 
-typedef struct
+typedef struct //Nx_FIFO
 	{
 	WORD wCell[16];	// data cell containing wall thickness readings
 	BYTE bInPt;		// next location to fill in the FIFO
@@ -705,7 +705,7 @@ typedef struct
 	WORD wDropOut;	// number of bad readings before drop out occurs
 	} Nx_FIFO;
 
-typedef struct
+typedef struct  //RAW_INSTRUMENT_STATUS
 	{
 	WORD wStatus;		// tbd
 	WORD wLoc;			// x location in motion pulses relative to 1 packet from instrument

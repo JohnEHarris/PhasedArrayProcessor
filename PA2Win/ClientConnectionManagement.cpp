@@ -583,7 +583,7 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 	BYTE *pCmd = pSocket->m_pFifo->GetInLoc();
 	// Receive() receives data into fifo memory pointed to by pCmd
 	n = pSocket->Receive((void *)pCmd, 0x2000, 0); // ask for 8k byte into 16k buffer
-	//PAM assumes we will get partial packets and have to extract whole packets
+	//PAP assumes we will get partial packets and have to extract whole packets
 	if ( n > 0)
 		{
 		pSocket->m_pFifo->AddBytesToFifo(n);
@@ -625,11 +625,14 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 			if ((pPacket->wMsgSeqCnt - (m_pstCCM->wLastSeqCnt + 1)) != 0)
 				{
 				//n = m_nSeqIndx;
-				int j = GetRcvListCount(); //numbert of packets in rcvList
+				int j = GetRcvListCount(); //number of packets in rcvList
 				s.Format(_T("Lost Packet, OnReceive got MsgSeqCnt %d, expected %d..RcvList Count = %5d, Total packets rcv = %d\n"),
 					pPacket->wMsgSeqCnt, (m_pstCCM->wLastSeqCnt + 1), j, m_pstCCM->uPacketsReceived);
 				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
+				// PAP client 0 handles adc msg
+				if (m_pstCCM->nMyClientIndex == 0) gbAdcMsgIdErrorCntPAP++;
+				// else if (m_pstCCM->nMyClientIndex == 1) not counting pulser msg yet
 				}
 			m_pstCCM->wLastSeqCnt = pPacket->wMsgSeqCnt;
 
@@ -703,6 +706,7 @@ void CClientConnectionManagement::ProcessReceivedMessage(void)
 
 #else
 // Phased Array GUI  -- PAG
+// In the current project (2014-2018) PAG is not a client of any other system
 void CClientConnectionManagement::ProcessReceivedMessage(void)
 	{
 	USES_CONVERSION;

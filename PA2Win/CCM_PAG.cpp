@@ -53,6 +53,7 @@ CCCM_PAG::CCCM_PAG(int nMyConnection) : CClientConnectionManagement(nMyConnectio
 	m_nMsgQty = 0;
 	m_nWhichInstrument = 0;	// Best guess before anything else is known about Instruments.
 	//m_pstCCM->pCCM->m_pstCCM->pCmdProcessThread = 0; already zero
+	gwPapPulserCmds = gwPapSmallCmds = gwPapLargeCmds = 0;
 	}
 
 CCCM_PAG::~CCCM_PAG( void )
@@ -133,6 +134,9 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		// MsgId >= 0x200 but < 0x300 is a large command for the ADC board(s)
 		// MsgId >= 0x300 is routed to the PAP Srv[1] thread to the Pulser board
 
+		ST_WORD_CMD *pSmall;
+		pSmall = (ST_WORD_CMD *)pMmiCmd;
+
 		/*       PULSER COMMAND SECTION     */
 
 		if (MsgId >= 0x300)
@@ -175,8 +179,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			// Assuming all pulser board commands are small commands
 			if (MsgId <= 0x300 + LAST_PULSER_COMMAND)
 				{
-				ST_WORD_CMD *pSmall;
-				pSmall = (ST_WORD_CMD *)pMmiCmd;
+				gwPapPulserCmds++;
 #if 0
 				s.Format(_T("Received from GUI: Cmd= %2d board= %d Seq= %2d Ch= %d G= %d wCmd= %d\n"),
 					MsgId, pSmall->Head.bBoardNumber, pSmall->bSeq,
@@ -187,6 +190,11 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				// special case for PAP -- grab prf as it goes thru to pusler and display on PAP screen
 				if (MsgId == 0x300 + 0)
 					gwPap_Prf = pSmall->wCmd;
+				else if (MsgId == 0x300 + 8)	// DebugPrint FOR PULSER
+					{
+					if ((pSmall->wCmd & 2) == 2)
+						gwPapPulserCmds = 0;
+					}
 
 				pSocket->LockSendPktList();	// server sockets linked list for sending commands
 				pSocket->AddTailSendPkt(pMmiCmd);
@@ -235,7 +243,20 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				return;
 				}
 
-
+			// Count large and small commands
+			if ((MsgId >= 0x200) && (MsgId <= 0x200 + LAST_LARGE_COMMAND))
+				{
+				gwPapLargeCmds++;
+				}
+			else if ((MsgId >= 0) && (MsgId <= LAST_SMALL_COMMAND))
+				{
+				gwPapSmallCmds++;
+				if (MsgId == DEBUG_PRINT_CMD_ID)  // small cmd version is ID = 29
+					{
+					if ((pSmall->wCmd & 2) == 2)
+						gwPapSmallCmds = gwPapLargeCmds = 0;
+					}
+				}
 
 			// big case statement adapted from ServiceApp.cpp 'c' routine ProcessMmiMsg()
 			switch (MsgId)

@@ -777,7 +777,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	BYTE *pB = (BYTE *)&Cmd;
 	CString s;
 
-	for (i = 0; i < sizeof(ST_LARGE_CMD); i++)
+	for (i = 0; i < sizeof(ST_LARGE_CMD)/2; i++)
 		pW[i] = i;
 	for (i = 0; i < sizeof(ST_SMALL_CMD); i++)
 		pB[i] = i;

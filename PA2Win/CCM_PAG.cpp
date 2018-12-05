@@ -135,8 +135,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		// MsgId >= 0x300 is routed to the PAP Srv[1] thread to the Pulser board
 
 		ST_WORD_CMD *pSmall;
-		pSmall = (ST_WORD_CMD *)pMmiCmd;
-
+		
 		/*       PULSER COMMAND SECTION     */
 
 		if (MsgId >= 0x300)
@@ -179,6 +178,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			// Assuming all pulser board commands are small commands
 			if (MsgId <= 0x300 + LAST_PULSER_COMMAND)
 				{
+				pSmall = (ST_WORD_CMD *)pMmiCmd;
 				gwPapPulserCmds++;
 #if 0
 				s.Format(_T("Received from GUI: Cmd= %2d board= %d Seq= %2d Ch= %d G= %d wCmd= %d\n"),
@@ -244,6 +244,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				}
 
 			// Count large and small commands
+			pSmall = (ST_WORD_CMD *)pMmiCmd;
 			if ((MsgId >= 0x200) && (MsgId <= 0x200 + LAST_LARGE_COMMAND))
 				{
 				gwPapLargeCmds++;

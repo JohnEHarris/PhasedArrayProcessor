@@ -794,7 +794,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	// set a break point here to manage loop limits:0,7 7,14 14,21 21,28 28,35 35,42  42,39
 	iStart = 0;
 	iStop = iStart + 7;
-	DebugPrint(m_nPAP, m_nBoard, PULSER_DEBUG_PRINT_CMD_ID, 2);	// turn off debug in pulser and clear counters
+	DebugPrint(m_nPAP, m_nBoard, PULSER_DEBUG_PRINT_CMD_ID, 6);	// turn off debug in pulser and clear counters
 	Sleep(40);
 	// only prf, shape, and width are affected by changing start/stop limits
 	for (i = iStart; i < iStop; i++)

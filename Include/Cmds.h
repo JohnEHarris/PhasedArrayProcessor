@@ -523,9 +523,10 @@ typedef struct
 						// 192.168.10.200+boardNumber  range is .200-.215
 
 	BYTE bSpare[4];		// 16
-	// To make my PAG interface work easier, DbgFlag is a bit field
+	// To make my PAG interface work easier, DbgFlag is a bit field globals – printf() operations
 	WORD wDbgFlag;		// bit 0=0 no dbg output sets gbDebugMode in ADC globals
 						// bit 1=1 reset command counters in ADC and PULSER
+						// bit 2=1 reset max FIFO high water mark in NIOS command FIFO's
 	WORD wCmd[7];		// 16	
 	} ST_DEBUG_CMD;		// sizeof() = 32
 

@@ -586,6 +586,10 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 	//PAP assumes we will get partial packets and have to extract whole packets
 	if ( n > 0)
 		{
+		if (n > 1280)
+			{
+			t = _T("multiple command packets");
+			}
 		pSocket->m_pFifo->AddBytesToFifo(n);
 #if	DEBUG_TCPIP_FROM_PAG
 			{

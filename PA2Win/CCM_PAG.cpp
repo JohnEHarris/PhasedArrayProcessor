@@ -135,7 +135,8 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		// MsgId >= 0x300 is routed to the PAP Srv[1] thread to the Pulser board
 
 		ST_WORD_CMD *pSmall;
-		
+		pSmall = (ST_WORD_CMD *)pMmiCmd;
+
 		/*       PULSER COMMAND SECTION     */
 
 		if (MsgId >= 0x300)
@@ -147,12 +148,12 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 #else
 			if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber] == nullptr)
 #endif
-					{
+				{
 				s.Format(_T("No Client Connection ptr for Pulser board number=%d\n"), pMmiCmd->bBoardNumber);
 				TRACE(s);
 				DebugOut(s);
 				delete pMmiCmd;
-				return;
+				continue;		// return;
 				}
 
 			// stSCM[1].  use [0] for initial testing
@@ -172,13 +173,12 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				TRACE(s);
 				DebugOut(s);
 				delete pMmiCmd;
-				return;
+				continue;		// return;
 				}
 
 			// Assuming all pulser board commands are small commands
 			if (MsgId <= 0x300 + LAST_PULSER_COMMAND)
 				{
-				pSmall = (ST_WORD_CMD *)pMmiCmd;
 				gwPapPulserCmds++;
 #if 0
 				s.Format(_T("Received from GUI: Cmd= %2d board= %d Seq= %2d Ch= %d G= %d wCmd= %d\n"),
@@ -202,7 +202,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 				// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
 				pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
-				break;
+				continue;		// break;
 				}	// MsgId <= LAST_PULSER_COMMAND
 
 			else
@@ -228,7 +228,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				DebugOut(s);
 				pMainDlg->SaveDebugLog(s);
 				delete pMmiCmd;
-				return;
+				continue;		// return;
 				}
 
 			CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
@@ -240,11 +240,10 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				DebugOut(s);
 				pMainDlg->SaveDebugLog(s);
 				delete pMmiCmd;
-				return;
+				continue;		// return;
 				}
 
 			// Count large and small commands
-			pSmall = (ST_WORD_CMD *)pMmiCmd;
 			if ((MsgId >= 0x200) && (MsgId <= 0x200 + LAST_LARGE_COMMAND))
 				{
 				gwPapLargeCmds++;
@@ -304,7 +303,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 						DebugOut(s);
 						pMainDlg->SaveDebugLog(s);
 						delete pMmiCmd;
-						return;
+						break;
 						}
 
 					CvChannel *pChannel;
@@ -385,7 +384,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				
 		/*     ADC Board Commands               */
 
-		m_nMsgQty++;
+		//m_nMsgQty++;	// not used anywhere 2018-12-12
 
 		}	// while (m_pstCCM->pRcvPktPacketList->GetCount())
 

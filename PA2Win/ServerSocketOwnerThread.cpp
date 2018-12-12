@@ -682,7 +682,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			{
 			if (m_pSCC == NULL)				break;
 			if (m_pSCC->pSocket == NULL)	break;
-			if (i == 1) Sleep(10);
+			if (i == 2) Sleep(10);
 			nSent = m_pSCC->pSocket->Send( (void *) pCmd, nMsgSize,0);
 			if (nSent == nMsgSize)
 				{

@@ -25,7 +25,7 @@ Revised:	2018-10-22 add character for Client or Server and counter for which cli
 CCmdFifo::CCmdFifo(int PacketSize, char CS, int nWhichCS, int nClient)
 	{
 	//m_PacketSize = PacketSize;
-	m_In = m_Out = m_Size = m_nLostSyncCnt = 0;
+	m_In = m_Out = m_Size = m_nLostSyncCnt = m_PhysicalShiftCount = 0;
 	Reset();
 	m_nFifoCnt = gnFifoCnt++;
 	if (toupper(CS) == 'C') m_Type = 'C';
@@ -73,6 +73,7 @@ void CCmdFifo::Reset(void)
 	}
 
 // A real hardware FIFO would shift data to the output side automatically
+// assume we have a really big fifo (400000H) and eventually the output catches the input ptr
 void  CCmdFifo::Shift(void)
 	{
 	if (m_Size == 0)	// nothing in the FIFO
@@ -81,9 +82,14 @@ void  CCmdFifo::Shift(void)
 		return;
 		}
 	// since there is something in the fifo, shift it to the very front.
-	memcpy(&m_Mem[0], &m_Mem[m_Out], m_Size);
-	m_In = m_Size;
-	m_Out = 0;	// point to the beginning of the fifo
+	// when we get close to the physical end of memory
+	if (m_Out > (CMD_FIFO_MEM_SIZE - 0x10000))
+		{
+		memcpy(&m_Mem[0], &m_Mem[m_Out], m_Size);
+		m_In = m_Size;
+		m_Out = 0;	// point to the beginning of the fifo
+		m_PhysicalShiftCount++;
+		}
 	}
 
 BYTE * CCmdFifo::GetInLoc(void)
@@ -99,13 +105,14 @@ BYTE * CCmdFifo::GetInLoc(void)
 		pMainDlg->SaveDebugLog(s);
 
 		}
-	if (m_In >= CMD_FIFO_MEM_SIZE - 1500)
+	if (m_In >= CMD_FIFO_MEM_SIZE - 0x8000)
 		{	// getting close to end of FIFO
-		if (m_Out > 1460)	// empty space at front of buffer
+		if (m_Out < m_In)	// empty space at front of buffer
 			{
 			memcpy(&m_Mem[0], &m_Mem[m_Out], m_Size);
 			m_In = m_Size;
 			m_Out = 0;
+			m_PhysicalShiftCount++;
 			}
 		else
 			{	// flush the buffer and set error bit in Idata

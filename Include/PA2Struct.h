@@ -92,7 +92,7 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define INSTRUMENT_PACKET_SIZE			1088		//old 1040.. 1460 is max TCPIP size
 //#define MASTER_PACKET_SIZE				1088		// 1260
 #define SYNC							0x5CEBDAAD
-#define CMD_FIFO_MEM_SIZE				0x4000		// must be greater than 0x1800
+#define CMD_FIFO_MEM_SIZE				0x400000		// must be greater than 0x1800
 #define NC_NX_STRUCT_SIZE				52
 #define MAX_CMD_PACKET_SIZE				1056
 

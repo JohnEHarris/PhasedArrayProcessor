@@ -14,7 +14,7 @@ Purpose:TCP/IP Can fragment messages and can combine them. In order to extract j
 class CCmdFifo
 	{
 	private:
-		BYTE m_Mem[CMD_FIFO_MEM_SIZE];		//16k for FIFO
+		BYTE m_Mem[CMD_FIFO_MEM_SIZE];		//16k for FIFO * 256
 		int m_In;		// index in m_Mem where next set of input bytes will start
 		int m_Out;		// index in m_Mem where next output from FIFO will start
 		int m_Size;		// number of bytes unread in FIFO
@@ -23,6 +23,7 @@ class CCmdFifo
 		char m_Type;	// 'C' or 'S'
 		short m_CSnum;	// which client or which server
 		short m_SrvClientNum;	// Client number for this server
+		int m_PhysicalShiftCount;	// how many times we move data to front of buffer
 	public:
 		// if a client fifo, which client do I belong to: CS='C', my client number, nClient = don't care 
 		// if a server fifo, which server and which client is filling the fifo: CS='S', my server number, the client

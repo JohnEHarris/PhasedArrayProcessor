@@ -24,6 +24,10 @@ class CCmdFifo
 		short m_CSnum;	// which client or which server
 		short m_SrvClientNum;	// Client number for this server
 		int m_PhysicalShiftCount;	// how many times we move data to front of buffer
+		int m_FlushCount;		// how many time we flushed the buffer
+		int m_nFifoEmptyCount;
+		int m_nMaxDepth;		// how much memory used 
+		CRITICAL_SECTION *m_pCS;	// may not be needed
 	public:
 		// if a client fifo, which client do I belong to: CS='C', my client number, nClient = don't care 
 		// if a server fifo, which server and which client is filling the fifo: CS='S', my server number, the client

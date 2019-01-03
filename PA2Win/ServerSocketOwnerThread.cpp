@@ -786,7 +786,10 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				pMainDlg->SaveDebugLog(s);
 				// Try closing socket on this side and restarting
 				if (m_pSCC->pSocket)
+					{
 					m_pSCC->pSocket->Close();
+					Sleep(10);
+					}
 				}
 			// 10054L is forcibly closed by remote host
 			}	// for ( i = 0; i < 8; i++)
@@ -828,7 +831,7 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case 26: MsgPrint(pCmd, "SetAscanGateOut<26>");					break;
 	case 27: MsgPrint(pCmd, "Ascan Period <27> wCmd = milliseconds");		break;
 	case 28: MsgPrint(pCmd, "WallNx <28> wCmd = Nx");				break;
-	case 29: MsgPrint(pCmd, "TCGBeamGainAll <29> wCmd = gain");		break;
+	case 29: MsgPrint(pCmd, "DebugPrint <29> wCmd = gain");			break;
 	case 30: MsgPrint(pCmd, "ReadBack <30> wCmd = ?");				break;
 	case 32: MsgPrint(pCmd, "SamInitAdc <32>");						break;
 	case TCG_GAIN_CMD_ID:	  MsgPrintLarge(pCmdL, "TCGBeamGain <516> wCmd[0..3]");		break;

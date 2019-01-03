@@ -540,6 +540,7 @@ BOOL CPA2WinDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 	i = sizeof(gPksPerSec);
 	memset((void *)&gPksPerSec, 0, sizeof(gPksPerSec));
+	gnFifoCnt = 0;
 
 	m_sHwVerAdc = m_sSwVerAdc = m_sHwVerPulser = m_sSwVerPulser = _T("");
 	// TODO: Add extra initialization here

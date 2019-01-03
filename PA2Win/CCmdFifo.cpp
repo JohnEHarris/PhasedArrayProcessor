@@ -26,16 +26,21 @@ CCmdFifo::CCmdFifo(int PacketSize, char CS, int nWhichCS, int nClient)
 	{
 	//m_PacketSize = PacketSize;
 	m_In = m_Out = m_Size = m_nLostSyncCnt = m_PhysicalShiftCount = 0;
+	m_nFifoEmptyCount = m_nMaxDepth = 0;
+	m_FlushCount = 0;
 	Reset();
-	m_nFifoCnt = gnFifoCnt++;
+	m_nFifoCnt = ++gnFifoCnt;
 	if (toupper(CS) == 'C') m_Type = 'C';
 	else m_Type = 'S';
 	m_CSnum = nWhichCS;
 	m_SrvClientNum = nClient;
+	m_pCS = new CRITICAL_SECTION();
+	InitializeCriticalSectionAndSpinCount(m_pCS, 4);
 	};
 
 CCmdFifo::~CCmdFifo()
 	{
+	delete m_pCS;
 	};
 
 void CCmdFifo::SetClientNumber(int nClient)
@@ -76,9 +81,12 @@ void CCmdFifo::Reset(void)
 // assume we have a really big fifo (400000H) and eventually the output catches the input ptr
 void  CCmdFifo::Shift(void)
 	{
+	EnterCriticalSection(m_pCS);
 	if (m_Size == 0)	// nothing in the FIFO
 		{
 		m_In = m_Out = 0;
+		m_nFifoEmptyCount++;
+		LeaveCriticalSection(m_pCS);
 		return;
 		}
 	// since there is something in the fifo, shift it to the very front.
@@ -90,12 +98,14 @@ void  CCmdFifo::Shift(void)
 		m_Out = 0;	// point to the beginning of the fifo
 		m_PhysicalShiftCount++;
 		}
+	LeaveCriticalSection(m_pCS);
 	}
 
 BYTE * CCmdFifo::GetInLoc(void)
 	{
 	CString s;
 	BYTE *pMem;
+	EnterCriticalSection(m_pCS);
 	if (m_In < 0)
 		{
 		m_In = m_Out = m_Size = 0;
@@ -109,7 +119,8 @@ BYTE * CCmdFifo::GetInLoc(void)
 		{	// getting close to end of FIFO
 		if (m_Out < m_In)	// empty space at front of buffer
 			{
-			memcpy(&m_Mem[0], &m_Mem[m_Out], m_Size);
+			if (m_Out)
+				memcpy(&m_Mem[0], &m_Mem[m_Out], m_Size);	//skip if m_Out == 0
 			m_In = m_Size;
 			m_Out = 0;
 			m_PhysicalShiftCount++;
@@ -118,13 +129,14 @@ BYTE * CCmdFifo::GetInLoc(void)
 			{	// flush the buffer and set error bit in Idata
 			m_In = m_Out = m_Size = 0;
 			m_bError = 1;	// overflow
-			s = _T( "CCmdFifo: Buffer Overflow\n" );
+			m_FlushCount++;
+			s.Format( _T( "CCmdFifo: Buffer Overflow %d\n"), m_FlushCount);
 			pMainDlg->SaveDebugLog(s);
 			TRACE(s);
-
 			}
 		}
 	pMem = (BYTE *)&m_Mem[m_In];
+	LeaveCriticalSection(m_pCS);
 	return pMem;
 	}
 
@@ -134,8 +146,12 @@ BYTE * CCmdFifo::GetInLoc(void)
 // and the next input location
 void CCmdFifo::AddBytesToFifo(int n)
 	{
+	EnterCriticalSection(m_pCS);
 	m_In += n;
 	m_Size += n;
+	if (m_Size > m_nMaxDepth)
+		m_nMaxDepth = m_Size;
+	LeaveCriticalSection(m_pCS);
 	}
 
 // after 2016-12-13 packet size is not fixed.
@@ -147,7 +163,9 @@ int CCmdFifo::GetPacketSize(void)
 	WORD wMsgID;		// commands are identified by their ID
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD
-	*/	
+	*/
+	int i;
+	EnterCriticalSection(m_pCS);
 	CString s,t;
 	WORD *pW = (WORD *)&m_Mem[m_Out];// debugging
 	GenericPacketHeader *pHeader;
@@ -155,7 +173,7 @@ int CCmdFifo::GetPacketSize(void)
 	pHeader = (GenericPacketHeader *)pW;		// &m_Mem[m_Out];
 	pIdata = (IDATA_FROM_HW *)pW;			// pHeader;
 	//if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > sizeof(IDATA_PAP)))	// 1064
-	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > CMD_FIFO_MEM_SIZE))	// 0x4000
+	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > 0x2000))	// 0x4000
 		{	// we are lost in the data, reset the FIFO and set an error bit
 		m_In = 0;
 		m_Out = 0;
@@ -169,7 +187,7 @@ int CCmdFifo::GetPacketSize(void)
 		t = _T("No OverFlow ");
 		if (pHeader->uSync != SYNC)
 			s = _T( "Lost Sync .. " );
-		if (pHeader->wByteCount > CMD_FIFO_MEM_SIZE)
+		if (pHeader->wByteCount > 0x2000)
 			{
 			t = _T("FIFO OVERFLOW ");
 			}
@@ -201,7 +219,7 @@ int CCmdFifo::GetPacketSize(void)
 			pMainDlg->SaveDebugLog(s);
 			}
 #endif
-
+		LeaveCriticalSection(m_pCS);
 		return 0;
 		}
 	m_PacketSize = pHeader->wByteCount;
@@ -212,23 +230,26 @@ int CCmdFifo::GetPacketSize(void)
 		s = _T( "Wrong Packet Size\n" );
 		TRACE(s);
 		pMainDlg->SaveDebugLog(s);
-
+		LeaveCriticalSection(m_pCS);
 		return 0;
 		}
 			// See if we are losing a real packet
 #if 0
 	// these checks made in OnReceive of both Server and Client
-	if ((pIdata->wMsgSeqCnt) != (m_wMsgSeqCnt + 1))
+	// comment out when running with simulator since simulator sends 2 packets from same IP address
+	// using same command fifo.
+	if (pIdata->wMsgSeqCnt != m_wMsgSeqCnt )
 		{
 		i = pIdata->wMsgSeqCnt - m_wMsgSeqCnt;	// debugging
 		// set error bit for lost msg
-		s.Format( _T( "MsgCnt = %d, expected = %d \n" ),pIdata->wMsgSeqCnt, m_wMsgSeqCnt + 1 );
+		s.Format( _T( "MsgCnt = %d, expected = %d \n" ),pIdata->wMsgSeqCnt, m_wMsgSeqCnt);
 		pMainDlg->SaveDebugLog(s);
 		TRACE(s);
 		}
 #endif
-	m_wMsgSeqCnt = pIdata->wMsgSeqCnt;
+	m_wMsgSeqCnt = (pIdata->wMsgSeqCnt) & 0xffff;
 	m_nLostSyncCnt = 0;
+	LeaveCriticalSection(m_pCS);
 	return m_PacketSize;
 	}
 
@@ -239,6 +260,7 @@ BYTE* CCmdFifo::PeakNextPacket(void)
 	{
 	CString s;
 	int i = 10;	//debug
+	EnterCriticalSection(m_pCS);
 	BYTE *pStart = &m_Mem[m_Out];		// beginning of NEXT whole packet(s) memory
 	GenericPacketHeader *pHeader = (GenericPacketHeader *)pStart;
 	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > sizeof(IDATA_PAP)))
@@ -249,9 +271,10 @@ BYTE* CCmdFifo::PeakNextPacket(void)
 		s = _T("Lost Sync or wrong packet size\n");
 		pMainDlg->SaveDebugLog(s);
 		TRACE(s);
-
+		LeaveCriticalSection(m_pCS);
 		return NULL;
 		}
+	LeaveCriticalSection(m_pCS);
 	return pStart;
 	}
 
@@ -272,6 +295,7 @@ BYTE *CCmdFifo::GetNextPacket(void)
 	*/
 	CString s;
 	int i = 10;	//debug
+	EnterCriticalSection(m_pCS);
 	BYTE *pStart = &m_Mem[m_Out];		// beginning of NEXT whole packet(s) memory
 	GenericPacketHeader *pHeader = (GenericPacketHeader *)pStart;
 	if ((pHeader->uSync != SYNC) || (pHeader->wByteCount > sizeof(IDATA_PAP) ) )
@@ -283,6 +307,7 @@ BYTE *CCmdFifo::GetNextPacket(void)
 		pMainDlg->SaveDebugLog(s);
 		TRACE(s);
 		// If this happens twice in a row, send message to adc board to reset Wiznet
+		LeaveCriticalSection(m_pCS);
 		return NULL;
 		}
 	m_PacketSize = pHeader->wByteCount;
@@ -296,7 +321,7 @@ BYTE *CCmdFifo::GetNextPacket(void)
 		s = _T( "CCmdFifo: m_Size < 0\n" );
 		pMainDlg->SaveDebugLog(s);
 		TRACE(s);
-
+		LeaveCriticalSection(m_pCS);
 		return NULL;
 		}
 	if ((m_Size > 0) && (m_Size < 16))
@@ -312,6 +337,7 @@ BYTE *CCmdFifo::GetNextPacket(void)
 		m_In, m_Out, m_Size, pHeader->uSync);
 	TRACE(s);
 #endif
+	LeaveCriticalSection(m_pCS);
 	return pStart;
 	}
 
@@ -320,7 +346,9 @@ BYTE *CCmdFifo::GetNextPacket(void)
 BYTE CCmdFifo::GetError( void )
 	{
 	BYTE tmp;
+	EnterCriticalSection(m_pCS);
 	tmp = m_bError;
 	m_bError = 0;
+	LeaveCriticalSection(m_pCS);
 	return tmp;
 	}

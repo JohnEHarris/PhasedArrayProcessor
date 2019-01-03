@@ -6,7 +6,7 @@ bytes in it to make a whole packet.
 Author:		jeh
 Date:		2016-11-03
 Revised:	2018-10-22 add character for Client or Server and counter for which client or which server instance
-
+			Instance of CCmdFifo in ServerSocket and ClientSocket classes.
 
 */
 

@@ -604,7 +604,7 @@ void CClientConnectionManagement::OnReceive(CClientSocket *pSocket)
 		while (1)
 			{	// get packets
 
-			wByteCnt = pSocket->m_pFifo->GetFIFOBytes();
+			wByteCnt = pSocket->m_pFifo->GetFIFOByteCount();
 			if (wByteCnt < sizeof(GenericPacketHeader))
 				{
 				break;

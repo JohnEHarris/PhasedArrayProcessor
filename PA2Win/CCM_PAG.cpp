@@ -219,8 +219,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		
 		else
 			{	// command for ADC board
-				// assumed operating conditions is boardNumber 0
-				//pMmiCmd->bBoardNumber = 0;
+
 			if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber] == nullptr)
 				{
 				s.Format(_T("No Client Connection ptr for ADC board number=%d\n"), pMmiCmd->bBoardNumber);
@@ -388,6 +387,8 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 		}	// while (m_pstCCM->pRcvPktPacketList->GetCount())
 
+	// Could wait until all linked list built and then post message to transmit.
+	// Might result in lost packets on NIOS/Wiznet side - or maybe make commands execute faster.
 
 	}	// ProcessReceivedMessage(void)
 

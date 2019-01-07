@@ -788,7 +788,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	Cmd.bPapNumber = CmdL.bPapNumber = m_nPAP;
 	Cmd.bBoardNumber = CmdL.bBoardNumber = m_nBoard;
 
-#if 1
+#if 0
 	// Now send 7 pulser commands
 	int iStart, iStop;
 	// set a break point here to manage loop limits:0,7 7,14 14,21 21,28 28,35 35,42  42,39
@@ -882,6 +882,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		}	// for (i = 0; i < 300; i++ )
 #endif
 
+#if 0
 	// final blast of 50 pulser commands - not prf
 	s = _T("Final blast of 50 large commands\n");
 	m_lbOutput.AddString(s);
@@ -899,6 +900,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		SendMsg((GenericPacketHeader*)&CmdL);
 		}
 
+#endif
 	Sleep(20);
 	// reset ADC board to initial condition
 	//SamInitAdc(m_nPAP, m_nBoard);

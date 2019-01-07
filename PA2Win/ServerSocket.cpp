@@ -533,7 +533,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	sockerr = Asocket.SetSockOpt(SO_DONTROUTE, &bufBOOL, sizeof(int), SOL_SOCKET);
 	ASSERT(sockerr != SOCKET_ERROR);
 
-	sockerr = Asocket.SetSockOpt(TCP_NODELAY, &bufBOOL, sizeof(int), IPPROTO_TCP);
+//	sockerr = Asocket.SetSockOpt(TCP_NODELAY, &bufBOOL, sizeof(int), IPPROTO_TCP);
 	ASSERT(sockerr != SOCKET_ERROR);
 
 		int nSize;
@@ -1094,8 +1094,6 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// Collect received data into expected packet lengths. That is
 	// reconstruct packet from received data.  Its a feature of TCPIP.
 
-// Packets received are "repackaged" to include the length of the packet as the first item in the new packet
-// [length of packet = n][packet data ... n bytes] 2016-12-13 included in new definition of packets
 // Servers receive data from clients and send commands to clients
 void CServerSocket::OnReceive(int nErrorCode)
 	{
@@ -1148,7 +1146,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 		}
 #endif
 
-	//PAM assumes we will get partial packets and have to extract whole packets
+	//PAM assumes we could get partial packets and have to extract whole packets
 	if ( n > 0)
 		{
 		m_pFifo->AddBytesToFifo(n);
@@ -1164,7 +1162,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 
 		while (1)	// total byte in FIFO. May be multiple packets.
 			{	// get packets
-			wByteCnt = m_pFifo->GetFIFOBytes();
+			wByteCnt = m_pFifo->GetFIFOByteCount();
 			if (wByteCnt == 672)
 				n = 672;
 
@@ -1228,7 +1226,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 				m_pSCM->m_pstSCM->bActualClientConnection[bPap] = bClientIndex;
 #endif
 			m_wLastSeqCnt = pHeader->wMsgSeqCnt;
-			pB =  new BYTE[nPacketSize];	// +sizeof(int)];	// resize the buffer that will actually be used
+			pB =  new BYTE[nPacketSize];	// resize the buffer that will actually be used
 			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
 			//InputRawDataPacket *pIdataPacket = (InputRawDataPacket *) pB;
 			IDATA_FROM_HW *pIdataPacket = (IDATA_FROM_HW *) pB;
@@ -1258,15 +1256,22 @@ void CServerSocket::OnReceive(int nErrorCode)
 					// transfer data into a linked list and then exit.
 					// m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED,0,0L);
 					}
+				else
+					{
+					delete pB;
+					pB = 0;
+					}
 				}
 			else
 				{
 				delete pB;
+				pB = 0;
 				TRACE(_T("CServerSocket::OnReceive - deleting data because no ServerRcvListThread\n"));
 				}
 
 			UnLockRcvPktList();
-			if (m_pSCC)
+
+			if (m_pSCC && pB)
 				{
 				m_pSCC->uBytesReceived += nPacketSize;
 				m_pSCC->uPacketsReceived++;
@@ -1313,12 +1318,12 @@ void CServerSocket::OnReceive(int nErrorCode)
 		if (nWholePacketQty)
 			{
 			int i;
-			i = GetRcvListCount();
+			i = GetRcvListCount(); // how many whole packets in receive list
 			if (m_nListCount < i)
-				{
+				{	// count increased
 				m_nListCountChanged = 1;
 				m_nListCount = i;
-				s.Format(_T("Idata RcvPktList Count = %d\n"), m_nListCount);
+				s.Format(_T("Idata RcvPktList Count increased to = %d\n"), m_nListCount);
 				TRACE(s);
 				}
 			else if ((m_nListCountChanged) && (i < m_nListCount) )
@@ -1447,7 +1452,7 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 
 		nSockOpt = 1;
 		// when data ready to send, send without delay
-		sockerr = this->SetSockOpt(TCP_NODELAY, &nSockOpt, sizeof(int),IPPROTO_TCP); 
+//		sockerr = this->SetSockOpt(TCP_NODELAY, &nSockOpt, sizeof(int),IPPROTO_TCP); 
 		if (sockerr == SOCKET_ERROR)
 			{
 			TRACE1("Socket Error TCP_NODELAY = %0x\n", sockerr);

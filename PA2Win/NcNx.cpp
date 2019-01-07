@@ -846,7 +846,8 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	CmdL.wByteCount = 1056;
 	Cmd.bPapNumber = CmdL.bPapNumber = m_nPAP;
 	Cmd.bBoardNumber = CmdL.bBoardNumber = m_nBoard;
-	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 2);	// turn off debug in adc and clear counters
+	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 6);	// turn off debug in adc and clear counters
+	DebugPrint(m_nPAP, m_nBoard, 0x308, 6);					// turn off debug in pulser and clear counters
 	Sleep(40);
 #if 1
 	for (i = 0; i < 5000; i++ )	// was 5000

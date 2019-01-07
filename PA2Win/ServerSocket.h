@@ -36,7 +36,7 @@ class CServerConnectionManagement;
 class CServerSocketOwnerThread;
 
 //*pSCM;
-class CServerSocket : public CAsyncSocket
+class CServerSocket : public CSocket		//CAsyncSocket
 {
 public:
 	CServerSocket();

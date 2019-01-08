@@ -105,8 +105,11 @@ class CServerConnectionManagement;	// we're going to make a ptr to ourselves in 
 class CServerListenThread;			// Thread to listen for connection on a given server port (a given service type)
 class CServerSocket;				// our specific implementation of an ASync socket
 class CServerSocketOwnerThread;		// a thread to control the resource of the management class and the dialog
+#ifdef I_AM_PAP
 //class CAsyncSocket;
+#else
 class CSocket;
+#endif
 
 //class CServerRcvListThreadBase;	// a thread to read the linked list filled from the data received from the client
 class CServerRcvListThread;			// a thread to read the linked list filled from the data received from the client

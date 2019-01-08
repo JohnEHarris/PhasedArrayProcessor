@@ -17,7 +17,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // CClientSocket command target
 
-class CClientSocket : public CAsyncSocket //CSocket
+class CClientSocket : public CAsyncSocket 
 {
 	DECLARE_DYNAMIC(CClientSocket);
 // Attributes

@@ -36,7 +36,11 @@ class CServerConnectionManagement;
 class CServerSocketOwnerThread;
 
 //*pSCM;
-class CServerSocket : public CSocket		//CAsyncSocket
+#ifdef I_AM_PAP
+class CServerSocket : public CAsyncSocket
+#else
+class CServerSocket : public CSocket
+#endif
 {
 public:
 	CServerSocket();

@@ -252,8 +252,11 @@ CServerSocket::~CServerSocket()
 						//if the app is closing, dont try to close the socket 3-15-18
 
 						m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
-						//CAsyncSocket::Close();
+#ifdef I_AM_PAP
+						CAsyncSocket::Close();
+#else
 						CSocket::Close();
+#endif
 						}
 					catch (...)
 						{
@@ -363,12 +366,18 @@ int CServerSocket::OnAcceptPrep(void)
 			s = _T("Could not determine MyServer Number\n");
 			TRACE(s);
 			pMainDlg->SaveDebugLog(s);
-			//CAsyncSocket dummy;
+#ifdef I_AM_PAP
+			CAsyncSocket dummy;
+#else
 			CSocket dummy;
+#endif
 			Accept(dummy);
 			dummy.Close();	// should we close after CAsyncSocket::OnAccept ??? 2016-08-29 jeh
-			//CAsyncSocket::OnAccept(100);
+#ifdef I_AM_PAP
+			CAsyncSocket::OnAccept(100);
+#else
 			CSocket::OnAccept(100);
+#endif
 			return 0;
 			}
 		}
@@ -377,11 +386,18 @@ int CServerSocket::OnAcceptPrep(void)
 	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)
 		{
 		TRACE("Server ShutDown Flag is true, aborting OnAccept\n");
+#ifdef I_AM_PAP
 		CAsyncSocket dummy;
 		Accept(dummy);
 		dummy.Close();	// should we close after CAsyncSocket::OnAccept ??? 2016-08-29 jeh
-		//CAsyncSocket::OnAccept(100);
+		CAsyncSocket::OnAccept(100);
+#else
+		CSocket dummy;
+		Accept(dummy);
+		dummy.Close();	// should we close after CAsyncSocket::OnAccept ??? 2016-08-29 jeh
 		CSocket::OnAccept(100);
+#endif
+		
 		return 0;
 		}
 
@@ -391,12 +407,18 @@ int CServerSocket::OnAcceptPrep(void)
 		ASSERT(0);
 		TRACE("On Accept can't identify the controlling SCM\n");
 		// need to throw away the socket??
-		//CAsyncSocket dummy;
+#ifdef I_AM_PAP
+		CAsyncSocket dummy;
+		Accept(dummy);
+		dummy.Close();
+		CAsyncSocket::OnAccept(101);
+#else
 		CSocket dummy;
 		Accept(dummy);
 		dummy.Close();
-		//CAsyncSocket::OnAccept(101);
 		CSocket::OnAccept(101);
+#endif
+
 		return 0;
 		}
 	/*********************************************/
@@ -439,8 +461,11 @@ void CServerSocket::OnAccept(int nErrorCode)
 	CString Ip4S, Ip4C, s, t, sOut;
 	UINT uIp4 = 0;
 	BYTE bIsClosing = 0;
-	//CAsyncSocket Asocket;
+#ifdef I_AM_PAP
+	CAsyncSocket Asocket;
+#else
 	CSocket Asocket;
+#endif
 
 	// how are we going to set our pSCM pointer???
 	// get our threadID of the thread running me
@@ -464,8 +489,11 @@ void CServerSocket::OnAccept(int nErrorCode)
 		{
 		sockerr = GetLastError();
 		TRACE2("OnAccept sockerr = %d = 0x%x\n", sockerr, sockerr);
-		//CAsyncSocket::OnAccept(nErrorCode);
+#ifdef I_AM_PAP
+		CAsyncSocket::OnAccept(nErrorCode);
+#else
 		CSocket::OnAccept(nErrorCode);
+#endif
 		return;
 		}
 	// Successful OnAccept
@@ -563,8 +591,11 @@ void CServerSocket::OnAccept(int nErrorCode)
 		{
 		TRACE("Fatal error, pMySCM->m_pstSCM == NULL\n");
 		Asocket.Close();
-		//CAsyncSocket::OnAccept(nErrorCode);
+#ifdef I_AM_PAP
+		CAsyncSocket::OnAccept(nErrorCode);
+#else
 		CSocket::OnAccept(nErrorCode);
+#endif
 		return;
 		}
 
@@ -617,8 +648,11 @@ void CServerSocket::OnAccept(int nErrorCode)
 				pThread->PostThreadMessageW(WM_USER_ATTACH_SERVER_SOCKET, (WPARAM) eServerConnection, (LPARAM)hConnectionSocket);
 				Sleep(10);
 				SetpSCC(pscc);
-				//CAsyncSocket::OnAccept(nErrorCode);
+#ifdef I_AM_PAP
+				CAsyncSocket::OnAccept(nErrorCode);
+#else
 				CSocket::OnAccept(nErrorCode);
+#endif
 				return;
 				}
 			}
@@ -633,8 +667,11 @@ void CServerSocket::OnAccept(int nErrorCode)
 		s.Format(_T("PAGSrv[%d] OnAccept failed, nClientIndex too big %d\n"), m_nMyServer, m_nClientIndex);
 		TRACE(s);
 		Asocket.Close();
-		//CAsyncSocket::OnAccept(nErrorCode);
+#ifdef I_AM_PAP
+		CAsyncSocket::OnAccept(nErrorCode);
+#else
 		CSocket::OnAccept(nErrorCode);
+#endif
 		return;
 		}
 
@@ -749,14 +786,22 @@ void CServerSocket::OnAccept(int nErrorCode)
 		{
 		ASSERT(0);	// got a break here from real instrument 2016-09-08
 		Asocket.Close();
+#ifdef I_AM_PAP
 		CAsyncSocket::OnAccept(nErrorCode);
+#else
+		CSocket::OnAccept(nErrorCode);
+#endif
 		s.Format(_T("Refused connection: no ClientConnection or no ServerSocketOwnerThread Error = %d\n"),
 			nErrorCode);
 		return;
 		}
 #endif
 
+#ifdef I_AM_PAP
 	CAsyncSocket::OnAccept(nErrorCode);
+#else
+	CSocket::OnAccept(nErrorCode);
+#endif
 	//pThread->Run();
 	}
 #endif
@@ -1186,16 +1231,22 @@ void CServerSocket::OnReceive(int nErrorCode)
 			nPacketSize = m_pFifo->GetPacketSize();
 			if ((nPacketSize <= 0) || (wByteCnt < nPacketSize))
 				{
-				//CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
+#ifdef I_AM_PAP
+				CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
+#else
 				CSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
+#endif
 				return;
 				}
 
 			pPacket = m_pFifo->GetNextPacket();
 			if (pPacket == NULL)
 				{
-				//CAsyncSocket::OnReceive(nErrorCode);
+#ifdef I_AM_PAP
+				CAsyncSocket::OnReceive(nErrorCode);
+#else
 				CSocket::OnReceive(nErrorCode);
+#endif
 				return;
 				}
 			pHeader = (GenericPacketHeader *)pPacket;
@@ -1364,9 +1415,11 @@ void CServerSocket::OnReceive(int nErrorCode)
 		pMainDlg->SaveDebugLog(s);
 		}
 
-
-		//CAsyncSocket::OnReceive(nErrorCode);
+#ifdef I_AM_PAP
+		CAsyncSocket::OnReceive(nErrorCode);
+#else
 		CSocket::OnReceive(nErrorCode);
+#endif
 	}
 
 
@@ -1398,11 +1451,16 @@ void CServerSocket::OnClose(int nErrorCode)
 		pMainDlg->SaveDebugLog(s);
 		}
 	Sleep( 10 );
-	//CAsyncSocket::OnClose(nErrorCode);
+#ifdef I_AM_PAP
+	CAsyncSocket::OnClose(nErrorCode);
+	TRACE(_T("CAsyncSocket::OnClose(nErrorCode) called\n"));
+#else
 	CSocket::OnClose(nErrorCode);
-
-	//TRACE(_T("CAsyncSocket::OnClose(nErrorCode) called\n"));
 	TRACE(_T("CSocket::OnClose(nErrorCode) called\n"));
+#endif
+
+	
+	
 	if (nErrorCode)
 		{
 		TRACE( _T( "OnClose failed\n" ) );

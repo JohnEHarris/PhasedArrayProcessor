@@ -568,8 +568,9 @@ void CServerSocket::OnAccept(int nErrorCode)
 
 	sockerr = Asocket.SetSockOpt(SO_DONTROUTE, &bufBOOL, sizeof(int), SOL_SOCKET);
 	ASSERT(sockerr != SOCKET_ERROR);
-
-//	sockerr = Asocket.SetSockOpt(TCP_NODELAY, &bufBOOL, sizeof(int), IPPROTO_TCP);
+#ifdef I_AM_PAP
+	sockerr = Asocket.SetSockOpt(TCP_NODELAY, &bufBOOL, sizeof(int), IPPROTO_TCP);
+#endif
 	ASSERT(sockerr != SOCKET_ERROR);
 
 		int nSize;
@@ -1505,8 +1506,11 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 
 	// the final null can be replaced with an ip4 address if a specific NIC is desired to be used,
 	// otherwise this socket will listen on all NIC's -- lpszSockAddress = null
-	//if (sockerr = this->Create(uPort, SOCK_STREAM, FD_READ | FD_CONNECT | FD_CLOSE | FD_ACCEPT) != 0)	// async socket
-	if (sockerr = this->Create(uPort, 1, pSCM->GetServerIP4()))		// async socket -- 1/7/19 now CSocket
+#ifdef I_AM_PAP
+	if (sockerr = this->Create(uPort, SOCK_STREAM, FD_READ | FD_CONNECT | FD_CLOSE | FD_ACCEPT) != 0)	// async socket
+#else
+	if (sockerr = this->Create(uPort, 1, pSCM->GetServerIP4()))		// PAG is -- 1/7/19 now CSocket
+#endif
 		{	// Socket created
 
 		nSockOpt = 1;
@@ -1527,7 +1531,9 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 
 		nSockOpt = 1;
 		// when data ready to send, send without delay
-//		sockerr = this->SetSockOpt(TCP_NODELAY, &nSockOpt, sizeof(int),IPPROTO_TCP); 
+#ifdef I_AM_PAP
+		sockerr = this->SetSockOpt(TCP_NODELAY, &nSockOpt, sizeof(int),IPPROTO_TCP);
+#endif
 		if (sockerr == SOCKET_ERROR)
 			{
 			TRACE1("Socket Error TCP_NODELAY = %0x\n", sockerr);

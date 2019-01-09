@@ -850,7 +850,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	DebugPrint(m_nPAP, m_nBoard, 0x308, 6);					// turn off debug in pulser and clear counters
 	Sleep(40);
 #if 1
-	for (i = 0; i < 5000; i++ )	// was 5000
+	for (i = 0; i < 600; i++ )	// was 5000
 		{
 		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
 		Cmd.wCmd[0] = i;
@@ -882,7 +882,21 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 			}
 		}	// for (i = 0; i < 300; i++ )
 #endif
-
+	// 300 large cmds
+	for (i = 0; i < 500; i++)
+		{
+		CmdL.wMsgID = 516;
+		CmdL.wCmd[0] = i;
+		CmdL.wCmd[1] = i + 1;
+		CmdL.wCmd[2] = i + 2;
+		CmdL.wCmd[3] = i + 3;
+		s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, wCmd[4] = %4d, %4d, %4d, %4d\n"),
+			CmdL.wMsgID, CmdL.wByteCount, CmdL.bPapNumber, CmdL.bBoardNumber,
+			CmdL.wCmd[0], CmdL.wCmd[1], CmdL.wCmd[2], CmdL.wCmd[3]);
+		m_lbOutput.AddString(s);
+		SendMsg((GenericPacketHeader*)&CmdL);
+		Sleep(10);
+		}
 #if 0
 	// final blast of 50 pulser commands - not prf
 	s = _T("Final blast of 50 large commands\n");
@@ -950,7 +964,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	//SamInitPulser(m_nPAP, m_nBoard);
 
 	Cmd.wMsgID = 0x300;
-	Cmd.wCmd[0] = 8000;
+	Cmd.wCmd[0] = 12000;
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, wCmd=%5d\n"),
 		Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.wCmd[0]);
 

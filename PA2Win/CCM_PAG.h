@@ -50,8 +50,8 @@ public:
 	int FindSlaveChannel(int nChannel);
 	int FindDisplayChannel(int nArray, int nArrayCh);
 
-	BOOL SendSlaveMsg(int nWhichSlave, ST_LARGE_CMD *pCmd);
-	BOOL SendSlaveMsgToAll(ST_LARGE_CMD *pCmd);
+//	BOOL SendSlaveMsg(int nWhichSlave, ST_LARGE_CMD *pCmd);
+//	BOOL SendSlaveMsgToAll(ST_LARGE_CMD *pCmd);
 
 	int GetMaxXSpan(void);
 	int GetMaxXOffset(void);

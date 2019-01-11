@@ -450,7 +450,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	// TODO: Add your specialized code here and/or call the base class
 	int * bufBOOLsize;
 	//int nResult;
-	BOOL bufBOOL;
+	BOOL bufBOOL = true;
 	bufBOOLsize = &bufBOOL;
     *bufBOOLsize = TRUE;
 	//int nMyServer;

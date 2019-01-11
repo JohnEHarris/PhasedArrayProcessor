@@ -214,7 +214,7 @@ typedef struct	// IDATA_FROM_HW
 	WORD wVersionSW;	// Johns C++ code version
 	// Debugging command activation in instrument
 	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
-	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
+	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is only part of the command
 	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
 	BYTE bCmdChnl;		// channel in sequence selected for command
 	BYTE bCmdGate;		// gate addressed by last command
@@ -268,7 +268,7 @@ typedef struct	// IDATA_FROM_HW_HDR
 	WORD wVersionSW;	// Johns C++ code version
 						// Debugging command activation in instrument
 	WORD wLastCmdId;	// the last command executed by the NIOS ADC program
-	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is the only part of the command
+	WORD w1stWordCmd;	// Most commands are 'WCmds' and the first word is only part of the command
 	BYTE bCmdSeq;		// sequence selection of last command executed in NIOS
 	BYTE bCmdChnl;		// channel in sequence selected for command
 	BYTE bCmdGate;		// gate addressed by last command

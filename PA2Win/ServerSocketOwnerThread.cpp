@@ -709,9 +709,9 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 					if (pCmd->wMsgID < TOTAL_COMMANDS)
 						{
 						m_bSmallCmdSent++;
-						if ((m_bSmallCmdSent & 7) == 0)
+						if ((m_bSmallCmdSent & 3) == 0)
 							{
-							//s = _T("Sleep after 32 small commands\n");
+							//s = _T("Sleep after 4 small commands\n");
 							//pMainDlg->SaveCommandLog(s);
 							Sleep(10);
 							j = 1;
@@ -735,7 +735,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 							{
 							//s = _T("Sleep after 8 large commands\n");
 							//pMainDlg->SaveCommandLog(s);
-							//Sleep(10);
+							Sleep(30);
 							}
 						}
 #endif
@@ -787,8 +787,11 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				// Try closing socket on this side and restarting
 				if (m_pSCC->pSocket)
 					{
-					m_pSCC->pSocket->Close();
-					Sleep(10);
+					if (m_pSCC->bConnected)
+						{
+						m_pSCC->pSocket->Close();
+						Sleep(10);
+						}
 					}
 				}
 			// 10054L is forcibly closed by remote host

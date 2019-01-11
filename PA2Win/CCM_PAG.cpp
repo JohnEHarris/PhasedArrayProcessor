@@ -510,6 +510,7 @@ void CCCM_PAG::WallNx(void)
 	{
 	}
 
+#if 0
 // Send the same message to all Instruments
 BOOL CCCM_PAG::SendSlaveMsgToAll(ST_LARGE_CMD *pCmd)
 	{
@@ -615,6 +616,7 @@ BOOL CCCM_PAG::SendSlaveMsg(int nWhichInstrument, ST_LARGE_CMD *pCmd)
 
 	return TRUE;
 	}
+#endif
 
 
 /**********************************************************************************

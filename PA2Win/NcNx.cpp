@@ -882,7 +882,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 			}
 		}	// for (i = 0; i < 300; i++ )
 #endif
-	// 300 large cmds
+	// 600 large cmds
 	for (i = 0; i < 500; i++)
 		{
 		CmdL.wMsgID = 516;

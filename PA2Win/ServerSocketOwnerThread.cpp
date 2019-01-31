@@ -654,6 +654,13 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			pMainDlg->SaveDebugLog( s );
 			pMainDlg->SaveCommandLog(s);
 			nMsgSize = pCmd->wByteCount;
+			if (nMsgSize > 1056)
+				{
+				s.Format(_T("Large Command msg size error, size = %d\n"), nMsgSize);
+				pMainDlg->SaveDebugLog(s);
+				pMainDlg->SaveCommandLog(s);
+				TRACE(s);
+				}
 			break;
 
 		default:
@@ -689,8 +696,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				m_pSCC->uBytesSent += nSent;
 				m_pSCC->uPacketsSent++;
 				m_nConfigMsgQty++;
-				// sleep every other 8th packet
-				if ((pCmd->wMsgSeqCnt & 7) == 0)
+				// sleep every other 4th packet
+				if ((pCmd->wMsgSeqCnt & 3) == 0)
 					{
 					Sleep(10);
 					j = 0;
@@ -724,8 +731,10 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 							{
 							//s = _T("Sleep after 4 large commands\n");
 							//pMainDlg->SaveCommandLog(s);
-							Sleep(10);
+							Sleep(30);
 							j = 3;
+							if ((m_bLargeCmdSent & 0x1) == 0)
+								Sleep(30);
 							}
 						}
 					else if (pCmd->wMsgID < TOTAL_PULSER_COMMANDS + 0x300)
@@ -789,7 +798,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 					{
 					if (m_pSCC->bConnected)
 						{
-						m_pSCC->pSocket->Close();
+						//m_pSCC->pSocket->Close();
 						Sleep(10);
 						}
 					}

@@ -771,7 +771,7 @@ ST_LARGE_CMD CmdL;
 // sort of a pseudo command since it generates real instrument commands for the PAG/UUI side
 void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	{
-	int i;
+	int i, j,k;
 	ST_WORD_CMD *pCmdW = (ST_WORD_CMD *)&Cmd;
 	WORD *pW = (WORD *)&CmdL;
 	BYTE *pB = (BYTE *)&Cmd;
@@ -788,23 +788,40 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	Cmd.bPapNumber = CmdL.bPapNumber = m_nPAP;
 	Cmd.bBoardNumber = CmdL.bBoardNumber = m_nBoard;
 
-#if 0
+#if 1
 	// Now send 7 pulser commands
 	int iStart, iStop;
 	// set a break point here to manage loop limits:0,7 7,14 14,21 21,28 28,35 35,42  42,39
 	iStart = 0;
-	iStop = iStart + 7;
+	iStop = iStart + 14;
+	k = 0;
 	DebugPrint(m_nPAP, m_nBoard, PULSER_DEBUG_PRINT_CMD_ID, 6);	// turn off debug in pulser and clear counters
 	Sleep(40);
 	// only prf, shape, and width are affected by changing start/stop limits
 	for (i = iStart; i < iStop; i++)
 		{
+#if 1
+		Cmd.wMsgID = 0x300 + 3;	//pulse shape
+		Cmd.wCmd[0] = 255;
+		for (j = 0; j < 4; j++)
+			{
+			pCmdW->bSeq = (k++);
+			k = k % 10;
+			SendMsg((GenericPacketHeader*)&Cmd);
+			s.Format(_T("ID=%d, Bytes=%d, PAP=%d, wCmd=%5d\n"),
+				Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.wCmd[0]);
+			m_lbOutput.AddString(s);
+			}
+		Sleep(10);
+#else
 		Cmd.wMsgID = 0x300 + (i % 7);
 
 		switch (i % 7)
 			{
-			case 0:		Cmd.wCmd[0] = 300;	//prf
-			case 1:		break;		// uncertain how and why to set HV - for now will resend prf
+			case 0:		
+			case 1:		Cmd.wCmd[0] = 8000;	//prf
+				Sleep(250);
+				break;		// uncertain how and why to set HV - for now will resend prf
 			case 2:		Cmd.wCmd[0] = 0; // Polarity
 				break;
 #if 1
@@ -826,6 +843,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 			if ((i % 7) == 0) Sleep(500);	// let prf settle at 320
 			else Sleep(10);
 			}
+#endif
 
 		}	// pulser command loop
 #endif
@@ -846,8 +864,8 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	CmdL.wByteCount = 1056;
 	Cmd.bPapNumber = CmdL.bPapNumber = m_nPAP;
 	Cmd.bBoardNumber = CmdL.bBoardNumber = m_nBoard;
-	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 6);	// turn off debug in adc and clear counters
-	DebugPrint(m_nPAP, m_nBoard, 0x308, 6);					// turn off debug in pulser and clear counters
+//	DebugPrint(m_nPAP, m_nBoard, DEBUG_PRINT_CMD_ID, 6);	// turn off debug in adc and clear counters
+//	DebugPrint(m_nPAP, m_nBoard, 0x308, 6);					// turn off debug in pulser and clear counters
 	Sleep(40);
 #if 1
 	for (i = 0; i < 600; i++ )	// was 5000
@@ -882,6 +900,8 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 			}
 		}	// for (i = 0; i < 300; i++ )
 #endif
+	
+#if 1
 	// 600 large cmds
 	for (i = 0; i < 500; i++)
 		{
@@ -897,7 +917,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		SendMsg((GenericPacketHeader*)&CmdL);
 		Sleep(10);
 		}
-#if 0
+#if 1
 	// final blast of 50 pulser commands - not prf
 	s = _T("Final blast of 50 large commands\n");
 	m_lbOutput.AddString(s);
@@ -915,6 +935,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		SendMsg((GenericPacketHeader*)&CmdL);
 		}
 
+#endif
 #endif
 	Sleep(20);
 	// reset ADC board to initial condition

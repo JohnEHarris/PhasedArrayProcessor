@@ -36,6 +36,7 @@ class CCmdFifo
 		virtual ~CCmdFifo();
 		void Reset(void);
 		BYTE *GetInLoc(void);	// { return (&m_Mem[m_In]); }	// starting point where next packet will be stored
+		BYTE *GetOutLoc(void);	// { return (&m_Mem[m_Out]); } pointer to the next packet
 		BYTE *GetNextPacket(void);
 		BYTE* PeakNextPacket(void); // like GetNextPacket but doesn't advance ptr in buffer or change in/out/size
 		int  GetFIFOByteCount(void) { return m_Size; }

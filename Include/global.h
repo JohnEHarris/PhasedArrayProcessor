@@ -43,6 +43,9 @@ Revised:
 #define PAP_SERVER_PORT	7502
 
 #define MS_500		500000		// 500,000 uSec
+#define MAX_PRF		20000
+#define MIN_PRF		10
+
 
 
 #ifdef MAIN_MODULE
@@ -176,7 +179,8 @@ PubExt WORD gwPapPulserCmds, gwPapLargeCmds, gwPapSmallCmds;		// count commands 
 PubExt BYTE gbAdcMsgIdErrorCntPAP;		// count number of times adc msg lost in PAP
 PubExt BYTE gbAdcMsgIdErrorCntADC;		// count number of times adc msg lost in ADC
 //#define SYNC							0x5CEBDAAD
-//#define PRINT_MSG		(1 << 0)
-//#define RESET_CMD_CNT	(1 << 1)
 
+#define PRINT_MSG		(1 << 0)
+#define RESET_CMD_CNT	(1 << 1)
+#define RESET_Q_MAX		(1 << 2)
 #endif /* GLOBAL_H_ */

@@ -143,6 +143,14 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			{
 			// board number should always be 0 for pulser
 			/*             FOR INTERIM TESTING USE stSCM[0]*/
+			if (MsgId >= 0x300 + LAST_PULSER_COMMAND)
+				{
+				s.Format(_T(">>>> Invalid Pulser Command=%d <<<<<\n"), MsgId);
+				TRACE(s);
+				DebugOut(s);
+				delete pMmiCmd;
+				continue;
+				}
 #ifdef NEW_SOCKET
 			if (stSCM[1].pClientConnection[pMmiCmd->bBoardNumber] == nullptr)
 #else
@@ -187,7 +195,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
 #endif
-				// special case for PAP -- grab prf as it goes thru to pusler and display on PAP screen
+				// special case for PAP -- grab prf as it goes thru to pulSer and display on PAP screen
 				if (MsgId == 0x300 + 0)
 					gwPap_Prf = pSmall->wCmd;
 				else if (MsgId == 0x300 + 8)	// DebugPrint FOR PULSER
@@ -255,6 +263,15 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 					if ((pSmall->wCmd & 2) == 2)
 						gwPapSmallCmds = gwPapLargeCmds = 0;
 					}
+				}
+			else
+				{	// not a valid command
+				s.Format(_T(">>>> Invalid ADC Command = %d <<<<\n"), MsgId);
+				TRACE(s);
+				DebugOut(s);
+				pMainDlg->SaveDebugLog(s);
+				delete pMmiCmd;
+				continue;
 				}
 
 			// big case statement adapted from ServiceApp.cpp 'c' routine ProcessMmiMsg()
@@ -342,10 +359,11 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 						else
 							{
-							s.Format(_T("Invalid large command ID = %d"), MsgId);
+							s.Format(_T(">>>> Invalid large command ID = %d <<<<"), MsgId);
 							TRACE(s);
 							pMainDlg->SaveDebugLog(s);
 							delete pMmiCmd;
+							continue;
 							}
 						break;
 						}
@@ -373,7 +391,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 					else
 						{
-						s.Format(_T("No command recognized ID = %d\nDeleting command from Phased Array GUI\n"), MsgId);
+						s.Format(_T(">>>> No command recognized ID = %d <<<<\nDeleting command from Phased Array GUI\n"), MsgId);
 						pMainDlg->SaveDebugLog(s);
 						delete pMmiCmd;
 						}

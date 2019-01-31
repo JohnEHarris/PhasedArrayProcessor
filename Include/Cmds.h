@@ -40,7 +40,6 @@ the PAP and PAG
 #endif /* I_AM_THE_INSTRUMENT */
 
 
-
 /*****************	COMMANDS *********************/
 #define TOTAL_COMMANDS				33		// small commands
 #define LAST_SMALL_COMMAND			TOTAL_COMMANDS - 1

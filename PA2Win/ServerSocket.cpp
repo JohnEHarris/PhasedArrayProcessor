@@ -1219,10 +1219,14 @@ void CServerSocket::OnReceive(int nErrorCode)
 
 		while (1)	// total byte in FIFO. May be multiple packets.
 			{	// get packets
+			int bc;
 			wByteCnt = m_pFifo->GetFIFOByteCount();
 			if (wByteCnt == 672)
 				n = 672;
-
+			pHeader = (GenericPacketHeader*) m_pFifo->GetOutLoc();
+			bc = pHeader->wByteCount;
+			if (pHeader->uSync != SYNC)
+				bc = bc;
 			if (wByteCnt < sizeof(GenericPacketHeader))
 				{
 				//CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive

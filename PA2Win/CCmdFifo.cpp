@@ -100,6 +100,10 @@ void  CCmdFifo::Shift(void)
 		}
 	LeaveCriticalSection(m_pCS);
 	}
+BYTE * CCmdFifo::GetOutLoc(void)
+	{
+	return &m_Mem[m_Out];
+	}
 
 BYTE * CCmdFifo::GetInLoc(void)
 	{
@@ -164,7 +168,7 @@ int CCmdFifo::GetPacketSize(void)
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
 	UINT uSync;			// 0x5CEBDAAD
 	*/
-	int i;
+	int i = 0;
 	EnterCriticalSection(m_pCS);
 	CString s,t;
 	WORD *pW = (WORD *)&m_Mem[m_Out];// debugging

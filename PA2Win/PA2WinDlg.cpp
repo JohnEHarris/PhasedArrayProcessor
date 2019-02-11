@@ -425,7 +425,7 @@ END_MESSAGE_MAP()
 
 // CPA2WinDlg message handlers
 
-// Read pap number from a usb memory stick. File name is PAPnumber0_7.txt
+// Read pap number from a usb memory stick. File name is 4.Wall  for example
 // Implies the usb stick will identify 1 of 8 different PAP's
 // Look for usb stick starting on G drive assuming the PAP code/Windows machine
 // has only a C hard drive. File content is a single number from 0 to 7
@@ -437,45 +437,154 @@ END_MESSAGE_MAP()
 
 
 #ifdef I_AM_PAP
+// There can only be 1 wall assignment per PAP for this implementation
+// If the wall assignment changes due to insertion of a memory stick with
+// a different number, the old number file must be deleted
+// This function specifies the file name to retain
+// all other files in range of 1-8 with format n.wall will be deleted
+void CPA2WinDlg::DeleteOldPapNumbers(int nNewPap)
+	{
+	char DeleteTarget[256] = "C:\\LocalAppExes\\MyID\\1.wall";
+	char DeleteName[256];
+	CString sPath, s;
+	int i, j;
+	char nC;
+	CFile DelFile;	// file name to delet if it exists
+	CFileException fileException;
+
+	s = DeleteTarget;
+	j = s.Find(_T(".wall"));
+	j--;	// move back to machine number
+	DeleteTarget[j] = 0;
+	// scan for 1-8 file name to delete
+	for (i = 1; i < 9; i++)
+		{
+		if ( i != nNewPap) // erase previous wall machine assignment files
+			{
+			sPath = DeleteTarget;	//C:\\LocalAppExes\\MyID\\  .
+			nC = '0' + i;	// make ascii number 1-8
+			sPath += nC;
+			sPath += _T(".wall");		//C:\\LocalAppExes\\MyID\\nC.wall
+			if (DelFile.Open(sPath, CFile::modeRead | CFile::shareDenyNone, &fileException))
+				{
+				DelFile.Close();
+				CstringToChar(sPath, DeleteName);
+				DeleteFileA(DeleteName);
+				}
+			}
+		}
+	}
+
+// Always attempt to read from inserted memory stick
+// As a fall back, look on C drive
+// Make sure only 1 wall system assignment is in C drive
+// Assume memory stick can take drive numbers D: thru G:. Start at G and search backward
+//
 void CPA2WinDlg::ReadPAPnumber(void)
 	{
 	//m_PapNumberFile
 	CString sPath, s;
-	char PathName[16] = "G:\\1.wall";		//"G:\\PAP0_7.txt"; -- number in 4th position
+	char PathName[16] = "G:\\1.wall";		//"G:\\1.wall"; -- number '1' in 4th position
+	char LocalApp[128] = "C:\\LocalAppExes\\MyID";
 	char FileName[16];
+	char AltFileName[16] = "\\1.wall";
+	//char FileText[1024];	//info to be written into permanent LocalAppExes file in ascii format
+	// Victor wants to write to the file, so we won't
+
 	CFileException fileException;
 	int i, j;
 	gbAssignedPAPNumber = 128;	// INVALID PAP number
 
 	for (i = 5; i > 0; i--)
 		{	// drive letter loop 
-		memcpy(FileName, PathName, 16);
-		for (j = 0; j < 8; j++)	// look for 1-8
-			{
-			sPath = FileName;
+		memcpy(FileName, PathName, 16);		//G:\1.wall  --the '1' is in  index 3
+		for (j = 0; j < 8; j++)	
+			{ // look for 1-8 for instrument number
+			sPath = FileName;	// convert char string to MFC string
 			if (!m_PapNumberFile.Open(sPath, CFile::modeRead | CFile::shareDenyNone, &fileException))
-				{
+				{	// did not open the file
 				//				TRACE(_T("Can't open file %s, error = %u\n"),
 				//					sPath, fileException.m_cause);
-				FileName[3]++;	// increment the number in the file name
+				FileName[3]++;	// increment the number in the file name.. starts with 1
 				}
-			// found it
+
 			else
-				{
+				{	// found it on memory stick
 				s.Format(_T("Found file %s\n"), sPath);
 				TRACE(s);
-				gbAssignedPAPNumber = FileName[3] - '0';	// map 1-8 to 0-7 -- NOT
+				gbAssignedPAPNumber = FileName[3] - '0';	// map char 1-8 to binary  1-8 
 				m_PapNumberFile.Close();
-				return;
-				}
-			}
-		PathName[0]--;	// setp thru drive letters.
+				// create the same file name in C:\\ for default when memory stick is missing
+				if (FileName[0] == 'C')
+					{
+					s.Format(_T("Memory stick missing, using default PAP number %d asssignment from C: drive\n"), gbAssignedPAPNumber);
+					TRACE(s);
+					return;
+					}
+
+				// Found file on Memory stick, copy to LocalAppExes:
+				if (FileName[0] != 'C')
+					{
+					sPath = LocalApp;
+					sPath += (char *)&FileName[2];
+					if (!m_AltPapNumberFile.Open(sPath, CFile::modeReadWrite | CFile::shareDenyNone, &fileException))
+						{
+						TRACE(_T("Can't open file %s, error = %u\n"),
+								sPath, fileException.m_cause);
+						}
+					else
+						{
+						m_AltPapNumberFile.SeekToEnd();
+						s.Format(_T("\n\nCopied Wall unit number %d file to LocalAppExes folder\n"), gbAssignedPAPNumber);
+						TRACE(s);
+						pMainDlg->SaveDebugLog(s);
+						}
+#if 0
+					// don't write to the file in C, Victor wants to wrtie network info there
+					try
+						{
+						CstringToChar(s, FileText);
+						m_AltPapNumberFile.Write(FileText, (int)strlen(FileText));
+						m_AltPapNumberFile.Close();
+						}
+					catch (CFileException* e)
+						{
+						e->ReportError();
+						e->Delete();
+						}
+#endif
+					// Delete all other competing file assignments
+					DeleteOldPapNumbers(gbAssignedPAPNumber); // keeps this one, deletes all others
+					return;
+					}
+				}	// found it
+
+			}	// look for 1-8 for instrument number
+
+		PathName[0]--;	// setp thru drive letters. G, F, E, D, C
 		}	// (i = 5; i > 0; i--) loop thru drive letters
 
 	if (i == 0)
 		{
-		TRACE(_T("Failed to find file name and thus PAP number\n"));
+		TRACE(_T("Failed to find file name and thus PAP number\n"));	// debug shows C:\\9.wall
+		if (FileName[0] == 'C')
+			{
+			// attempt to use stored file name in  LocalAppExes\MyID
+			GetPAPFromCDrive();
+			if (gbAssignedPAPNumber < 8)
+				{
+				s.Format(_T("PAP number = %d from C drive\n"), gbAssignedPAPNumber);
+				TRACE(s);
+				pMainDlg->SaveDebugLog(s);
+				return;		// succeeded in finding wall machine number
+				}
+			}
+
+
 		gbAssignedPAPNumber = 8;	//INVALID
+		s.Format(_T("Invalid PAP number = %d\n"), gbAssignedPAPNumber);
+		TRACE(s);
+		pMainDlg->SaveDebugLog(s);
 		return;
 		}
 	return;
@@ -488,13 +597,54 @@ void CPA2WinDlg::ReadPAPnumber(void)
 	}
 #endif
 
+// Find the PAP number in folder C:\LocalAppExes\MyID
+void CPA2WinDlg::GetPAPFromCDrive(void)
+	{
+	CString sPath, s;
+	char PathName[128] =  "C:\\LocalAppExes\\MyID\\1.wall";
+	int i, j;	// character position for numerical value of wall file name
+	CString t;
+	CFileException fileException;
+	t = PathName;
+	i = t.Find(_T(".wall"));	// character location just past integer identifying wall number
+	i--;	// point to location of the 1 character in 1.wall
+
+	for (j = 0; j < 8; j++)
+		{
+		sPath = PathName;
+		if (!m_PapNumberFile.Open(sPath, CFile::modeRead | CFile::shareDenyNone, &fileException))
+			{	// did not open the file
+			//				TRACE(_T("Can't open file %s, error = %u\n"),
+			//					sPath, fileException.m_cause);
+			PathName[i]++;	// increment the number in the file name.. starts with 1
+			}
+
+		else
+			{	// found it on C drive
+			s.Format(_T("Found file %s\n"), sPath);
+			TRACE(s);
+			gbAssignedPAPNumber = PathName[i] - '0';	// map char 1-8 to binary  1-8 
+			m_PapNumberFile.Close();
+			// create the same file name in C:\\ for default when memory stick is missing
+			return;
+			}
+		}	//for (j = 0; j < 8; j++)
+	gbAssignedPAPNumber = 8;	//INVALID
+	return;
+	}
+
+
 // Display a matrix of n rows of servers with m columns of connected clients.
 void CPA2WinDlg::ShowConnectedClients(void)
 	{
+	int i;
+	i = 0;
 	}
 
 void CPA2WinDlg::AddConnectedClient(int nServer, int nClientNum, CString& sIP4)
 	{
+	int i;
+	i = 0;
 	}
 
 
@@ -1930,22 +2080,22 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 	// All this to save processing time in displaying data on screen
 	// Do it once so no extra time for conversions of numbers to text
 	//m_sHwVerAdc = m_sSwVerAdc = m_sHwVerPulser = m_sSwVerPulse
-	if ((gLastAscanPap.wFPGA_VersionA != 0) && (m_sHwVerAdc.GetLength() == 0))
+//	if ((gLastAscanPap.wFPGA_VersionA != 0) && (m_sHwVerAdc.GetLength() == 0))
 		{
 		wVerH = gLastAscanPap.wFPGA_VersionA;
 		wVerS = gLastAscanPap.wNIOS_VersionA;
 		m_sHwVerAdc.Format(_T("[%01d.%01d.%03d"), MAJVER(wVerH), MINVER(wVerH), BLDVER(wVerH));
 		m_sSwVerAdc.Format(_T("    %01d.%01d.%03d"), MAJVER(wVerS), MINVER(wVerS), BLDVER(wVerS));
-		return;
+		//return;
 		}
 	
-	if ((gwFPGA_VersionP != 0) && (m_sHwVerPulser.GetLength() == 0))
+//	if ((gwFPGA_VersionP != 0) && (m_sHwVerPulser.GetLength() == 0))
 		{
 		wVerH = gwFPGA_VersionP;
 		wVerS = gwNIOS_VersionP;
 		m_sHwVerPulser.Format(_T("		          [%01d.%01d.%03d "), MAJVER(wVerH), MINVER(wVerH), BLDVER(wVerH));
 		m_sSwVerPulser.Format(_T("   %01d.%01d.%03d"), MAJVER(wVerS), MINVER(wVerS), BLDVER(wVerS));
-		return;
+		//return;
 		}
 	// grab hw/sw version numbers from packet data
 	ShowIdata();

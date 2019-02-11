@@ -152,6 +152,7 @@ public:
 	CFile m_DebugLog;
 	CFile m_CommandLog;
 	CFile m_PapNumberFile;
+	CFile m_AltPapNumberFile;	// file store on C drive in \LocalAppExes\MyID
 	int m_nMsgSeqCnt;
 
 	int m_nFakeDataExists;
@@ -167,6 +168,8 @@ public:
 	void SaveCommandLog(CString& s);
 	void CloseCommandLog(void);
 	void ReadPAPnumber(void);
+	void DeleteOldPapNumbers(int nNewPap);
+	void GetPAPFromCDrive(void);	// If Read Pap Number doesn't find pap number file in drives  G - D
 
 
 	int m_nPapNumber;		// the PAP number of this machine, the one running the ServiceApp

@@ -123,9 +123,9 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		pMmiCmd = (PAP_GENERIC_MSG *) m_pstCCM->pRcvPktPacketList->RemoveHead();
 		UnLockRcvPktList();
 
-		// use pMmiCmd->Slot to identify PAM's pClientConnection to know which instrument to send to
+		// use pMmiCmd->Slot to identify PAP's pClientConnection to know which instrument to send to
 		// pMmiCmd->ChnlNum will specify the channel in that instrument
-		// 1st, unpack from linked list and examine each message. Some messages configure the PAM itself
+		// 1st, unpack from linked list and examine each message. Some messages configure the PAP itself
 		// while othere may be routed directly to the instruments.
 
 			

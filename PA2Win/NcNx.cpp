@@ -848,7 +848,8 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		}	// pulser command loop
 #endif
 
-	// After pulser commands sent, drop to 10 Hz prf
+	// After pulser commands sent, drop to 10 Hz prf -- high prf better than low prf!!
+	// 12k works very good on the bench
 #if 0
 	Cmd.wMsgID = 0x300;
 	Cmd.wCmd[0] = 10;
@@ -980,19 +981,19 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 			}
 
 		}	// pulser command loop
-#endif
 	// restore Pulser to initial condition
 	//SamInitPulser(m_nPAP, m_nBoard);
+#endif
 
 	Cmd.wMsgID = 0x300;
-	Cmd.wCmd[0] = 12000;
+	Cmd.wCmd[0] = 12000;	// 12000 works very good in office
+	// 3k fails on large commands almost always .. ditto 6k also 5k
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, wCmd=%5d\n"),
 		Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.wCmd[0]);
 
 	m_lbOutput.AddString(s);
 	SendMsg((GenericPacketHeader*)&Cmd);
 	Sleep(500);
-
 	}
 
 // cmd 13 -- changed to 29 per RAC

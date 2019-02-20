@@ -2,7 +2,7 @@
 
 
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			11
+#define BUILD_VERSION			12
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -18,6 +18,7 @@
 
 /*
 Show the version number of this program. Newest version on TOP
+1.0.012 2019-02-19 Change Ascan packet. Eliminate redundant data. Include Gate & TOF in ASCAN header
 1.0.011 2019-01-07 Change PAG CAsyncSocket to sync CSocket
 1.0.010 2018-11-09 Dispaly ADC/Pulser cmd queues on screen. Does 5k commands in 20 sec.
 1.0.009	2018-11-02 Lower PA2WinDlg to below normal. Allows other threads to run first

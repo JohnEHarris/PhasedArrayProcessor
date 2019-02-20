@@ -420,12 +420,13 @@ typedef struct // IDATA_PAP_HDR
 	WORD wSpare[2];
 	} IDATA_PAP_HDR;	// sizeof = 64
 
-// Ascan data has same basic structure as Idata 
+// Ascan data has same basic structure as Idata
+// 2019-02-19 remove data redundant in Idata and replace with ascan gate location data
 typedef struct // ASCAN_DATA
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eAscanID		2
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
-	UINT uSync;			// 0x5CEBDAAD													8
+	WORD wMsgID;		// commands and data are identified by their ID	= eAscanID	
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD
 	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count	10
 	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
@@ -434,89 +435,101 @@ typedef struct // ASCAN_DATA
 	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bSeqNumber;
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
-	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id
-	BYTE bNiosFeedback[7];// eg. FPGA version, C version, self-test info	
+						//BYTE bMsgSubMux;	
+						//BYTE bNiosFeedback[7]****;	8 byte change
 
 	WORD wScopeSetting;	// inform about trigger, thold, other scope settings
-	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
+						// WORD wSendQDepth;	// Are packets accumulating in send queue    *** 2
 
 						// Pipe position information
 	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
 	BYTE bCmdQDepthP;	// Pulser cmd Q depth
-	WORD wLocation;		// x location in motion pulses
-	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
-	WORD wPeriod;		// unit in .2048ms
-	WORD wRotationCnt;	// Number of rotations since pipe present signal
+						// WORD wLocation;		// x location in motion pulses ****   8 byte change
+						// WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
+						// WORD wPeriod;		// unit in .2048ms
+						// WORD wRotationCnt;	// Number of rotations since pipe present signal
 	BYTE bFPGATempA;		// ADC board
 	BYTE bBoardTempA;
 	WORD wFPGA_VersionA;	// adc hw version
 	WORD wNIOS_VersionA;	// adc NIOS version
 
-	WORD wStatus;		
+						//  WORD wStatus;	*** 2	
 
 	BYTE bBeamType;		// 0=rf 1=fw  2=peak hold,  4 = gate out-- from cmd 23
 	BYTE bChCmd25;		// chnl  -- from cmd 25
 	WORD wSeqCmd25;		// sequences which contribute to above ChSelected  -- from cmd 25
 	BYTE bChCmd24;		// chnl selected by cmd 24 only for Ascan, not for gates -- from cmd 24
 	BYTE bScopeGates;	// 1 or more gates to display. Selected by bits -- from cmd 26
-						// 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
+						// 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking
+	// New gate location info 2019-02-19
+	WORD G1[2];			// start,stop location
+	WORD G2[2];			// start,stop location
+	WORD G3[2];			// start,stop location
+	WORD G4[2];			// start,stop location
+	WORD TOF[2];		// start,stop locatio
+
 	WORD wLargeCmds;	// number of large commands since reset
 	WORD wSmallCmds;	// number of small commands since reset
 	WORD wPulserCmds;	// number of pulser commands since reset
 	WORD wFPGA_VersionP;	// Pulser fpga version
 	WORD wNIOS_VersionP;	// Pulser NIOS version
-	WORD wCPU_TempP;		// Pulser cpu temp
-							//	WORD wSpare[1];		// 64 bytes to here
+	WORD wCPU_TempP;		// Pulser cpu temp - could be a byte
 	char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA;		// sizeof() = 1088
 
 typedef struct // ASCAN_DATA_HDR
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eAscanID		2
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
-	UINT uSync;			// 0x5CEBDAAD													8
+	WORD wMsgID;		// commands and data are identified by their ID	= eAscanID	
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number
+	UINT uSync;			// 0x5CEBDAAD
 	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count	10
 	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
 	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
-	BYTE bSeqNumber;	//for this vChnl
+	BYTE bSeqNumber;
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
-	BYTE bMsgSubMux;	// small Msg from NIOS. This is the Feedback msg Id  15
-	BYTE bNiosFeedback[7];// eg. FPGA version, C version, self-test info	  22	
+						//BYTE bMsgSubMux;	
+						//BYTE bNiosFeedback[7]****;	8 byte change
 
 	WORD wScopeSetting;	// inform about trigger, thold, other scope settings
-	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
+						//WORD wSendQDepth;	// Are packets accumulating in send queue    *** 2
 
 						// Pipe position information
-	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
+	BYTE bDin;			// digital input, 
 	BYTE bCmdQDepthP;	// Pulser cmd Q depth
-	WORD wLocation;		// x location in motion pulses
-	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
-	WORD wPeriod;		// unit in .2048ms
-	WORD wRotationCnt;	// Number of rotations since pipe present signal
+						// WORD wLocation;		// x location in motion pulses ****   8 byte change
+	// WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
+	// WORD wPeriod;		// unit in .2048ms
+	// WORD wRotationCnt;	// Number of rotations since pipe present signal
 	BYTE bFPGATempA;		// ADC board
 	BYTE bBoardTempA;
 	WORD wFPGA_VersionA;	// adc hw version
 	WORD wNIOS_VersionA;	// adc NIOS version
 
-	WORD wStatus;
+						//  WORD wStatus;	*** 2	
 
 	BYTE bBeamType;		// 0=rf 1=fw  2=peak hold,  4 = gate out-- from cmd 23
 	BYTE bChCmd25;		// chnl  -- from cmd 25
 	WORD wSeqCmd25;		// sequences which contribute to above ChSelected  -- from cmd 25
 	BYTE bChCmd24;		// chnl selected by cmd 24 only for Ascan, not for gates -- from cmd 24
 	BYTE bScopeGates;	// 1 or more gates to display. Selected by bits -- from cmd 26
-						// 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking 
+						// 1=gate 0, 2=gate 1, 4=gate 2, 8=gate3, 16=TOF, 32=blanking
+	// New gate location info 2019-02-19
+	WORD G1[2];			// start,stop location gate 1
+	WORD G2[2];			// start,stop location
+	WORD G3[2];			// start,stop location
+	WORD G4[2];			// start,stop location
+	WORD TOF[2];		// start,stop location
+
 	WORD wLargeCmds;	// number of large commands since reset
 	WORD wSmallCmds;	// number of small commands since reset
 	WORD wPulserCmds;	// number of pulser commands since reset
 	WORD wFPGA_VersionP;	// Pulser fpga version
 	WORD wNIOS_VersionP;	// Pulser NIOS version
-	WORD wCPU_TempP;		// Pulser cpu temp
-							// 64 bytes to here
+	WORD wCPU_TempP;		// Pulser cpu temp - could be a byte
 	//char ascan[1024];	// 1024 8-bit scope amplitude samples
 	} ASCAN_DATA_HDR;	
 

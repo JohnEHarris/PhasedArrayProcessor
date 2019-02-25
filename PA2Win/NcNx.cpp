@@ -998,7 +998,8 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 
 // cmd 13 -- changed to 29 per RAC
 // bit 0 turn on/off printf in NIOS code
-// bit 1 set resets command count
+// bit 1=1  resets command count
+// bit 2=1  reset max quque depth
 void CNcNx::DebugPrint(int nPap, int nBoard, int nCmd, int nValue)
 	{
 	CString s;

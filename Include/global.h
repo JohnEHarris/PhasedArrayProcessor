@@ -19,6 +19,7 @@ Revised:
 
 
 #include "PA2Struct.h"
+#include "Cmds.h"
 
 // The MAC and IP addresses of the instrument are modified by board switch setting or
 // by backplane board slot address when implemented.
@@ -105,6 +106,7 @@ PubExt ASCAN_DATA gLastAscanPap;
 PubExt READBACK_DATA gLastRdBkPap;
 PubExt IDATA_FROM_HW gLastAllWall;
 PubExt ST_GATE_READBACK_DATA gLastGateCmd;
+PubExt ST_SMALL_CMD gLastCmd;	// sized for small cmds, used for both adc commands on PAP screen
 PubExt WORD gwMax0, gwMin0, gwMin1_0, gwMin2_0, gwZeroCnt, gwNot0;	// max and min of seq0, chnl 0
 #endif
 
@@ -117,7 +119,7 @@ PubExt int gMaxSeqCount;
 PubExt int gnMaxServers, gnMaxClientsPerServer;		// Server Connection Management
 PubExt int gnMaxClients;							// Client Connection Management
 PubExt int gnFifoCnt, gnAsyncSocketCnt;
-PubExt WORD gwMsgSeqCnt;
+PubExt WORD gwMsgSeqCnt;		// increments when Idata or Ascan sent
 PubExt BYTE gbStartSeqNumber;	// starting sequence number for next Idata packet
 PubExt BYTE gbStartSeqNumberIncrement;
 PubExt WORD gwLastCmdId;	// keep cmd ID of last command executed by NIOS
@@ -125,6 +127,8 @@ PubExt WORD gw1stWordCmd;	// keep 1st cmd word of last command executed by NIOS
 PubExt BYTE gbCmdSeq;
 PubExt BYTE gbCmdChnl;
 PubExt BYTE gbCmdGate;
+PubExt WORD gwLastAdcCmdMsgCnt;	// what msg seq count associated with last received msg. 
+								// Not same as gbCmdSeq which is part of a command. This is only for 1 ADC. 
 PubExt WORD gwStatus;		// bit field of error sent with Idata
 PubExt WORD gwBadSync;
 PubExt WORD gwStatusHoldCnt;	// set to non-zero when status changes

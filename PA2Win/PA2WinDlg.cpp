@@ -2624,7 +2624,7 @@ void CPA2WinDlg::ShowIdata(void)
 		if (gLastIdataPap.bDin & HD_SAM) hd = 1;
 		// Hardware input status
 		//       0123456 89012345 78901234 678901  456789012
-		s = _T( "Digital PP  IE  HD   X-Loc Angle  Period   RotateCnt     MsgSeq  Glitch  LastCmd  1stWord  Seq  Chnl  Gate  (NIOS)Small Large  Pulser  (PAP)Small Large  Pulser" );
+		s = _T( "Digital PP  IE  HD   X-Loc Angle  Period   RotateCnt     MsgSeq  Glitch  Cmd/Cnt    1stWord  Seq  Chnl  Gate  (NIOS)Small Large  Pulser  (PAP)Small Large  Pulser" );
 		t = s;
 		//m_lbOutput.AddString(t);	// show top line
 		//s.Format(_T("    MsgCnt = %d, GlitchCnt = %d  CmdId  1stWord"),
@@ -2636,9 +2636,9 @@ void CPA2WinDlg::ShowIdata(void)
 			gLastIdataPap.bDin, pp, ie, hd, gLastIdataPap.wLocation, gLastIdataPap.wAngle,
 			gLastIdataPap.wPeriod, gLastIdataPap.wRotationCnt );
 		t = s;
-		s.Format(_T("         %05d   %03d     %03d      %05d    %02d   %02d    %02d"),
+		s.Format(_T("         %05d   %03d     %03d/%05d  %05d    %02d   %02d    %02d"),
 			gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
-			gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd,
+			gLastCmd.wMsgID, gLastCmd.wMsgSeqCnt, gLastIdataPap.w1stWordCmd,
 			(gLastIdataPap.bCmdSeq % 10), (gLastIdataPap.bCmdChnl % 10), gLastIdataPap.bCmdGate&3);
 		t += s;
 		// count of commands received by ADC & Pulser board. Pulser absent as of 2018-11-16

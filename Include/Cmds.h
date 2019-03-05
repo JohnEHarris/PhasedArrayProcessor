@@ -87,7 +87,7 @@ the PAP and PAG
 #define DEBUG_PRINT_CMD_ID			29		// was TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
 											// Moved to 31. DebugPrint moves into 29
 #define TCG_BEAM_GAIN_ALL_CMD_ID	31		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
-#define ADC_WIZ_RESET_CMD_ID		32		// bit0=0, ADC board Wiznet ONLY init. bit 0 set, reset ADC BRD also
+//#define ADC_WIZ_RESET_CMD_ID		32		// bit0=0, ADC board Wiznet ONLY init. bit 0 set, reset ADC BRD also
 											
 											
 //*******************************************
@@ -522,7 +522,7 @@ typedef struct
 						// 192.168.10.200+boardNumber  range is .200-.215
 
 	BYTE bSpare[4];		// 16
-	// To make my PAG interface work easier, DbgFlag is a bit field
+	// To make my PAG interface work easier, DbgFlag is a bit field globals – printf() operations
 	WORD wDbgFlag;		// bit 0=0 no dbg output sets gbDebugMode in ADC globals
 						// bit 1=1 reset command counters in ADC and PULSER
 						// bit 2=1 reset max FIFO high water mark in NIOS command FIFO's
@@ -658,8 +658,8 @@ void ProcNull( void );
 void NcNx_Test_Cmd( void );
 
 void FakeData( void );
-void MakeFakeAscanData(void);
-void FakeAscanData(void);
+void MakeFakeAscanData(void);	// only in PAP
+void FakeAscanData(void);		// only in PAP
 /*   GATE COMMANDS */
 void GateDelay( void );
 void GateRange( void );
@@ -756,7 +756,7 @@ WORD GetSpinCount();
 WORD GetScopeSetting();
 WORD GetVersionHw();
 
-void SetAscanGateN(WORD& GW1, WORD& GW2, WORD nGate);
+void GetAscanGateN(WORD& GW1, WORD& GW2, WORD nGate);
 
 BYTE GetBeamType();
 void SetBeamType(BYTE bBeam);

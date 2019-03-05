@@ -128,7 +128,6 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 		// 1st, unpack from linked list and examine each message. Some messages configure the PAP itself
 		// while othere may be routed directly to the instruments.
 
-			
 		MsgId = pMmiCmd->wMsgID;
 		// MsgId < 0x200 is a small command for the ADC board(s)
 		// MsgId >= 0x200 but < 0x300 is a large command for the ADC board(s)
@@ -302,7 +301,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 					delete pMmiCmd;
 					break;
 
-				case SET_WALL_NX_CMD_ID:
+				case SET_WALL_NX_CMD_ID:	// cmd 28
 					// Only executes on PAP... all wall processing has same parameters for every wall channel
 					// virtual channels exist in Server side structure only
 					// Server side connects to Adc and other hardware data sources
@@ -329,7 +328,12 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 						for (ic = 0; ic < MAX_CHNLS_PER_MAIN_BANG; ic++)
 							{
 							pChannel = pSCC->pvChannel[is][ic];
+							// cmd word [0]=Nx [1]=Max [2]=Min [3]=Drop
 							pChannel->WFifoInit((BYTE)pCmdS->wNx, pCmdS->wMax, pCmdS->wMin, pCmdS->wDropCount);
+							// SHOW something on PAG output screen
+							if ((is == 0) && (ic == 0))
+								{
+								}
 							}
 					delete pMmiCmd;
 					break;

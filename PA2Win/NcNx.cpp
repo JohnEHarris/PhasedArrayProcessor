@@ -400,6 +400,30 @@ void CNcNx::PopulateCmdComboBox()
 	m_nPopulated = 1;
 	}
 
+void CNcNx::NxTestCases(int nSelect)
+	{
+	WORD wNx, wMax, wMin, wDrop;
+	nSelect &= 3;	//Limit to 1,2,3
+	switch (nSelect)
+		{
+	case 0:
+	case 1:
+	default:
+		wNx = 1;	wMax = 1392;	wMin = 110;	wDrop = 4;		break;
+	case 2:
+		wNx = 2;	wMax = 700;		wMin = 300;	wDrop = 10;		break;
+		break;
+	case 3:
+		wNx = 3;	wMax = 500;		wMin = 400;	wDrop = 50;		break;
+		break;
+		}
+	// Nx the same for all channels
+	// args Nx, Max, Min, DropOut
+	// For PAG testing, use only nParam to select test cases
+	// WallNxCmd(m_nPAP, m_nBoard, m_nSeq, m_nCmdId, m_nParam);
+	MakeWallNxCmd(m_nPAP, m_nBoard, wNx, wMax, wMin, wDrop);
+	}
+
 void CNcNx::OnCbnSelchangeCbCmds()
 	{
 	CString s, t;
@@ -426,7 +450,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 	t.Format(_T("m_nCmdId = %d"), m_nCmdId + nCmdOffset);
 
 	if ((0x300 <= (m_nCmdId + nCmdOffset)) && (m_nCmdId < TOTAL_PULSER_COMMANDS))
-		{
+		{	//Pulser commands
 		switch (m_nCmdId + nCmdOffset)
 			{
 			case 0 + 0x300:
@@ -437,10 +461,10 @@ void CNcNx::OnCbnSelchangeCbCmds()
 				PulserCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, (m_nCmdId + nCmdOffset), (WORD)m_nParam);
 				break;
 			}
-		}
+		}	//Pulser commands
 
 	else if ((0x200 <= (m_nCmdId + nCmdOffset)) && (m_nCmdId < TOTAL_LARGE_COMMANDS))
-		{
+		{	// Large Commands
 		switch (m_nCmdId + nCmdOffset)
 			{
 		case 0:
@@ -459,10 +483,10 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			default:
 				break;
 			}
-		}
+		}	// Large Commands
 
 	else
-		{
+		{	// small commands
 		switch (m_nCmdId + nCmdOffset)
 			{
 			//case 0:	s.Format(_T("null %d"), m_nCmdId);	break;
@@ -475,7 +499,8 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			case 6: s.Format(_T("Gate %d Trigger %d"), m_nGate, m_nParam); break;
 			case 7: s.Format(_T("Gate %d Polarity %d"), m_nGate, m_nParam); break;
 			case 8: s.Format(_T("Gate %d TOF %d"), m_nGate, m_nParam); break;
-			case 9: s.Format(_T("Nx = %d"), m_nParam);				break;
+			//case 9: s.Format(_T("Nx = %d"), m_nParam);				break;
+			case 28: s.Format(_T("Wall Nx = %d"), m_nParam);		break;
 			case 29: s.Format(_T("ReadBk SubCmd %d"), m_nParam);	break;
 			case 31: s.Format(_T("TcgBeamGainAll %d"), m_nParam);	break;
 			case 32: s = _T("ADC Init");							break;
@@ -510,7 +535,10 @@ void CNcNx::OnCbnSelchangeCbCmds()
 					break;
 					// TCG commands
 				case 9:
-					WallNxCmd(m_nPAP, m_nBoard, m_nSeq, m_nCmdId, m_nParam);
+					// Nx the same for all channels
+					// args Nx, Max, Min, DropOut
+					// For PAG testing, use only nParam to select test cases
+					NxTestCases(m_nParam);
 					break;
 					// TCG commands
 				case 10:
@@ -520,6 +548,9 @@ void CNcNx::OnCbnSelchangeCbCmds()
 				case 12:
 					// Blast 300 cmds
 					Blast(m_nPAP, m_nBoard);
+					break;
+				case 28:
+					NxTestCases(m_nParam);
 					break;
 				case 29:
 					DebugPrint(m_nPAP, m_nBoard, m_nCmdId, m_nParam);
@@ -542,7 +573,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			{
 			TRACE(_T("unknown command\n"));
 			}
-		}
+		}	// small commands
 
 
 	}
@@ -707,24 +738,21 @@ void CNcNx::GateCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	//if (m_RbGates >= 4) break;	// one command sets all gates for a chnl	
 	}
 
-void CNcNx::WallNxCmd(int nPap, int nBoard, int nSeq, int nCmd, int nValue)
+void CNcNx::MakeWallNxCmd(WORD nPap, WORD nBoard, WORD wX, WORD wMax, WORD wMin, WORD wDrop)
 	{
 	CString s;
 	memset(&m_NxCmd, 0, sizeof(ST_NX_CMD));
-	m_NxCmd.wMsgID = SET_WALL_NX_CMD_ID;		// 9;
+	m_NxCmd.wMsgID = SET_WALL_NX_CMD_ID;		// 28;
 	m_NxCmd.wByteCount = 32;
 	m_NxCmd.uSync = SYNC;
-	m_NxCmd.bPapNumber = nPap;
-	m_NxCmd.bBoardNumber = nBoard;
-	// change nValue assignment from wall thick to Nx
-	nValue = nValue % 10;
-	if (nValue == 0) nValue = 1;
-	m_NxCmd.wNx = nValue;
-	m_NxCmd.wMax = 1200 + nValue;
-	m_NxCmd.wMin = 200 + nValue;
-	m_NxCmd.wDropCount = 10 + nValue;
-	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Nx=%d, Max=%d, Min=%d Drop=%5d  nValue modifies Max,Min,drop\n"),
-		m_NxCmd.wMsgID, m_NxCmd.wByteCount, m_NxCmd.bPapNumber, m_NxCmd.bBoardNumber, nValue,
+	m_NxCmd.bPapNumber = (BYTE)nPap;
+	m_NxCmd.bBoardNumber = (BYTE)nBoard;
+	m_NxCmd.wNx = wX;
+	m_NxCmd.wMax = wMax;
+	m_NxCmd.wMin = wMin;
+	m_NxCmd.wDropCount = wDrop;
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Nx=%d, Max=%d, Min=%d Drop=%5d  Param modifies Max,Min,drop\n"),
+		m_NxCmd.wMsgID, m_NxCmd.wByteCount, m_NxCmd.bPapNumber, m_NxCmd.bBoardNumber, m_NxCmd.wNx,
 		m_NxCmd.wMax, m_NxCmd.wMin, m_NxCmd.wDropCount);
 	m_lbOutput.AddString(s);
 	SendMsg((GenericPacketHeader*)&m_NxCmd);
@@ -1022,6 +1050,7 @@ void CNcNx::DebugPrint(int nPap, int nBoard, int nCmd, int nValue)
 // bit0=0, ADC board Wiznet ONLY init. bit 0 set, reset ADC BRD also
 void CNcNx::SamInitAdc(int nPap, int nBoard, int m_nParam)
 	{
+#if 0
 	CString s;
 	ST_SMALL_CMD Init;
 	memset(&Init, 0, sizeof(Init));
@@ -1037,6 +1066,7 @@ void CNcNx::SamInitAdc(int nPap, int nBoard, int m_nParam)
 		s.Format(_T("ID=%d, Init only Wiznet on ADC Board %d, PAP %d\n"), Init.wMsgID, nBoard, nPap);
 	m_lbOutput.AddString(s);
 	SendMsg((GenericPacketHeader*)&Init);
+#endif
 	}
 
 // Probably crashed the NIOS code with unhandled interrupt message.

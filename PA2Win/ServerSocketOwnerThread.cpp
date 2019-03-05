@@ -682,7 +682,11 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				}
 			}	// switch (pCmd->wMsgID)
 
-		pCmd->wMsgSeqCnt = m_pSCC->wMsgSeqCnt++;
+#ifdef I_AM_PAG
+		pCmd->wMsgSeqCnt = m_pSCC->wMsgSeqCnt++;	//m_pSCC static and 0 to start
+		// otherwise PAP has received the command and is forwarding it to 
+		// the NIOS processors without making any changes to the message
+#endif
 
 		// up to 8 attempts to send
 		for ( i = 0; i < 8; i++)
@@ -696,6 +700,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				m_pSCC->uBytesSent += nSent;
 				m_pSCC->uPacketsSent++;
 				m_nConfigMsgQty++;
+				// capture copy of last cmd for display info on PAP screen
+				memcpy((void *)&gLastCmd, (void *)pCmd, sizeof(ST_SMALL_CMD));
 				// sleep every other 4th packet
 				if ((pCmd->wMsgSeqCnt & 3) == 0)
 					{
@@ -902,6 +908,7 @@ void CServerSocketOwnerThread::MsgPrintLarge(ST_LARGE_CMD *pCmd, char *msg)
 //
 void CServerSocketOwnerThread::FlushCmdQueue(WPARAM w, LPARAM lParam)
 	{
+#if 0
 	int i;
 	ST_SMALL_CMD  *pCmd;
 	if (m_pSCC->pSocket == NULL)
@@ -940,4 +947,5 @@ void CServerSocketOwnerThread::FlushCmdQueue(WPARAM w, LPARAM lParam)
 	
 	m_pSCC->pSocket->UnLockSendPktList();
 	// Send wiznet reset command to 
+#endif
 	}

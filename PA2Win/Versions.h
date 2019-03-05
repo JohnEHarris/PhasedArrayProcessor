@@ -1,6 +1,6 @@
 #pragma once
 
-
+// I AM PAG  *******************
 #define CURRENT_VERSION		_T("Version 1.0")
 #define BUILD_VERSION			12
 

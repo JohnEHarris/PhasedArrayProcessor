@@ -71,6 +71,7 @@ public:
 	CListBox m_lbOutput;
 	afx_msg void OnBnClickedBnErase();
 	afx_msg void OnCbnSelchangeCbCmds();
+	void NxTestCases(int nSelect);
 	afx_msg void OnBnClickedBnDonothing();
 	CComboBox m_cbCommand;
 	CButton m_bnDoNoting;
@@ -85,7 +86,7 @@ public:
 	// 7 gate commands is actually sent.
 	ST_GATE_DELAY_CMD m_GateCmd;
 
-	void WallNxCmd(int nPap, int nBoard, int nSeq, int nCmd, int nValue);
+	void MakeWallNxCmd(WORD nPap, WORD nBoard, WORD wX, WORD wMax, WORD wMin, WORD wDrop);
 	ST_NX_CMD m_NxCmd;
 
 	void TcgCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue );

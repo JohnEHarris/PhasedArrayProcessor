@@ -18,6 +18,7 @@ Revised:
 #include <time.h>
 #include "PA2Win.h"
 #include "PA2WinDlg.h"
+#include "..\Include\Global.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -453,7 +454,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 
 		m_pIdataPacket->bMsgSubMux = pIData->bMsgSubMux;
 		memcpy(&m_pIdataPacket->bNiosFeedback, &pIData->bNiosFeedback, 8);
-		m_pIdataPacket->wLastCmdSeqCnt = pIData->wLastCmdSeqCnt;
+		m_pIdataPacket->wLastCmdSeqCnt = gLastCmd.wMsgSeqCnt;		//pIData->wLastCmdSeqCnt;
 		// map Sams bDin to Roberts
 		m_pIdataPacket->bDin = pIData->bDin;//  bDinMap[pIData->bDin & 0x3f]; 5/23/18 allow all jeh
 		m_pIdataPacket->bCmdQDepthP = pIData->bCmdQDepthP;	// Come from gate board in header with gates and wall reading

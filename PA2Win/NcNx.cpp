@@ -372,7 +372,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("ASCAN_RF_BEAM_SELECT"));	m_cbCommand.AddString(s);	//24--check case statements below
 		s.Format(_T("ASCAN_BEAM_SEQ"));			m_cbCommand.AddString(s);	//25 SetAscanSeqBeamReg
 		s.Format(_T("ASCAN_GATE_OUTPUT"));		m_cbCommand.AddString(s);	//26
-		s.Format(_T("ASCAN_REP_RATE"));			m_cbCommand.AddString(s);	//27
+		s.Format(_T("ASCAN_REP_RATE"));			m_cbCommand.AddString(s);	//27 how often Ascan sent to PAP
 		s.Format(_T("WallNx"));					m_cbCommand.AddString(s);	//28
 		s.Format(_T("DebugPrint"));				m_cbCommand.AddString(s);	//29 replace TcgBeamGainAll with DebugPrint
 		s.Format(_T("ReadBack"));				m_cbCommand.AddString(s);	//30
@@ -473,9 +473,12 @@ void CNcNx::OnCbnSelchangeCbCmds()
 #endif
 
 			case 2 + 0x200:
-			case 3 + 0x200:
-			case 4 + 0x200:
-			case 5 + 0x200:
+			case 3 + 0x200:							break;
+			case 0x204: s = _T("TCG_BEAM_GAIN");
+				LargeCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, nCmdLarge, (WORD)m_nParam);
+				t = _T("Large Command");
+				break;
+			case 0x205: s = _T("TCG_SEQ_GAIN");						break;
 				// build command here
 				LargeCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, nCmdLarge, (WORD)m_nParam);
 				t = _T("Large Command");
@@ -498,8 +501,10 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			case 5: s.Format(_T("Gate %d Thold %d"), m_nGate, m_nParam); break;
 			case 6: s.Format(_T("Gate %d Trigger %d"), m_nGate, m_nParam); break;
 			case 7: s.Format(_T("Gate %d Polarity %d"), m_nGate, m_nParam); break;
-			case 8: s.Format(_T("Gate %d TOF %d"), m_nGate, m_nParam); break;
+			case 8: s.Format(_T("Gate %d TOF %d"), m_nGate, m_nParam);		break;
+			case 21: s.Format(_T("Ascan Sample Rate = %d"), m_nParam);		break;	// ticks between a/d sampling
 			//case 9: s.Format(_T("Nx = %d"), m_nParam);				break;
+			case 27: s.Format(_T("AscanRepRate (ms) = %d"), m_nParam);	break;
 			case 28: s.Format(_T("Wall Nx = %d"), m_nParam);		break;
 			case 29: s.Format(_T("ReadBk SubCmd %d"), m_nParam);	break;
 			case 31: s.Format(_T("TcgBeamGainAll %d"), m_nParam);	break;
@@ -511,7 +516,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		//m_lbOutput.AddString( s );
 
 
-		if (m_nCmdId + nCmdOffset < 33)	// limit number has to be adjusted
+		if (m_nCmdId + nCmdOffset < TOTAL_COMMANDS)	// limit number has to be adjusted
 			{
 			switch (m_nCmdId + nCmdOffset)
 				{
@@ -538,7 +543,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 					// Nx the same for all channels
 					// args Nx, Max, Min, DropOut
 					// For PAG testing, use only nParam to select test cases
-					NxTestCases(m_nParam);
+					//NxTestCases(m_nParam);
 					break;
 					// TCG commands
 				case 10:
@@ -548,6 +553,9 @@ void CNcNx::OnCbnSelchangeCbCmds()
 				case 12:
 					// Blast 300 cmds
 					Blast(m_nPAP, m_nBoard);
+					break;
+				case 27:
+					GenericSmall(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 					break;
 				case 28:
 					NxTestCases(m_nParam);
@@ -565,7 +573,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 				}
 			}
 
-		else if (m_nCmdId + nCmdOffset < TOTAL_COMMANDS)
+		else if ((m_nCmdId + nCmdOffset) < TOTAL_COMMANDS)
 			{
 			WordCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 			}
@@ -736,6 +744,33 @@ void CNcNx::GateCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	m_lbOutput.AddString(t);
 	SendMsg((GenericPacketHeader*)&m_GateCmd);
 	//if (m_RbGates >= 4) break;	// one command sets all gates for a chnl	
+	}
+
+// A generic small command 
+void CNcNx::GenericSmall(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue)
+	{
+	CString s, t, sym;
+	switch (nCmd)
+		{
+		case ASCAN_REP_RATE_ID:	sym = _T("AscanRepRate: ");		break;	// UUI ASCAN_SCOPE
+
+		default:	sym = _T("???");		return;
+		}
+
+	memset(&m_GenericSmallCmd, 0, sizeof(ST_SMALL_CMD));
+	m_GenericSmallCmd.wMsgID = nCmd;
+	m_GenericSmallCmd.wByteCount = 32;
+	m_GenericSmallCmd.uSync = SYNC;
+	//		m_GateCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
+	m_GenericSmallCmd.bPapNumber = nPap;
+	m_GenericSmallCmd.bBoardNumber = nBoard;
+	m_GenericSmallCmd.wCmd[0] = nValue;	
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Value=%5d\n"),
+		m_GenericSmallCmd.wMsgID, m_GenericSmallCmd.wByteCount, m_GenericSmallCmd.bPapNumber,
+		m_GenericSmallCmd.bBoardNumber, m_GenericSmallCmd.wCmd[0]);
+	t = sym + s;
+	m_lbOutput.AddString(t);
+	SendMsg((GenericPacketHeader*)&m_GenericSmallCmd);
 	}
 
 void CNcNx::MakeWallNxCmd(WORD nPap, WORD nBoard, WORD wX, WORD wMax, WORD wMin, WORD wDrop)

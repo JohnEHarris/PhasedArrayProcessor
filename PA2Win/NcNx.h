@@ -81,10 +81,13 @@ public:
 	int m_nCmdId;
 	void PopulateCmdComboBox();
 
+	ST_GATE_DELAY_CMD m_GateCmd;
 	void GateCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue);
 	// All gate commands have the same template. The Cmd ID determines which one of the
 	// 7 gate commands is actually sent.
-	ST_GATE_DELAY_CMD m_GateCmd;
+
+	ST_SMALL_CMD m_GenericSmallCmd;
+	void GenericSmall(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue);
 
 	void MakeWallNxCmd(WORD nPap, WORD nBoard, WORD wX, WORD wMax, WORD wMin, WORD wDrop);
 	ST_NX_CMD m_NxCmd;

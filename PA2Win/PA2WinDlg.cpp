@@ -2177,7 +2177,7 @@ void CPA2WinDlg::DestroyCCM( void )
 
 			// wait for a while for the socket to be destroyed
 			i = 0;
-			while (( i < 100 ) && ( pCCM_PAG->m_pstCCM->pSocket != 0) )
+			while (( i < 100 ) && ( pCCM_PAG->m_pstCCM->pSocket->m_hSocket != 0xffffffff) )
 				{	Sleep (10);		i++;	}
 			if ( i >= 100) TRACE("CCM - Failed to kill Client socket");
 			Sleep( 20 );

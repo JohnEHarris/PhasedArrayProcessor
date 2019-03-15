@@ -100,6 +100,7 @@ public:
 
 	void Blast(int m_nPAP, int m_nBoard);	// blast a lot of commands to test FIFO's
 	void DebugPrint(int nPap, int nBoard, int nCmd, int nValue);
+	void ProcNull(int nPap, int nBoard, int nCmd, int nValue);
 	void SamInitAdc(int nPap, int nBoard, int nSel);
 	void SamInitPulser(int nPap, int nBoard, int nSel);
 
@@ -115,6 +116,7 @@ public:
 	CEdit m_edParam;
 	//int m_nAscanCnt;
 	void IncrementAscanCnt(void);
+	void ShowLastCmdSeq(void);
 	void ShowIdataSource(void);
 	void ShowSmallCmds(void);
 	void ShowLargeCmds(void);

@@ -686,6 +686,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		pCmd->wMsgSeqCnt = m_pSCC->wMsgSeqCnt++;	//m_pSCC static and 0 to start
 		// otherwise PAP has received the command and is forwarding it to 
 		// the NIOS processors without making any changes to the message
+//		if (pCmd->wMsgID < 0x300)	// ADC command
+			gwLastAdcCmdMsgCnt = pCmd->wMsgSeqCnt;
 #endif
 
 		// up to 8 attempts to send

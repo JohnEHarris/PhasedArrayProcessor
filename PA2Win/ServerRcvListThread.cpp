@@ -462,7 +462,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->wAngle = pIData->wAngle;	//m_pSCC->InstrumentStatus.wAngle;
 		m_pIdataPacket->wPeriod = pIData->wPeriod;	// m_pSCC->InstrumentStatus.wPeriod;
 		m_pIdataPacket->wRotationCnt = pIData->wRotationCnt;
-		m_pIdataPacket->wStatus = 0x1234;	// to be determined
+		m_pIdataPacket->wStatus = 0;	// to be determined
 		m_pIdataPacket->wVersionHW = pIData->wVersionHW;
 		m_pIdataPacket->wVersionSW = pIData->wVersionSW;
 
@@ -667,14 +667,13 @@ void CServerRcvListThread::CheckSequences(IDATA_PAP *pIdataPacket)
 	{
 	unsigned int nStartSeq, nSeqModulo, nChnl;	// test vars
 	unsigned int nChnlModulo;
-	unsigned int i, nError, nLastChnl;
+	unsigned int i, nLastChnl;
 	int j;
 	CString s;
 	nStartSeq = pIdataPacket->bStartSeqNumber;
 	nSeqModulo = pIdataPacket->bSeqModulo;
 	nChnl = nStartSeq * 8;	
 	nChnlModulo = nSeqModulo * 8;	// 8 chnls per sequence
-	nError = 0;
 	if (nStartSeq > 2)
 		i = 0;
 
@@ -691,13 +690,12 @@ void CServerRcvListThread::CheckSequences(IDATA_PAP *pIdataPacket)
 				j, i, nStartSeq);
 			TRACE(s);
 			// set a status bit in header to indicate sequence error 
-			nError = 1;	// or whatever bit value selected for this error
+			pIdataPacket->wStatus |= 8;	// bits 0,1,2 are received msg count error indicators
 			break;
 			}
 		nChnl++;
 		}
-	if (nError)
-		pIdataPacket->wStatus |= nError;	// else clear this bit
+
 	}
 
 // pIdata is deleted in the function that called ProcessInstrumentData
@@ -1026,6 +1024,7 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 	IDATA_PAP *pIdata = (IDATA_PAP *)pData;
 	IDATA_FROM_HW* pAllWall = (IDATA_FROM_HW*)pData;
 
+	j = 0;	// kill warning
 	switch (m_nMyServer)
 		{
 	case 0:

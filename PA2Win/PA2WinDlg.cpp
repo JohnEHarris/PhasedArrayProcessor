@@ -2065,6 +2065,7 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 	if (gDlg.pNcNx)
 		{
 		gDlg.pNcNx->IncrementAscanCnt();
+		gDlg.pNcNx->ShowLastCmdSeq();
 		gDlg.pNcNx->ShowIdataSource();
 		gDlg.pNcNx->ShowSmallCmds();
 		gDlg.pNcNx->ShowLargeCmds();
@@ -2072,6 +2073,7 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 		gDlg.pNcNx->ShowSmallQ();
 		gDlg.pNcNx->ShowLargeQ();
 		gDlg.pNcNx->ShowPulserQ();
+		wVerH = wVerS = 0;	// kill warning in PAG
 		}
 
 #ifdef I_AM_PAP
@@ -2624,7 +2626,7 @@ void CPA2WinDlg::ShowIdata(void)
 		if (gLastIdataPap.bDin & HD_SAM) hd = 1;
 		// Hardware input status
 		//       0123456 89012345 78901234 678901  456789012
-		s = _T( "Digital PP  IE  HD   X-Loc Angle  Period   RotateCnt     MsgSeq  Glitch  Cmd/Cnt    1stWord  Seq  Chnl  Gate  (NIOS)Small Large  Pulser  (PAP)Small Large  Pulser" );
+		s = _T( "Digital PP  IE  HD   X-Loc Angle  Period   RotateCnt     MsgSeq  Glitch  Cmd/Cnt    1stWord  Seq  Chnl  Gate  (NIOS)Small Large  Pulser  (PAP)Small Large  Pulser  Status" );
 		t = s;
 		//m_lbOutput.AddString(t);	// show top line
 		//s.Format(_T("    MsgCnt = %d, GlitchCnt = %d  CmdId  1stWord"),
@@ -2641,11 +2643,11 @@ void CPA2WinDlg::ShowIdata(void)
 			gLastCmd.wMsgID, gLastCmd.wMsgSeqCnt, gLastIdataPap.w1stWordCmd,
 			(gLastIdataPap.bCmdSeq % 10), (gLastIdataPap.bCmdChnl % 10), gLastIdataPap.bCmdGate&3);
 		t += s;
-		// count of commands received by ADC & Pulser board. Pulser absent as of 2018-11-16
+		// count of commands received by ADC & Pulser board, then wStatus value
 		s.Format(_T("          %05d %05d  %05d"), gLastAscanPap.wSmallCmds, gLastAscanPap.wLargeCmds, gLastAscanPap.wPulserCmds);
 		t += s;
 		// Show number of cmds received by PAP 
-		s.Format(_T("        %05d %05d  %05d"), gwPapSmallCmds, gwPapLargeCmds, gwPapPulserCmds);
+		s.Format(_T("        %05d %05d  %05d   %04x"), gwPapSmallCmds, gwPapLargeCmds, gwPapPulserCmds, gwStatus);
 		t += s;
 		m_lbOutput.AddString(t);
 

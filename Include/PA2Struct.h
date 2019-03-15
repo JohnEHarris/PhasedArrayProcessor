@@ -315,6 +315,15 @@ typedef struct // stPeakChnlNIOS
 					//WORD wTofMax;	// gate 4 max -- joins sturcture in future-- then sizeof = 10
 	} stPeakChnlNIOS;	// sizeof = 5  -- From ADC
 
+/*
+ wStatus  bit definitions for IDATA_PAP structure
+ bit	meaning when bit is set
+
+ 0		PAP small cmd count != NIOS cmd count
+ 1		PAP large cmd count != NIOS cmd count
+ 2		PAP pulser cmd count != NIOS cmd count
+ 3		Idata sequence error
+*/
 
 typedef struct // IDATA_PAP
 	{
@@ -354,7 +363,7 @@ typedef struct // IDATA_PAP
 	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
 	WORD wPeriod;		// unit in .2048ms
 	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	WORD wStatus;		// see below
+	WORD wStatus;		// bit0 PAP small cmd!= NIOS, bit 1 PAP large cmd!= NIOS, bit 2 PAP pulser cmd!= NIOS
 	WORD wVersionHW;	// Sams altera code version
 	WORD wVersionSW;	// Johns C++ code version ..50
 						// Debugging command activation in instrument

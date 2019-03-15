@@ -1153,6 +1153,20 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 			// debug look at Ascan data 
 			if (pSendPkt->wMsgID == eAscanID)
 				j = 3;
+			else
+				{
+				// 2019-03-15 tell Robert if PAP received commands != to ADC or Pulser received commands
+				// wStatus bits 0-2 PAP cmd count != NIOS cmd count
+				//gLastAscanPap.wSmallCmds, gLastAscanPap.wLargeCmds, gLastAscanPap.wPulserCmd
+				//gwPapSmallCmds, gwPapLargeCmds, gwPapPulserCmds
+				pSendPkt->wStatus &= 0xfff8;	// clear low 3 bits of status
+				if (gLastAscanPap.wSmallCmds != gwPapSmallCmds)		pSendPkt->wStatus |= 1;
+				if (gLastAscanPap.wLargeCmds != gwPapLargeCmds)		pSendPkt->wStatus |= 2;
+				if (gLastAscanPap.wPulserCmds != gwPapPulserCmds)	pSendPkt->wStatus |= 4;
+				if (pSendPkt->wStatus & 7)
+					j = 4;	// break pt test
+				gwStatus = pSendPkt->wStatus;	// status of Idata sent to UUI/PAG
+				}
 
 
 			if ((m_pstCCM->uPacketsSent & 0x7ff) == 0)		m_pElapseTimer->Start();
@@ -1210,7 +1224,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 			if (m_pstCCM->pSocket == NULL)	break;
 			if (pSendPkt == NULL)	break;
 
-			if (pSendPkt->wMsgID < 4)	
+			if (pSendPkt->wMsgID < 4)
 				guPktAttempts[0][i]++;	// Nx wall data
 			else 
 				guPktAttempts[1][i]++;	// All wall data

@@ -502,6 +502,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			case 6: s.Format(_T("Gate %d Trigger %d"), m_nGate, m_nParam); break;
 			case 7: s.Format(_T("Gate %d Polarity %d"), m_nGate, m_nParam); break;
 			case 8: s.Format(_T("Gate %d TOF %d"), m_nGate, m_nParam);		break;
+			case 13: s = _T("ProcNull");								break;
 			case 21: s.Format(_T("Ascan Sample Rate = %d"), m_nParam);		break;	// ticks between a/d sampling
 			//case 9: s.Format(_T("Nx = %d"), m_nParam);				break;
 			case 27: s.Format(_T("AscanRepRate (ms) = %d"), m_nParam);	break;
@@ -536,14 +537,13 @@ void CNcNx::OnCbnSelchangeCbCmds()
 				case 6:
 				case 7:
 				case 8:
-					GateCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
+					GateCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam );
 					break;
 					// TCG commands
 				case 9:
 					// Nx the same for all channels
 					// args Nx, Max, Min, DropOut
 					// For PAG testing, use only nParam to select test cases
-					//NxTestCases(m_nParam);
 					break;
 					// TCG commands
 				case 10:
@@ -552,31 +552,30 @@ void CNcNx::OnCbnSelchangeCbCmds()
 					break;
 				case 12:
 					// Blast 300 cmds
-					Blast(m_nPAP, m_nBoard);
-					break;
+					Blast(m_nPAP, m_nBoard);						break;
+				case 13:
+					ProcNull(m_nPAP, m_nBoard, m_nPAP, m_nBoard);	break;
 				case 27:
 					GenericSmall(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 					break;
 				case 28:
-					NxTestCases(m_nParam);
-					break;
+					NxTestCases(m_nParam);					break;
 				case 29:
-					DebugPrint(m_nPAP, m_nBoard, m_nCmdId, m_nParam);
-					break;
+					DebugPrint(m_nPAP, m_nBoard, m_nCmdId, m_nParam);	break;
 				case 30:
-					ReadBackCmd(m_nPAP, m_nBoard, m_nCmdId, m_nParam);
+					ReadBackCmd(m_nPAP, m_nBoard, m_nCmdId, m_nParam);	break;
 				case 32:
-					SamInitAdc(m_nPAP, m_nBoard, m_nParam);
-					break;
+					SamInitAdc(m_nPAP, m_nBoard, m_nParam);				break;
 				default:
 					break;
 				}
 			}
-
+#if 0
 		else if ((m_nCmdId + nCmdOffset) < TOTAL_COMMANDS)
 			{
 			WordCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 			}
+#endif
 		else
 			{
 			TRACE(_T("unknown command\n"));
@@ -943,10 +942,13 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 			CmdL.wCmd[1] = i+1;
 			CmdL.wCmd[2] = i+2;
 			CmdL.wCmd[3] = i+3;
-			s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, wCmd[4] = %4d, %4d, %4d, %4d\n"),
-				CmdL.wMsgID, CmdL.wByteCount, CmdL.bPapNumber, CmdL.bBoardNumber,
-				CmdL.wCmd[0], CmdL.wCmd[1], CmdL.wCmd[2], CmdL.wCmd[3]);
-			m_lbOutput.AddString(s);
+			if ((i < 10) || (i > 590))
+				{
+				s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, wCmd[4] = %4d, %4d, %4d, %4d\n"),
+					CmdL.wMsgID, CmdL.wByteCount, CmdL.bPapNumber, CmdL.bBoardNumber,
+					CmdL.wCmd[0], CmdL.wCmd[1], CmdL.wCmd[2], CmdL.wCmd[3]);
+				m_lbOutput.AddString(s);
+				}
 			SendMsg((GenericPacketHeader*)&CmdL);
 			//Sleep(10);
 			}
@@ -956,17 +958,20 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 			pCmdW->bChnl = i & 7;
 			pCmdW->bGateNumber = i & 3;
 			pCmdW->bSeq = i % 3;
-			s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d, Ch=%d, Gate=%d, wCmd=%5d\n"),
-				Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.bBoardNumber,
-				pCmdW->bSeq, pCmdW->bChnl, pCmdW->bGateNumber, Cmd.wCmd[0]);
-			m_lbOutput.AddString(s);
+			if ((i < 10) || (i > 590))
+				{
+				s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d, Ch=%d, Gate=%d, wCmd=%5d\n"),
+					Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.bBoardNumber,
+					pCmdW->bSeq, pCmdW->bChnl, pCmdW->bGateNumber, Cmd.wCmd[0]);
+				m_lbOutput.AddString(s);
+				}
 			SendMsg((GenericPacketHeader*)&Cmd);
 			}
 		}	// for (i = 0; i < 300; i++ )
 #endif
 	
 #if 1
-	// 600 large cmds
+	// 500 large cmds
 	for (i = 0; i < 500; i++)
 		{
 		CmdL.wMsgID = 516;
@@ -974,10 +979,13 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		CmdL.wCmd[1] = i + 1;
 		CmdL.wCmd[2] = i + 2;
 		CmdL.wCmd[3] = i + 3;
-		s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, wCmd[4] = %4d, %4d, %4d, %4d\n"),
-			CmdL.wMsgID, CmdL.wByteCount, CmdL.bPapNumber, CmdL.bBoardNumber,
-			CmdL.wCmd[0], CmdL.wCmd[1], CmdL.wCmd[2], CmdL.wCmd[3]);
-		m_lbOutput.AddString(s);
+		if ((i < 10) || (i > 490))
+			{
+			s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, wCmd[4] = %4d, %4d, %4d, %4d\n"),
+				CmdL.wMsgID, CmdL.wByteCount, CmdL.bPapNumber, CmdL.bBoardNumber,
+				CmdL.wCmd[0], CmdL.wCmd[1], CmdL.wCmd[2], CmdL.wCmd[3]);
+			m_lbOutput.AddString(s);
+			}
 		SendMsg((GenericPacketHeader*)&CmdL);
 		Sleep(10);
 		}
@@ -992,10 +1000,13 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		CmdL.wCmd[1] = i + 1;
 		CmdL.wCmd[2] = i + 2;
 		CmdL.wCmd[3] = i + 3;
-		s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, wCmd[4] = %4d, %4d, %4d, %4d\n"),
-			CmdL.wMsgID, CmdL.wByteCount, CmdL.bPapNumber, CmdL.bBoardNumber,
-			CmdL.wCmd[0], CmdL.wCmd[1], CmdL.wCmd[2], CmdL.wCmd[3]);
-		m_lbOutput.AddString(s);
+		if ((i < 10) || (i > 90))
+			{
+			s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, wCmd[4] = %4d, %4d, %4d, %4d\n"),
+				CmdL.wMsgID, CmdL.wByteCount, CmdL.bPapNumber, CmdL.bBoardNumber,
+				CmdL.wCmd[0], CmdL.wCmd[1], CmdL.wCmd[2], CmdL.wCmd[3]);
+			m_lbOutput.AddString(s);
+			}
 		SendMsg((GenericPacketHeader*)&CmdL);
 		}
 
@@ -1058,6 +1069,24 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	SendMsg((GenericPacketHeader*)&Cmd);
 	Sleep(500);
 	}
+
+// cmd 13 ProcNull for ADC   Something else for UUI
+void CNcNx::ProcNull(int nPap, int nBoard, int nCmd, int nValue)
+	{
+	CString s;
+	ST_WORD_CMD *pCmdW = (ST_WORD_CMD *)&Cmd;
+	memset((void *)pCmdW, 0, sizeof(ST_WORD_CMD));
+	pCmdW->Head.wMsgID = PROC_NULL_CMD_ID;
+	pCmdW->Head.wByteCount = 32;
+	pCmdW->Head.uSync = SYNC;
+	pCmdW->Head.bPapNumber = nPap;
+	pCmdW->Head.bBoardNumber = nBoard;
+	s.Format(_T("ProcNull: ID=%d, Bytes=%d, PAP=%d  Board=%d\n"),
+		pCmdW->Head.wMsgID, pCmdW->Head.wByteCount, nPap, nBoard );
+	m_lbOutput.AddString(s);
+	SendMsg((GenericPacketHeader*)pCmdW);
+	}
+
 
 // cmd 13 -- changed to 29 per RAC
 // bit 0 turn on/off printf in NIOS code
@@ -1397,6 +1426,11 @@ void CNcNx::OnChangeEdParam()
 void CNcNx::IncrementAscanCnt(void)
 	{
 	SetDlgItemInt(IDC_EN_ASCANCNT, guAscanMsgCnt, 0);
+	}
+
+void CNcNx::ShowLastCmdSeq(void)
+	{
+	SetDlgItemInt(IDC_EN_LAST_MSG_CNT, gwLastAdcCmdMsgCnt, 0);
 	}
 
 void CNcNx::ShowIdataSource(void)

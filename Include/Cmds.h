@@ -64,10 +64,11 @@ the PAP and PAG
 #define SET_GATES_TRIGGER_CMD_ID	6		// GatesTrigger 
 #define SET_GATES_POLARITY_CMD_ID   7		// GatesPolarity
 #define SET_GATES_TOF_CMD_ID		8		// GatesTOF
-// define PROC_NULL					9		-- WAS WALL_NX
+//#define PROC_NULL_CMD_ID			9		//-- WAS WALL_NX - only for PAG, not for UUI
 #define TCG_GAIN_CLOCK_CMD_ID		10		// TCGGainClock
 #define TCG_BEAM_GAIN_DELAY_ID		11		// what is this in adc board?
 #define BLAST_CMDS_ID				12		// Blast test commands.. Send 300 canned commands
+#define PROC_NULL_CMD_ID			13
 #define DEBUG_PRINT_CMD_ID			29		// turn on/off debuggin in ADC debug console.. was 13
 #define SET_TCG_CLOCK_RATE_CMD_ID	14		// SetTcgClockRate
 #define TCG_TRIGGER_DELAY_CMD_ID	15		// TCGTriggerDelay

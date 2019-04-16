@@ -1299,6 +1299,14 @@ void CServerSocket::OnReceive(int nErrorCode)
 			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
 			//InputRawDataPacket *pIdataPacket = (InputRawDataPacket *) pB;
 			IDATA_FROM_HW *pIdataPacket = (IDATA_FROM_HW *) pB;
+#if 0
+			// detects correct seq 2,0,1,2,0,1
+			if (pIdataPacket->wMsgID == 1)
+				{
+				s.Format(_T("Idata Start Seq = %d\n"), pIdataPacket->bStartSeqNumber);
+				TRACE(s);
+				}
+#endif
 
 #if 0
 			if (pIdataPacket->wMsgID == 3)

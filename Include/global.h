@@ -78,7 +78,6 @@ PubExt IDATA_FROM_HW FakeDATA;
 PubExt ASCAN_DATA FakeASCAN;
 PubExt READBACK_DATA ReadBackDATA;
 PubExt BYTE gbFakeDataCmd;		// change operation of Xmit interrupt when fake data
-PubExt BYTE gbMakeAscanFlag; 
 PubExt ST_GATE_READBACK_DATA GateCmdData;		// a copy of every gate command setting received
 PubExt BYTE gbFakeDataCnt;
 
@@ -187,4 +186,8 @@ PubExt BYTE gbAdcMsgIdErrorCntADC;		// count number of times adc msg lost in ADC
 #define PRINT_MSG		(1 << 0)
 #define RESET_CMD_CNT	(1 << 1)
 #define RESET_Q_MAX		(1 << 2)
+#define NOTHING_IN_PARTICULAR (1 << 8)
+
+
+
 #endif /* GLOBAL_H_ */

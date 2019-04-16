@@ -64,11 +64,10 @@ the PAP and PAG
 #define SET_GATES_TRIGGER_CMD_ID	6		// GatesTrigger 
 #define SET_GATES_POLARITY_CMD_ID   7		// GatesPolarity
 #define SET_GATES_TOF_CMD_ID		8		// GatesTOF
-//#define PROC_NULL_CMD_ID			9		//-- WAS WALL_NX - only for PAG, not for UUI
+#define TCG_PROBE_TRIGGER_CMD_ID	9		// SetChnlTrigger
 #define TCG_GAIN_CLOCK_CMD_ID		10		// TCGGainClock
 #define TCG_BEAM_GAIN_DELAY_ID		11		// what is this in adc board?
 #define BLAST_CMDS_ID				12		// Blast test commands.. Send 300 canned commands
-#define PROC_NULL_CMD_ID			13
 #define DEBUG_PRINT_CMD_ID			29		// turn on/off debuggin in ADC debug console.. was 13
 #define SET_TCG_CLOCK_RATE_CMD_ID	14		// SetTcgClockRate
 #define TCG_TRIGGER_DELAY_CMD_ID	15		// TCGTriggerDelay
@@ -501,13 +500,13 @@ typedef struct
 
 typedef struct
 	{
-	GenericPacketHeader Head;	// wMsgID= READBACK_CMD_ID = 13
+	GenericPacketHeader Head;	// wMsgID= READBACK_CMD_ID = 30
 	BYTE bSeq;			// 
-	BYTE bChnl;		// which virtual probe
-	BYTE bGateNumber;	// we have room here to set all 4 gates with one command but will not for now.
-	BYTE bSeqEnd;	// 16 bytes to here .. cmd returns all channel values between bSeq and bSpare=bSeqEnd
-	WORD wReadBackID;	// specifies the read back sets defined elsewhere
-	WORD wFill[7];	// all 0
+	BYTE bChnl;			// which virtual probe
+	BYTE bGateNumber;	
+	BYTE bSeqEnd;		// not currently used
+	WORD wReadBackID;	// =1 reads back all gate setting for one sequence
+	WORD wFill[7];		// all 0
 	} ST_READ_BACK_CMD;	// sizeof() = 32
 
 // Used to turn on debugging output from Eclipes/NIOS debug output
@@ -637,10 +636,12 @@ typedef struct	// NOT SURE ABOUT THIS COMMAND 2017-03-16
 // in each of the 4 shoes.
 //
 
+#if 0
 typedef struct
 	{
 	GenericPacketHeader Head;	// wMsgID= 
 	} ST_GATE_READBACK;
+#endif
 
 
 /*************** Command Structures **************/
@@ -670,22 +671,22 @@ void GatesTrigger( void );
 void GatesPolarity( void );
 void GatesTOF( void );
 
-void set_gate_delay( WORD GateNumber, WORD nDelay, WORD nSeq, WORD vChnl);
-void set_gate_range( WORD GateNumber, WORD nRange, WORD nSeq, WORD vChnl);
-void set_gate_blank( WORD GateNumber, WORD nBlank, WORD nSeq, WORD vChnl );
-void set_gate_threshold(WORD GateNumber, WORD nThold, WORD nSeq, WORD vChnl );
+void set_gate_delay( WORD bGate, WORD nDelay, WORD nSeq, WORD vChnl);
+void set_gate_range( WORD bGate, WORD nRange, WORD nSeq, WORD vChnl);
+void set_gate_blank( WORD bGate, WORD nBlank, WORD nSeq, WORD vChnl );
+void set_gate_threshold(WORD bGate, WORD nThold, WORD nSeq, WORD vChnl );
 
 //bit7,6,5,4: gate 4-1 trigger select (0:mbs, 1:threshold);  bit 3-0: gate enable
-void set_gates_trigger(WORD nTrigger, WORD nSeq, WORD vChnl );	// Sams void set_gate_control
+void set_gates_trigger(WORD nTrigger, WORD nSeq, WORD vChnl, BYTE bGate);	// Sams void set_gate_control
 
 //bit10:mode1, 32:mode2, 54:mode3, 7-6:mode4 --mode: 00:+, 01:-, 1x: abs
 //0x55-d85:-, 0x00:+, 0xaa-d170:abs
-void set_gates_polarity( WORD nPolarity, WORD nSeq, WORD vChn3 );
+void set_gates_polarity( WORD nPolarity, WORD nSeq, WORD vChnl, BYTE bGate);
 
 //bit7,6: not used; bit5,4,3: start of gate 4,3,2; 
 //bit2,1,0: stop of gate 4,3,2-start:0-mbs,1-PkDet;--stop:0-ThDet,1-PkDet
 //tof2: b00_100_111-0x27(start:4Pk 3mbs 2mbs);
-void set_gates_tof(WORD nTOF, WORD nSeq, WORD vChn3 );
+void set_gates_tof(WORD nTOF, WORD nSeq, WORD vChnl, BYTE bGate );
 /*   GATE COMMANDS */
 
 /*   GAIN COMMANDS */
@@ -697,6 +698,8 @@ void TCGBeamGain( void );			// set_beam_gain
 void TCGGainClock( void );			// set_beam_gain_step
 void TCGBeamGainDelay(void);		// set_beam_gain_delay
 void TCGBeamGainAll(void);			// set_beam_gain_all
+// Same beam/chnl for all sequences
+void SetChnlTrigger(void);			//set_beam_gain_t_mode, set_beam_gain_t_select
 void SetPrf( void );
 void set_ascan_scope(short value);	// ascan sample period
 void AscanScopeSampleRate( void );	// set_ascan_scope also add in NcNx.cpp  -- 21

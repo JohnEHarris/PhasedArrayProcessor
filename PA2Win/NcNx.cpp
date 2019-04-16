@@ -353,7 +353,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("Gate n Trigger"));		m_cbCommand.AddString(s);	//6
 		s.Format(_T("Gate n Polarty"));		m_cbCommand.AddString(s);	//7
 		s.Format(_T("Gate n TOF"));			m_cbCommand.AddString(s);	//8
-		s.Format(_T("null TCGChnlTrigger"));m_cbCommand.AddString(s);	//9  TCGProbeTrigger T("TCGChnlTrigger")
+		s.Format(_T("SetChnlTrigger"));		m_cbCommand.AddString(s);	//9  TCGProbeTrigger T("TCGChnlTrigger")
 		s.Format(_T("TCGGainClock"));		m_cbCommand.AddString(s);	//10
 		s.Format(_T("TCGChnlGainDelay"));	m_cbCommand.AddString(s);	//11
 		s.Format(_T("Blast300"));			m_cbCommand.AddString(s);	//12 Send 300 commands
@@ -469,6 +469,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			{
 		case 0:
 #ifdef I_AM_PAG
+			// eliminate Debug fifo, use 0 for ProcNull
 			DebugFifo(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 #endif
 
@@ -493,7 +494,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		switch (m_nCmdId + nCmdOffset)
 			{
 			//case 0:	s.Format(_T("null %d"), m_nCmdId);	break;
-			case 0:	s.Format(_T("Debug FIFO"));	break;
+			case 0:	s = _T("ProcNull");						break;	// replace this with ProcNull, change #13 to something else
 			case 1:	s = _T("Fake Data");					break;
 			case 2: s.Format(_T("Gate %d Delay %d"), m_nGate, m_nParam); break;
 			case 3: s.Format(_T("Gate %d Range %d"), m_nGate, m_nParam); break;
@@ -502,12 +503,13 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			case 6: s.Format(_T("Gate %d Trigger %d"), m_nGate, m_nParam); break;
 			case 7: s.Format(_T("Gate %d Polarity %d"), m_nGate, m_nParam); break;
 			case 8: s.Format(_T("Gate %d TOF %d"), m_nGate, m_nParam);		break;
+			case 9: s.Format(_T("TCG Chnl Trigger Ch%d"), m_nCh, m_nParam);	break;
 			case 13: s = _T("ProcNull");								break;
 			case 21: s.Format(_T("Ascan Sample Rate = %d"), m_nParam);		break;	// ticks between a/d sampling
 			//case 9: s.Format(_T("Nx = %d"), m_nParam);				break;
 			case 27: s.Format(_T("AscanRepRate (ms) = %d"), m_nParam);	break;
 			case 28: s.Format(_T("Wall Nx = %d"), m_nParam);		break;
-			case 29: s.Format(_T("ReadBk SubCmd %d"), m_nParam);	break;
+			case 30: s.Format(_T("ReadBk SubCmd %d"), m_nParam);	break;
 			case 31: s.Format(_T("TcgBeamGainAll %d"), m_nParam);	break;
 			case 32: s = _T("ADC Init");							break;
 			case 0x204: s = _T("TCG_BEAM_GAIN");					break;
@@ -523,7 +525,9 @@ void CNcNx::OnCbnSelchangeCbCmds()
 				{
 				case 0:
 #ifdef I_AM_PAG
-					DebugFifo(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
+					// Use 0 for procnull
+					//DebugFifo(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
+					ProcNull(m_nPAP, m_nBoard, m_nPAP, m_nBoard);	break;
 #endif
 
 					break;
@@ -541,9 +545,9 @@ void CNcNx::OnCbnSelchangeCbCmds()
 					break;
 					// TCG commands
 				case 9:
-					// Nx the same for all channels
-					// args Nx, Max, Min, DropOut
-					// For PAG testing, use only nParam to select test cases
+					//TCG trigger cmd
+					m_nParam &= 1;	// 0= IP,1=IF
+					GateCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 					break;
 					// TCG commands
 				case 10:
@@ -563,7 +567,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 				case 29:
 					DebugPrint(m_nPAP, m_nBoard, m_nCmdId, m_nParam);	break;
 				case 30:
-					ReadBackCmd(m_nPAP, m_nBoard, m_nCmdId, m_nParam);	break;
+					ReadBackCmd(m_nPAP, m_nBoard, m_nSeq, m_nCmdId, m_nParam);	break;
 				case 32:
 					SamInitAdc(m_nPAP, m_nBoard, m_nParam);				break;
 				default:
@@ -721,6 +725,7 @@ void CNcNx::GateCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 		break;
 	case 7:		sym = _T("Pol:"); 		break;	// gate data mode ie signal polarity
 	case 8:		sym = _T("Tof:"); 		break;	// gate data mode ie tof
+	case 9:		sym = _T("TCG Trigger: ");		break;	// 0=IP, 1=IF
 	default:	sym = _T( "???" );		return;
 		}
 
@@ -745,7 +750,8 @@ void CNcNx::GateCmd( int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 	//if (m_RbGates >= 4) break;	// one command sets all gates for a chnl	
 	}
 
-// A generic small command 
+// A generic small command
+// nValue = m_nParam
 void CNcNx::GenericSmall(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, int nValue)
 	{
 	CString s, t, sym;
@@ -1076,7 +1082,7 @@ void CNcNx::ProcNull(int nPap, int nBoard, int nCmd, int nValue)
 	CString s;
 	ST_WORD_CMD *pCmdW = (ST_WORD_CMD *)&Cmd;
 	memset((void *)pCmdW, 0, sizeof(ST_WORD_CMD));
-	pCmdW->Head.wMsgID = PROC_NULL_CMD_ID;
+	pCmdW->Head.wMsgID = 0;
 	pCmdW->Head.wByteCount = 32;
 	pCmdW->Head.uSync = SYNC;
 	pCmdW->Head.bPapNumber = nPap;
@@ -1154,23 +1160,27 @@ void CNcNx::SamInitPulser(int nPap, int nBoard, int nSel)
 	}
 
 
-// Readback has sub commands. Top read back ID is 13
+// Readback has sub commands. Top read back ID is 30
 // nRbId is nValue from NcNx parameters
-void CNcNx::ReadBackCmd(int nPap, int nBoard, int nCmd, int nValue)
+// For Apr 2019 only one read back --- gate data by sequence
+//
+void CNcNx::ReadBackCmd(int nPap, int nBoard, int nSeq, int nCmd, int nValue)
 	{
 	CString s, t, sym;
 	memset(&m_RdBkCmd, 0, sizeof(ST_SET_TCG_DELAY_CMD));
-	m_RdBkCmd.Head.wMsgID = nCmd;	 // 13;
+	m_RdBkCmd.Head.wMsgID = nCmd;	 // 30;
 	m_RdBkCmd.Head.wByteCount = 32;
 	m_RdBkCmd.Head.uSync = SYNC;
 	//		m_TcgCmd.Head.wMsgSeqCnt;	SET BY SENDING ROUTINE
 	m_RdBkCmd.Head.bPapNumber = nPap;
 	m_RdBkCmd.Head.bBoardNumber = nBoard;
-	m_RdBkCmd.wReadBackID = nValue;	// this is the nValue parameter
+	m_RdBkCmd.bSeq = nSeq;
+	m_RdBkCmd.wReadBackID = 1;	// nValue;	// this is the nValue parameter-which data to send back
+	// wReadBackID = 1 means send back gates data by seq number.
 
-	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, RdBkCmd = 13, RdBkID = %2d\n"),
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d,  RdBkID = %2d\n"),
 		m_RdBkCmd.Head.wMsgID, m_RdBkCmd.Head.wByteCount, m_RdBkCmd.Head.bPapNumber,
-		m_RdBkCmd.Head.bBoardNumber, m_RdBkCmd.wReadBackID);
+		m_RdBkCmd.Head.bBoardNumber, nSeq, m_RdBkCmd.wReadBackID);
 	t = sym + s;
 	m_lbOutput.AddString(t);
 	SendMsg((GenericPacketHeader*)&m_RdBkCmd);
@@ -1219,6 +1229,7 @@ void CNcNx::FakeData(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 // cmd sequence 25x8, 24, 23, 22, 21, 12*3, 0x205x3, 0x204x2  25 sent 8 times in one packet
 // from Robert, results in about 5 total TCPIP packets
 // Add AscanRepRate to end of command
+// Replaced by Blast. Delete DebugFifo sometime
 #ifdef I_AM_PAG
 void CNcNx::DebugFifo(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue)
 	{
@@ -1430,7 +1441,9 @@ void CNcNx::IncrementAscanCnt(void)
 
 void CNcNx::ShowLastCmdSeq(void)
 	{
+#ifdef I_AM_PAG
 	SetDlgItemInt(IDC_EN_LAST_MSG_CNT, gwLastAdcCmdMsgCnt, 0);
+#endif
 	}
 
 void CNcNx::ShowIdataSource(void)

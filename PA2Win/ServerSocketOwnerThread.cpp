@@ -651,7 +651,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 					pCmd->wMsgID, pCmd->bPapNumber, pCmd->bBoardNumber,
 					pCmd->wMsgSeqCnt, pCmd->wCmd[0], pCmd->wByteCount );
 			//theApp.SaveDebugLog(s);
-			pMainDlg->SaveDebugLog( s );
+			//pMainDlg->SaveDebugLog( s );
 			pMainDlg->SaveCommandLog(s);
 			nMsgSize = pCmd->wByteCount;
 			if (nMsgSize > 1056)
@@ -827,6 +827,8 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	
 	switch (pCmd->wMsgID)
 		{
+	case 0: MsgPrint(pCmd, "ProcNull<0>");				break;
+	case 1: MsgPrint(pCmd, "FakeData<1>");				break;
 	case 2: MsgPrint(pCmd, "GateDelay<2> wCmd=wDelay");	break;
 	case 3: MsgPrint(pCmd, "GateRange<3> wCmd=wRange");	break;
 	case 4: MsgPrint(pCmd, "GateBlank<4> wCmd=wBlank");	break;
@@ -834,11 +836,11 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case 6: MsgPrint(pCmd, "GatesTrigger<6> wCmd=wTrigger");	break;
 	case 7: MsgPrint(pCmd, "GatesPolarity<7> wCmd=wPolarity");	break;
 	case 8: MsgPrint(pCmd, "GatesTOF<8> wCmd=TOF");				break;
-	case 9: MsgPrint(pCmd, "nullTCGChnlTrig<9> wCmd=step time");break;
+	case 9: MsgPrint(pCmd, "SetChnlTrig<9> wCmd=IP/IF");		break;
 	case 10: MsgPrint(pCmd, "TCGGainClock<10> wCmd=step time");	break;
 	case 11: MsgPrint(pCmd, "TCGBeamGainDelay<11> wCmd=delay");	break;
 	case 12: MsgPrint(pCmd, "Blast300<12>");					break;		// moved
-	case 13: MsgPrint(pCmd, "DebugPring<13>");					break;	// moved
+	case 13: MsgPrint(pCmd, "ProcNull<13>");					break;		// moved
 	case 14: MsgPrint(pCmd, "SetTcgClockRate<14> wCmd=step time");	break;
 	case 15: MsgPrint(pCmd, "TCGTriggerDelay<15> wCmd=delay time");	break;
 	case 16: MsgPrint(pCmd, "Pow2Gain<16> wCmd=gain");				break;
@@ -878,13 +880,31 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 
 void CServerSocketOwnerThread::MsgPrint(ST_SMALL_CMD *pCmd, char *msg)
 	{
-	CString s, t;
+	CString s, t, u;
 	ST_WORD_CMD *pwCmd = (ST_WORD_CMD *)pCmd;
+	ST_GATE_DELAY_CMD *pGate = (ST_GATE_DELAY_CMD *)pCmd;
+	int i = pCmd->wMsgID;
 	t = msg;
+	u = _T("");
+	// Error check for invalid gate parameters
+	if ((i > 1) && (i < 9))	// gate command
+		{
+		if (pGate->bSeq > 2)    { u = _T("Bad Seq ");	goto NOT_A_GATE; }
+		if (pGate->bChnl > 7)   { u = _T("Bad Chnl ");	goto NOT_A_GATE; }
+		if (pGate->bGateNumber > 3) { u = _T("Bad Gate ");	goto NOT_A_GATE; }
+		}
+
+	NOT_A_GATE:
 	s.Format(_T("ID=%d "),pCmd->wMsgID);	//, msg, pwCmd->bSeq, pwCmd->bChnl, pwCmd->bGateNumber, pwCmd->wCmd);
+	if (u.GetLength()) // put bad 'something' in front of command values
+		{
+		u += s;
+		s = u;
+		}
 	s += t;
 	t.Format(_T(" Seq=%d, Ch=%d, Gate=%d, wCmd=%d\n"),	 
 		pwCmd->bSeq, pwCmd->bChnl, pwCmd->bGateNumber, pwCmd->wCmd);
+
 	s += t;
 	pMainDlg->SaveCommandLog(s);
 	}

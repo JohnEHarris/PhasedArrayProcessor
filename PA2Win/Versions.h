@@ -2,7 +2,7 @@
 
 // I AM PAG  *******************
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			14
+#define BUILD_VERSION			15
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -18,6 +18,7 @@
 
 /*
 Show the version number of this program. Newest version on TOP
+1.0.015 2019-04-12 Start testing Gate Cmd Read back from ADC board
 1.0.014 2019-03-14 Add explicit ProcNull, limit blast output to List box to first 10, last 10 msgs
 					Show last cmd seq number sent on Nx screen
 1.0.013 2019-03-05 Implement Nx command for testing wall nx in PAP

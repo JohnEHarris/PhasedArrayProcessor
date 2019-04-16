@@ -442,7 +442,15 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->bBoardNumber = pIData->bBoardNumber;
 		m_pIdataPacket->wBoardType = 1;		// 1 = wall, 0 = socomate
 
-		m_pIdataPacket->bStartSeqNumber = pChannel->m_bSeq;	// the key to correctly mapping the data to the output packet	
+		m_pIdataPacket->bStartSeqNumber = pChannel->m_bSeq;	// the key to correctly mapping the data to the output packet
+#if 0
+		//if (pChannel->m_bSeq)
+			{
+			s.Format(_T("SeqNum=%d\n"), pChannel->m_bSeq);
+			TRACE(s);
+			}
+#endif
+
 		m_pIdataPacket->bSeqModulo = gnSeqModulo = pIData->bSeqModulo;
 		m_pIdataPacket->bMaxVChnlsPerSequence = pIData->bMaxVChnlsPerSequence;
 		m_pIdataPacket->bStartChannel = pChannel->m_bChnl;
@@ -888,7 +896,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 						
 						// MAX_RESULTS is the number of uniques channels in the inspection machine = SeqLen*(Chns/main_bang)
 
-						// if unique seq length = 3, then after 10*3 main bangs (30 main bangs)
+						// if unique seq length = 3, then after 16*3 main bangs (48 main bangs)
 						// we will have collected all 3*8 = 24 channels
 						// Send these 24 channel to PAG/ Display & processing system
 						// packet length will be 24*8 + header = 192+64 = 256 bytes
@@ -1064,12 +1072,22 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 			{
 			READBACK_DATA *pRb = (READBACK_DATA *)pIdata;
 			i = pIdata->wMsgID;
-			memcpy((void *)&gLastRdBkPap, (void *)pIdata, sizeof(READBACK_DATA));
-			// switch statement if more read back cmds added
-			if (pRb->wReadBackID = GET_GATE_DATA_ID)
-				memcpy((void *)&gLastGateCmd, (void *)pRb->ReadBack, sizeof(gLastGateCmd));
-			guRdBkMsgCnt++;
-			s.Format(_T("Received Read Back data, wReadBackID = %d"), pRb->wReadBackID);
+			int nByteCount = pRb->wByteCount;
+			if (nByteCount >= 32)
+				{
+				memcpy((void *)&gLastRdBkPap, (void *)pRb, nByteCount);
+				// switch statement if more read back cmds added
+				if (pRb->wReadBackID = GET_GATE_DATA_ID)
+					{
+					int nSeq = pRb->bSeqNumber;
+					// PubExt ST_GATE_READBACK_DATA gLastGateCmd;
+					memcpy((void *)&gLastGateCmd.Seq[nSeq], (void *)pRb->ReadBack, nByteCount);
+					gLastGateCmd.wSeq = pRb->bSeqNumber;
+					}
+				guRdBkMsgCnt++;
+				s.Format(_T("Received Read Back data, wReadBackID = %d"), pRb->wReadBackID);
+				}
+			else s = _T("Readback data less than 32 bytes -- ERROR");
 			SaveDebugLog(s);
 			}
 		else

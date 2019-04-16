@@ -2179,8 +2179,13 @@ void CPA2WinDlg::DestroyCCM( void )
 
 			// wait for a while for the socket to be destroyed
 			i = 0;
-			while (( i < 100 ) && ( pCCM_PAG->m_pstCCM->pSocket->m_hSocket != 0xffffffff) )
-				{	Sleep (10);		i++;	}
+			if (pCCM_PAG->m_pstCCM->pSocket)
+				{
+				while ((i < 100) && (pCCM_PAG->m_pstCCM->pSocket->m_hSocket != 0xffffffff))
+					{
+					Sleep(10);		i++;
+					}
+				}
 			if ( i >= 100) TRACE("CCM - Failed to kill Client socket");
 			Sleep( 20 );
 			pCCM_PAG->KillReceiveThread();
@@ -2453,6 +2458,7 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(SEQ_DATA);	// 32
 	i = sizeof(ASCAN_DATA);	// 1088
 	i = sizeof(ST_CHNL_GAIN_DELAY_CMD);	// 32
+	i = sizeof(READBACK_DATA);	//1088
 
 	}
 
@@ -2687,11 +2693,11 @@ void CPA2WinDlg::ShowIdata(void)
 		m_lbOutput.AddString(t);
 		s = _T("ADC: [  VerHW     VerSW     TempCPU  TempBd]  PULSER: [  VerHW     VerSW     TempCPU       PRF ]");
 		m_lbOutput.AddString(s);
-		s.Format(_T("     %s %s   %02d C     %02d C  ]"), m_sHwVerAdc, m_sSwVerAdc,
+		s.Format(_T("     %s %s   %02d C     %03d C ]"), m_sHwVerAdc, m_sSwVerAdc,
 					gLastAscanPap.bFPGATempA, gLastAscanPap.bBoardTempA);
 		t += s;
 #if 1
-		s.Format(_T("%s %s   %02d C        %5d ]"), m_sHwVerPulser, m_sSwVerPulser,
+		s.Format(_T("%s %s   %03d C       %5d ]"), m_sHwVerPulser, m_sSwVerPulser,
 			gLastAscanPap.wCPU_TempP, gwPap_Prf);	//gwPap_Prf swiped from message to pulser. Not fed back from pulser
 		t += s;
 #endif
@@ -2736,7 +2742,7 @@ void CPA2WinDlg::DebugToNcNxDlg( CString s )
 // 2018-08-13 now use stSCM[ePAP_Server].bActualClientConnection[nClientNumber] to map client  number to actual
 // connection
 
-// Assumes the server for PAP is stSCM[0] which for now is trure
+// Assumes the server for PAP is stSCM[0] which for now is true
 BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the client is the PAP
 	{
 	CString s;

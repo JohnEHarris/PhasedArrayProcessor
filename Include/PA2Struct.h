@@ -78,7 +78,7 @@ enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 
 // Channels may be redefined on each main bang. The counter which counts main bangs is called the sequence counter
 // the maximum value the sequence counter can have was 16, now (2017/07/20) =
-#define MAX_SEQ_COUNT					16
+#define MAX_SEQ_COUNT					3
 
 // The number of virtual channels is finite. Channels repeat after MAX_SEQ_COUNT number of main bangs.
 // On any given main bang (sequence count) there can only be a max number of channels define by 
@@ -557,22 +557,9 @@ typedef struct // READBACK_DATA
 	BYTE bSeqNumber;
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
 /* Change here from format of ASCAN_DATA_HDR */
-	WORD wReadBackID;	// Read back ID for the command data requested
+	WORD wReadBackID;	// Read back ID for the command data requested- a sub command
 
-	//WORD wScopeSetting;	// inform about trigger, thold, other scope settings ... replaced by wBoardType
-	WORD wSendQDepth;	// Are packets accumulating in send queue.... 28 bytes to here
-
-						// Pipe position information
-	BYTE bDin;			// digital input, Bit1=Direction, Bit2=Inspection Enable, Bit4=Away(1)/Toward(0)
-	BYTE bCmdQDepthP;	// Pulser cmd Q depth
-	WORD wLocation;		// x location in motion pulses
-	WORD wAngle;		// unit in .2048ms - ticks from TOP OF PIPE
-	WORD wPeriod;		// unit in .2048ms
-	WORD wRotationCnt;	// Number of rotations since pipe present signal
-	BYTE bFPGATempA;		// ADC board
-	BYTE bBoardTempA;
-	//WORD wStatus;		// see below
-	//WORD wSpare[11];	// 64 bytes to here
+	WORD wSpare[11];
 	BYTE ReadBack[1048];	// 1048 byte. Info depends on what is requested to be read back
 
 	} READBACK_DATA;		// sizeof() = 1088
@@ -580,7 +567,7 @@ typedef struct // READBACK_DATA
 							// A packet of data sent from the Pulser to the PAP server updating pulser status
 typedef struct // PULSER_DATA
 	{
-	WORD wMsgID;		// commands are identified by their ID 0x300
+	WORD wMsgID;		// commands are identified by their ID 0x300+
 	WORD wByteCount;	// Number of bytes in this packet. 64
 	UINT uSync;			// 0x5CEBDAAD 
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream	WORD wMsgID;		// 1 = NC_NX_CMD_ID
@@ -598,32 +585,45 @@ typedef struct // PULSER_DATA
 
 
 
-// The settings for one gate
+// The settings for one gate used by read back command
+// Done instead of a readback from hardware addresses
+// which was deemed unpractical 2019-04-03
+// pairs of data, a control value plus the address where the value is written
+// addresses are built from sequence, channel and gate values
 typedef struct
 	{
-	WORD wDelay;
+	WORD wDelay;	//the delay value written to hardware 
 	WORD wRange;
 	WORD wBlank;
-	WORD wThold;
-	WORD wTrigger;
-	WORD wPolarity;
-	WORD wTOF;
-	} ST_GATE_SETTINGS;	// 14 bytes
+	WORD bThold;
+	WORD bTrigger;
+	WORD bPolarity;
+	WORD bTOF;
+	//
+	WORD wDelayAddr;	//the address of the delay value written to hardware
+	WORD wRangeAddr;
+	WORD wBlankAddr;
+	WORD wTholdAddr;
+	WORD wTriggerAddr;
+	WORD wPolarityAddr;
+	WORD wTOFAddr;
+	} ST_GATE_SETTINGS;	// 28 bytes
 
 typedef struct
 	{
-	ST_GATE_SETTINGS Gate[2];	// only 2 gates in 2018 hardware
-	} ST_GATEINFO_PER_CHANNEL;	// 28 bytes
+	ST_GATE_SETTINGS Gate[4];
+	} ST_GATEINFO_PER_CHANNEL;	// 112 bytes
 
 typedef struct 
 	{
 	ST_GATEINFO_PER_CHANNEL Ch[MAX_CHNLS_PER_MAIN_BANG];	// 8
-	} ST_GATECH_PER_SEQ;	// 8*28 = 224
+	} ST_GATECH_PER_SEQ;	// 8*112 = 896
 
 typedef struct // MAX_SEQ_COUNT = 3 in 2018 hardware
 	{
+	WORD wSeq;	// selects which one of 3 to copy into Wiznet xmit buffer
 	ST_GATECH_PER_SEQ Seq[3];
-	}	ST_GATE_READBACK_DATA;	// 224*3 = 672
+	}	ST_GATE_READBACK_DATA;	// 896 + 2 = 898	//2690 must send 3 msg of 898 each
 
 
 

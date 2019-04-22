@@ -99,6 +99,9 @@ BEGIN_MESSAGE_MAP(CNcNx, CDialogEx)
 	ON_BN_CLICKED(IDC_BN_RECORD, &CNcNx::OnBnClickedBnRecord)
 #endif
 	ON_BN_CLICKED(IDC_RB_PULSERCMD, &CNcNx::OnBnClickedRbPulsercmd)
+	ON_EN_CHANGE(IDC_ED_GATE, &CNcNx::OnEnChangeEdGate)
+	ON_EN_CHANGE(IDC_ED_CH, &CNcNx::OnEnChangeEdCh)
+	ON_EN_CHANGE(IDC_ED_SEQ, &CNcNx::OnEnChangeEdSeq)
 END_MESSAGE_MAP()
 
 
@@ -1421,6 +1424,7 @@ void CNcNx::PulserCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nC
 	SendMsg((GenericPacketHeader*)&m_WordCmd);
 	}
 
+// In resource view, add and event handler for edit box change
 void CNcNx::OnChangeEdParam()
 	{
 	// TODO:  If this is a RICHEDIT control, the control will not
@@ -1433,6 +1437,23 @@ void CNcNx::OnChangeEdParam()
 		m_nParam = m_spParam.GetPos();
 	}
 
+
+// In resource view, add and event handler for edit box change
+void CNcNx::OnEnChangeEdGate()
+	{
+	if (m_nPopulated)		m_nGate = m_spGate.GetPos();
+	}
+
+void CNcNx::OnEnChangeEdCh()	//channel
+	{
+	if (m_nPopulated)		m_nCh = m_spCh.GetPos();
+	}
+
+
+void CNcNx::OnEnChangeEdSeq()
+	{
+	if (m_nPopulated) m_nSeq = m_spSeq.GetPos();
+	}
 
 void CNcNx::IncrementAscanCnt(void)
 	{
@@ -1556,6 +1577,5 @@ void CNcNx::OnBnClickedBnRecord()
 
 	}
 #endif
-
 
 

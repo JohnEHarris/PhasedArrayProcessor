@@ -671,10 +671,10 @@ void GatesTrigger( void );
 void GatesPolarity( void );
 void GatesTOF( void );
 
-void set_gate_delay( WORD bGate, WORD nDelay, WORD nSeq, WORD vChnl);
-void set_gate_range( WORD bGate, WORD nRange, WORD nSeq, WORD vChnl);
-void set_gate_blank( WORD bGate, WORD nBlank, WORD nSeq, WORD vChnl );
-void set_gate_threshold(WORD bGate, WORD nThold, WORD nSeq, WORD vChnl );
+void set_gate_delay( WORD nDelay, WORD nSeq, WORD vChnl, WORD bGate );
+void set_gate_range( WORD nRange, WORD nSeq, WORD vChnl, WORD bGate );
+void set_gate_blank( WORD nBlank, WORD nSeq, WORD vChnl, WORD bGate );
+void set_gate_threshold(WORD nThold, WORD nSeq, WORD vChnl, WORD bGate);
 
 //bit7,6,5,4: gate 4-1 trigger select (0:mbs, 1:threshold);  bit 3-0: gate enable
 void set_gates_trigger(WORD nTrigger, WORD nSeq, WORD vChnl, BYTE bGate);	// Sams void set_gate_control

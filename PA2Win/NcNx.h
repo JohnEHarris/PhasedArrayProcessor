@@ -141,4 +141,7 @@ public:
 	CString m_PulserCmdTxt;
 	CString m_SmallTxt;
 	CString m_LargeTxt;
+	afx_msg void OnEnChangeEdGate();
+	afx_msg void OnEnChangeEdCh();
+	afx_msg void OnEnChangeEdSeq();
 };

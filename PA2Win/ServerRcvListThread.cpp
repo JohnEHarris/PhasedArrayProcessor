@@ -726,7 +726,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 		{
 		switch(pIData->wMsgID)
 			{
-			case eNcNxInspID:
+		case eNcNxInspID:
 			{
 			// For all wall if full packet queue now to All Wall Processor
 			if (pIData->wByteCount = 1088) // and All Wall Flag ON
@@ -956,7 +956,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 #endif
 			/***************** The peak hold opertion on all channels by PAP ********************/
 			break;
-			}
+			}	// case eNcNxInspID:
 
 
 		case eAscanID:	//AScan data... pass thru to PAP
@@ -975,19 +975,58 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			delete m_pIdataPacket;
 			m_pIdataPacket = NULL;
 			break;
-			}
+			}	// case eAscanID
 
 		case eReadBackID:	// Read back.. pass thru to PAP
 			{
-			READBACK_DATA *pIn = (READBACK_DATA *)pIData;
 			READBACK_DATA *pIdataPacket = new (READBACK_DATA);
-			memcpy((void*)pIdataPacket, (void *)pIData, pIn->wByteCount);
-			SendIdataToPag((GenericPacketHeader *)pIdataPacket, 0);
-			memcpy((void *)&gLastRdBkPap, (void *)pIdataPacket, pIn->wByteCount);
+			memcpy((void*)pIdataPacket, (void *)pIData, pIData->wByteCount);
+			
+			//memcpy((void *)&gLastGateCmd, (void *)pIn, pIn->wByteCount);
+			//memcpy((void *)&gLastGateCmd.Seq[nSeq], (void *)pRb->ReadBack, nByteCount)
+			gLastGateCmd.wSeq = pIdataPacket->bSeqNumber;
+			//SendIdataToPag((GenericPacketHeader *)pIdataPacket, 0);	// this path will eventually delete pIdataPacket
+
+			// gLastRdBkPap has one sequence of Gate command data -- 32 gates worth of data
+			//int nSeq;
+			/************************************************************/
+
+			READBACK_DATA *pRb = (READBACK_DATA *)pIData;
+			i = pIData->wMsgID;
+			int nByteCount = pRb->wByteCount;
+			if (nByteCount >= 32)
+				{
+				memcpy((void *)&gLastRdBkPap, (void *)pRb, nByteCount);
+				// switch statement if more read back cmds added
+				if (pRb->wReadBackID = GET_GATE_DATA_ID)
+					{
+					int nSeq = pRb->bSeqNumber;
+					// PubExt ST_GATE_READBACK_DATA gLastGateCmd;
+					memcpy((void *)&gLastGateCmd.Seq[nSeq], (void *)pRb->ReadBack, nByteCount);
+					gLastGateCmd.wSeq = pRb->bSeqNumber;
+					}
+				//guRdBkMsgCnt++;
+				//s.Format(_T("Received Read Back data, wReadBackID = %d"), pRb->wReadBackID);
+				}
+			else s = _T("Readback data less than 32 bytes -- ERROR");
+			SaveDebugLog(s);
+
+			SendIdataToPag((GenericPacketHeader *)pIdataPacket, 0);	// this path will eventually delete pIdataPacket
+
+	
+
+
+
+			/**************************************************************/
+			//memcpy((void *)&gLastGateCmd.Seq[nSeq], (void *)pRb->ReadBack, nByteCount);
+			//gLastGateCmd.wSeq = pRb->bSeqNumber;
+
+			SaveReadBackSequence(&gLastGateCmd);
 			delete m_pIdataPacket;
 			m_pIdataPacket = NULL;
 			break;
-			}
+			}	// case eReadBackID
+
 		default:
 			s.Format(_T("ProcessInstrumentData unknown MsgId, %d\n"), pIData->wMsgID);
 			//delete pIData;	// done in caller function
@@ -1002,6 +1041,48 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 		}
 
 	}	// CServerRcvListThread::ProcessInstrumentData(void *pData)
+
+	// A read back sequence from the ADC board has come thru PAP
+	// Convert the elements to ASCII and write to a log file
+	// Only one sequence at a time. At present (Apr 2019) only 3 sequences of wall data
+void CServerRcvListThread::SaveReadBackSequence(ST_GATE_READBACK_DATA *pLastRdBkPap)
+	{
+	CString s, t;
+	int ic, ig, iseq;
+	if (pMainDlg->m_nReadBackExists == 0) return;
+	ST_GATECH_PER_SEQ *pCh;
+	ST_GATE_SETTINGS *pGate;
+	iseq = pLastRdBkPap->wSeq;
+	int val, addr;
+
+	s.Format(_T("Sequece = %d  *******************************\n"), iseq );
+	t = s;
+	for (ic = 0; ic < 8; ic++)
+		{
+		s.Format(_T("\nCh=%d Dly  Addr   Rng  Addr   Blk  Addr   Thl  Addr   Trg  Addr   Pol  Addr   TOF  Addr\n"), ic);
+		t += s;
+		pCh = (ST_GATECH_PER_SEQ *) &pLastRdBkPap->Seq[iseq].Ch[ic];
+		for (ig = 0; ig < 4; ig++)
+			{
+			pGate = (ST_GATE_SETTINGS *)&pLastRdBkPap->Seq[iseq].Ch[ic].Gate[ig];
+			val = pGate->wDelay;
+			addr = pGate->wDelayAddr;
+
+			s.Format(_T("G%d   %04x %04x   %04x %04x   %04x %04x   %04x %04x   %04x %04x   %04x %04x   %04x %04x\n"),
+				ig,
+				pGate->wDelay, pGate->wDelayAddr,
+				pGate->wRange, pGate->wRangeAddr,
+				pGate->wBlank, pGate->wBlankAddr,
+				pGate->bThold, pGate->wTholdAddr,
+				pGate->bTrigger, pGate->wTriggerAddr,
+				pGate->bPolarity, pGate->wPolarityAddr,
+				pGate->bTOF, pGate->wTOFAddr );
+			t += s;
+				
+			}
+		}
+	pMainDlg->SaveReadBackLog(t);
+	}
 
 	// Maybe not general purpose, but put pulser status into global data
 	// Only one pulser for the system and data is slow moving  2018-10-19

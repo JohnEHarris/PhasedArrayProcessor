@@ -102,7 +102,7 @@ typedef struct
 PubExt GLOBAL_DLG_PTRS gDlg;
 PubExt IDATA_PAP gLastIdataPap;		// data sent to down stream systems from PAP
 PubExt ASCAN_DATA gLastAscanPap;
-PubExt READBACK_DATA gLastRdBkPap;
+PubExt ST_GATE_READBACK_DATA gLastRdBkPap;
 PubExt IDATA_FROM_HW gLastAllWall;
 PubExt ST_GATE_READBACK_DATA gLastGateCmd;
 PubExt ST_SMALL_CMD gLastCmd;	// sized for small cmds, used for both adc commands on PAP screen

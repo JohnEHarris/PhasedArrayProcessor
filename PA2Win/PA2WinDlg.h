@@ -148,9 +148,11 @@ public:
 		
 	CRITICAL_SECTION *pCSSaveDebug;	// control access to debug output 
 	CRITICAL_SECTION *pCSSaveCommands;	// control access to Commands output 
+	CRITICAL_SECTION *pCSSaveReadBack;
 	CFile m_FakeData;
 	CFile m_DebugLog;
 	CFile m_CommandLog;
+	CFile m_ReadBackLog;
 	CFile m_PapNumberFile;
 	CFile m_AltPapNumberFile;	// file store on C drive in \LocalAppExes\MyID
 	int m_nMsgSeqCnt;
@@ -158,6 +160,7 @@ public:
 	int m_nFakeDataExists;
 	int m_nDebugLogExists;
 	int m_mCommandLogExists;
+	int m_nReadBackExists;
 
 	void SaveFakeData(CString& s);
 	void CloseFakeData(void);
@@ -167,6 +170,9 @@ public:
 	// Verify Commands are received by PAP
 	void SaveCommandLog(CString& s);
 	void CloseCommandLog(void);
+	void CPA2WinDlg::SaveReadBackLog(CString& s);
+	void CPA2WinDlg::CloseReadBackLog(void);
+
 	void ReadPAPnumber(void);
 	void DeleteOldPapNumbers(int nNewPap);
 	void GetPAPFromCDrive(void);	// If Read Pap Number doesn't find pap number file in drives  G - D

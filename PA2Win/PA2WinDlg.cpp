@@ -201,6 +201,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	CString s,Fake;	// fake is a debug file with fake data and fake data msg to PAG
 	CString DeBug;	// another debug file to catch printf statements since vs2015 does not output to monitor screen
 	CString Commands;	// catch commands from PAG to PAP
+	CString ReadBack;	// intercept read back message and write to file
 
 	t = GetCommandLine();	// shows ""D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\PhasedArrayMasterVS2010.exe" -i -d"
 	i = t.Find(_T(".exe"));
@@ -218,6 +219,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	Fake = t + _T("FakeData.txt");
 	DeBug = t + _T("Debug.log");
 	Commands = t + _T("Commands.log");
+	ReadBack = t + _T("ReadBack.log");
 	// shows "D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\"
 	// The name of the App becomes an implicit part of the key
 	// We only write Tuboscope, but clever windows makes a subregistry entry of AdpMMI
@@ -246,7 +248,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	//m_pTuboIni = new CTuboIni(t);
 	//i = sizeof (CTuboIni);
 
-	m_nFakeDataExists = m_nDebugLogExists = m_mCommandLogExists = 0;
+	m_nFakeDataExists = m_nDebugLogExists = m_mCommandLogExists = m_nReadBackExists = 0;
 
 	CFileException fileException;
   
@@ -275,6 +277,17 @@ void CPA2WinDlg::MakeDebugFiles(void)
 			Commands, fileException.m_cause);
 		}
 	else m_mCommandLogExists = 1;
+
+	// ReadBack of commands written to NIOS addresses
+	if (!m_ReadBackLog.Open(ReadBack, CFile::modeCreate |
+		CFile::modeReadWrite | CFile::shareDenyNone, &fileException))
+		{
+		TRACE(_T("Can't open file %s, error = %u\n"),
+			ReadBack, fileException.m_cause);
+		}
+	else m_nReadBackExists = 1;
+
+
 	}
 
 
@@ -314,6 +327,8 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	InitializeCriticalSectionAndSpinCount(pCSSaveDebug,4);
 	pCSSaveCommands = new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pCSSaveCommands, 4);
+	pCSSaveReadBack = new CRITICAL_SECTION();
+	InitializeCriticalSectionAndSpinCount(pCSSaveReadBack, 4);
 
 	MakeDebugFiles();
 
@@ -376,6 +391,7 @@ CPA2WinDlg::~CPA2WinDlg()
 	CloseFakeData();
 	CloseDebugLog();
 	CloseCommandLog();
+	CloseReadBackLog();
 
 	Sleep( 100 );
 	if (pCSSaveDebug)
@@ -385,6 +401,10 @@ CPA2WinDlg::~CPA2WinDlg()
 	if (pCSSaveCommands)
 		delete pCSSaveCommands;
 	pCSSaveCommands = 0;
+
+	if (pCSSaveReadBack)
+		delete pCSSaveReadBack;
+	pCSSaveReadBack = 0;
 
 	if (gDlg.pNcNx)
 		{
@@ -1911,7 +1931,6 @@ void CPA2WinDlg::SaveDebugLog(CString& s)
 	{
 #ifdef DEBUGIT
 	char ch[4000];
-	CstringToChar(s,ch,4000);
 	if (0 == m_nDebugLogExists)
 		{
 		TRACE(_T("Debug log file not available\n"));
@@ -1923,6 +1942,7 @@ void CPA2WinDlg::SaveDebugLog(CString& s)
 	EnterCriticalSection(pCSSaveDebug);
 	try
 		{
+		CstringToChar(s, ch, 4000);
 		m_DebugLog.Write(ch,(int)strlen(ch));	// I want to see ASCII in the file
 		//m_DebugLog.Flush(); -- not needed. Kills Nc Nx processing time
 		}
@@ -1961,7 +1981,6 @@ void CPA2WinDlg::SaveCommandLog(CString& s)
 	{
 #if 1
 	char ch[4000];
-	CstringToChar(s, ch, 4000);
 	if (0 == m_mCommandLogExists)
 		{
 		TRACE(_T("Command log file not available\n"));
@@ -1973,6 +1992,7 @@ void CPA2WinDlg::SaveCommandLog(CString& s)
 		EnterCriticalSection(pCSSaveCommands);
 		try
 			{
+			CstringToChar(s, ch, 4000);
 			m_CommandLog.Write(ch, (int)strlen(ch));	// I want to see ASCII in the file
 			//m_DebugLog.Flush(); -- not needed. Kills Nc Nx processing time
 			}
@@ -2005,13 +2025,13 @@ void CPA2WinDlg::CloseCommandLog(void)
 	m_mCommandLogExists = 0;
 	}
 
+
 /********  Fake Data File *********/
 
 void CPA2WinDlg::SaveFakeData(CString& s)
 	{
 #ifdef DEBUGIT
 	char ch[4000];
-	CstringToChar(s,ch,4000);
 	if (0 == m_nFakeDataExists)
 		{
 		TRACE(_T("Fake data file not available\n"));
@@ -2019,6 +2039,7 @@ void CPA2WinDlg::SaveFakeData(CString& s)
 		}
 	try
 		{
+		CstringToChar(s, ch, 4000);
 		m_FakeData.Write(ch,(int)strlen(ch));	// I want to see ASCII in the file
 		//m_FakeData.Flush();
 		}
@@ -2049,6 +2070,57 @@ void CPA2WinDlg::CloseFakeData(void)
 		}
 	m_nFakeDataExists = 0;
 	}
+
+/********  ReadBack File *********/
+void CPA2WinDlg::SaveReadBackLog(CString& s)
+	{
+#ifdef DEBUGIT
+	char ch[16000];
+	if (0 == m_nReadBackExists)
+		{
+		TRACE(_T("Cmd Read Back log file not available\n"));
+		return;
+		}
+
+	if (m_ReadBackLog.m_hFile > 0)
+		{
+		EnterCriticalSection(pCSSaveReadBack);
+		try
+			{
+			CstringToChar(s, ch, 8000);
+			m_ReadBackLog.Write(ch, (int)strlen(ch));	// I want to see ASCII in the file
+			//m_DebugLog.Flush(); -- not needed. Kills Nc Nx processing time
+			}
+		catch (CFileException* e)
+			{
+			e->ReportError();
+			e->Delete();
+			}
+		LeaveCriticalSection(pCSSaveReadBack);
+		}
+#endif
+	}
+
+void CPA2WinDlg::CloseReadBackLog(void)
+	{
+	if (0 == m_nReadBackExists)
+		{
+		TRACE(_T("Read Back log file not available\n"));
+		return;
+		}
+	try
+		{
+		m_ReadBackLog.Close();
+		}
+	catch (CFileException* e)
+		{
+		e->ReportError();
+		e->Delete();
+		}
+	m_nReadBackExists = 0;
+	}
+
+
 
 // This timer only runs the PA2WinDlg screen.
 // Timed connection attempts to PAG if this is PAP are done by pings from the TestThread
@@ -2693,7 +2765,7 @@ void CPA2WinDlg::ShowIdata(void)
 		m_lbOutput.AddString(t);
 		s = _T("ADC: [  VerHW     VerSW     TempCPU  TempBd]  PULSER: [  VerHW     VerSW     TempCPU       PRF ]");
 		m_lbOutput.AddString(s);
-		s.Format(_T("     %s %s   %02d C     %03d C ]"), m_sHwVerAdc, m_sSwVerAdc,
+		s.Format(_T("     %s %s   %03d C    %03d C ]"), m_sHwVerAdc, m_sSwVerAdc,
 					gLastAscanPap.bFPGATempA, gLastAscanPap.bBoardTempA);
 		t += s;
 #if 1

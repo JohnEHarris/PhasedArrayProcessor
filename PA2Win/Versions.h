@@ -2,7 +2,7 @@
 
 // I AM PAG  *******************
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			16
+#define BUILD_VERSION			17
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -18,6 +18,8 @@
 
 /*
 Show the version number of this program. Newest version on TOP
+1.0.017 2019-05-06 Add ReadBack log to PAP/PAG. Increase small cmds to 40. Add GateBlast cmd.
+					Reduce size of Blast300 cmd
 1.0.016 2019-04-22 Change NcNx window seq/chnl/gate with edit in addition to spinner. Change
 					gate cmds to begin with gate variable instead of gate number
 1.0.015 2019-04-12 Start testing Gate Cmd Read back from ADC board

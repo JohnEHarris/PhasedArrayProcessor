@@ -41,7 +41,7 @@ the PAP and PAG
 
 
 /*****************	COMMANDS *********************/
-#define TOTAL_COMMANDS				33		// small commands
+#define TOTAL_COMMANDS				40		// small commands
 #define LAST_SMALL_COMMAND			TOTAL_COMMANDS - 1
 
 
@@ -86,8 +86,10 @@ the PAP and PAG
 #define SET_WALL_NX_CMD_ID			28		// only runs on PAP, not in the Nios
 #define DEBUG_PRINT_CMD_ID			29		// was TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
 											// Moved to 31. DebugPrint moves into 29
+#define READ_BACK_CMD_ID			30
 #define TCG_BEAM_GAIN_ALL_CMD_ID	31		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
-//#define ADC_WIZ_RESET_CMD_ID		32		// bit0=0, ADC board Wiznet ONLY init. bit 0 set, reset ADC BRD also
+#define INIT_ADC_CMD_ID				32		// initialize gate settings .. small gate cmds.
+#define GATE_BLAST_CMD_ID			33		// Set Gate Cmds to test Read Back packet from ADC
 											
 											
 //*******************************************

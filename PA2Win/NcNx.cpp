@@ -354,7 +354,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("Gate n Blank"));		m_cbCommand.AddString(s);	//4
 		s.Format(_T("Gate n Thold"));		m_cbCommand.AddString(s);	//5
 		s.Format(_T("Gate n Trigger"));		m_cbCommand.AddString(s);	//6
-		s.Format(_T("Gate n Polarty"));		m_cbCommand.AddString(s);	//7
+		s.Format(_T("Gate n Polarity"));	m_cbCommand.AddString(s);	//7
 		s.Format(_T("Gate n TOF"));			m_cbCommand.AddString(s);	//8
 		s.Format(_T("SetChnlTrigger"));		m_cbCommand.AddString(s);	//9  TCGProbeTrigger T("TCGChnlTrigger")
 		s.Format(_T("TCGGainClock"));		m_cbCommand.AddString(s);	//10
@@ -381,7 +381,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("ReadBack"));				m_cbCommand.AddString(s);	//30
 		s.Format(_T("TcgBeamGainAll"));			m_cbCommand.AddString(s);	//31
 		s.Format(_T("InitADC"));				m_cbCommand.AddString(s);	//32
-		s.Format(_T("ProcNull"));				m_cbCommand.AddString(s);	//33
+		s.Format(_T("GateBlast"));				m_cbCommand.AddString(s);	//33
 
 		m_cbCommand.SetCurSel(2);
 		break;
@@ -515,6 +515,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			case 30: s.Format(_T("ReadBk SubCmd %d"), m_nParam);	break;
 			case 31: s.Format(_T("TcgBeamGainAll %d"), m_nParam);	break;
 			case 32: s = _T("ADC Init");							break;
+			case 33: s = _T("GateBlast");
 			case 0x204: s = _T("TCG_BEAM_GAIN");					break;
 			case 0x205: s = _T("TCG_SEQ_GAIN");						break;
 			default:	s = t;		break;
@@ -572,7 +573,9 @@ void CNcNx::OnCbnSelchangeCbCmds()
 				case 30:
 					ReadBackCmd(m_nPAP, m_nBoard, m_nSeq, m_nCmdId, m_nParam);	break;
 				case 32:
-					SamInitAdc(m_nPAP, m_nBoard, m_nParam);				break;
+					SamInitAdc(m_nPAP, m_nBoard, m_nParam);	break;
+				case 33:
+					GateBlast(m_nPAP, m_nBoard, m_nSeq);	break;
 				default:
 					break;
 				}
@@ -981,7 +984,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	
 #if 1
 	// 500 large cmds
-	for (i = 0; i < 500; i++)
+	for (i = 0; i < 50; i++)	// was 500
 		{
 		CmdL.wMsgID = 516;
 		CmdL.wCmd[0] = i;
@@ -996,7 +999,7 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 			m_lbOutput.AddString(s);
 			}
 		SendMsg((GenericPacketHeader*)&CmdL);
-		Sleep(10);
+		//Sleep(20);	// was 10
 		}
 #if 1
 	// final blast of 50 pulser commands - not prf
@@ -1066,7 +1069,6 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 		}	// pulser command loop
 	// restore Pulser to initial condition
 	//SamInitPulser(m_nPAP, m_nBoard);
-#endif
 
 	Cmd.wMsgID = 0x300;
 	Cmd.wCmd[0] = 12000;	// 12000 works very good in office
@@ -1076,7 +1078,47 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 
 	m_lbOutput.AddString(s);
 	SendMsg((GenericPacketHeader*)&Cmd);
+#endif
+
 	Sleep(500);
+	}
+
+// Set recognizable pattern for gate cmds to be read back
+// Test (somewhat) if command sent shows correctly in ReadBack data 2019-05-03
+
+void CNcNx::GateBlast(int m_nPAP, int m_nBoard, int Seq)
+	{
+	int is, ic, ig;	// seq/chnl/gate
+	int iCmd, nGateVal;
+	ST_GATE_DELAY_CMD *pCmdG = (ST_GATE_DELAY_CMD *)&Cmd;
+	BYTE *pB = (BYTE *)&Cmd;
+	CString s;
+	Cmd.uSync = SYNC;
+	Cmd.wByteCount = 32;
+	Cmd.bPapNumber = m_nPAP;
+	Cmd.bBoardNumber = m_nBoard;
+	
+	is = Seq & 3;	// seq = 0,1,2 only
+	if (is == 3) is = 2;
+	pCmdG->bSeq = is;
+	for (iCmd = 2; iCmd < 9; iCmd++)
+		{
+		Cmd.wMsgID = iCmd;
+		nGateVal = 1;
+		for (ic = 0; ic < 8; ic++)
+			{
+			pCmdG->bChnl = ic;
+			for (ig = 0; ig < 4; ig++)
+				{
+				pCmdG->bGateNumber = ig;
+				pCmdG->wDelay =  nGateVal++;
+				SendMsg((GenericPacketHeader*)&Cmd);
+				s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Seq=%d, Ch=%d, G=%d, wCmd=%5d\n"),
+					Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, is, ic, ig, pCmdG->wDelay);
+				m_lbOutput.AddString(s);
+				}	// for (ig = 0; ig < 4; ig++)
+			}	// for (ic = 0; ic 8; ic++)
+		}	// for (iCmd = 2; iCmd < 9; iCmd++)
 	}
 
 // cmd 13 ProcNull for ADC   Something else for UUI

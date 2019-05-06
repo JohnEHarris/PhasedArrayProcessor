@@ -99,6 +99,7 @@ public:
 	ST_READ_BACK_CMD m_RdBkCmd;
 
 	void Blast(int m_nPAP, int m_nBoard);	// blast a lot of commands to test FIFO's
+	void GateBlast(int m_nPAP, int m_nBoard, int Seq);	// Set all gate & gate cmds to test ReadBack
 	void DebugPrint(int nPap, int nBoard, int nCmd, int nValue);
 	void ProcNull(int nPap, int nBoard, int nCmd, int nValue);
 	void SamInitAdc(int nPap, int nBoard, int nSel);

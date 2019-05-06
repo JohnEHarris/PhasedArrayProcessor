@@ -854,7 +854,7 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case 27: MsgPrint(pCmd, "Ascan Period <27> wCmd = milliseconds");		break;
 	case 28: MsgPrint(pCmd, "WallNx <28> wCmd = Nx");				break;
 	case 29: MsgPrint(pCmd, "DebugPrint <29> wCmd = gain");			break;
-	case 30: MsgPrint(pCmd, "ReadBack <30> wCmd = ?");				break;
+	case 30: MsgPrint(pCmd, "ReadBack <30> wCmd = ReadBack");		break;
 	case 32: MsgPrint(pCmd, "SamInitAdc <32>");						break;
 	case TCG_GAIN_CMD_ID:	  MsgPrintLarge(pCmdL, "TCGBeamGain <516> wCmd[0..3]");		break;
 	case SEQ_TCG_GAIN_CMD_ID: MsgPrintLarge(pCmdL, "SetSeqTCGGain <517> wCmd[0..3]");	break;
@@ -902,6 +902,7 @@ void CServerSocketOwnerThread::MsgPrint(ST_SMALL_CMD *pCmd, char *msg)
 		s = u;
 		}
 	s += t;
+	t = s;
 	t.Format(_T(" Seq=%d, Ch=%d, Gate=%d, wCmd=%d\n"),	 
 		pwCmd->bSeq, pwCmd->bChnl, pwCmd->bGateNumber, pwCmd->wCmd);
 

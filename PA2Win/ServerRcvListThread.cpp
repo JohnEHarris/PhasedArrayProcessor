@@ -807,6 +807,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			m_Seq = nStartSeq = pIData->bStartSeqNumber;	// only used to find which pChannel
 			m_Ch = 0;	// pIData->stSeqPkt[iSeqPkt].DataHead.bChnlNumber;
 			gnSeqModulo = pIData->bSeqModulo;
+			if (gnSeqModulo == 0) gnSeqModulo = 3;
 			m_nFullPacketChnls = gnSeqModulo*8;
 			gbStartSeqNumberIncrement = 32 % gnSeqModulo;
 			// gnSeqModulo channels

@@ -33,9 +33,13 @@ public:
 	// Testing Nc function
 	void TestNc(void);
 	void TestNx(void);
+	void TestAdcFifo(void);
+	void InitCmdFifo(void);
+	void InitSmallCmdFifo(void);
+	
 
 	ST_CLIENT_CONNECTION_MANAGEMENT *m_pstCCM;	// pointer to my global structure instance 
-
+	WORD m_MsgId[256];
 protected:
 	DECLARE_MESSAGE_MAP()
 };

@@ -86,6 +86,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 	// Use debugger to test Nc operation
 	//TestNc();
 	TestNx();
+	TestAdcFifo();
 	
 	// Infinite loop waiting on handle which never gets set
 	// Wakes every 100 ms and post msg to client threads primarily
@@ -245,4 +246,212 @@ void CTestThread::TestNx(void)
 		}
 
 	delete pCh;
+	}
+
+/******************* ADC FIFO DEBUG *************************/
+
+// Add code from ADC TO test ADC fifo's
+#define CMD_BUF_MODULO	16
+#define SMALL_CMD_PACKET_SIZE	32			// 16 byte header, 16 bytes data
+typedef struct
+	{
+	BYTE bIn;	// next empty slot in FIFo to hold a new command. 0-7
+	BYTE bOut;	// points to next command in FIFO to be executed. 0-7
+	BYTE bCnt;	// number of unexecuted commands in FIFO. 0-7
+	BYTE bSpare;	// enforce 32 bit boundaries
+	WORD wOffset[CMD_BUF_MODULO];	// offset from beginning of buffer for each BUF[]
+	// FOR inputs, the insertion point is &Buf[bIn][wOffset[bIn]]
+	WORD wLost;	//Input overwrote an out, increment lost when this happens
+	BYTE BUF[CMD_BUF_MODULO][MAX_CMD_PACKET_SIZE];	// 16*1056 = 16896
+	} CMD_FIFO;
+
+
+// Add a second cmd fifo for small commands 2017-02-24 jeh
+// In adc small buf modulo is 128
+#define SMALL_CMD_BUF_MODULO	4
+//small command still has 16 byte header + 16 byte command data
+
+typedef struct
+	{
+	BYTE bIn;	// next empty slot in FIFo to hold a new command. 0-127
+	BYTE bOut;	// points to next command in FIFO to be executed. 0-127
+	BYTE bCnt;	// number of unexecuted commands in FIFO. 0-127
+	BYTE bSpare;	// enforce 32 bit boundaries
+	WORD wOffset[SMALL_CMD_BUF_MODULO];	// offset from beginning of buffer for each BUF[]
+	// FOR inputs, the insertion point is &Buf[bIn][wOffset[bIn]]
+	WORD wLost;	//Input overwrote an out, increment lost when this happens
+	BYTE BUF[SMALL_CMD_BUF_MODULO][SMALL_CMD_PACKET_SIZE];	// [128][32] all on 32 bit boundaries
+	} SMALL_CMD_FIFO;
+
+CMD_FIFO CmdFifo;
+SMALL_CMD_FIFO SmallCmdFifo;
+
+BYTE* GetCmdFifoOutputPtr(void)
+	{
+	BYTE *pOut;
+	pOut = &CmdFifo.BUF[CmdFifo.bOut][0];
+	if (CmdFifo.bCnt > 0)
+		{
+		CmdFifo.bCnt--;
+		CmdFifo.bOut++;
+		CmdFifo.bOut %= CMD_BUF_MODULO;
+		}
+	return pOut;
+	}
+
+BYTE* GetSmallCmdFifoOutputPtr(void)
+	{
+	BYTE *pOut;
+	pOut = &SmallCmdFifo.BUF[SmallCmdFifo.bOut][0];
+	if (SmallCmdFifo.bCnt > 0)
+		{
+		SmallCmdFifo.bCnt--;
+		SmallCmdFifo.bOut++;
+		SmallCmdFifo.bOut %= SMALL_CMD_BUF_MODULO;
+		}
+	return pOut;
+	}
+
+// only called from Wiznet interrupt routine
+BYTE* GetNextSmallCmdFifoInputPtr(void)
+	{
+	BYTE *pIn;
+	SmallCmdFifo.bCnt++;	// assumes data will be immediately copied into the FIFO
+	if (SmallCmdFifo.bCnt > SMALL_CMD_BUF_MODULO)
+		{
+		// lost oldest element in FIFO
+		SmallCmdFifo.bOut = SmallCmdFifo.bIn;
+		SmallCmdFifo.bOut %= SMALL_CMD_BUF_MODULO;
+		SmallCmdFifo.wLost++;
+		SmallCmdFifo.bCnt = SMALL_CMD_BUF_MODULO;
+		}
+
+	SmallCmdFifo.bIn++;
+	SmallCmdFifo.bIn %= SMALL_CMD_BUF_MODULO;	// modulo 5 counter
+	SmallCmdFifo.wOffset[SmallCmdFifo.bIn] = 0;	// start with all 32 bytes available
+	pIn = &SmallCmdFifo.BUF[SmallCmdFifo.bIn][0];
+	return pIn;
+	}
+
+BYTE* GetSmallCmdFifoInputPtr(void)
+	{
+	BYTE *pIn;
+	pIn = &SmallCmdFifo.BUF[SmallCmdFifo.bIn][0];
+	SmallCmdFifo.wOffset[SmallCmdFifo.bIn] = 0;	// start with all 32 bytes available	
+
+	// increment input pointer in preparation for next call
+	SmallCmdFifo.bIn++;
+	SmallCmdFifo.bIn %= SMALL_CMD_BUF_MODULO;
+	SmallCmdFifo.bCnt++;	// adding a cmd to small buffer
+	if (SmallCmdFifo.bCnt > SMALL_CMD_BUF_MODULO)
+		{
+		SmallCmdFifo.bIn = SmallCmdFifo.bOut;
+		SmallCmdFifo.wLost++;		// lost oldest element in FIFO
+		gwSmallCmdLost = SmallCmdFifo.wLost;
+		SmallCmdFifo.bOut = SmallCmdFifo.bIn + 1;
+		SmallCmdFifo.bOut %= SMALL_CMD_BUF_MODULO;
+		SmallCmdFifo.bCnt = SMALL_CMD_BUF_MODULO;
+		gwStatus |= SMALL_CMD_BUF_OVERFLOW;
+		gwStatusHoldCnt = 3;
+		}
+	return pIn;
+	}
+
+BYTE GetCmdsWaiting(void)
+	{
+	return CmdFifo.bCnt;
+	}
+
+BYTE GetSmallCmdsWaiting(void)
+	{
+	return SmallCmdFifo.bCnt;
+	}
+
+
+void CTestThread::InitCmdFifo(void)
+	{
+	memset(&CmdFifo, 0, sizeof(CmdFifo));
+	}
+
+void CTestThread::InitSmallCmdFifo(void)
+	{
+	memset(&SmallCmdFifo, 0, sizeof(SmallCmdFifo));
+	}
+
+
+void CTestThread::TestAdcFifo(void)
+	{
+	ST_SMALL_CMD SmallCmd;
+	ST_GATE_DELAY_CMD *pGateCmd = (ST_GATE_DELAY_CMD*)&SmallCmd;
+	ST_SMALL_CMD *pCmdBuf;
+	
+	CString s;
+	int i, j, k;
+	i = sizeof(SmallCmd);
+	SmallCmd.uSync = SYNC;
+	SmallCmd.wMsgID = 2;
+	SmallCmd.wByteCount = 32;
+	SmallCmd.bPapNumber = 0;
+	SmallCmd.bBoardNumber = 0;
+	pGateCmd->bSeq = 0;
+	pGateCmd->bChnl = 1;
+	pGateCmd->bGateNumber = 1;
+	k = 0;	// retrieved msg id's from small fifo
+
+	InitCmdFifo();
+	InitSmallCmdFifo();
+	//puts("Output doesn't start until 33rd input\n");
+	for (j = 0; j < 10; j++)
+		{
+		for (i = 0; i < 16; i++)
+			{
+			SmallCmd.wMsgID = (i & 7) + 2;
+			SmallCmd.wCmd[0] = SmallCmd.wMsgID;
+			// put 1 command in, take 1 out
+			pCmdBuf = (ST_SMALL_CMD *)GetSmallCmdFifoInputPtr();	// assume will always get entire small command
+			memcpy((void*)pCmdBuf, (void*)&SmallCmd, sizeof(ST_SMALL_CMD));
+			s.Format(_T("i=%02d,j=%02d, MsgID = %d Lost = %d\n"), i, j, pCmdBuf->wMsgID, gwSmallCmdLost);
+			TRACE(s);
+
+			if (j > 2)
+				{	// output now lags input... thus the final while loop should execute
+				if (GetSmallCmdsWaiting())
+					{
+					ST_LARGE_CMD *pPacket = (ST_LARGE_CMD *)GetSmallCmdFifoOutputPtr();
+					if (pPacket->wMsgID < TOTAL_COMMANDS)
+						{
+						s.Format(_T("[%03d] In= %d, Out=%d, Cnt=%d, Lost=%d  \n"), (j * 16 + i + 1),
+							SmallCmdFifo.bIn, SmallCmdFifo.bOut, SmallCmdFifo.bCnt, SmallCmdFifo.wLost);
+						TRACE(s);
+						m_MsgId[k++] = pPacket->wMsgID;
+						}
+
+						//CmdExecutive(pPacket);
+					else
+						{
+						s.Format(_T("Skipped command [j][i] %d %d\n"), j, i);
+						TRACE(s);
+						}
+					}
+				else
+					{
+					s.Format(_T("No small commands waiting [j][i] %d %d \n"), j, i);
+					TRACE(s);
+					}
+				}
+			}	// for (i = 0; i < 16; i++)
+		} // for (j = 0; j < 10; j++)
+
+	while (GetSmallCmdsWaiting())
+		{
+		ST_LARGE_CMD *pPacket = (ST_LARGE_CMD *)GetSmallCmdFifoOutputPtr();
+		if (pPacket->wMsgID < TOTAL_COMMANDS)
+			{
+			s.Format(_T("[%03d] In= %d, Out=%d, Cnt=%d, Lost=%d  \n"), (j * 16 + i + 1),
+				SmallCmdFifo.bIn, SmallCmdFifo.bOut, SmallCmdFifo.bCnt, SmallCmdFifo.wLost);
+			TRACE(s);
+			m_MsgId[k++] = pPacket->wMsgID;
+			}
+		}
+
 	}

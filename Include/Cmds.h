@@ -499,7 +499,9 @@ typedef struct
 	WORD wFill[6];	// all 0
 	}	ST_BEAM_TYPE_CMD;
 
-
+// ID =1 Read back all gates commands
+// ID =2 Read back TCG Beam Gain 
+// ID =3 Read back TCG Seq Gain settings 128 Seq 0
 typedef struct
 	{
 	GenericPacketHeader Head;	// wMsgID= READBACK_CMD_ID = 30

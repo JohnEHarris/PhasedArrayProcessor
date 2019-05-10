@@ -79,6 +79,7 @@ public:
 
 
 	int m_nCmdId;
+	int m_nReadBackWhat;
 	void PopulateCmdComboBox();
 
 	ST_GATE_DELAY_CMD m_GateCmd;
@@ -145,4 +146,6 @@ public:
 	afx_msg void OnEnChangeEdGate();
 	afx_msg void OnEnChangeEdCh();
 	afx_msg void OnEnChangeEdSeq();
+	CComboBox m_cbReadWhat;
+	afx_msg void OnCbnSelchangeCbRdwhat();
 };

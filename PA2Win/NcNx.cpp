@@ -78,6 +78,7 @@ void CNcNx::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDLARGE_CMD, m_LargeCmdTxt);
 	DDX_Text(pDX, IDC_EDSMAL_CMD, m_SmallTxt);
 	DDX_Text(pDX, IDC_EDLARGE_CMD, m_LargeTxt);
+	DDX_Control(pDX, IDC_CB_RDWHAT, m_cbReadWhat);
 	}
 
 
@@ -102,6 +103,7 @@ BEGIN_MESSAGE_MAP(CNcNx, CDialogEx)
 	ON_EN_CHANGE(IDC_ED_GATE, &CNcNx::OnEnChangeEdGate)
 	ON_EN_CHANGE(IDC_ED_CH, &CNcNx::OnEnChangeEdCh)
 	ON_EN_CHANGE(IDC_ED_SEQ, &CNcNx::OnEnChangeEdSeq)
+	ON_CBN_SELCHANGE(IDC_CB_RDWHAT, &CNcNx::OnCbnSelchangeCbRdwhat)
 END_MESSAGE_MAP()
 
 
@@ -121,6 +123,7 @@ void CNcNx::DebugOut(CString s)
 BOOL CNcNx::OnInitDialog()
 	{
 	CDialogEx::OnInitDialog();
+	CString s;
 
 	// TODO:  Add extra initialization here
 	PositionWindow();
@@ -153,6 +156,15 @@ BOOL CNcNx::OnInitDialog()
 #endif
 
 	m_cbCommand.SetCurSel ( 2 );	// Gate Delay
+
+
+	// ReadWhat Combo
+	m_cbReadWhat.ResetContent();
+	s.Format(_T("GateCmds"));			m_cbReadWhat.AddString(s); // m_RdBkCmd.wReadBackID = 1;
+	s.Format(_T("TCGBeamGain"));		m_cbReadWhat.AddString(s); // TCGBeamGain is cmd 0x204  m_RdBkCmd.wReadBackID = 2;
+	s.Format(_T("TCGSeqGain"));			m_cbReadWhat.AddString(s); // TCGSeqGain  is cmd 0x205  m_RdBkCmd.wReadBackID = 3;
+	m_cbReadWhat.SetCurSel(0);
+	m_nReadBackWhat = 1;	// default to gates
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // EXCEPTION: OCX Property Pages should return FALSE
@@ -1220,7 +1232,7 @@ void CNcNx::ReadBackCmd(int nPap, int nBoard, int nSeq, int nCmd, int nValue)
 	m_RdBkCmd.Head.bPapNumber = nPap;
 	m_RdBkCmd.Head.bBoardNumber = nBoard;
 	m_RdBkCmd.bSeq = nSeq;
-	m_RdBkCmd.wReadBackID = 1;	// nValue;	// this is the nValue parameter-which data to send back
+	m_RdBkCmd.wReadBackID = m_nReadBackWhat;	// nValue;	// this is the nValue parameter-which data to send back
 	// wReadBackID = 1 means send back gates data by seq number.
 
 	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d,  RdBkID = %2d\n"),
@@ -1621,3 +1633,10 @@ void CNcNx::OnBnClickedBnRecord()
 #endif
 
 
+void CNcNx::OnCbnSelchangeCbRdwhat()
+	{
+	// TODO: Add your control notification handler code here
+	int nSel;
+	nSel = m_cbReadWhat.GetCurSel();
+	m_nReadBackWhat = nSel + 1;
+	}

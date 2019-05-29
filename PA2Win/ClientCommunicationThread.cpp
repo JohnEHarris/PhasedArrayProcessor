@@ -1142,6 +1142,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 #endif
 
 		// examine the MsgId of the extracted packet to see what type message it really is
+		// 0 connection is NcNx data, 1 is All Wall data
 		switch (m_pMyCCM->m_nMyConnection)
 			{
 		case 0:

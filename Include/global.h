@@ -79,6 +79,7 @@ PubExt ASCAN_DATA FakeASCAN;
 PubExt READBACK_DATA ReadBackDATA;
 PubExt BYTE gbFakeDataCmd;		// change operation of Xmit interrupt when fake data
 PubExt ST_GATE_READBACK_DATA GateCmdData;		// a copy of every gate command setting received
+PubExt ST_TCG_BEAM_GAIN_READBACK_DATA TcgGainReadback;
 PubExt BYTE gbFakeDataCnt;
 
 
@@ -105,6 +106,7 @@ PubExt ASCAN_DATA gLastAscanPap;
 PubExt ST_GATE_READBACK_DATA gLastRdBkPap;
 PubExt IDATA_FROM_HW gLastAllWall;
 PubExt ST_GATE_READBACK_DATA gLastGateCmd;
+PubExt ST_TCG_BEAM_GAIN_READBACK_DATA gLastBeamGainReadBack;
 PubExt ST_SMALL_CMD gLastCmd;	// sized for small cmds, used for both adc commands on PAP screen
 PubExt WORD gwMax0, gwMin0, gwMin1_0, gwMin2_0, gwZeroCnt, gwNot0;	// max and min of seq0, chnl 0
 #endif
@@ -122,6 +124,7 @@ PubExt WORD gwMsgSeqCnt;		// increments when Idata or Ascan sent
 PubExt BYTE gbStartSeqNumber;	// starting sequence number for next Idata packet
 PubExt BYTE gbStartSeqNumberIncrement;
 PubExt WORD gwLastCmdId;	// keep cmd ID of last command executed by NIOS
+PubExt WORD gwLastCmdSeqCnt;	// Msg seq count of last received command
 PubExt WORD gw1stWordCmd;	// keep 1st cmd word of last command executed by NIOS
 PubExt BYTE gbCmdSeq;
 PubExt BYTE gbCmdChnl;

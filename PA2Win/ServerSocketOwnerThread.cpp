@@ -589,7 +589,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	int nSent;
 	int nMsgSize;
 	int i = -1;
-	int j;
+	int j = 0;
 	int nError;
 	ST_LARGE_CMD *pCmd;
 	ST_SMALL_CMD *pCmdS;
@@ -695,7 +695,10 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 			{
 			if (m_pSCC == NULL)				break;
 			if (m_pSCC->pSocket == NULL)	break;
-			if (i == 2) Sleep(10);
+			//if (i == 2)
+#ifdef I_AM_PAP
+				Sleep(10);
+#endif
 			nSent = m_pSCC->pSocket->Send( (void *) pCmd, nMsgSize,0);
 			if (nSent == nMsgSize)
 				{
@@ -703,13 +706,23 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				m_pSCC->uPacketsSent++;
 				m_nConfigMsgQty++;
 				// capture copy of last cmd for display info on PAP screen
+				// ReadBack breaks the typical command format
+				
 				memcpy((void *)&gLastCmd, (void *)pCmd, sizeof(ST_SMALL_CMD));
+				if (pCmd->wMsgID == 30)
+					{
+					gLastCmd.wMsgID = 30;
+					gLastCmd.wMsgSeqCnt = pCmd->wMsgSeqCnt;
+					Sleep(10);
+					}
+#ifdef I_AM_PAP
 				// sleep every other 4th packet
 				if ((pCmd->wMsgSeqCnt & 3) == 0)
 					{
 					Sleep(10);
 					j = 0;
 					}
+#endif
 				// debug info to trace output.. losing connection when attempting to download config file
 				if ((m_pSCC->uPacketsSent & 0xff) == 0)
 					{
@@ -724,7 +737,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 					if (pCmd->wMsgID < TOTAL_COMMANDS)
 						{
 						m_bSmallCmdSent++;
-						if ((m_bSmallCmdSent & 3) == 0)
+						//if ((m_bSmallCmdSent & 3) == 0)
 							{
 							//s = _T("Sleep after 4 small commands\n");
 							//pMainDlg->SaveCommandLog(s);
@@ -741,8 +754,8 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 							//pMainDlg->SaveCommandLog(s);
 							Sleep(30);
 							j = 3;
-							if ((m_bLargeCmdSent & 0x1) == 0)
-								Sleep(30);
+							//if ((m_bLargeCmdSent & 0x1) == 0)
+								//Sleep(30);
 							}
 						}
 					else if (pCmd->wMsgID < TOTAL_PULSER_COMMANDS + 0x300)

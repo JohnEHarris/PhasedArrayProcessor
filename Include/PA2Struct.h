@@ -560,7 +560,7 @@ typedef struct // READBACK_DATA
 	WORD wReadBackID;	// Read back ID for the command data requested- a sub command
 
 	WORD wSpare[11];
-	BYTE ReadBack[1048];	// 1048 byte. Info depends on what is requested to be read back
+	BYTE ReadBackBlock[1048];	// 1048 byte. Info depends on what is requested to be read back
 
 	} READBACK_DATA;		// sizeof() = 1088
 
@@ -617,15 +617,37 @@ typedef struct
 typedef struct 
 	{
 	ST_GATEINFO_PER_CHANNEL Ch[MAX_CHNLS_PER_MAIN_BANG];	// 8
-	} ST_GATECH_PER_SEQ;	// 8*112 = 896
+	} ST_GATE_CH_PER_SEQ;	// 8*112 = 896
 
 typedef struct // MAX_SEQ_COUNT = 3 in 2018 hardware
 	{
 	WORD wSeq;	// selects which one of 3 to copy into Wiznet xmit buffer
-	ST_GATECH_PER_SEQ Seq[3];
+	ST_GATE_CH_PER_SEQ Seq[3];
 	}	ST_GATE_READBACK_DATA;	// 896 + 2 = 898	//2690 must send 3 msg of 898 each
 
+/****************************************************************/
+// NEED ALL 8 BEAMS FOR 3 SEQUENCES ABOUT 3K. SEND BACK 3 READBACKS 1 FOR EACH SEQUENCE
 
+// TCG Beam gain profile cmd 0x204
+typedef struct // Gain-Address set
+	{
+	WORD wStartAddr;
+	BYTE bGainPerCh[128];	// only saving 128 bytes
+	} ST_ELEMENT_GAIN_PER_Ch;	// sizeof = 130
+
+typedef struct
+	{
+	ST_ELEMENT_GAIN_PER_Ch Chnl[8];
+	} ST_CHNL_PER_SEQ;		// 1040
+
+
+typedef struct // cmd 205H
+	{
+	WORD wSeq;
+	ST_CHNL_PER_SEQ Seq[3];	// Only saving 3 sequences. Takes 3 read backs to get all info
+	} ST_TCG_BEAM_GAIN_READBACK_DATA;	// save tcg analog gain values for each element in virtual probe
+	// sizeof = 3122 read back
+// ReadBack gets one squence at at time
 
 
 /*

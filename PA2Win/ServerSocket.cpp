@@ -936,7 +936,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 			{
 			Asocket.Close();
 			CAsyncSocket::OnAccept(nErrorCode);
-			s.Format(_T("Fatal error - nClientPortIndex = %d\n"), nClientPortIndex);
+			s.Format(_T("Fatal error - nClientPortIndex = %d  CHECK .INI FILE\n"), nClientPortIndex);
 			TRACE(s);	// bad client port index for PAP to ADC. Must be fixed IP addresses
 			return;
 			}

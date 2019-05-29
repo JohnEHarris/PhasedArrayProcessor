@@ -90,7 +90,8 @@ the PAP and PAG
 #define TCG_BEAM_GAIN_ALL_CMD_ID	31		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
 #define INIT_ADC_CMD_ID				32		// initialize gate settings .. small gate cmds.
 #define GATE_BLAST_CMD_ID			33		// Set Gate Cmds to test Read Back packet from ADC
-											
+#define CMD204H_BLAST_CMD_ID		34		// Set Gate Cmds to test Read Back packet from ADC
+
 											
 //*******************************************
 
@@ -104,6 +105,7 @@ the PAP and PAG
 // READ BACK CMDS
 #define NX_READBACK_ID				0		// returns Nx settings for all channels
 #define GET_GATE_DATA_ID			1		// returns all gate data for all channels of bSeq = n
+#define GET_TCG_BEAM_GAIN_ID		2		// returns  beam gains for all 3 sequences
 
 
 //*******************************************
@@ -616,7 +618,7 @@ typedef struct
 	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
 	BYTE bSeqNumber;	// when relevant, which sequence of virtual probes the command affects
 	BYTE bSpare[19];	// 32 bytes to here
-    WORD wGain[512];	// 512 words or 1024 bytes .. ony first 128 used. wGain[128] to wGain[511= = 0
+    WORD wGain[512];	// 512 words or 1024 bytes .. only first 128 used. wGain[128] to wGain[511]= = 0
 	} ST_SEQ_TCG_GAIN;		// 1056 bytes 
 
 
@@ -626,7 +628,8 @@ typedef struct	// NOT SURE ABOUT THIS COMMAND 2017-03-16
 	GenericPacketHeader Head;	// wMsgID= SET_GATES_TOF_CMD_ID, gph is 12 bytes
 	BYTE bSeqNumber;	// when relevant, which sequence of virtual probes the command affects
 	BYTE bChnl;
-	BYTE bSpare[18];	// 32 bytes to here
+	BYTE bSpare[16];	// 32 bytes to here
+	WORD wStartAddr;	// initial hw offset address
     WORD wGain[512];	// 512 words or 1024 bytes .. ony first 128 used. wGain[128] to wGain[511]= = 0
 	} ST_TCG_BEAM_GAIN;		// 1056 bytes 
 
@@ -698,7 +701,7 @@ void set_gates_tof(WORD nTOF, WORD nSeq, WORD vChnl, BYTE bGate );
 void SetSeqTCGGain( void );		// void set_TCG_gain
 void SetTcgClockRate( void );		// set_TCG_step_size
 void TCGTriggerDelay( void );		// set_TCG_delay
-void TCGBeamGain( void );			// set_beam_gain
+void TCGBeamGain( void );			// set_beam_gain  0x204
 void TCGGainClock( void );			// set_beam_gain_step
 void TCGBeamGainDelay(void);		// set_beam_gain_delay
 void TCGBeamGainAll(void);			// set_beam_gain_all
@@ -787,6 +790,7 @@ int RangeChecksWordCmd(ST_WORD_CMD *pW);	// CheckS plural
 void MsgPrint(char *msg);
 void BuildReadBackHeader(READBACK_DATA *pHdr);
 void GetGateSettings(void);
+void GetTCGBeamGain(void);
 
 // 2018-11-05 reset wiznet from PAP or UUI
 void ResetWiznetCmd(void);

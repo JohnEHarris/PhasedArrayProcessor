@@ -605,7 +605,7 @@ void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata, int nWhic
 			}
 		pThread = pCCM_PAG->m_pstCCM->pSendThread;
 		pCCM_PAG->LockSendPktList();
-		pCCM_PAG->AddTailSendPkt((void*)pIdata);
+		pCCM_PAG->AddTailSendPkt((void*)pIdata);	// input Idata ptr move to another linked list
 		i = pCCM_PAG->m_pstCCM->pSendPktList->GetCount();
 		pCCM_PAG->UnLockSendPktList();
 		//ON_THREAD_MESSAGE(WM_USER_SEND_TCPIP_PACKET, CClientCommunicationThread::TransmitPackets)
@@ -923,7 +923,8 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 							//pIdataPacket->wMsgID = NC_NX_IDATA_ID; //already 1 before break
 							SendIdataToPag((GenericPacketHeader *)pIdataPacket,0);
 							memcpy((void *)&gLastIdataPap, (void *)pIdataPacket, sizeof(IDATA_PAP));	// for debugging
-							delete m_pIdataPacket;
+							if (m_pIdataPacket)
+								delete m_pIdataPacket;
 							m_pIdataPacket = NULL;
 							}
 						// move the result into the output message
@@ -960,6 +961,9 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			}	// case eNcNxInspID:
 
 
+			// DON'T TOUCH OR DELETE m_pIdataPacket - it only relates to inspection data
+
+
 		case eAscanID:	//AScan data... pass thru to PAP
 			{
 			ASCAN_DATA *pIdataPacket = new (ASCAN_DATA);
@@ -973,46 +977,76 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 
 			SendIdataToPag((GenericPacketHeader *)pIdataPacket, 0);
 			memcpy((void *)&gLastAscanPap, (void *)pIdataPacket, sizeof(ASCAN_DATA));
-			delete m_pIdataPacket;
-			m_pIdataPacket = NULL;
+			//delete m_pIdataPacket;
+			//m_pIdataPacket = NULL;
 			break;
 			}	// case eAscanID
 
 		case eReadBackID:	// Read back.. pass thru to PAP
 			{
-			READBACK_DATA *pIdataPacket = new (READBACK_DATA);
-			memcpy((void*)pIdataPacket, (void *)pIData, pIData->wByteCount);
+			READBACK_DATA *pRb = new (READBACK_DATA);
+			memcpy((void*)pRb, (void *)pIData, pIData->wByteCount);
 			
 			//memcpy((void *)&gLastGateCmd, (void *)pIn, pIn->wByteCount);
 			//memcpy((void *)&gLastGateCmd.Seq[nSeq], (void *)pRb->ReadBack, nByteCount)
-			gLastGateCmd.wSeq = pIdataPacket->bSeqNumber;
+			gLastGateCmd.wSeq = pRb->bSeqNumber;
 			//SendIdataToPag((GenericPacketHeader *)pIdataPacket, 0);	// this path will eventually delete pIdataPacket
 
 			// gLastRdBkPap has one sequence of Gate command data -- 32 gates worth of data
 			//int nSeq;
 			/************************************************************/
 
-			READBACK_DATA *pRb = (READBACK_DATA *)pIData;
 			i = pIData->wMsgID;
 			int nByteCount = pRb->wByteCount;
 			if (nByteCount >= 32)
 				{
 				memcpy((void *)&gLastRdBkPap, (void *)pRb, nByteCount);
+				int nSeq = pRb->bSeqNumber;
 				// switch statement if more read back cmds added
-				if (pRb->wReadBackID = GET_GATE_DATA_ID)
+				switch (pRb->wReadBackID)
 					{
-					int nSeq = pRb->bSeqNumber;
+				default:
+					break;
+				case GET_GATE_DATA_ID:
 					// PubExt ST_GATE_READBACK_DATA gLastGateCmd;
 					memcpy((void *)&gLastGateCmd.Seq[nSeq], (void *)pRb->ReadBack, nByteCount);
-					gLastGateCmd.wSeq = pRb->bSeqNumber;
+					//gLastGateCmd.wSeq = pRb->bSeqNumber;
+					SendIdataToPag((GenericPacketHeader *)pRb, 0);	// this path will eventually delete pIdataPacket
+					SaveGateCmdReadBackSequence(&gLastGateCmd);
+#if 0
+					if (pRb)
+						{
+						delete pRb;
+						pRb = NULL;
+						}
+#endif
+					break;
+				case GET_BEAM_GAIN_DATA_ID:
+					nSeq = 0;	// patch - fix alignment problem in ADC/NIOS code gen
+					memcpy((void *)&gLastBeamGainReadBack.Seq[nSeq], (void *)pRb->ReadBack, nByteCount);
+					SendIdataToPag((GenericPacketHeader *)pRb, 0);	// this path will eventually delete pIdataPacket
+					SaveBeamGainReadBackData();
+					break;
+					}	// switch (pRb->wReadBackID)
+				}	// if (nByteCount >= 32)
+			else
+				{
+				s = _T("Readback data less than 32 bytes -- ERROR");
+				SaveDebugLog(s);
+				if (pRb)
+					{
+					delete pRb;
+					pRb = NULL;
 					}
-				//guRdBkMsgCnt++;
-				//s.Format(_T("Received Read Back data, wReadBackID = %d"), pRb->wReadBackID);
-				}
-			else s = _T("Readback data less than 32 bytes -- ERROR");
-			SaveDebugLog(s);
+#if 0
+				delete m_pIdataPacket;
+				m_pIdataPacket = NULL;
+#endif
 
-			SendIdataToPag((GenericPacketHeader *)pIdataPacket, 0);	// this path will eventually delete pIdataPacket
+				break;
+				}
+
+			
 
 	
 
@@ -1022,9 +1056,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 			//memcpy((void *)&gLastGateCmd.Seq[nSeq], (void *)pRb->ReadBack, nByteCount);
 			//gLastGateCmd.wSeq = pRb->bSeqNumber;
 
-			SaveReadBackSequence(&gLastGateCmd);
-			delete m_pIdataPacket;
-			m_pIdataPacket = NULL;
+
 			break;
 			}	// case eReadBackID
 
@@ -1046,23 +1078,23 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 	// A read back sequence from the ADC board has come thru PAP
 	// Convert the elements to ASCII and write to a log file
 	// Only one sequence at a time. At present (Apr 2019) only 3 sequences of wall data
-void CServerRcvListThread::SaveReadBackSequence(ST_GATE_READBACK_DATA *pLastRdBkPap)
+void CServerRcvListThread::SaveGateCmdReadBackSequence(ST_GATE_READBACK_DATA *pLastRdBkPap)
 	{
 	CString s, t;
 	int ic, ig, iseq;
 	if (pMainDlg->m_nReadBackExists == 0) return;
-	ST_GATECH_PER_SEQ *pCh;
+	ST_GATE_CH_PER_SEQ *pCh;
 	ST_GATE_SETTINGS *pGate;
 	iseq = pLastRdBkPap->wSeq;
 	int val, addr;
 
-	s.Format(_T("Sequece = %d  *******************************\n"), iseq );
+	s.Format(_T("\nSequece = %d  All Gate Cmds  *******************************\n"), iseq );
 	t = s;
 	for (ic = 0; ic < 8; ic++)
 		{
 		s.Format(_T("\nCh=%d Dly  Addr   Rng  Addr   Blk  Addr   Thl  Addr   Trg  Addr   Pol  Addr   TOF  Addr\n"), ic);
 		t += s;
-		pCh = (ST_GATECH_PER_SEQ *) &pLastRdBkPap->Seq[iseq].Ch[ic];
+		pCh = (ST_GATE_CH_PER_SEQ *) &pLastRdBkPap->Seq[iseq].Ch[ic];
 		for (ig = 0; ig < 4; ig++)
 			{
 			pGate = (ST_GATE_SETTINGS *)&pLastRdBkPap->Seq[iseq].Ch[ic].Gate[ig];
@@ -1084,6 +1116,34 @@ void CServerRcvListThread::SaveReadBackSequence(ST_GATE_READBACK_DATA *pLastRdBk
 		}
 	pMainDlg->SaveReadBackLog(t);
 	}
+
+// Only gets/saves 1 sequence of tcg gains per read back packet.
+void  CServerRcvListThread::SaveBeamGainReadBackData(void)
+	{
+	CString s, t;
+	int ic, ir, is, addr;
+	if (pMainDlg->m_nReadBackExists == 0) return;
+
+
+	for (is = 0; is < 3; is++)
+		{
+		addr = gLastBeamGainReadBack.Seq[is].wStartAddr;
+		s.Format(_T("\nSequece = %d  Start address %04x TCG Beam Gains ********** 8 rows, 16 columns\n"), is, addr);
+		t = s;
+		for (ir = 0; ir < 8; ir++)
+			{
+			for (ic = 0; ic < 16; ic++)
+				{
+				s.Format(_T("%04x "), gLastBeamGainReadBack.Seq[is].bGain[ic + ir * 16]);
+				t += s;
+				}
+			t += _T("\n");
+			pMainDlg->SaveReadBackLog(t);
+			t = _T("");	// reset for next line
+			}	// for (ir = 0; ir < 8; ir++)
+		} // Sequence loop
+	}
+
 
 	// Maybe not general purpose, but put pulser status into global data
 	// Only one pulser for the system and data is slow moving  2018-10-19
@@ -1151,7 +1211,7 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 			}
 
 		else if (pIdata->wMsgID == READBACK_DATA_ID)
-			{
+			{ // ReadBack
 			READBACK_DATA *pRb = (READBACK_DATA *)pIdata;
 			i = pIdata->wMsgID;
 			int nByteCount = pRb->wByteCount;
@@ -1163,7 +1223,7 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 					{
 					int nSeq = pRb->bSeqNumber;
 					// PubExt ST_GATE_READBACK_DATA gLastGateCmd;
-					memcpy((void *)&gLastGateCmd.Seq[nSeq], (void *)pRb->ReadBack, nByteCount);
+					memcpy((void *)&gLastGateCmd.Seq[nSeq], (void *)pRb->ReadBackBlock, nByteCount);
 					gLastGateCmd.wSeq = pRb->bSeqNumber;
 					}
 				guRdBkMsgCnt++;
@@ -1171,7 +1231,8 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 				}
 			else s = _T("Readback data less than 32 bytes -- ERROR");
 			SaveDebugLog(s);
-			}
+			}	// ReadBack
+
 		else
 			{
 			// something else

@@ -394,6 +394,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("TcgBeamGainAll"));			m_cbCommand.AddString(s);	//31
 		s.Format(_T("InitADC"));				m_cbCommand.AddString(s);	//32
 		s.Format(_T("GateBlast"));				m_cbCommand.AddString(s);	//33
+		s.Format(_T("Cmd204H_Blast"));			m_cbCommand.AddString(s);	//34
 
 		m_cbCommand.SetCurSel(2);
 		break;
@@ -588,6 +589,8 @@ void CNcNx::OnCbnSelchangeCbCmds()
 					SamInitAdc(m_nPAP, m_nBoard, m_nParam);	break;
 				case 33:
 					GateBlast(m_nPAP, m_nBoard, m_nSeq);	break;
+				case 34:
+					Cmd204hBlast(m_nPAP, m_nBoard, m_nSeq);	break;
 				default:
 					break;
 				}
@@ -1133,6 +1136,48 @@ void CNcNx::GateBlast(int m_nPAP, int m_nBoard, int Seq)
 		}	// for (iCmd = 2; iCmd < 9; iCmd++)
 	}
 
+// Cmd204H-Blast
+// Send 1 command for each sequence, like GateBlast
+//
+void CNcNx::Cmd204hBlast(int m_nPAP, int m_nBoard, int Seq)
+	{
+	int is, ir, ie;	// seq/row/element  16 per row
+	int ic;	// chnl loop
+	int nRowStart;
+	ST_TCG_BEAM_GAIN *pCmdBG = (ST_TCG_BEAM_GAIN *)&CmdL;	// Beam Gain
+	CString s;
+	pCmdBG->Head.uSync = SYNC;
+	pCmdBG->Head.wByteCount = 288;
+	pCmdBG->Head.bPapNumber = m_nPAP;
+	pCmdBG->Head.bBoardNumber = m_nBoard;
+	pCmdBG->Head.wMsgID = TCG_GAIN_CMD_ID; //Generic header is 12 bytes
+
+	for (is = 0; is < 3; is++)
+		{
+		pCmdBG->bSeqNumber = is;
+		for (ic = 0; ic < 8; ic++)	//chnl loop 8 channels
+			{
+			pCmdBG->bChnl = ic;
+			// 8*16*2 = 256, total size is 12 + 256 = 268
+				nRowStart = 0;
+			for (ir = 0; ir < 8; ir++)	// 8 rows
+				{
+				for (ie = 0; ie < 16; ie++)	// 16 elements
+					{
+					pCmdBG->wGain[ie + nRowStart] = ie + nRowStart;
+					}
+				nRowStart += 16;
+				}
+			s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Seq=%d, 1st Byte 0x%02x\n"),
+				CmdL.wMsgID, CmdL.wByteCount, CmdL.bPapNumber, is, pCmdBG->wGain[0]);
+			m_lbOutput.AddString(s);
+			// Send 1 chnl at a time
+			SendMsg((GenericPacketHeader*)&CmdL);	// SendMsg deletes argument at end, but we pass a ptr to a static struct.2019-05-23
+			}	// chnl loop
+		} //for (is = 0; is < 3; is++)
+	}
+
+
 // cmd 13 ProcNull for ADC   Something else for UUI
 void CNcNx::ProcNull(int nPap, int nBoard, int nCmd, int nValue)
 	{
@@ -1402,7 +1447,7 @@ void CNcNx::WordCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd
 	SendMsg((GenericPacketHeader*)&m_WordCmd);
 	}
 
-// Putw wValue into all 512 large command  words wCmd[]
+// Puts wValue into all 512 large command  words wCmd[]
 void CNcNx::LargeCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCmd, WORD wValue)
 	{
 	CString s, t, sym;
@@ -1415,7 +1460,7 @@ void CNcNx::LargeCmd(int nPap, int nBoard, int nSeq, int nCh, int nGate, int nCm
 		case SEQ_TCG_GAIN_CMD_ID:			
 			sym = _T("TCG_SEQ_GAIN_CMD ");			break;	//0x205
 		case TCG_GAIN_CMD_ID:				
-			sym = _T("TCG_BEAM_GAIN_CMD ");				break;	//0x204
+			sym = _T("TCG_BEAM_GAIN_CMD ");			break;	//0x204
 #if 0
 		case SET_ASCAN_BEAMFORM_DELAY_ID:	
 			sym = _T("SET_ASCAN_BEAMFORM_DELAY ");	break;	//0x204

@@ -253,10 +253,16 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			if ((MsgId >= 0x200) && (MsgId <= 0x200 + LAST_LARGE_COMMAND))
 				{
 				gwPapLargeCmds++;
+				gwLastCmdId = MsgId;
+				gwLastCmdSeqCnt = pMmiCmd->wMsgSeqCnt;
+				gw1stWordCmd = pSmall->wCmd;
 				}
 			else if ((MsgId >= 0) && (MsgId <= LAST_SMALL_COMMAND))
 				{
 				gwPapSmallCmds++;
+				gwLastCmdId = MsgId;
+				gwLastCmdSeqCnt = pMmiCmd->wMsgSeqCnt;
+				gw1stWordCmd = pSmall->wCmd;
 				if (MsgId == DEBUG_PRINT_CMD_ID)  // small cmd version is ID = 29
 					{
 					if ((pSmall->wCmd & 2) == 2)

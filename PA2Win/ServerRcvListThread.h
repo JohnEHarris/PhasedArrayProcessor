@@ -60,7 +60,8 @@ public:
 	void ProcessInstrumentData(IDATA_FROM_HW *pIData);
 	void ProcessPulserData(PULSER_DATA *pPulserData);
 	void CheckSequences(IDATA_PAP *pIdataPacket);
-	void SaveReadBackSequence(ST_GATE_READBACK_DATA *pLastRdBkPap);
+	void SaveGateCmdReadBackSequence(ST_GATE_READBACK_DATA *pLastRdBkPap);
+	void SaveBeamGainReadBackData(void);
 	
 	void MakeFakeDataHead(IDATA_FROM_HW *pData);
 	void MakeFakeData(IDATA_FROM_HW *pData);

@@ -2246,6 +2246,7 @@ void CPA2WinDlg::DestroyCCM( void )
 				if (pCCM_PAG->m_pstCCM->pSocket)
 					{	// socket exists
 					pCCM_PAG->KillSocket();
+					Sleep(10);
 					}	
 				}	// socket exists
 

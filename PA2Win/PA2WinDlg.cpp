@@ -2532,6 +2532,9 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(ASCAN_DATA);	// 1088
 	i = sizeof(ST_CHNL_GAIN_DELAY_CMD);	// 32
 	i = sizeof(READBACK_DATA);	//1088
+	i = sizeof(ST_TCG_BEAM_GAIN_READBACK_DATA);	// 3122
+	i = sizeof(gLastBeamGainReadBack.Seq[0]);	// 1040
+	i = sizeof(CMD204H_READBACK);	// 1058
 
 	}
 
@@ -2719,7 +2722,8 @@ void CPA2WinDlg::ShowIdata(void)
 		t = s;
 		s.Format(_T("         %05d   %03d     %03d/%05d  %05d    %02d   %02d    %02d"),
 			gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
-			gLastCmd.wMsgID, gLastCmd.wMsgSeqCnt, gLastIdataPap.w1stWordCmd,
+			//gLastCmd.wMsgID, gLastCmd.wMsgSeqCnt, gLastIdataPap.w1stWordCmd,
+			gwLastCmdId, gwLastCmdSeqCnt, gw1stWordCmd,
 			(gLastIdataPap.bCmdSeq % 10), (gLastIdataPap.bCmdChnl % 10), gLastIdataPap.bCmdGate&3);
 		t += s;
 		// count of commands received by ADC & Pulser board, then wStatus value

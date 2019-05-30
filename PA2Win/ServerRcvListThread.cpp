@@ -1009,7 +1009,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					break;
 				case GET_GATE_DATA_ID:
 					// PubExt ST_GATE_READBACK_DATA gLastGateCmd;
-					memcpy((void *)&gLastGateCmd.Seq[nSeq], (void *)pRb->ReadBack, nByteCount);
+					memcpy((void *)&gLastGateCmd.Seq[nSeq], (void *)pRb->ReadBackBlock, nByteCount);
 					//gLastGateCmd.wSeq = pRb->bSeqNumber;
 					SendIdataToPag((GenericPacketHeader *)pRb, 0);	// this path will eventually delete pIdataPacket
 					SaveGateCmdReadBackSequence(&gLastGateCmd);
@@ -1021,9 +1021,10 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 						}
 #endif
 					break;
-				case GET_BEAM_GAIN_DATA_ID:
-					nSeq = 0;	// patch - fix alignment problem in ADC/NIOS code gen
-					memcpy((void *)&gLastBeamGainReadBack.Seq[nSeq], (void *)pRb->ReadBack, nByteCount);
+				case GET_TCG_BEAM_GAIN_ID:
+					nSeq = pRb->bSeqNumber;
+					memcpy((void *)&gLastBeamGainReadBack.Seq[nSeq], (void *)pRb->wSpare, nByteCount);
+					gLastBeamGainReadBack.wSeq = nSeq;
 					SendIdataToPag((GenericPacketHeader *)pRb, 0);	// this path will eventually delete pIdataPacket
 					SaveBeamGainReadBackData();
 					break;
@@ -1117,31 +1118,34 @@ void CServerRcvListThread::SaveGateCmdReadBackSequence(ST_GATE_READBACK_DATA *pL
 	pMainDlg->SaveReadBackLog(t);
 	}
 
-// Only gets/saves 1 sequence of tcg gains per read back packet.
+
 void  CServerRcvListThread::SaveBeamGainReadBackData(void)
 	{
 	CString s, t;
-	int ic, ir, is, addr;
+	int ic, ir, is, id, ig, addr;
 	if (pMainDlg->m_nReadBackExists == 0) return;
 
-
-	for (is = 0; is < 3; is++)
+	is = gLastBeamGainReadBack.wSeq;
+	s.Format(_T("\nTCG Beam Gains ********** Sequece = %d \n"), is);
+	t = s;
+	for (ic = 0; ic < 8; ic++)	// channel loop
 		{
-		addr = gLastBeamGainReadBack.Seq[is].wStartAddr;
-		s.Format(_T("\nSequece = %d  Start address %04x TCG Beam Gains ********** 8 rows, 16 columns\n"), is, addr);
-		t = s;
-		for (ir = 0; ir < 8; ir++)
+		addr = gLastBeamGainReadBack.Seq[is].Chnl[ic].wStartAddr;
+		s.Format(_T("Channel %d Start Addr = %04x\n"), ic, addr);
+		t += s;
+		for (ir = 0; ir < 8; ir++)  // row loop
 			{
-			for (ic = 0; ic < 16; ic++)
+			id = ir * 16;
+			for (ig = 0; ig < 16; ig++)	// column lop
 				{
-				s.Format(_T("%04x "), gLastBeamGainReadBack.Seq[is].bGain[ic + ir * 16]);
+				s.Format(_T("%04x "), gLastBeamGainReadBack.Seq[is].Chnl[ic].bGainPerCh[ig + id]);
 				t += s;
 				}
 			t += _T("\n");
 			pMainDlg->SaveReadBackLog(t);
 			t = _T("");	// reset for next line
 			}	// for (ir = 0; ir < 8; ir++)
-		} // Sequence loop
+		}	// chnl loop
 	}
 
 

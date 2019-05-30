@@ -105,7 +105,7 @@ the PAP and PAG
 // READ BACK CMDS
 #define NX_READBACK_ID				0		// returns Nx settings for all channels
 #define GET_GATE_DATA_ID			1		// returns all gate data for all channels of bSeq = n
-#define GET_TCG_BEAM_GAIN_ID		2		// returns  beam gains for all 3 sequences
+#define GET_TCG_BEAM_GAIN_ID		2		// return setting for all beam gains cmd 0x204 
 
 
 //*******************************************

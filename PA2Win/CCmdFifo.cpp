@@ -150,12 +150,22 @@ BYTE * CCmdFifo::GetInLoc(void)
 // and the next input location
 void CCmdFifo::AddBytesToFifo(int n)
 	{
-	EnterCriticalSection(m_pCS);
-	m_In += n;
-	m_Size += n;
-	if (m_Size > m_nMaxDepth)
-		m_nMaxDepth = m_Size;
-	LeaveCriticalSection(m_pCS);
+	CString s;
+	if (m_pCS)
+		{
+		EnterCriticalSection(m_pCS);
+		m_In += n;
+		m_Size += n;
+		if (m_Size > m_nMaxDepth)
+			m_nMaxDepth = m_Size;
+		LeaveCriticalSection(m_pCS);
+		}
+	else
+		{
+		s = _T("AddBytesToFifo critical section ptr is 0\n");
+		TRACE(s);
+		pMainDlg->SaveDebugLog(s);
+		}
 	}
 
 // after 2016-12-13 packet size is not fixed.

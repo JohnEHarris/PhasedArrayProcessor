@@ -1217,22 +1217,33 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 		else if (pIdata->wMsgID == READBACK_DATA_ID)
 			{ // ReadBack
 			READBACK_DATA *pRb = (READBACK_DATA *)pIdata;
+			CMD204H_READBACK *p204 = (CMD204H_READBACK*)pIdata;
 			i = pIdata->wMsgID;
 			int nByteCount = pRb->wByteCount;
 			if (nByteCount >= 32)
 				{
 				memcpy((void *)&gLastRdBkPap, (void *)pRb, nByteCount);
-				// switch statement if more read back cmds added
-				if (pRb->wReadBackID = GET_GATE_DATA_ID)
+				int nSeq = pRb->bSeqNumber;
+				s.Format(_T("Received Read Back data, wReadBackID = %d"), pRb->wReadBackID);
+				switch (pRb->wReadBackID)
 					{
-					int nSeq = pRb->bSeqNumber;
+				case GET_GATE_DATA_ID:
 					// PubExt ST_GATE_READBACK_DATA gLastGateCmd;
 					memcpy((void *)&gLastGateCmd.Seq[nSeq], (void *)pRb->ReadBackBlock, nByteCount);
 					gLastGateCmd.wSeq = pRb->bSeqNumber;
+					break;
+				case GET_TCG_BEAM_GAIN_ID:
+					memcpy((void *)&(gLastBeamGainReadBack.Seq[pRb->bSeqNumber]  ), (void *)&p204->Seq.Chnl[0] , nByteCount);
+					gLastBeamGainReadBack.wSeq = pRb->bSeqNumber;
+					break;
+				default:
+					s.Format(_T("Received Read Back Unknown, wReadBackID = %d"), pRb->wReadBackID);
+					SaveDebugLog(s);
 					}
-				guRdBkMsgCnt++;
-				s.Format(_T("Received Read Back data, wReadBackID = %d"), pRb->wReadBackID);
-				}
+
+					guRdBkMsgCnt++;
+				//s.Format(_T("Received Read Back data, wReadBackID = %d"), pRb->wReadBackID);
+				}	// if (nByteCount >= 32)
 			else s = _T("Readback data less than 32 bytes -- ERROR");
 			SaveDebugLog(s);
 			}	// ReadBack
@@ -1274,7 +1285,7 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 				//TRACE(s);
 				}
 #endif
-			}
+			}	 // All wall server
 		break;
 
 	default:
@@ -1282,7 +1293,7 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 		s = _T("Unknown Server running ProcessPAP_Data rountine");
 		SaveDebugLog(s);
 		break;
-		}
+		}	// switch (m_nMyServer)
 	delete pData;
 	}	// ProcessPAP_Data(void *pData)
 

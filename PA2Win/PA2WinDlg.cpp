@@ -2537,6 +2537,7 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(CMD204H_READBACK);	// 1058
 	i = sizeof(CMD205H_READBACK); // 792
 	i = sizeof(ST_TCG_SEQ_GAIN_READBACK_DATA); // 774
+	i = sizeof(ST_SEQ_TCG_GAIN); //1056
 
 	}
 

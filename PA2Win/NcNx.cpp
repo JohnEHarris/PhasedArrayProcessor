@@ -395,6 +395,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("InitADC"));				m_cbCommand.AddString(s);	//32
 		s.Format(_T("GateBlast"));				m_cbCommand.AddString(s);	//33
 		s.Format(_T("Cmd204H_Blast"));			m_cbCommand.AddString(s);	//34
+		s.Format(_T("Cmd205H_Blast"));			m_cbCommand.AddString(s);	//35
 
 		m_cbCommand.SetCurSel(2);
 		break;
@@ -591,6 +592,8 @@ void CNcNx::OnCbnSelchangeCbCmds()
 					GateBlast(m_nPAP, m_nBoard, m_nSeq);	break;
 				case 34:
 					Cmd204hBlast(m_nPAP, m_nBoard, m_nSeq);	break;
+				case 35:
+					Cmd205hBlast(m_nPAP, m_nBoard);			break;
 				default:
 					break;
 				}
@@ -1177,6 +1180,41 @@ void CNcNx::Cmd204hBlast(int m_nPAP, int m_nBoard, int Seq)
 		} //for (is = 0; is < 3; is++)
 	}
 
+// Cmd205H Blast  sizeof(CMD205H_READBACK);
+void CNcNx::Cmd205hBlast(int m_nPAP, int m_nBoard)
+	{
+	int is, ir, ie;	// seq/row/element  16 per row
+	int nRowStart;
+	ST_SEQ_TCG_GAIN *pCmdSG = (ST_SEQ_TCG_GAIN *)&CmdL;	// Seq Gain
+	CString s;
+	pCmdSG->Head.uSync = SYNC;
+	pCmdSG->Head.wByteCount = 288;	// 128 values, 256 bytes + header of 32
+	pCmdSG->Head.bPapNumber = m_nPAP;
+	pCmdSG->Head.bBoardNumber = m_nBoard;
+	pCmdSG->Head.wMsgID = SEQ_TCG_GAIN_CMD_ID; //Generic header is 12 bytes
+
+	for (is = 0; is < 3; is++)
+		{
+		pCmdSG->bSeqNumber = is;
+
+		//pCmdSG->bChnl = ic;
+		// 8*16*2 = 256, total size is 12 + 256 = 268
+		nRowStart = 0;
+		for (ir = 0; ir < 8; ir++)	// 8 rows
+			{
+			for (ie = 0; ie < 16; ie++)	// 16 elements
+				{
+				pCmdSG->wGain[ie + nRowStart] = ie + nRowStart;
+				}
+			nRowStart += 16;
+			}
+		s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Seq=%d, 1st Byte 0x%02x\n"),
+			CmdL.wMsgID, CmdL.wByteCount, CmdL.bPapNumber, is, pCmdSG->wGain[0]);
+		m_lbOutput.AddString(s);
+		// Send 1 seq at a time
+		SendMsg((GenericPacketHeader*)&CmdL);	// SendMsg deletes argument at end, but we pass a ptr to a static struct.2019-05-23
+		} //for (is = 0; is < 3; is++)
+	}
 
 // cmd 13 ProcNull for ADC   Something else for UUI
 void CNcNx::ProcNull(int nPap, int nBoard, int nCmd, int nValue)

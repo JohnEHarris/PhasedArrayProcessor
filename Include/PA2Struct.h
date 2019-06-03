@@ -691,8 +691,8 @@ typedef struct // cmd 205H
 
 
 
-// Data sturcture to overlay the structure of READBACK_DATA for cmd  0x204
-typedef struct // CMD204H_READBACK
+// Data sturcture to overlay the structure of READBACK_DATA for cmd  0x205
+typedef struct // CMD205H_READBACK
 	{
 	WORD wMsgID;		// commands and data are identified by their ID	= eReadBackID = 3
 	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		

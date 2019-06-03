@@ -101,7 +101,8 @@ public:
 
 	void Blast(int m_nPAP, int m_nBoard);	// blast a lot of commands to test FIFO's
 	void GateBlast(int m_nPAP, int m_nBoard, int Seq);	// Set all gate & gate cmds to test ReadBack
-	void CNcNx::Cmd204hBlast(int m_nPAP, int m_nBoard, int Seq); // test Read Back function
+	void Cmd204hBlast(int m_nPAP, int m_nBoard, int Seq); // test Read Back function
+	void Cmd205hBlast(int m_nPAP, int m_nBoard);
 	void DebugPrint(int nPap, int nBoard, int nCmd, int nValue);
 	void ProcNull(int nPap, int nBoard, int nCmd, int nValue);
 	void SamInitAdc(int nPap, int nBoard, int nSel);

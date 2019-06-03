@@ -15,7 +15,7 @@ Revised:
 
 #ifndef GLOBAL_H_
 #define GLOBAL_H_
-#undef I_AM_THE_INSTURMENT
+#undef I_AM_THE_INSTRUMENT
 
 
 #include "PA2Struct.h"
@@ -67,7 +67,7 @@ typedef unsigned short WORD;
 typedef unsigned int	UINT;
 #endif
 
-#ifdef I_AM_THE_INSTURMENT
+#ifdef I_AM_THE_INSTRUMENT
 #include "Timer64.h"
 PubExt ELAPSE64 TRecvCmd;
 #ifndef HANDLE
@@ -80,6 +80,7 @@ PubExt READBACK_DATA ReadBackDATA;
 PubExt BYTE gbFakeDataCmd;		// change operation of Xmit interrupt when fake data
 PubExt ST_GATE_READBACK_DATA GateCmdData;		// a copy of every gate command setting received
 PubExt ST_TCG_BEAM_GAIN_READBACK_DATA TcgGainReadback;
+PubExt ST_TCG_SEQ_GAIN_READBACK_DATA TcgSeqGainReadBack;
 PubExt BYTE gbFakeDataCnt;
 
 
@@ -107,6 +108,7 @@ PubExt ST_GATE_READBACK_DATA gLastRdBkPap;
 PubExt IDATA_FROM_HW gLastAllWall;
 PubExt ST_GATE_READBACK_DATA gLastGateCmd;
 PubExt ST_TCG_BEAM_GAIN_READBACK_DATA gLastBeamGainReadBack;
+PubExt ST_TCG_SEQ_GAIN_READBACK_DATA gLastSeqGainReadBack;
 PubExt ST_SMALL_CMD gLastCmd;	// sized for small cmds, used for both adc commands on PAP screen
 PubExt WORD gwMax0, gwMin0, gwMin1_0, gwMin2_0, gwZeroCnt, gwNot0;	// max and min of seq0, chnl 0
 #endif
@@ -141,6 +143,11 @@ PubExt BYTE gbSmallCmdQ, gbSmallCmdQPrior, gbLargeCmdQ, gbLargeCmdQPrior;
 PubExt WORD gwSmallCmds, gwLargeCmds;	// count commands received
 PubExt BYTE gbIntrMask;
 
+// Execution Times in uSec to build read back message
+PubExt UINT uTimeCmd204;
+PubExt UINT uTimeCmd205;
+PubExt UINT uTimeGates;
+PubExt UINT uTimeAscan;
 
 PubExt int nLoc; // simulate location of pipe
 PubExt BYTE bLastFakeSeq;	// assuming fake data can reset before 32 ascans.

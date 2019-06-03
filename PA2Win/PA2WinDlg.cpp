@@ -2535,6 +2535,8 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(ST_TCG_BEAM_GAIN_READBACK_DATA);	// 3122
 	i = sizeof(gLastBeamGainReadBack.Seq[0]);	// 1040
 	i = sizeof(CMD204H_READBACK);	// 1058
+	i = sizeof(CMD205H_READBACK); // 792
+	i = sizeof(ST_TCG_SEQ_GAIN_READBACK_DATA); // 774
 
 	}
 

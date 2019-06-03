@@ -13,13 +13,13 @@ the PAP and PAG
 */
 
 
-// If used with NIOS2, DEFINE:    I_AM_THE_INSTURMENT
-// When used with PAP  and PAG, undefine I_AM_THE_INSTURMENT
+// If used with NIOS2, DEFINE:    I_AM_THE_INSTRUMENT
+// When used with PAP  and PAG, undefine I_AM_THE_INSTRUMENT
 //#include <alt_types.h> //for alt_u32
 
-#undef I_AM_THE_INSTURMENT
+#undef I_AM_THE_INSTRUMENT
 
-#ifdef I_AM_THE_INSTURMENT
+#ifdef I_AM_THE_INSTRUMENT
 #include "../GlobalHeaders/Global.h"
 #include <stdio.h> //for printf
 #include <string.h> //for memcpy
@@ -106,6 +106,7 @@ the PAP and PAG
 #define NX_READBACK_ID				0		// returns Nx settings for all channels
 #define GET_GATE_DATA_ID			1		// returns all gate data for all channels of bSeq = n
 #define GET_TCG_BEAM_GAIN_ID		2		// return setting for all beam gains cmd 0x204 
+#define GET_TCG_SEQ_GAIN_ID			3		// return setting for all SEQ gains cmd 0x205 
 
 
 //*******************************************
@@ -655,7 +656,7 @@ typedef struct
 
 /*****************	COMMANDS  END *********************/
 
-#ifdef I_AM_THE_INSTURMENT
+#ifdef I_AM_THE_INSTRUMENT
 
 void CmdExecutive( ST_LARGE_CMD *pCmd );	// This works because ST_SMALL_CMD is a subset of the large command
 
@@ -791,6 +792,7 @@ void MsgPrint(char *msg);
 void BuildReadBackHeader(READBACK_DATA *pHdr);
 void GetGateSettings(void);
 void GetTCGBeamGain(void);
+void GetTCGSeqGain(void);
 
 // 2018-11-05 reset wiznet from PAP or UUI
 void ResetWiznetCmd(void);

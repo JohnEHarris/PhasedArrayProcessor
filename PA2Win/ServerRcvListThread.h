@@ -62,6 +62,7 @@ public:
 	void CheckSequences(IDATA_PAP *pIdataPacket);
 	void SaveGateCmdReadBackSequence(ST_GATE_READBACK_DATA *pLastRdBkPap);
 	void SaveBeamGainReadBackData(void);
+	void SaveTcgSeqGainReadBackData(void);
 	
 	void MakeFakeDataHead(IDATA_FROM_HW *pData);
 	void MakeFakeData(IDATA_FROM_HW *pData);

@@ -1023,10 +1023,15 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					break;
 				case GET_TCG_BEAM_GAIN_ID:
 					nSeq = pRb->bSeqNumber;
-					memcpy((void *)&gLastBeamGainReadBack.Seq[nSeq], (void *)pRb->wSpare, nByteCount);
+					memcpy((void *)&gLastBeamGainReadBack.Seq[nSeq], (void *)pRb->wSpare, nByteCount);	  // was pRb->wspare
 					gLastBeamGainReadBack.wSeq = nSeq;
 					SendIdataToPag((GenericPacketHeader *)pRb, 0);	// this path will eventually delete pIdataPacket
 					SaveBeamGainReadBackData();
+					break;
+				case GET_TCG_SEQ_GAIN_ID:
+					memcpy((void *)&gLastSeqGainReadBack.Seq[0], (void *)pRb->ReadBackBlock, nByteCount);
+					SendIdataToPag((GenericPacketHeader *)pRb, 0);	// this path will eventually delete pIdataPacket
+					SaveTcgSeqGainReadBackData();
 					break;
 					}	// switch (pRb->wReadBackID)
 				}	// if (nByteCount >= 32)
@@ -1136,7 +1141,7 @@ void  CServerRcvListThread::SaveBeamGainReadBackData(void)
 		for (ir = 0; ir < 8; ir++)  // row loop
 			{
 			id = ir * 16;
-			for (ig = 0; ig < 16; ig++)	// column lop
+			for (ig = 0; ig < 16; ig++)	// column loop
 				{
 				s.Format(_T("%04x "), gLastBeamGainReadBack.Seq[is].Chnl[ic].bGainPerCh[ig + id]);
 				t += s;
@@ -1147,6 +1152,36 @@ void  CServerRcvListThread::SaveBeamGainReadBackData(void)
 			}	// for (ir = 0; ir < 8; ir++)
 		}	// chnl loop
 	}
+
+void  CServerRcvListThread::SaveTcgSeqGainReadBackData(void)
+	{
+	CString s, t;
+	int ir, is, id, ig, addr;
+	if (pMainDlg->m_nReadBackExists == 0) return;
+
+	is = gLastBeamGainReadBack.wSeq;
+	s = _T("\nTCG Seq Gains **********  \n");
+	t = s;
+	for (is = 0; is < 3; is++)	// seq loop
+		{
+		addr = gLastSeqGainReadBack.Seq[is].wStartAddr;
+		s.Format(_T("Sequence %d Start Addr = 0x%04x\n"), is, addr);
+		t += s;
+		for (ir = 0; ir < 8; ir++)  // row loop
+			{
+			id = ir * 16;
+			for (ig = 0; ig < 16; ig++)	// column loop
+				{
+				s.Format(_T("%04x "), gLastSeqGainReadBack.Seq[is].wGainPerSeq[id + ig]);
+				t += s;
+				}
+			t += _T("\n");
+			pMainDlg->SaveReadBackLog(t);
+			t = _T("");	// reset for next line
+			}	// for (ir 
+		}	// seq loop
+	}
+
 
 
 	// Maybe not general purpose, but put pulser status into global data

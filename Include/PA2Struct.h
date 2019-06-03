@@ -557,9 +557,9 @@ typedef struct // READBACK_DATA
 	BYTE bSeqNumber;
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
 /* Change here from format of ASCAN_DATA_HDR */
-	WORD wReadBackID;	// Read back ID for the command data requested- a sub command
+	WORD wReadBackID;	// Read back ID for the command data requested- a sub command 18 bytes to here
 
-	WORD wSpare[11];
+	WORD wSpare[11];	// 40 bytes to here
 	BYTE ReadBackBlock[1048];	// 1048 byte. Info depends on what is requested to be read back
 
 	} READBACK_DATA;		// sizeof() = 1088
@@ -646,7 +646,7 @@ typedef struct // cmd 205H
 	{
 	WORD wSeq;	// which one of 3 sequences to return on ReadBack
 	ST_CHNL_PER_SEQ Seq[3];	// Only saving 3 sequences. Takes 3 read backs to get all info
-	} ST_TCG_BEAM_GAIN_READBACK_DATA;	// save tcg analog gain values for each element in virtual probe
+	} ST_TCG_BEAM_GAIN_READBACK_DATA;	// save tcg DIGITAL gain values for each element in virtual probe
 	// sizeof = 3122 read back
 // ReadBack gets one squence at at time
 
@@ -669,6 +669,47 @@ typedef struct // CMD204H_READBACK
 	WORD wReadBackID;	// Read back ID for the command data requested- a sub command = 2
 	ST_CHNL_PER_SEQ Seq;
 	} CMD204H_READBACK;		// sizeof() = 1058
+
+/************************************************************************************/
+
+// CMD 0x205 TCGSeqGain - similar to 0x204 but word values instead of byte values. 
+// This is a hardware gain 0-0X3FFF
+
+// TCG Sequence gain  cmd 0x205
+typedef struct // Gain-Address set
+	{
+	WORD wStartAddr;
+	WORD wGainPerSeq[128];		// saving 256 bytes -- word gains
+	} ST_ELEMENT_GAIN_PER_SEQ;	// sizeof = 258
+
+typedef struct // cmd 205H
+	{
+	ST_ELEMENT_GAIN_PER_SEQ Seq[3];	// Only saving 3 sequences. 
+	} ST_TCG_SEQ_GAIN_READBACK_DATA;	// save tcg analog gain values for each element in virtual probe
+	// sizeof = 774 read back
+// ReadBack gets all sequence gains in one packet
+
+
+
+// Data sturcture to overlay the structure of READBACK_DATA for cmd  0x204
+typedef struct // CMD204H_READBACK
+	{
+	WORD wMsgID;		// commands and data are identified by their ID	= eReadBackID = 3
+	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
+	UINT uSync;			// 0x5CEBDAAD													
+	WORD wMsgSeqCnt;	// interleaved with Idata, uses Idata seq count
+	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
+						// this is the last 2 digits of the IP4 address of the board 
+						// 192.168.10.200+boardNumber  range is .200-.215
+	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
+	BYTE bSeqNumber;
+	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
+/* Change here from format of ASCAN_DATA_HDR */
+	WORD wReadBackID;	// Read back ID for the command data requested- a sub command = 3
+	ST_TCG_SEQ_GAIN_READBACK_DATA RB205; //774
+	} CMD205H_READBACK;		// sizeof() = 792
+
 
 
 /*

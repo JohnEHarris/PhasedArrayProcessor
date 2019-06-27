@@ -467,8 +467,10 @@ afx_msg void CServerSocketOwnerThread::KillServerSocket(WPARAM w, LPARAM lParam)
 					//if (i)
 						//m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
 					}
-				catch (...)
+				catch (CException *e)
 					{
+					e->ReportError();
+					e->Delete();
 					}
 				}
 #endif

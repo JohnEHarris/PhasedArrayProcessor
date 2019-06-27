@@ -1454,8 +1454,16 @@ void CServerSocket::OnClose(int nErrorCode)
 		{
 		s.Format( _T( "Shutdown of client socket was successful status = %d\n" ), i );
 		TRACE( s );
-		this->Close();
-		pMainDlg->SaveDebugLog(s);
+//		try {
+			this->Close();
+			pMainDlg->SaveDebugLog(s);
+//			}
+#if 0
+		catch(...)
+			{
+			s = _T("Shutdown hit exception\n");
+			}
+#endif
 		}
 	else
 		{

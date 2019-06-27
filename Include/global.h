@@ -17,6 +17,7 @@ Revised:
 #define GLOBAL_H_
 #undef I_AM_THE_INSTRUMENT
 
+#define PRINTF
 
 #include "PA2Struct.h"
 #include "Cmds.h"
@@ -82,7 +83,8 @@ PubExt ST_GATE_READBACK_DATA GateCmdData;		// a copy of every gate command setti
 PubExt ST_TCG_BEAM_GAIN_READBACK_DATA TcgGainReadback;
 PubExt ST_TCG_SEQ_GAIN_READBACK_DATA TcgSeqGainReadBack;
 PubExt BYTE gbFakeDataCnt;
-
+PubExt WORD gwAscanCntLast, gwAscanCntPrevious;	// test to see if Ascans are running
+PubExt WORD gwWarmStart;
 
 #else	// not the instrument
 

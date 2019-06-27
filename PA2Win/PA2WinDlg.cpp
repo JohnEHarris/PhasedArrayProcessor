@@ -2603,7 +2603,8 @@ void CPA2WinDlg::ShowIdata(void)
 		// exit this routine
 		if (i = GetAdcCmdQ()) // apparently only adc has much in queue
 			{
-			s.Format(_T(" *** BUSY SENDING COMMANDS. ADC cmd Q = %d ***"), i);
+			s.Format(_T(" *** BUSY SENDING COMMANDS. ADC cmd Q = %04d *** Small Rcvd = %04d, Large Rcvd =%04d  ***"), 
+				i, gLastAscanPap.wSmallCmds, gLastAscanPap.wLargeCmds);
 			m_lbOutput.AddString(s);
 			return;
 			}

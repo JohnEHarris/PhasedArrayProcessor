@@ -1131,7 +1131,7 @@ void  CServerRcvListThread::SaveBeamGainReadBackData(void)
 	if (pMainDlg->m_nReadBackExists == 0) return;
 
 	is = gLastBeamGainReadBack.wSeq;
-	s.Format(_T("\nTCG Beam Gains ********** Sequece = %d \n"), is);
+	s.Format(_T("\nTCG Beam Gains (Cmd 0x204) ********** Sequece = %d \n"), is);
 	t = s;
 	for (ic = 0; ic < 8; ic++)	// channel loop
 		{
@@ -1160,7 +1160,7 @@ void  CServerRcvListThread::SaveTcgSeqGainReadBackData(void)
 	if (pMainDlg->m_nReadBackExists == 0) return;
 
 	is = gLastBeamGainReadBack.wSeq;
-	s = _T("\nTCG Seq Gains **********  \n");
+	s = _T("\nTCG Seq Gains (Cmd 0x205) **********  \n");
 	t = s;
 	for (is = 0; is < 3; is++)	// seq loop
 		{

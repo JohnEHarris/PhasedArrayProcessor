@@ -611,6 +611,15 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 		nMsgSize = pCmd->wByteCount;
 
 		int nElapse = 0;
+		if (nMsgSize > 1056)
+			{
+			s.Format(_T("Large Command msg size error, size = %d\n"), nMsgSize);
+			pMainDlg->SaveDebugLog(s);
+			pMainDlg->SaveCommandLog(s);
+			TRACE(s);
+			goto DELETE_CMD;
+			}
+
 		switch (pCmd->wMsgID)
 			{
 
@@ -646,23 +655,18 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 #endif
 
 		case SEQ_TCG_GAIN_CMD_ID:
+			s.Format(_T("ID= %3d, <Seq TCG Gain> PAP= %d, Board= %d, seq=%2d, wCmd[0]= %d, PktListSize= %4d\n"),
+				pCmd->wMsgID, pCmd->bPapNumber, pCmd->bBoardNumber,
+				pCmd->wMsgSeqCnt, pCmd->wCmd[0], pCmd->wByteCount);
+			pMainDlg->SaveCommandLog(s);
+			break;
 		case TCG_GAIN_CMD_ID:
-			s.Format( _T( "Valid Large CMD, ID= %3d, PAP= %d, Board= %d, seq=%2d, wCmd[0]= %d, PktListSize= %4d\n" ),
+			s.Format( _T( "ID= %3d, <TCG Beam Gain> PAP= %d, Board= %d, seq=%2d, wCmd[0]= %d, PktListSize= %4d\n" ),
 					pCmd->wMsgID, pCmd->bPapNumber, pCmd->bBoardNumber,
 					pCmd->wMsgSeqCnt, pCmd->wCmd[0], pCmd->wByteCount );
-			//theApp.SaveDebugLog(s);
-			//pMainDlg->SaveDebugLog( s );
 			pMainDlg->SaveCommandLog(s);
-			nMsgSize = pCmd->wByteCount;
-			if (nMsgSize > 1056)
-				{
-				s.Format(_T("Large Command msg size error, size = %d\n"), nMsgSize);
-				pMainDlg->SaveDebugLog(s);
-				pMainDlg->SaveCommandLog(s);
-				TRACE(s);
-				}
 			break;
-
+	
 		default:
 			// maybe this is a small command - most valid commands are.
 

@@ -2,7 +2,7 @@
 
 // I AM PAG  *******************
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			20
+#define BUILD_VERSION			21
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -18,6 +18,8 @@
 
 /*
 Show the version number of this program. Newest version on TOP
+1.0.021 2019-06-27 Command log has TCG Seq Gain and TCG Beam Gain text. Blast300 does 900 small, 1000 large cmds
+					PAP version shows queue depth when sending to ADC
 1.0.020 2019-06-03 Blast TcgSeqGain.
 1.0.019 2019-05-29 Readback all gate data and all TCGBeamGain data in separate commands. PAP
 					outputs read back data to a read back log. Readback info also goes to 

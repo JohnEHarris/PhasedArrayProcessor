@@ -441,6 +441,7 @@ void CNcNx::NxTestCases(int nSelect)
 	MakeWallNxCmd(m_nPAP, m_nBoard, wNx, wMax, wMin, wDrop);
 	}
 
+// Selecting a command from this combo box creates the command and sends it.
 void CNcNx::OnCbnSelchangeCbCmds()
 	{
 	CString s, t;
@@ -496,7 +497,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 				LargeCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, nCmdLarge, (WORD)m_nParam);
 				t = _T("Large Command");
 				break;
-			case 0x205: s = _T("TCG_SEQ_GAIN");						break;
+			case 0x205: s = _T("TCG_SEQ_GAIN");	
 				// build command here
 				LargeCmd(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, nCmdLarge, (WORD)m_nParam);
 				t = _T("Large Command");
@@ -961,13 +962,14 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 //	DebugPrint(m_nPAP, m_nBoard, 0x308, 6);					// turn off debug in pulser and clear counters
 	Sleep(40);
 #if 1
-	for (i = 0; i < 600; i++ )	// was 5000
+	for (i = 0; i < 1000; i++ )	// was 5000
 		{
 		Cmd.wMsgID = 2 + (i % 6);	// gate cmds 2-7
 		Cmd.wCmd[0] = i;
 		if ((i % 10) == 0)
 			{
-			CmdL.wMsgID = 516;
+			// Large command
+			CmdL.wMsgID = 516 + (rand() & 1);
 			CmdL.wCmd[0] = i;
 			CmdL.wCmd[1] = i+1;
 			CmdL.wCmd[2] = i+2;
@@ -984,11 +986,12 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 			}
 		else
 			{
+			// small command
 			Cmd.wCmd[0] = i;
 			pCmdW->bChnl = i & 7;
 			pCmdW->bGateNumber = i & 3;
 			pCmdW->bSeq = i % 3;
-			if ((i < 10) || (i > 590))
+			if ((i < 10) || (i > 990))
 				{
 				s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, Seq=%d, Ch=%d, Gate=%d, wCmd=%5d\n"),
 					Cmd.wMsgID, Cmd.wByteCount, Cmd.bPapNumber, Cmd.bBoardNumber,
@@ -1002,9 +1005,9 @@ void CNcNx::Blast(int m_nPAP, int m_nBoard)
 	
 #if 1
 	// 500 large cmds
-	for (i = 0; i < 50; i++)	// was 500
+	for (i = 0; i < 800; i++)	// was 500
 		{
-		CmdL.wMsgID = 516;
+		CmdL.wMsgID = 516 + (rand() & 1);
 		CmdL.wCmd[0] = i;
 		CmdL.wCmd[1] = i + 1;
 		CmdL.wCmd[2] = i + 2;

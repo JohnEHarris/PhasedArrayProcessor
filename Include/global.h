@@ -146,9 +146,10 @@ PubExt WORD gwSmallCmds, gwLargeCmds;	// count commands received
 PubExt BYTE gbIntrMask;
 
 // Execution Times in uSec to build read back message
+PubExt UINT uTimeIdata;
 PubExt UINT uTimeCmd204;
 PubExt UINT uTimeCmd205;
-PubExt UINT uTimeGates;
+PubExt UINT uTimeGates;	// readback time for all gates in one sequence
 PubExt UINT uTimeAscan;
 
 PubExt int nLoc; // simulate location of pipe

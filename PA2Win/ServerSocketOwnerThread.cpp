@@ -875,6 +875,8 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case 29: MsgPrint(pCmd, "DebugPrint <29> wCmd = gain");			break;
 	case 30: MsgPrint(pCmd, "ReadBack <30> wCmd = ReadBack");		break;
 	case 32: MsgPrint(pCmd, "SamInitAdc <32>");						break;
+	case 36: MsgPrint(pCmd, "X Loc Scaler <36> wCmd = Scaler");		break;
+
 	case TCG_GAIN_CMD_ID:	  MsgPrintLarge(pCmdL, "TCGBeamGain <516> wCmd[0..3]");		break;
 	case SEQ_TCG_GAIN_CMD_ID: MsgPrintLarge(pCmdL, "SetSeqTCGGain <517> wCmd[0..3]");	break;
 

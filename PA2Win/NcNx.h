@@ -97,6 +97,7 @@ public:
 	// TCG commands have the same gain template
 	ST_SET_TCG_DELAY_CMD m_TcgCmd;
 	void ReadBackCmd(int nPap, int nBoard, int nSeq, int nCmd, int nValue);
+	void X_LocScale(int nPap, int nBoard, int nCmd, int nValue);
 	ST_READ_BACK_CMD m_RdBkCmd;
 
 	void Blast(int m_nPAP, int m_nBoard);	// blast a lot of commands to test FIFO's

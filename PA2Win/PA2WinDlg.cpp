@@ -10,7 +10,7 @@
 #include "PA2Win.h"
 #include "PA2WinDlg.h"
 #include "afxdialogex.h"
-#include "Versions.h"		// DEFINITIONS FOR VERSION NUMBERS
+#include "VersionsPag.h"		// DEFINITIONS FOR VERSION NUMBERS
 #include <fcntl.h>
 #include <io.h>
 #include <string.h>

@@ -90,8 +90,9 @@ the PAP and PAG
 #define TCG_BEAM_GAIN_ALL_CMD_ID	31		// TCGBeamGainAll  calls set_beam_gain_all with same gain for all 128 elements
 #define INIT_ADC_CMD_ID				32		// initialize gate settings .. small gate cmds.
 #define GATE_BLAST_CMD_ID			33		// Set Gate Cmds to test Read Back packet from ADC
-#define CMD204H_BLAST_CMD_ID		34		// Set Gate Cmds to test Read Back packet from ADC
-
+#define CMD204H_BLAST_CMD_ID		34		// Set TCG_BEAM_GAIN blast
+#define CMD205H_BLAST_CMD_ID		35		// Set SEQ_TCG_GAIN blast
+#define CMD_XLOC_SCALE_CMD_ID		36		// divide encoder pulses to get x scale resolution
 											
 //*******************************************
 
@@ -536,6 +537,17 @@ typedef struct
 	WORD wCmd[7];		// 16	
 	} ST_DEBUG_CMD;		// sizeof() = 32
 
+typedef struct
+	{
+	GenericPacketHeader Head;	// wMsgID= 36
+	BYTE bSeq;		// used here only as a place holder
+	BYTE bChnl;		// which virtual probe.. used here only as a place holder
+	BYTE bGateNumber;	// normally a place holder to conform to the command format
+	BYTE bSpare;	// 16 bytes to here
+	WORD wScaleFactor;	//  number of encoder pulses to count before incrementing x loc
+	WORD wFill[7];	// all 0
+	}	ST_X_LOC_SCALE_CMD;
+
 //
 
 
@@ -733,6 +745,8 @@ void SelectAscanGateOutputs(void);	// executes multiple primitives
 void MakeScopeCmds(void);		// executes multiple primitives
 
 void ReadBackCmdData(void);
+void set_encoder_inch_number(BYTE bLocScale);
+void X_LocScale(void);
 void AscanRepRate(void);
 
 void set_TCG_step_size( int value );

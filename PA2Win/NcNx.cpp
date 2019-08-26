@@ -396,6 +396,7 @@ void CNcNx::PopulateCmdComboBox()
 		s.Format(_T("GateBlast"));				m_cbCommand.AddString(s);	//33
 		s.Format(_T("Cmd204H_Blast"));			m_cbCommand.AddString(s);	//34
 		s.Format(_T("Cmd205H_Blast"));			m_cbCommand.AddString(s);	//35
+		s.Format(_T("XLocDivider"));			m_cbCommand.AddString(s);	//36
 
 		m_cbCommand.SetCurSel(2);
 		break;
@@ -530,7 +531,8 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			case 30: s.Format(_T("ReadBk SubCmd %d"), m_nParam);	break;
 			case 31: s.Format(_T("TcgBeamGainAll %d"), m_nParam);	break;
 			case 32: s = _T("ADC Init");							break;
-			case 33: s = _T("GateBlast");
+			case 33: s = _T("GateBlast");							break;
+			case 36: s = _T("X-LocScale");							break;
 			case 0x204: s = _T("TCG_BEAM_GAIN");					break;
 			case 0x205: s = _T("TCG_SEQ_GAIN");						break;
 			default:	s = t;		break;
@@ -595,6 +597,8 @@ void CNcNx::OnCbnSelchangeCbCmds()
 					Cmd204hBlast(m_nPAP, m_nBoard, m_nSeq);	break;
 				case 35:
 					Cmd205hBlast(m_nPAP, m_nBoard);			break;
+				case 36:
+					X_LocScale(m_nPAP, m_nBoard, m_nCmdId, m_nParam);	break;
 				default:
 					break;
 				}
@@ -1329,6 +1333,24 @@ void CNcNx::ReadBackCmd(int nPap, int nBoard, int nSeq, int nCmd, int nValue)
 	SendMsg((GenericPacketHeader*)&m_RdBkCmd);
 	}
 
+// cmd 36 
+// set the motion pulse hardware divider in the ADC board
+void CNcNx::X_LocScale(int nPap, int nBoard, int nCmd, int nValue)
+	{
+	CString s;
+	ST_X_LOC_SCALE_CMD xScale;
+	memset(&xScale, 0, sizeof(ST_X_LOC_SCALE_CMD));
+	xScale.Head.wMsgID = nCmd;// DEBUG_PRINT_CMD_ID;
+	xScale.Head.uSync = SYNC;
+	xScale.Head.wByteCount = 32;
+	xScale.Head.bPapNumber = nPap;
+	xScale.Head.bBoardNumber = nBoard;
+	xScale.wScaleFactor = nValue;
+	s.Format(_T("ID=%d, Bytes=%d, PAP=%d, Board=%d, ScaleFactor=%5d\n"),
+		xScale.Head.wMsgID, xScale.Head.wByteCount, xScale.Head.bPapNumber, xScale.Head.bBoardNumber, xScale.wScaleFactor);
+	m_lbOutput.AddString(s);
+	SendMsg((GenericPacketHeader*)&xScale);
+	}
 
 // Command ID = 1 generates a request for the NIOS instrument to create fake data and
 // send to PAP

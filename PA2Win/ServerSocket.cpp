@@ -1627,11 +1627,14 @@ void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTI
 
 // Only in PAP - done on individual connection for every sequence and channel
 #ifdef I_AM_PAP
+	//memset((void* pscc->vChannelExists, 0, MAX_SEQ_COUNT * 4);	// chnl exists is 32 bit UINT
 	for (j = 0; j < MAX_SEQ_COUNT; j++)
 		{
+		pscc->vChannelExists[j] = 0;	//bit fields
 		for (i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
 			{
 			pscc->pvChannel[j][i] = new CvChannel( j, i );
+			pscc->vChannelExists[j] |= 1 << i;
 			}
 		}
 #endif

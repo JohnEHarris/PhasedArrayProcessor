@@ -616,7 +616,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 		}	// small commands
 
 
-	}
+	}	// CNcNx::OnCbnSelchangeCbCmds()
 
 void CNcNx::OnBnClickedBnDonothing()
 	{

@@ -36,9 +36,6 @@
     <ClInclude Include="LimitSingleInstance.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Versions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MainModuleGlobal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -111,7 +108,7 @@
     <ClInclude Include="..\Include\global.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Instrument2017_TFS\ADC_NEW\software\GlobalHeaders\Inst.h">
+    <ClInclude Include="VersionsPag.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -194,7 +194,6 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Instrument2017_TFS\ADC_NEW\software\GlobalHeaders\Inst.h" />
     <ClInclude Include="..\Include\Cmds.h" />
     <ClInclude Include="..\Include\global.h" />
     <ClInclude Include="..\Include\PA2Struct.h" />
@@ -225,7 +224,7 @@
     <ClInclude Include="tstdlibs.h" />
     <ClInclude Include="TuboIni.h" />
     <ClInclude Include="vChannel.h" />
-    <ClInclude Include="Versions.h" />
+    <ClInclude Include="VersionsPag.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CCmdFifo.cpp" />

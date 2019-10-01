@@ -7,7 +7,7 @@
 *.userosscache
 *.sln.docstates
 *.vcxproj
-version.h
+[Vv]ersions.h
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

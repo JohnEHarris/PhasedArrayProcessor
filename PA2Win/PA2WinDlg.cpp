@@ -440,6 +440,7 @@ BEGIN_MESSAGE_MAP(CPA2WinDlg, CDialogEx)
 	ON_COMMAND( ID_CONFIGURE_NCNX, &CPA2WinDlg::OnConfigureNcNx )
 	ON_BN_CLICKED( IDC_BN_ERASE_DBG, &CPA2WinDlg::OnBnClickedBnEraseDbg )
 	ON_BN_CLICKED( IDC_BN_SHUTDOWN, &CPA2WinDlg::OnBnClickedBnShutdown )
+	ON_LBN_SELCHANGE(IDC_LIST1, &CPA2WinDlg::OnLbnSelchangeList1)
 END_MESSAGE_MAP()
 
 
@@ -518,7 +519,7 @@ void CPA2WinDlg::ReadPAPnumber(void)
 	for (i = 5; i > 0; i--)
 		{	// drive letter loop 
 		memcpy(FileName, PathName, 16);		//G:\1.wall  --the '1' is in  index 3
-		for (j = 0; j < 8; j++)	
+		for (j = 0; j < 5; j++)	
 			{ // look for 1-8 for instrument number
 			sPath = FileName;	// convert char string to MFC string
 			if (!m_PapNumberFile.Open(sPath, CFile::modeRead | CFile::shareDenyNone, &fileException))
@@ -617,11 +618,16 @@ void CPA2WinDlg::ReadPAPnumber(void)
 	}
 #endif
 
+#define SIMULATOR
 // Find the PAP number in folder C:\LocalAppExes\MyID
 void CPA2WinDlg::GetPAPFromCDrive(void)
 	{
 	CString sPath, s;
+#ifdef SIMULATOR
+	char PathName[128] = "d:\\1.wall";
+#else
 	char PathName[128] =  "C:\\LocalAppExes\\MyID\\1.wall";
+#endif
 	int i, j;	// character position for numerical value of wall file name
 	CString t;
 	CFileException fileException;
@@ -2938,3 +2944,9 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the 
 	}
 
 #endif
+
+
+	void CPA2WinDlg::OnLbnSelchangeList1()
+	{
+		// TODO: Add your control notification handler code here
+	}

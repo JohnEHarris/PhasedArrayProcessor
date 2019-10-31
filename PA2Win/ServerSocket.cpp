@@ -232,6 +232,25 @@ CServerSocket::~CServerSocket()
 			m_pFifo = 0;
 			}		
 	
+		// Kill all the virtual channels
+#ifdef I_AM_PAP
+		if (m_pstSCM->pClientConnection[m_nClientIndex]->bOwnVChnls)
+			{
+			for (j = 0; j < MAX_SEQ_COUNT; j++)
+				{
+				for (i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
+					{
+					delete m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[j][i];
+					m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[j][i] = 0;
+					}
+				}
+			m_pstSCM->pClientConnection[m_nClientIndex] = 0;
+			m_pstSCM->pClientConnection[m_nClientIndex]->bOwnVChnls = 0;
+			}
+#endif
+
+
+
 		// safety check from testing operations
 		ST_SERVERS_CLIENT_CONNECTION *m_pCheckSCC;
 		nDummy = 5;	// this had to be declared at the top of the procedure
@@ -258,8 +277,10 @@ CServerSocket::~CServerSocket()
 						CSocket::Close();
 #endif
 						}
-					catch (...)
+					catch (CException *e)
 						{
+						e->ReportError();
+						e->Delete();
 						}
 					}
 				Sleep( 10 );
@@ -277,6 +298,8 @@ CServerSocket::~CServerSocket()
 			}
 			break;
 
+
+		// end of eServerConnection case
 
 	default:
 		s = _T("Unknown Socket Destructor called \n");
@@ -332,7 +355,7 @@ CServerSocket::~CServerSocket()
 		}	// if (nShutDown)
 	if (m_pSCC->pSocket)		// sometimes crashes here ??
 		m_pSCC->pSocket = 0;
-	s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
+	s.Format(_T("Server Socket %d Destructor exit\n"), m_nClientIndex);
 	TRACE(s);
 	for (i = 0; i < 100; i++)
 		nDummy++;
@@ -1046,6 +1069,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 				pThread->m_pstSCM = m_pSCM->m_pstSCM;
 				pThread->m_nMyServer = m_pSCM->m_pstSCM->pSCM->m_nMyServer;
 				pThread->m_pSCC = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];
+				pThread->m_pSCC->bOwnVChnls = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex]->bOwnVChnls = 0;
+
 				pThread->m_nClientIndex = m_nClientIndex;
 				pThread->m_pSCC->pSocket = new CServerSocket(m_pSCM, eServerConnection); ;
 				s.Format(_T("CServerSocket::OnAccept, pThread->m_pSCC->pSocket = 0x%08x, Handle = 0x%08x\n"), 
@@ -1299,6 +1324,14 @@ void CServerSocket::OnReceive(int nErrorCode)
 			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
 			//InputRawDataPacket *pIdataPacket = (InputRawDataPacket *) pB;
 			IDATA_FROM_HW *pIdataPacket = (IDATA_FROM_HW *) pB;
+			// Debugging
+#ifdef I_AM_PAP
+			if (nPacketSize != sizeof(IDATA_FROM_HW))
+				{
+				s.Format(_T("Expected packet size = %d, but got %d"), nPacketSize, sizeof(IDATA_FROM_HW));
+				TRACE(s);
+				}
+#endif
 #if 0
 			// detects correct seq 2,0,1,2,0,1
 			if (pIdataPacket->wMsgID == 1)
@@ -1459,9 +1492,11 @@ void CServerSocket::OnClose(int nErrorCode)
 			pMainDlg->SaveDebugLog(s);
 //			}
 #if 0
-		catch(...)
+		catch(CException *e)
 			{
 			s = _T("Shutdown hit exception\n");
+			e->ReportError();
+			e->Delete();
 			}
 #endif
 		}
@@ -1474,10 +1509,12 @@ void CServerSocket::OnClose(int nErrorCode)
 	Sleep( 10 );
 #ifdef I_AM_PAP
 	CAsyncSocket::OnClose(nErrorCode);
-	TRACE(_T("CAsyncSocket::OnClose(nErrorCode) called\n"));
+	s.Format(_T("CAsyncSocket::OnClose(SrvSocket error = %d called\n"), nErrorCode);
+	TRACE(s);
 #else
 	CSocket::OnClose(nErrorCode);
-	TRACE(_T("CSocket::OnClose(nErrorCode) called\n"));
+	s.Format(_T("CSocket::OnClose(SrvSocket error = %d called\n"), nErrorCode);
+	TRACE(s);
 #endif
 
 	
@@ -1623,19 +1660,19 @@ void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTI
 	pscc->uBytesSent				= 0;
 	pscc->uUnsentPackets			= 0;
 	pscc->uLastTick					= 0;
+	pscc->bOwnVChnls				= 0xff;
 	SetpSCC( pscc );	// important or we get nulls
 
 // Only in PAP - done on individual connection for every sequence and channel
 #ifdef I_AM_PAP
-	//memset((void* pscc->vChannelExists, 0, MAX_SEQ_COUNT * 4);	// chnl exists is 32 bit UINT
 	for (j = 0; j < MAX_SEQ_COUNT; j++)
 		{
-		pscc->vChannelExists[j] = 0;	//bit fields
 		for (i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
 			{
 			pscc->pvChannel[j][i] = new CvChannel( j, i );
-			pscc->vChannelExists[j] |= 1 << i;
 			}
 		}
 #endif
+	s = "OnAcceptInitializeConnectionStats has run\n";
+	pMainDlg->SaveDebugLog(s);
 	}

@@ -50,7 +50,6 @@ public:
 	ST_SERVER_CONNECTION_MANAGEMENT *m_pstSCM;	// managing structure ptr
 	ST_SERVERS_CLIENT_CONNECTION *m_pSCC;		// ptr to my connection info/statistics/objects
 
-
 	void SetClientConnectionIndex( int indx ) { m_nClientIndex = indx; }
 	// call these get/set function from ServerSocketOwnerThread ExitInstance to update
 	// the values

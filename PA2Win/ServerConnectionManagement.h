@@ -176,13 +176,13 @@ typedef struct
 	UINT uLastTick;					// Use with main app uAppTimerTick value to provide keep alive messages
 	// 2016-06-06 jeh
 	// initialized in CServerSocket::OnAcceptInitializeConnectionStats
+	BYTE bOwnVChnls;
 	CvChannel* pvChannel[MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];	// array of ptrs to virtual channels associated 
 							// with each client connection. Pointer is
 	
 	RAW_INSTRUMENT_STATUS InstrumentStatus;	// Status info which comes with each TCPIP packet from an instrument
 
-	//2019-09-29 bit field to indicate that pvChannel exists. Used to determine if pvChannel ptr is valid
-	UINT vChannelExists[MAX_SEQ_COUNT];		// supports 32 vChnls per sequence
+
 	} ST_SERVERS_CLIENT_CONNECTION;	// Name means for a given server what are the properties of each connected client
 
 /** =============================================================================**/
@@ -339,7 +339,6 @@ public:
 	// for the connection.
 
 	int ServerShutDown(int nMyServer);
-	BYTE IsVChnl(int nMyServer, int nClient, int nSeq, int nCh);	// not implemented yet 2019-09-25
 	// Called at shut down or when client socket executes OnClose
 	void KillClientConnection(int nMyServer, int nClient);	// Called by ServerShutDown
 	// wait for nWait*10 milliseconds for thread to close

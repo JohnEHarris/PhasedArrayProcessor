@@ -274,4 +274,5 @@ public:
 	afx_msg void OnConfigureNcNx();
 	afx_msg void OnBnClickedBnEraseDbg();
 	afx_msg void OnBnClickedBnShutdown();
+	afx_msg void OnLbnSelchangeList1();
 };

@@ -70,8 +70,8 @@ CClientSocket::~CClientSocket()
 	int i;
 	if (NULL == m_pCCM)				return;
 	if (NULL == m_pCCM->m_pstCCM)	return;
-	s.Format(_T("~CClientSocket Socket# =%d, CreateThread = %d\n"),
-				m_nAsyncSocketCnt, m_nOwningThreadId);
+	s.Format(_T("~CClientSocket Socket# =%d, CreateThread = %d SocketName = %s\n"),
+				m_nAsyncSocketCnt, m_nOwningThreadId, m_pCCM->m_pstCCM->szSocketName);
 	TRACE(s);
 	// if the socket exists and was at one time connected then m_pFifo and
 	// m_pElapseTimer are likely valid
@@ -270,6 +270,7 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		{
 		s = _T("Client number is unkown..");
 		}
+	TRACE(s);
 	if (0 != nErrorCode)
 		{
 		switch(nErrorCode)
@@ -299,6 +300,7 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 			break;
 		case WSAEINVAL: 
 			MyMessageBox(_T("The socket is already bound to an address.\n"));			// 10022L
+			WSACleanup();
 			break;
 		case WSAEISCONN: 
 			MyMessageBox(_T("The socket is already connected.\n"));
@@ -343,9 +345,9 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		GetPeerName(s0, uSPort);
 		GetSockName(s1, uCPort);	// my ip and port
 		if (m_pCCM->m_nMyConnection == 0)
-			s.Format(_T("PAG client IP = %s:%d connected to PAG server = %s:%d "), s1, uCPort, s0, uSPort);
+			s.Format(_T("PAG client IP = %s:%d connected to PAG server = %s:%d \n"), s1, uCPort, s0, uSPort);
 		else if (m_pCCM->m_nMyConnection == 1)
-			s.Format(_T("PAG client IP = %s:%d connected to PAG_AW server = %s:%d "), s1, uCPort, s0, uSPort);
+			s.Format(_T("PAG client IP = %s:%d connected to PAG_AW server = %s:%d \n"), s1, uCPort, s0, uSPort);
 		//DebugOutMessage(s);
 #ifdef I_AM_PAP
 		//pMainDlg->SetMy_PAP_Number(s1, uCPort);

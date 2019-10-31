@@ -157,7 +157,7 @@ BOOL CServerSocketOwnerThread::InitInstance()
 
 	m_pSCC->nSSRcvListThreadPriority = THREAD_PRIORITY_NORMAL;	// could/should be an ini file value
 #ifdef I_AM_PAP
-	// PAM if here
+	// PAP if here
 
 		// one rcv list thread for each client connection
 		// create suspended in theApp and set pointers to structures here

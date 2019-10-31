@@ -185,7 +185,7 @@ BOOL CClientCommunicationThread::InitInstance()
 // Self deleting threads
 int CClientCommunicationThread::ExitInstance()
 	{
-#if 0
+#if 1
 	// TODO:  perform any per-thread cleanup here
 	void *pv;
 	int i;
@@ -976,7 +976,7 @@ void CClientCommunicationThread::StartTCPCommunication()
 			// code in CClientSocket will complete the socket connection operation.
 			//s.Format(_T("Connect Error = %d ...waiting to connect "), nError);
 
-			s.Format(_T("Connect Error = %d ...waiting to connect to server %s.."),
+			s.Format(_T("Connect Error = %d ...waiting to connect to server %s..\n"),
 				m_pstCCM->nOnConnectError, m_pstCCM->sServerName);
 
 			t = GetTimeString();

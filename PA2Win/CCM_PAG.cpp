@@ -169,6 +169,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 			// pMmiCmd->bBoardNumber = 0;
 			CServerSocket *pSocket = stSCM[1].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
 			CServerSocketOwnerThread *pThread = stSCM[1].pClientConnection[pMmiCmd->bBoardNumber]->pServerSocketOwnerThread;
+			stSCM[1].pClientConnection[pMmiCmd->bBoardNumber]->bOwnVChnls = 0;
 #else
 			// should pMmiCmd->bBoardNumber be 0 ??
 			CServerSocket *pSocket = stSCM[0].pClientConnection[pMmiCmd->bBoardNumber]->pSocket;
@@ -369,7 +370,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 						else
 							{
-							s.Format(_T(">>>> Invalid large command ID = %d <<<<"), MsgId);
+							s.Format(_T(">>>> Invalid large command ID = %d <<<<\n"), MsgId);
 							TRACE(s);
 							pMainDlg->SaveDebugLog(s);
 							delete pMmiCmd;

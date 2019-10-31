@@ -794,7 +794,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 					{
 					s.Format(_T("Deleting m_pIdataPacket, gnSeqModulo error %d  != %d, IdataSeqNumber, m_pIdataPacket = 0x%08x\n\n"),
 						gnSeqModulo, pIData->bSeqModulo, (UINT)m_pIdataPacket);
-					pMainDlg->SaveFakeData(s);
+					pMainDlg->SaveDebugLog(s);
 					delete m_pIdataPacket;
 					m_pIdataPacket = 0;
 					//m_IdataInPt = 0;

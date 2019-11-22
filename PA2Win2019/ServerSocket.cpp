@@ -1513,6 +1513,7 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 	int nSockOpt = TRUE;
 	int  sockerr=0;
 	UINT uPort;
+	CString s;
 
 	if ( NULL == pSCM)	return -1;
 	pSCM->SetServerType(eListener);
@@ -1527,8 +1528,12 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 	// the final null can be replaced with an ip4 address if a specific NIC is desired to be used,
 	// otherwise this socket will listen on all NIC's -- lpszSockAddress = null
 #ifdef I_AM_PAP
+	s.Format(_T("Attempt to create ASYNC socket for port %d\n"), uPort);
+	TRACE(s);
 	if (sockerr = this->Create(uPort, SOCK_STREAM, FD_READ | FD_CONNECT | FD_CLOSE | FD_ACCEPT) != 0)	// async socket
 #else
+	s.Format(_T("Attempt to create SYNC socket for port %d\n"), uPort);
+	TRACE(s);
 	if (sockerr = this->Create(uPort, 1, pSCM->GetServerIP4()))		// PAG is -- 1/7/19 now CSocket
 #endif
 		{	// Socket created
@@ -1570,10 +1575,10 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 
 	else
 		{								
-		
-		TRACE("Failed to create stream socket... aborting\n");
+		s += _T("Failed-- aborting\n");
+		TRACE(s);
 		sockerr = GetLastError();
-		TRACE1("Create Socket Error = 0x%x\n", sockerr);
+		TRACE1("Create Socket Error = 0x%x\n", sockerr);	//#define WSAEADDRINUSE      10048L=2748H
 		return -1;	// C_CLIENT_SOCKET_CREATION_ERROR;
 		}
 

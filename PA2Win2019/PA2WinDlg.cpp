@@ -814,7 +814,7 @@ void CPA2WinDlg::GetServerConnectionManagementInfo(void)
 
 		szI.Format(_T("%d-Client_Base_IP"), i);
 #ifdef I_AM_PAP
-		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection,szI, _T("192.168.10.201"));
+		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection,szI, _T("192.168.10.200")); //jeh was .201 check in other instances of code 11-20-2019
 #else
 		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection, szI, _T("192.168.11.40"));
 #endif

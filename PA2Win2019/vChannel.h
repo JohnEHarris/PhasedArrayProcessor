@@ -51,8 +51,8 @@ public:
 	void FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod);
 	void FifoClear(BYTE bIdOd);	// zero fifo entries, keep other parameters
 	BYTE bGetIdGateMax(void)	{ return NcFifo[0].bMaxFinal;	}
-	BYTE bGetOdGateMax(void)	{ return NcFifo[1].bMaxFinal;;	}
-	BYTE bGetIfGateMax(void)	{ return NcFifo[2].bMaxFinal;;	}
+	BYTE bGetOdGateMax(void)	{ return NcFifo[1].bMaxFinal;	}
+	BYTE bGetIfGateMax(void)	{ return NcFifo[2].bMaxFinal;	}
 
 	BYTE bGetNcId(void)			{ return NcFifo[0].bNc;	}
 	BYTE bGetNcOd(void)			{ return NcFifo[1].bNc;	}
@@ -143,7 +143,7 @@ public:
 	// changed on 2017-04-18 to create/destroy as instrument clients connect.
 	// This is so the PAG and PAP code can be almost identical.
 	// PAG is much easier to debug. PAG must work this way by assuming there is nothing existing
-	// before and instrument connects.
+	// before an instrument connects.
 #endif
 	};	
 

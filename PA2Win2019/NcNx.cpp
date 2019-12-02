@@ -129,6 +129,7 @@ BOOL CNcNx::OnInitDialog()
 	PositionWindow();
 	m_nPAP = m_nBoard = m_nSeq = m_nCh = m_nGate = m_nParam	= 0;
 	guAscanMsgCnt = 0;
+	guIdataMsgCnt = 0;
 	m_nRecordState = 0;
 #ifdef I_AM_PAG
 	SetDlgItemText(IDC_BN_RECORD, _T("RECORD"));
@@ -338,6 +339,7 @@ void CNcNx::OnBnClickedBnErase()
 	// TODO: Add your control notification handler code here
 	m_lbOutput.ResetContent();
 	guAscanMsgCnt = 0;
+	guIdataMsgCnt = 0;
 	}
 
 // Fill the combo box with strings whose index in the combobox matches the 

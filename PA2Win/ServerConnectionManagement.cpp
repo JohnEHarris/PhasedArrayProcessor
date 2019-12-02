@@ -459,6 +459,10 @@ int CServerConnectionManagement::ServerShutDown(int nMyServer)
 	return 0;
 	}
 
+BYTE CServerConnectionManagement::IsVChnl(int nMyServer, int nClient, int nSeq, int nCh)
+	{
+	return 0;
+	}
 	
 void CServerConnectionManagement::KillClientConnection(int nMyServer, int nClient)
 	{
@@ -523,7 +527,10 @@ void CServerConnectionManagement::KillClientConnection(int nMyServer, int nClien
 	// 2017-05-14 Now kill threads ... TBD
 	// Socket owner and receive list
 
-
+	UINT uTmp;
+	//BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp) PAP crashes in high bay with bad ptr
+	// if (pFifo->bNc == 0) return 0;
+	// try to guard against this
 	for ( i = 0; i < MAX_SEQ_COUNT; i++)
 		for (j = 0; j < MAX_CHNLS_PER_MAIN_BANG; j++)
 			{
@@ -532,6 +539,8 @@ void CServerConnectionManagement::KillClientConnection(int nMyServer, int nClien
 					{
 					delete m_pstSCM->pClientConnection[nClient]->pvChannel[i][j];
 					m_pstSCM->pClientConnection[nClient]->pvChannel[i][j] = 0;
+					uTmp = 0xffffffff ^ (1 << j); // mask to remove chnl j
+					m_pstSCM->pClientConnection[nClient]->vChannelExists[i] &= uTmp;
 					}
 			}
 	

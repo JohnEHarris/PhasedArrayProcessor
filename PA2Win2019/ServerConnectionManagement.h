@@ -176,6 +176,7 @@ typedef struct
 	UINT uLastTick;					// Use with main app uAppTimerTick value to provide keep alive messages
 	// 2016-06-06 jeh
 	// initialized in CServerSocket::OnAcceptInitializeConnectionStats
+	BYTE bOwnVChnls;
 	CvChannel* pvChannel[MAX_SEQ_COUNT][MAX_CHNLS_PER_MAIN_BANG];	// array of ptrs to virtual channels associated 
 							// with each client connection. Pointer is
 	

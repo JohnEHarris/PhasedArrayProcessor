@@ -58,6 +58,9 @@ CvChannel::CvChannel(int nSeq, int nChnl)
 
 CvChannel::~CvChannel()
 	{
+	CString s;
+	s.Format(_T("Delete vChnl[%d][%d]\n"), m_bSeq, m_bChnl);
+	TRACE(s);
 	};
 
 #if 1
@@ -74,7 +77,7 @@ void CvChannel::ResetGatesAndWalls(void)
 	m_wTOFMaxSum = 0;
 	m_wTOFMinSum = 0xffff;
 	NxFifo.wBadWall = NxFifo.wGoodWall = 0;
-	NcFifo[0].bMaxFinal = NcFifo[1].bMaxFinal = 0;
+	NcFifo[0].bMaxFinal = NcFifo[1].bMaxFinal = NcFifo[2].bMaxFinal = 0;
 	}
 
 /*********************** Flaw processing routines ***********************/
@@ -99,7 +102,7 @@ void CvChannel::FifoInit(BYTE bIdOd, BYTE bNc, BYTE bThld, BYTE bMod)
 	};
 
 // An amplitued is input and an Nc qualified reading is returned.
-// bIdOd selects which FIFO id=0, od=1
+// bIdOd selects which FIFO id=0, od=1 interface gate1 = 2
 // If Nc is 0 return immediately
 BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 	{
@@ -107,18 +110,27 @@ BYTE CvChannel::InputFifo(BYTE bIdOd,BYTE bAmp)
 	Nc_FIFO *pFifo;
 	if (bIdOd > 2)	 bIdOd = 2;
 	pFifo = &NcFifo[bIdOd];
-	if (pFifo->bNc == 0) return 0;	// nothing or a wall channel only
-	//if (bAmp > 0xc0)
-	//	i = i+3;
+	// crashes in high bay Sep 2019
+	try
+		{
+		if (pFifo->bNc == 0) 
+			return 0;	// nothing or a wall channel only
 
-	i = pFifo->bInPt;		// slot position in the fifo
-	pFifo->bCell[i] = bAmp;	// replace oldest element
-	pFifo->bInPt++;		// advance to next oldest position
-	if (pFifo->bInPt >= pFifo->bMod)	pFifo->bInPt = 0;	// fifo is only bMod deep
+		i = pFifo->bInPt;		// slot position in the fifo
+		pFifo->bCell[i] = bAmp;	// replace oldest element
+		pFifo->bInPt++;		// advance to next oldest position
+		if (pFifo->bInPt >= pFifo->bMod)	pFifo->bInPt = 0;	// fifo is only bMod deep
 
-	pFifo->bAboveThld = 0;	// get ready to count fifo entries above or equal to thold
-	pFifo->bMaxTemp   = 0;	
-
+		pFifo->bAboveThld = 0;	// get ready to count fifo entries above or equal to thold
+		pFifo->bMaxTemp = 0;
+		}
+	catch (CException *e)
+		{
+		e->ReportError();
+		e->Delete();
+		return 0;
+		}
+	
 	for ( i = 0; i < pFifo->bMod; i++)
 		{
 		if (pFifo->bCell[i] >= pFifo->bThold)	pFifo->bAboveThld++;

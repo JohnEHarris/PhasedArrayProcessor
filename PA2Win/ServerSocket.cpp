@@ -1550,6 +1550,7 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 	int nSockOpt = TRUE;
 	int  sockerr=0;
 	UINT uPort;
+	CString s;
 
 	if ( NULL == pSCM)	return -1;
 	pSCM->SetServerType(eListener);
@@ -1564,8 +1565,12 @@ int CServerSocket::InitListeningSocket(CServerConnectionManagement * pSCM)
 	// the final null can be replaced with an ip4 address if a specific NIC is desired to be used,
 	// otherwise this socket will listen on all NIC's -- lpszSockAddress = null
 #ifdef I_AM_PAP
+	s.Format(_T("Attempt to create ASYNC socket for port %d\n"), uPort);
+	TRACE(s);
 	if (sockerr = this->Create(uPort, SOCK_STREAM, FD_READ | FD_CONNECT | FD_CLOSE | FD_ACCEPT) != 0)	// async socket
 #else
+	s.Format(_T("Attempt to create SYNC socket for port %d\n"), uPort);
+	TRACE(s);
 	if (sockerr = this->Create(uPort, 1, pSCM->GetServerIP4()))		// PAG is -- 1/7/19 now CSocket
 #endif
 		{	// Socket created
@@ -1667,9 +1672,11 @@ void CServerSocket::OnAcceptInitializeConnectionStats(ST_SERVERS_CLIENT_CONNECTI
 #ifdef I_AM_PAP
 	for (j = 0; j < MAX_SEQ_COUNT; j++)
 		{
+		pscc->vChannelExists[j] = 0;	//bit fields
 		for (i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
 			{
 			pscc->pvChannel[j][i] = new CvChannel( j, i );
+			pscc->vChannelExists[j] |= 1 << i;
 			}
 		}
 #endif

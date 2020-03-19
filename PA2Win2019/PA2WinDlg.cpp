@@ -10,7 +10,7 @@
 #include "PA2Win.h"
 #include "PA2WinDlg.h"
 #include "afxdialogex.h"
-#include "VersionsPag.h"		// DEFINITIONS FOR VERSION NUMBERS
+#include "Versions.h"		// DEFINITIONS FOR VERSION NUMBERS
 #include <fcntl.h>
 #include <io.h>
 #include <string.h>
@@ -22,6 +22,7 @@
 #include "ServerConnectionManagement.h"
 #include <synchapi.h>	// get/set system clock interval in ms
 #include <timeapi.h>
+#include "CIP_Connect.h"
 
 
 
@@ -41,6 +42,7 @@ I AM THE PHASED ARRAY PROCESSOR
 */
 #endif
 
+class CIP_CONNECT;
 class CClientConnectionManagement *pCCM[MAX_CLIENTS];	// global, static ptrs to class instances defined outside of the class definition.
 class CServerConnectionManagement *pSCM[MAX_SERVERS];	// global, static ptrs to class instances define outside of the class definition.
 												//  -- not created with 'new'
@@ -299,8 +301,12 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	m_ptheApp = (CPA2WinApp *) AfxGetApp();
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	gDlg.pUIDlg = this;
+	gDlg.pIpConnect = 0;
+	gDlg.pNcNx = 0;
+	gDlg.pTuboIni = 0;
 	nShutDown = 0;
 	m_nMsgSeqCnt = 0;
+	gnAsyncSocketCnt = 0;
 
 	g_hTimerTick = ::CreateEvent(0, TRUE, FALSE, 0);
 	//memset((void*)stSCM, 0, sizeof(stSCM)*MAX_SERVERS);
@@ -441,6 +447,7 @@ BEGIN_MESSAGE_MAP(CPA2WinDlg, CDialogEx)
 	ON_BN_CLICKED( IDC_BN_ERASE_DBG, &CPA2WinDlg::OnBnClickedBnEraseDbg )
 	ON_BN_CLICKED( IDC_BN_SHUTDOWN, &CPA2WinDlg::OnBnClickedBnShutdown )
 	ON_LBN_SELCHANGE(IDC_LIST1, &CPA2WinDlg::OnLbnSelchangeList1)
+	ON_COMMAND(ID_CONNECTIVITY_SHOW, &CPA2WinDlg::OnConnectivityShow)
 END_MESSAGE_MAP()
 
 
@@ -687,6 +694,7 @@ BOOL CPA2WinDlg::OnInitDialog()
 	#else
 	sDlgName = _T( "PA2Win -- Phase Array Processor Version -- PAP " );
 #endif
+	gsNxIP = _T("");
 	bAppIsClosing = 0;	// just started
 	sDlgName += s;
 	SetWindowText(sDlgName);
@@ -2952,3 +2960,21 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the 
 	{
 		// TODO: Add your control notification handler code here
 	}
+
+
+	void CPA2WinDlg::OnConnectivityShow()
+		{
+		// TODO: Add your command handler code here
+		// check for already existing dialog. If not existing
+		// use new to create new dialog
+	// TODO: Add your command handler code here
+	if (gDlg.pIpConnect == NULL) 
+		{
+		gDlg.pIpConnect = new CIP_Connect();
+		if (gDlg.pIpConnect)
+			{
+			gDlg.pIpConnect->Create(IDD_IP_CONNECT);
+			}
+		}
+	else gDlg.pIpConnect->SetFocus();
+		}

@@ -49,6 +49,7 @@ CNcNx::CNcNx(CWnd* pParent /*=NULL*/)
 , m_PulserCmdTxt(_T(""))
 , m_SmallTxt(_T(""))
 , m_LargeTxt(_T(""))
+// Using ini file for dialog location, next items are keys for ini file
 	{
 	m_DlgLocationKey = _T("NC_NX_PA2");
 	m_DlgLocationSection = _T("Dialog Locations");	// Section is always this string for all dlgs

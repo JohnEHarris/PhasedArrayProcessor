@@ -137,15 +137,21 @@ CServerSocket::~CServerSocket()
 		s.Format( _T( " Socket# =%d, CreateThread = %d\n" ),
 			m_nAsyncSocketCnt, nId );
 		TRACE( s );
-		//try    ............ debugger says invalid m_pstSCM
-		if (m_pSCM->m_pstSCM->pServerListenSocket == 0)
-			{
-			TRACE( _T( "m_pSCM->m_pstSCM->pServerListenSocket = 0\n" ) );
-			s.Format(_T("Server Socket %d Listener Destructor exit\n"), hThis);
-			TRACE(s);
-			return;
-			}
-		// catch()
+//		try  //    ............ debugger says invalid m_pstSCM
+//			{
+			if (m_pSCM->m_pstSCM->pServerListenSocket == 0)
+				{
+				TRACE(_T("m_pSCM->m_pstSCM->pServerListenSocket = 0\n"));
+				s.Format(_T("Server Socket %d Listener Destructor exit\n"), hThis);
+				TRACE(s);
+				return;
+				}
+//			}
+//		catch (CException)
+//			{
+//			e->ReportError();
+//			e->Delete();
+//			}
 
 		else
 			{

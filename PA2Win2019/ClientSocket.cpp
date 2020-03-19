@@ -345,9 +345,17 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		GetPeerName(s0, uSPort);
 		GetSockName(s1, uCPort);	// my ip and port
 		if (m_pCCM->m_nMyConnection == 0)
+			{
 			s.Format(_T("PAG client IP = %s:%d connected to PAG server = %s:%d \n"), s1, uCPort, s0, uSPort);
+			gsNxIP.Format(_T("%s : %d"),s1,uCPort); // client Nx IP and port
+			gsUUI_NxIP.Format(_T("%s : %d"),s0,uSPort); // UUI IP and port
+			}
 		else if (m_pCCM->m_nMyConnection == 1)
+			{
 			s.Format(_T("PAG client IP = %s:%d connected to PAG_AW server = %s:%d \n"), s1, uCPort, s0, uSPort);
+			gsAllWallIP.Format(_T("%s : %d"),s1,uCPort); // client Nx IP and port
+			gsUUI_AllWallIP.Format(_T("%s : %d"),s0,uSPort); // UUI IP and port
+			}
 		//DebugOutMessage(s);
 #ifdef I_AM_PAP
 		//pMainDlg->SetMy_PAP_Number(s1, uCPort);

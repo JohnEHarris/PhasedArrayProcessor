@@ -108,10 +108,10 @@
     <ClInclude Include="..\Include\global.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="VersionsPag.h">
+    <ClInclude Include="Versions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Versions.h">
+    <ClInclude Include="CIP_Connect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -177,6 +177,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TestThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CIP_Connect.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

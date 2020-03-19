@@ -86,13 +86,15 @@ PubExt BYTE gbFakeDataCnt;
 PubExt WORD gwAscanCntLast, gwAscanCntPrevious;	// test to see if Ascans are running
 PubExt WORD gwWarmStart;
 
+
+
 #else	// not the instrument
 
 class CTuboIni;
 class CPA2WinDlg;
 class CPA2WinApp;
-class CTuboIni;
 class CNcNx;
+class CIP_Connect;
 
 typedef struct 
 	{
@@ -101,6 +103,7 @@ typedef struct
 	CPA2WinApp *ptheApp;
 	CTuboIni *pTuboIni;		// not actually a dialog, but no harm, no foul
 	CNcNx *pNcNx;			// Nc Nx test dialog
+	CIP_Connect* pIpConnect; // generate a dialog showing IP connections/ports and wall instrument number
 	}	GLOBAL_DLG_PTRS;
 
 PubExt GLOBAL_DLG_PTRS gDlg;
@@ -195,6 +198,12 @@ PubExt WORD gwPapPulserCmds, gwPapLargeCmds, gwPapSmallCmds;		// count commands 
 // These error counts should reset on DebugPrint msg bit 1
 PubExt BYTE gbAdcMsgIdErrorCntPAP;		// count number of times adc msg lost in PAP
 PubExt BYTE gbAdcMsgIdErrorCntADC;		// count number of times adc msg lost in ADC
+
+PubExt CString gsNxIP;		//IP + port of Wall Instrument
+PubExt CString gsUUI_NxIP;	//IP + port of UUI connected to wall
+PubExt CString gsAllWallIP;	//IP + port of Wall Instrument - all walls
+PubExt CString gsUUI_AllWallIP;	//IP + port of UUI connected to all wall
+
 //#define SYNC							0x5CEBDAAD
 
 #define PRINT_MSG		(1 << 0)

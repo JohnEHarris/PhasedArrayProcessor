@@ -275,4 +275,5 @@ public:
 	afx_msg void OnBnClickedBnEraseDbg();
 	afx_msg void OnBnClickedBnShutdown();
 	afx_msg void OnLbnSelchangeList1();
+	afx_msg void OnConnectivityShow();
 };

@@ -173,18 +173,22 @@ typedef struct
 // keep data synchronized with location information
 typedef struct	// IDATA_FROM_HW
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
+	//BYTE bMsgID;		// Commands are word length, data returned is byte length
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID
+	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256
+	WORD wByteCount;	// Number of bytes in this packet. Make it even number		
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
 	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+						// AKA Instrument
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
-						// this is the last 2 digits of the IP4 address of the board 
-						// 192.168.10.200+boardNumber  range is .200-.215
-	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
+						//AKA card
+	BYTE bBoardType;	// what kind of inspection device 1= wall 2 = socomate
+	BYTE bPapStatus;	// AKA Instrument status, 0 means no errors. new on 2/25/20
+
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
-	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
+	BYTE bSeqModulo;	// modulo of the sequence number. Last seq, modulo-1.  in 2020 modulo = 3 
 	BYTE bMaxVChnlsPerSequence;	// maximum number of virtual channels generated on a firing.		16
 								// Some sequence points may have channel type NOTHING
 	BYTE bStartChannel;	// First virtual channel in peak data PeakChnl--always 0 for this hardware
@@ -227,15 +231,19 @@ typedef struct	// IDATA_FROM_HW
 // Estimated 13 uSec to copy header into Wiznet
 typedef struct	// IDATA_FROM_HW_HDR
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		
+	//BYTE bMsgID;		// Commands are word length, data returned is byte length
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID
+	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256
+	WORD wByteCount;	// Number of bytes in this packet. Make it even number		
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
 	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+						// AKA Instrument
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
-						// this is the last 2 digits of the IP4 address of the board 
-						// 192.168.10.200+boardNumber  range is .200-.215
-	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
+						//AKA card
+	BYTE bBoardType;	// what kind of inspection device 1= wall 2 = socomate
+	BYTE bPapStatus;	// AKA Instrument status, 0 means no errors. new on 2/25/20
+
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
@@ -327,15 +335,19 @@ typedef struct // stPeakChnlNIOS
 
 typedef struct // IDATA_PAP
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
-	UINT uSync;			// 0x5CEBDAAD													8
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
+	//BYTE bMsgID;		// Commands are word length, data returned is byte length
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID
+	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256
+	WORD wByteCount;	// Number of bytes in this packet. Make it even number		
+	UINT uSync;			// 0x5CEBDAAD													
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
 	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+						// AKA Instrument
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
-						// this is the last 2 digits of the IP4 address of the board 
-						// 192.168.10.200+boardNumber  range is .200-.215
-	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
+						//AKA card
+	BYTE bBoardType;	// what kind of inspection device 1= wall 2 = socomate
+	BYTE bPapStatus;	// AKA Instrument status, 0 means no errors. new on 2/25/20
+	
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1
@@ -380,15 +392,20 @@ typedef struct // IDATA_PAP
 
 typedef struct // IDATA_PAP_HDR
 	{
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID	2
-	WORD wByteCount;	// Number of bytes in this packet. Try to make even number		4
-	UINT uSync;			// 0x5CEBDAAD													8
-	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	10
+	//BYTE bMsgID;		// Commands are word length, data returned is byte length
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID
+	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256
+	WORD wByteCount;	// Number of bytes in this packet. Make it even number		
+	UINT uSync;			// 0x5CEBDAAD													
+	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
 	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
+						// AKA Instrument
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
-						// this is the last 2 digits of the IP4 address of the board 
-						// 192.168.10.200+boardNumber  range is .200-.215
-	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
+						//AKA card
+	BYTE bBoardType;	// what kind of inspection device 1= wall 2 = socomate
+
+	BYTE bPapStatus;	// AKA Instrument status, 0 means no errors. new on 2/25/20
+
 	BYTE bStartSeqNumber;	// the NIOS start seq number which produced the packet. 
 							// but in order of time occurrence, seq 0 might be last. Depends on NIOS board
 	BYTE bSeqModulo;	// modulo of the sequence number. Last seq = modulo-1

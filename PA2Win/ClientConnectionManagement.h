@@ -116,7 +116,7 @@ typedef struct
 	int nSendPriority;				// should normally be THREAD_PRIORITY_BELOW_NORMAL
 
 	// Receive-from-server items
-	// Receive thread does nothing but create an invisibble dialog which creates a 
+	// Receive thread does nothing but create an invisible dialog which creates a 
 	// ClientConnection socket and then hold a place in the process so the 
 	// Async client can receive packets and put them into the RcvPktPacketList
 

@@ -820,7 +820,7 @@ void CPA2WinDlg::GetServerConnectionManagementInfo(void)
 
 		szI.Format(_T("%d-Client_Base_IP"), i);
 #ifdef I_AM_PAP
-		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection,szI, _T("192.168.10.201"));
+		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection,szI, _T("192.168.10.200"));
 #else
 		szIp = gDlg.pTuboIni->GetProfileString(sSrvSection, szI, _T("192.168.11.40"));
 #endif
@@ -1362,8 +1362,8 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 		case ePAP_Server:
 			// a server for PAP NcNx data
 			pSCM[i] = new CServerConnectionManagement(i);
-			j = sizeof(pSCM[i]);
-			j = sizeof(CServerConnectionManagement);
+			j = sizeof(pSCM[i]);	// 4
+			j = sizeof(CServerConnectionManagement);	//12
 			if (pSCM[i])
 				{
 				s = gServerArray[i].Ip;			// a global static table of ip addresses
@@ -2636,6 +2636,8 @@ void CPA2WinDlg::ShowIdata(void)
 							uLost = 0;
 						uLost = pCCM[i]->m_pstCCM->uLostSentPackets;
 						uGood = pCCM[i]->m_pstCCM->uPacketsSent;
+						for (j = 1; j < 4; j++)
+							uGood += guPktAttempts[i][j];
 #if 0
 						fAvgAttempts = 0.0;	// this really did reveal much info
 						// better to show number of attempts

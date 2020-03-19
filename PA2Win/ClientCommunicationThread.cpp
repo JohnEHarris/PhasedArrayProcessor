@@ -119,6 +119,7 @@ CClientCommunicationThread::~CClientCommunicationThread()
 			i = m_pstCCM->pCCM->m_nMyConnection;
 		else i = 01234;
 		}
+	else return;
 
 	switch (this->m_nMyRole)
 		{

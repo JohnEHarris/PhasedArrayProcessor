@@ -137,7 +137,7 @@ CServerSocket::~CServerSocket()
 		s.Format( _T( " Socket# =%d, CreateThread = %d\n" ),
 			m_nAsyncSocketCnt, nId );
 		TRACE( s );
-
+		//try    ............ debugger says invalid m_pstSCM
 		if (m_pSCM->m_pstSCM->pServerListenSocket == 0)
 			{
 			TRACE( _T( "m_pSCM->m_pstSCM->pServerListenSocket = 0\n" ) );
@@ -145,6 +145,8 @@ CServerSocket::~CServerSocket()
 			TRACE(s);
 			return;
 			}
+		// catch()
+
 		else
 			{
 			i = (int)m_pSCM->m_pstSCM->pServerListenSocket->m_hSocket;

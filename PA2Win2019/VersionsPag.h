@@ -2,7 +2,7 @@
 
 // I AM PAG  *******************
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			22
+#define BUILD_VERSION			23
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -18,6 +18,7 @@
 
 /*
 Show the version number of this program. Newest version on TOP
+1.0.023 2020-02-26 Header file for Idata/Cmds is now different. Cmds header is unchanged
 1.0.022 2019-08-23 Change Versions.h to VersionsPag.h. Add X_Loc divider command 36
 1.0.021 2019-06-27 Command log has TCG Seq Gain and TCG Beam Gain text. Blast300 does 900 small, 1000 large cmds
 					PAP version shows queue depth when sending to ADC

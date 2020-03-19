@@ -1,8 +1,8 @@
 #pragma once
 
-// I AM PAG  *******************
+// I AM PAP  ******************* GUI has its own version file
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			21
+#define BUILD_VERSION			25
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -18,16 +18,15 @@
 
 /*
 Show the version number of this program. Newest version on TOP
-1.0.021 2019-06-27 Command log has TCG Seq Gain and TCG Beam Gain text. Blast300 does 900 small, 1000 large cmds
-					PAP version shows queue depth when sending to ADC
-1.0.020 2019-06-03 Blast TcgSeqGain.
-1.0.019 2019-05-29 Readback all gate data and all TCGBeamGain data in separate commands. PAP
-					outputs read back data to a read back log. Readback info also goes to 
-					PAP or UUI.
-1.0.018 2019-05-08 Test ADC Fifo's in test thread. Much easier to see variables and w/o
-					having to use a real ADC board + ByteBlaster
-1.0.017 2019-05-06 Add ReadBack log to PAP/PAG. Increase small cmds to 40. Add GateBlast cmd.
-					Reduce size of Blast300 cmd
+1.0.025 2019-10-31 Delete vChnls on ADC disconnect and shut down of PAP.	Quits w/o mem leaks
+1.0.024 2019-10-30 Debugging PAP crash when we think PT disconnects
+1.0.023 2019-06-28 Command log shows Large command names.KillServerSocket catches the exceptions
+1.0.022 2019-06-10 Show small/large cmds already received during cmd download.
+1.0.021 2019-05-31 TcgSeqGains read back works
+1.0.020 2029-05-29 TCGBeam gain read back
+1.0.019 2019-05-24 Changes to display of last/ cmdId, msg cnt,  1st word
+1.0.018 2019-05-22 Implement TCGBeam Cmd and printing in ReadBack log
+1.0.017 2019-05-20 Correct diaplsy of last cmd/seq number 1st word aggument
 1.0.016 2019-04-22 Change NcNx window seq/chnl/gate with edit in addition to spinner. Change
 					gate cmds to begin with gate variable instead of gate number
 1.0.015 2019-04-12 Start testing Gate Cmd Read back from ADC board

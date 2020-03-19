@@ -60,21 +60,33 @@ CCCM_PAG::~CCCM_PAG( void )
 	{
 	// last chance to kill crit sections and lists 
 	void *pv = 0;
-	if (0 == KillLinkedList( m_pstCCM->pCSRcvPkt, m_pstCCM->pRcvPktPacketList ))
-		TRACE( _T( "Failed to kill Receive List\n" ) );
-	else {		m_pstCCM->pCSRcvPkt = 0;  m_pstCCM->pRcvPktPacketList = 0;		}
+	if (m_pstCCM->pRcvPktPacketList)
+		{
+		if (0 == KillLinkedList(m_pstCCM->pCSRcvPkt, m_pstCCM->pRcvPktPacketList))
+			TRACE(_T("Failed to kill Receive List\n"));
+		else { m_pstCCM->pCSRcvPkt = 0;  m_pstCCM->pRcvPktPacketList = 0; }
+		}
 
-	if ( 0 == KillLinkedList( m_pstCCM->pCSSendPkt, m_pstCCM->pSendPktList ))
-		TRACE( _T( "Failed to kill Send List\n" ) );
-	else {		m_pstCCM->pCSSendPkt = 0;  m_pstCCM->pSendPktList = 0;		}
+	if (m_pstCCM->pSendPktList)
+		{
+		if (0 == KillLinkedList(m_pstCCM->pCSSendPkt, m_pstCCM->pSendPktList))
+			TRACE(_T("Failed to kill Send List\n"));
+		else { m_pstCCM->pCSSendPkt = 0;  m_pstCCM->pSendPktList = 0; }
+		}
 
-	if ( 0 == KillLinkedList( m_pstCCM->pCSDebugIn, m_pstCCM->pInDebugMessageList ))
-		TRACE( _T( "Failed to kill Debug In List\n" ) );
-	else {		m_pstCCM->pCSDebugIn = 0;  m_pstCCM->pInDebugMessageList = 0;		}
+	if (m_pstCCM->pInDebugMessageList)
+		{ 
+		if (0 == KillLinkedList(m_pstCCM->pCSDebugIn, m_pstCCM->pInDebugMessageList))
+			TRACE(_T("Failed to kill Debug In List\n"));
+		else { m_pstCCM->pCSDebugIn = 0;  m_pstCCM->pInDebugMessageList = 0; }
+		}
 
-	if ( 0 == KillLinkedList( m_pstCCM->pCSDebugOut, m_pstCCM->pOutDebugMessageList ))
-		TRACE( _T( "Failed to kill Debug Out List\n" ) );
-	else {		m_pstCCM->pCSDebugOut = 0;  m_pstCCM->pOutDebugMessageList = 0;		}
+	if (m_pstCCM->pOutDebugMessageList)
+		{
+		if (0 == KillLinkedList(m_pstCCM->pCSDebugOut, m_pstCCM->pOutDebugMessageList))
+			TRACE(_T("Failed to kill Debug Out List\n"));
+		else { m_pstCCM->pCSDebugOut = 0;  m_pstCCM->pOutDebugMessageList = 0; }
+		}
 
 	m_pstCCM->pCCM = 0;
 

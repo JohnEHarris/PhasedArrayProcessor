@@ -142,6 +142,7 @@ the PAP and PAG
 
 /*************** Command Structures **************/
 
+// Command ID's are still 16 bit. Data packet ID's are now 8 bit. 2/25/2020
 typedef struct
 	{
 	WORD wMsgID;		// commands are identified by their ID

@@ -137,7 +137,7 @@ CServerSocket::~CServerSocket()
 		s.Format( _T( " Socket# =%d, CreateThread = %d\n" ),
 			m_nAsyncSocketCnt, nId );
 		TRACE( s );
-
+		//try    ............ debugger says invalid m_pstSCM
 		if (m_pSCM->m_pstSCM->pServerListenSocket == 0)
 			{
 			TRACE( _T( "m_pSCM->m_pstSCM->pServerListenSocket = 0\n" ) );
@@ -145,6 +145,8 @@ CServerSocket::~CServerSocket()
 			TRACE(s);
 			return;
 			}
+		// catch()
+
 		else
 			{
 			i = (int)m_pSCM->m_pstSCM->pServerListenSocket->m_hSocket;
@@ -641,16 +643,16 @@ void CServerSocket::OnAccept(int nErrorCode)
 			OnAcceptInitializeConnectionStats(pscc, m_nMyServer, m_nClientIndex);
 			pscc->sClientIP4 = Ip4C;
 			pscc->uClientIP4 = uIp4;
+			pscc->uClientPort = uPortC;
 			pscc->m_nClientIndex = m_nClientIndex;
-			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept Client IP = %s server port %d\n"), 
-				m_nMyServer, m_nClientIndex, Ip4C, uPortS);
+			s.Format(_T("PAGSrv[%d]:PAP[%d] OnAccept Client IP = %s Client Port = %d, server port %d\n"), 
+				m_nMyServer, m_nClientIndex, Ip4C, uPortC, uPortS);
 			t = s;
 			TRACE(t);
 
 			//		theApp.SaveDebugLog(t);
 			pMainDlg->SaveDebugLog(t);
 			pscc->szSocketName = s;
-			pscc->uClientPort = uPortC;
 			m_pstSCM->nComThreadExited[m_nClientIndex] = 0;
 			SetpSCC(pscc);
 
@@ -675,6 +677,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 #ifdef I_AM_PAP
 				CAsyncSocket::OnAccept(nErrorCode);
 #else
+				// PAG uses synchronous sockets
 				CSocket::OnAccept(nErrorCode);
 #endif
 				return;

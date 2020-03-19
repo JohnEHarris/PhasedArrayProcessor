@@ -160,6 +160,7 @@ PubExt UINT guAscanDelay;
 PubExt BYTE AscanSel;
 
 PubExt UINT guAscanMsgCnt;		// only used in PAG
+PubExt UINT guIdataMsgCnt;      // only used in PAG
 PubExt UINT guRdBkMsgCnt;		// only used in PAG
 
 PubExt short gnFpgaTemp;	// temp of FPGA chip ADC

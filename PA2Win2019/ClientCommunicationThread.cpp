@@ -119,6 +119,7 @@ CClientCommunicationThread::~CClientCommunicationThread()
 			i = m_pstCCM->pCCM->m_nMyConnection;
 		else i = 01234;
 		}
+	else return;
 
 	switch (this->m_nMyRole)
 		{
@@ -1230,6 +1231,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 			else 
 				guPktAttempts[1][i]++;	// All wall data
 
+			// modify the packet header for Robert's new status info 2020-03-11
 			nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
 			if (nSent == pSendPkt->wByteCount)
 				{

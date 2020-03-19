@@ -440,7 +440,7 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 		m_pIdataPacket->wMsgSeqCnt = 0;	// properly incremented when sent by CClientCommunicationThread::TransmitPackets
 		m_pIdataPacket->bPapNumber = gbAssignedPAPNumber;		// pIData->bPapNumber; only 1 PAP for now in 2018
 		m_pIdataPacket->bBoardNumber = pIData->bBoardNumber;
-		m_pIdataPacket->wBoardType = 1;		// 1 = wall, 0 = socomate
+		//m_pIdataPacket->wBoardType = 1;		// 1 = wall, 0 = socomate
 
 		m_pIdataPacket->bStartSeqNumber = pChannel->m_bSeq;	// the key to correctly mapping the data to the output packet
 #if 0
@@ -1205,56 +1205,61 @@ void  CServerRcvListThread::ProcessPulserData(PULSER_DATA *pPulserData)
 // Take the code from TScanDlg which processes packets from PAM and insert here
 #ifdef I_AM_PAG
 
-
+// Really need to know which client this data is coming from
+// For that matter, which inspection machine.
+// For now (2019-12-02) just sort inputs by message ID type
 void CServerRcvListThread::ProcessPAP_Data(void *pData)
 	{
 	CString s;
 	int i, j;
 	IDATA_PAP *pIdata = (IDATA_PAP *)pData;
 	IDATA_FROM_HW* pAllWall = (IDATA_FROM_HW*)pData;
+	int nByteCount;
+	READBACK_DATA *pRb = (READBACK_DATA *)pIdata;
+	CMD204H_READBACK *p204 = (CMD204H_READBACK*)pIdata;
 
-	j = 0;	// kill warning
-	switch (m_nMyServer)
+	i = j = nByteCount = 0;	// kill warning
+//	switch (m_nMyServer)
+	switch(pIdata->wMsgID)
 		{
-	case 0:
+	case NC_NX_IDATA_ID:
 		// NcNx server
-		if (pIdata->wMsgID == NC_NX_IDATA_ID)
-			{
 
-			if ((pIdata->wMsgSeqCnt & 0x7ff) == 0) 
-				{
-				s.Format(_T("wByteCount=%d, wMsgSeqCnt=%d, bPapNumber=%d, bBoardNumber=%d, bStartSeqNumber=%d\n"),
-					pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->bPapNumber, pIdata->bBoardNumber, pIdata->bStartSeqNumber);
-				// use debugger to view
-				TRACE(s);
-				s.Format(_T("bSeqModulo=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
-					pIdata->bSeqModulo, pIdata->bStartChannel, pIdata->bMaxVChnlsPerSequence);
-				TRACE(s);
-				s.Format(_T("PeakChnl[0].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
-					pIdata->PeakChnl[0].bId2, pIdata->PeakChnl[0].bOd3, pIdata->PeakChnl[0].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
-				TRACE(s);
-				SaveFakeData(s);
-				// if using simulator, chnl 21 wall = 999*filter length, Od = 25
-				s.Format(_T("PeakChnl[21].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
-					pIdata->PeakChnl[21].bId2, pIdata->PeakChnl[21].bOd3, pIdata->PeakChnl[21].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
-				SaveFakeData(s);
-				}
 
-			memcpy((void *)&gLastIdataPap, (void *)pIdata, pIdata->wByteCount);
-			}
-		else if (pIdata->wMsgID == ASCAN_DATA_ID)
+		if ((pIdata->wMsgSeqCnt & 0x7ff) == 0) 
 			{
-			i = pIdata->wMsgID;
-			memcpy((void *)&gLastAscanPap, (void *)pIdata, sizeof(ASCAN_DATA));
-			guAscanMsgCnt++;
+			s.Format(_T("wByteCount=%d, wMsgSeqCnt=%d, bPapNumber=%d, bBoardNumber=%d, bStartSeqNumber=%d\n"),
+				pIdata->wByteCount, pIdata->wMsgSeqCnt, pIdata->bPapNumber, pIdata->bBoardNumber, pIdata->bStartSeqNumber);
+			// use debugger to view
+			TRACE(s);
+			s.Format(_T("bSeqModulo=%d, bStartChannel=%d, bMaxVChnlsPerSequence=%d\n"),
+				pIdata->bSeqModulo, pIdata->bStartChannel, pIdata->bMaxVChnlsPerSequence);
+			TRACE(s);
+			s.Format(_T("PeakChnl[0].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
+				pIdata->PeakChnl[0].bId2, pIdata->PeakChnl[0].bOd3, pIdata->PeakChnl[0].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
+			TRACE(s);
+			SaveFakeData(s);
+			// if using simulator, chnl 21 wall = 999*filter length, Od = 25
+			s.Format(_T("PeakChnl[21].Id2=%d, Od3=%d TOFmin=%d\n"),		//, TOFmax=%d\n"),
+				pIdata->PeakChnl[21].bId2, pIdata->PeakChnl[21].bOd3, pIdata->PeakChnl[21].wTofMin); // , pIdata->PeakChnl[0].wTofMax );
+			SaveFakeData(s);
 			}
 
-		else if (pIdata->wMsgID == READBACK_DATA_ID)
-			{ // ReadBack
-			READBACK_DATA *pRb = (READBACK_DATA *)pIdata;
-			CMD204H_READBACK *p204 = (CMD204H_READBACK*)pIdata;
+		memcpy((void *)&gLastIdataPap, (void *)pIdata, pIdata->wByteCount);
+		guIdataMsgCnt++;
+		break;
+			
+
+	case ASCAN_DATA_ID:
+		i = pIdata->wMsgID;
+		memcpy((void *)&gLastAscanPap, (void *)pIdata, sizeof(ASCAN_DATA));
+		guAscanMsgCnt++;
+		break;
+		
+
+	case READBACK_DATA_ID:
 			i = pIdata->wMsgID;
-			int nByteCount = pRb->wByteCount;
+			nByteCount = pRb->wByteCount;
 			if (nByteCount >= 32)
 				{
 				memcpy((void *)&gLastRdBkPap, (void *)pRb, nByteCount);
@@ -1281,33 +1286,36 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 				}	// if (nByteCount >= 32)
 			else s = _T("Readback data less than 32 bytes -- ERROR");
 			SaveDebugLog(s);
-			}	// ReadBack
+			// ReadBack
+			break;
+	case ADC_DATA_ID:
+		// May not work if multiple ServerRcvListThreads. Each thread likely would need to 
+		// open a unique file name that included the thread number in the name.
+#ifdef I_AM_PAG
+		if (gDlg.pNcNx)
+			{
+			memcpy((void*)&pAllWall->bNiosFeedback, "AllWall", 7);
+			memcpy((void*)&gLastAllWall, (void*)pAllWall, pAllWall->wByteCount);
+			if (gDlg.pNcNx->m_nRecordState > 0)
+				{	// record the data in binary format
+				gDlg.pNcNx->m_AllWallFile.Write(pAllWall, pAllWall->wByteCount);
+				}
+			}
+#endif
+		// show some piece of all wall data
+		break;
 
-		else
+
+
+	default:
 			{
 			// something else
-			s = _T("Unknown message");
+			s.Format(_T("Process PAP Data message unknown ID = %d\n"), pIdata->wMsgID);
 			SaveDebugLog(s);
 			}
 		break;
 
-	case 1:
-		// All wall server
-		if (pAllWall->wMsgID == ADC_DATA_ID)
-			{
-			// May not work if multiple ServerRcvListThreads. Each thread likely would need to 
-			// open a unique file name that included the thread number in the name.
-#ifdef I_AM_PAG
-			if (gDlg.pNcNx)
-				{
-				memcpy((void*)&pAllWall->bNiosFeedback, "AllWall", 7);
-				memcpy((void*)&gLastAllWall, (void*)pAllWall, pAllWall->wByteCount);
-				if (gDlg.pNcNx->m_nRecordState > 0)
-					{	// record the data in binary format
-					gDlg.pNcNx->m_AllWallFile.Write(pAllWall, pAllWall->wByteCount);
-					}
-				}
-#endif
+
 			// show some piece of all wall data 
 #if 0
 			if ((pAllWall->wMsgSeqCnt & 0xff) == 0)
@@ -1319,16 +1327,17 @@ void CServerRcvListThread::ProcessPAP_Data(void *pData)
 				//SaveDebugLog(s);
 				//TRACE(s);
 				}
-#endif
 			}	 // All wall server
 		break;
 
 	default:
 		// Houston, we have problem -- Not NcNx processing and not all_wall processing
-		s = _T("Unknown Server running ProcessPAP_Data rountine");
+		s = _T("Unknown Server/Msg ID = %d running ProcessPAP_Data rountine",);
 		SaveDebugLog(s);
 		break;
-		}	// switch (m_nMyServer)
+#endif
+
+		}	// switch(pIdata->wMsgID)
 	delete pData;
 	}	// ProcessPAP_Data(void *pData)
 

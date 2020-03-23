@@ -199,10 +199,20 @@ PubExt WORD gwPapPulserCmds, gwPapLargeCmds, gwPapSmallCmds;		// count commands 
 PubExt BYTE gbAdcMsgIdErrorCntPAP;		// count number of times adc msg lost in PAP
 PubExt BYTE gbAdcMsgIdErrorCntADC;		// count number of times adc msg lost in ADC
 
-PubExt CString gsNxIP;		//IP + port of Wall Instrument
-PubExt CString gsUUI_NxIP;	//IP + port of UUI connected to wall
-PubExt CString gsAllWallIP;	//IP + port of Wall Instrument - all walls
-PubExt CString gsUUI_AllWallIP;	//IP + port of UUI connected to all wall
+PubExt CString gsWall_IP;		//IP + port of Wall Instrument
+PubExt CString gsPulser_IP;     // IP + port of pulser
+
+PubExt CString gsPAP2Wall_IP;
+PubExt CString gsPAP2Pulser_IP;
+
+PubExt CString gsPAP_Nx2UUI_IP;
+PubExt CString gsPAP_AW2UUI_IP;
+
+PubExt CString gsUUI_PAP_NxIP;	//IP + port of UUI server connected to wall
+PubExt CString gsUUI_PAP_AllWall_IP;	//IP + port of UUI server connected to all wall
+
+PubExt CString gsIniFilePath;      // ini file defines ip address of the inspection system
+PubExt CString gsWallAssignPath;   // file name x.wall where x is the wall's id number
 
 //#define SYNC							0x5CEBDAAD
 

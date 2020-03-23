@@ -592,6 +592,7 @@ void CClientCommunicationThread::ConnectSocket(WPARAM w, LPARAM lParam)
 	{
 	CString s,t;
 	BOOL rtn;
+	int i;
 	if ((int)w != 1)
 		{
 		TRACE( _T( "ConnectSocket request of wrong thread type. Must be Receiver thread\n" ) );
@@ -624,6 +625,13 @@ void CClientCommunicationThread::ConnectSocket(WPARAM w, LPARAM lParam)
 			s.Format(_T("Connect Error = %d ...waiting to connect to server %s at %s : %d\n"), 
 				m_pstCCM->nOnConnectError, m_pstCCM->sServerName,
 				m_pstCCM->sServerIP4, m_nPort);
+			// only way to distinguish Nx and all wall is by socket name at this point (3/23/20). Depends on ini file
+			t = m_pstCCM->sServerName;
+			i = t.Find(_T("ALL WALL"));
+			if ( i > 0)
+				gsUUI_PAP_AllWall_IP.Format(_T("%s : %d"),  m_pstCCM->sServerIP4, m_nPort);
+			else
+				gsUUI_PAP_NxIP.Format      (_T("%s : %d"),  m_pstCCM->sServerIP4, m_nPort);
 			t = GetTimeString();
 			t += _T("\n");
 			s += t;

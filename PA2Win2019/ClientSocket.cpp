@@ -47,7 +47,8 @@ CClientSocket::CClientSocket( CClientConnectionManagement *pCCM	)
 		// this is a copy of the socket pointer in ClientCommunicationThread
 		if (m_pCCM->m_pstCCM)
 			m_pCCM->m_pstCCM->pSocket = this;
-		m_nAsyncSocketCnt = gnAsyncSocketCnt++;
+		m_nAsyncSocketCnt = gnAsyncSocketCnt = 0;
+		//m_nAsyncSocketCnt = 0;
 		m_nOwningThreadId = AfxGetThread()->m_nThreadID;
 		s.Format(_T("Valid CCM ptr, use OnReceive1(), Socket# =%d, CreateThread = %d\n"),
 			m_nAsyncSocketCnt, m_nOwningThreadId);
@@ -347,14 +348,14 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		if (m_pCCM->m_nMyConnection == 0)
 			{
 			s.Format(_T("PAG client IP = %s:%d connected to PAG server = %s:%d \n"), s1, uCPort, s0, uSPort);
-			gsNxIP.Format(_T("%s : %d"),s1,uCPort); // client Nx IP and port
-			gsUUI_NxIP.Format(_T("%s : %d"),s0,uSPort); // UUI IP and port
+			gsWall_IP.Format(_T("%s : %d"),s1,uCPort); // client Nx IP and port
+			gsUUI_PAP_NxIP.Format(_T("%s : %d"),s0,uSPort); // UUI IP and port
 			}
 		else if (m_pCCM->m_nMyConnection == 1)
 			{
 			s.Format(_T("PAG client IP = %s:%d connected to PAG_AW server = %s:%d \n"), s1, uCPort, s0, uSPort);
-			gsAllWallIP.Format(_T("%s : %d"),s1,uCPort); // client Nx IP and port
-			gsUUI_AllWallIP.Format(_T("%s : %d"),s0,uSPort); // UUI IP and port
+			gsPAP_AW2UUI_IP.Format(_T("%s : %d"),s1,uCPort); // client Nx IP and port
+			gsUUI_PAP_AllWall_IP.Format(_T("%s : %d"),s0,uSPort); // UUI IP and port
 			}
 		//DebugOutMessage(s);
 #ifdef I_AM_PAP

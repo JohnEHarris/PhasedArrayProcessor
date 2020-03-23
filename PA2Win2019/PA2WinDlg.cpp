@@ -238,7 +238,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	t += _T("HardwareConfig_PAP.ini");
 	TRACE(_T("Using ini file: %s\n"), t);
 #endif
-
+	gsIniFilePath = t;
 	// To use an INI file instead, set m_pszProfileName to the ini file path
 	// First free the string allocated by MFC at CWinApp startup.
 	// The string is allocated before InitInstance is called.
@@ -307,7 +307,7 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	nShutDown = 0;
 	m_nMsgSeqCnt = 0;
 	gnAsyncSocketCnt = 0;
-
+	m_uStatTimer = 0;
 	g_hTimerTick = ::CreateEvent(0, TRUE, FALSE, 0);
 	//memset((void*)stSCM, 0, sizeof(stSCM)*MAX_SERVERS);
 	//memset((void*)stCCM, 0, sizeof(stCCM)*MAX_CLIENTS);
@@ -423,6 +423,11 @@ CPA2WinDlg::~CPA2WinDlg()
 		gDlg.pTuboIni = 0;
 		}
 
+	if (gDlg.pIpConnect)
+		{
+		delete gDlg.pIpConnect;
+		gDlg.pIpConnect = 0;
+		}
 
 	TRACE( _T( "CPA2WinDlg destructor has run\n" ) );
 
@@ -541,6 +546,7 @@ void CPA2WinDlg::ReadPAPnumber(void)
 				s.Format(_T("Found file %s\n"), sPath);
 				TRACE(s);
 				gbAssignedPAPNumber = FileName[3] - '0';	// map char 1-8 to binary  1-8 
+				gsWallAssignPath = sPath;
 				m_PapNumberFile.Close();
 				// create the same file name in C:\\ for default when memory stick is missing
 				if (FileName[0] == 'C')
@@ -656,6 +662,7 @@ void CPA2WinDlg::GetPAPFromCDrive(void)
 			{	// found it on C drive
 			s.Format(_T("Found file %s\n"), sPath);
 			TRACE(s);
+			gsWallAssignPath = sPath;
 			gbAssignedPAPNumber = PathName[i] - '0';	// map char 1-8 to binary  1-8 
 			m_PapNumberFile.Close();
 			// create the same file name in C:\\ for default when memory stick is missing
@@ -694,7 +701,7 @@ BOOL CPA2WinDlg::OnInitDialog()
 	#else
 	sDlgName = _T( "PA2Win -- Phase Array Processor Version -- PAP " );
 #endif
-	gsNxIP = _T("");
+	gsWall_IP = _T("");
 	bAppIsClosing = 0;	// just started
 	sDlgName += s;
 	SetWindowText(sDlgName);
@@ -1236,6 +1243,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	// 	All these connections are tcp/ip clients and the other end is a tcp/ip server.
 	CString sClientIP,  sServerIp, sServerName, s;	// sServerName use the url for this server
 	UINT uServerPort = 0;
+	char txt[10];
 
 	for ( i = 0; i < gnMaxClients; i++)
 		{
@@ -1249,6 +1257,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			sServerIp = GetServerIP( i );
 			sServerName = GetServerName( i );
 			uServerPort = GetServerPort( i ) & 0xffff;	// port on the PAG server that we will try to connect to
+			
 			// Make a specific child class of CCM to handle the Phased Array GUI - PAG
 			pCCM_PAG = (CCCM_PAG *) new CCCM_PAG( i );
 			pCCM[i] = (CClientConnectionManagement *)pCCM_PAG;
@@ -1273,6 +1282,11 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			pCCM_PAG->SetServerIp( sServerIp );
 			pCCM_PAG->SetServerName( sServerName );	// url of server, e.g. srvhouapp67
 			pCCM_PAG->SetServerPort( uServerPort );
+			gsPAP_Nx2UUI_IP = sClientIP;
+			gsUUI_PAP_NxIP = sServerIp + _T(" : ");
+			_itoa(uServerPort, txt,10);
+			s = txt;
+			gsUUI_PAP_NxIP += s;
 
 
 			pCCM_PAG->m_pstCCM->nReceivePriority	= THREAD_PRIORITY_ABOVE_NORMAL;
@@ -1322,6 +1336,10 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			pCCM_PAG_AW->SetServerName(sServerName);	// url of server, e.g. srvhouapp67
 			pCCM_PAG_AW->SetServerPort(uServerPort);
 
+			gsUUI_PAP_AllWall_IP = sServerIp + _T(" : ");
+			_itoa(uServerPort, txt,10);
+			s = txt;
+			gsUUI_PAP_AllWall_IP += s;
 
 			pCCM_PAG_AW->m_pstCCM->nReceivePriority = THREAD_PRIORITY_ABOVE_NORMAL;
 			pCCM_PAG_AW->m_pstCCM->nSendPriority = THREAD_PRIORITY_BELOW_NORMAL;
@@ -2162,6 +2180,12 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 		wVerH = wVerS = 0;	// kill warning in PAG
 		}
 
+	if (gDlg.pIpConnect)
+		{
+		gDlg.pIpConnect->RemoteTimer();
+		}
+
+
 #ifdef I_AM_PAP
 	if (gDlg.pNcNx)	return;		// don't show when NcNx dialog on screen
 	// update last Idata packet to list box.
@@ -2203,7 +2227,7 @@ bool CPA2WinDlg::UpdateTimeDate(time_t *tNow)
 
 	/* Convert to time structure  */
 	today = localtime( tNow );
-	if (today ==0) return TRUE;
+	if (today == 0) return TRUE;
 		{
 		t.Format(_T("%02d:%02d:%02d"), today->tm_hour, today->tm_min, today->tm_sec);
 		SetDlgItemText(IDC_STAT_TIME, t);

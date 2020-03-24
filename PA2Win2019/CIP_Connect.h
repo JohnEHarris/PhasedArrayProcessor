@@ -17,6 +17,7 @@ public:
 	void RemoteTimer();
 	int  m_nTimerCount;  // call SetNetworkAlarm() every m timer events
 	UINT m_uStatTimer;
+	void UpdateTime(CString t);
 
 // Dialog Data
 	CString m_DlgLocationKey;				// Include in all dialogs. Names the entry for the registry to hold location

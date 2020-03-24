@@ -187,10 +187,12 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 
 	case 0:
 		m_pstSCM->sServerDescription = _T("PAP server for Instruments");
+		gsPAP2Wall_IP.Format(_T("%s : %d"),m_pstSCM->sServerIP4, m_pstSCM->uServerPort );
 		break;
 
 	case 1:
 		m_pstSCM->sServerDescription = _T("PAP server for Pulser");
+		gsPAP2Pulser_IP.Format(_T("%s : %d"),m_pstSCM->sServerIP4, m_pstSCM->uServerPort );
 		break;
 	default:
 		m_pstSCM->sServerDescription = _T("Unknow or Incorrecct server");

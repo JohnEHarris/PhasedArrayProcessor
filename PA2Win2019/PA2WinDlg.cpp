@@ -383,6 +383,18 @@ CPA2WinDlg::~CPA2WinDlg()
 	// lower thread priority to allow signaled thread chance to exit
 	AfxGetThread()->SetThreadPriority( THREAD_PRIORITY_BELOW_NORMAL );
 
+	if (gDlg.pTuboIni)
+		{
+		delete gDlg.pTuboIni;
+		gDlg.pTuboIni = 0;
+		}
+
+	if (gDlg.pIpConnect)
+		{
+		delete gDlg.pIpConnect;
+		gDlg.pIpConnect = 0;
+		}
+
 	// KIll the test thread
 	if (m_pTestThread)
 		{
@@ -417,17 +429,7 @@ CPA2WinDlg::~CPA2WinDlg()
 		delete gDlg.pNcNx;
 		gDlg.pNcNx = 0;
 		}
-	if (gDlg.pTuboIni)
-		{
-		delete gDlg.pTuboIni;
-		gDlg.pTuboIni = 0;
-		}
 
-	if (gDlg.pIpConnect)
-		{
-		delete gDlg.pIpConnect;
-		gDlg.pIpConnect = 0;
-		}
 
 	TRACE( _T( "CPA2WinDlg destructor has run\n" ) );
 
@@ -2231,6 +2233,10 @@ bool CPA2WinDlg::UpdateTimeDate(time_t *tNow)
 		{
 		t.Format(_T("%02d:%02d:%02d"), today->tm_hour, today->tm_min, today->tm_sec);
 		SetDlgItemText(IDC_STAT_TIME, t);
+		// update  time on connectivity dialog if it is open
+		if (gDlg.pIpConnect)
+			gDlg.pIpConnect->UpdateTime(t);
+
 		t.Format(_T("%02d/%02d/%02d"), today->tm_mon+1, today->tm_mday, (today->tm_year % 100) );
 		SetDlgItemText(IDC_STAT_DATE, t);
 		}

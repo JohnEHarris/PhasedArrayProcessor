@@ -34,7 +34,14 @@ CIP_Connect::CIP_Connect(CWnd* pParent /*=nullptr*/)
 
 CIP_Connect::~CIP_Connect()
 	{
-	gDlg.pIpConnect = 0;
+#if 0
+	// crash app if close with X in top right corner
+	if (gDlg.pIpConnect)
+		{
+		delete gDlg.pIpConnect;
+		gDlg.pIpConnect = 0;
+		}
+#endif
 	}
 
 void CIP_Connect::DoDataExchange(CDataExchange* pDX)
@@ -88,6 +95,17 @@ void CIP_Connect::RemoteTimer()
 	s = gsIniFilePath;
 	SetDlgItemText(IDC_ED_FILE_PATH, s);
 
+	//PAP Server for Wall
+	s = gsPAP2Wall_IP;
+	SetDlgItemText(IDC_ED_PAPSRV_GATES, s);
+
+
+
+	}
+
+void CIP_Connect::UpdateTime(CString t)
+	{
+	SetDlgItemText(IDC_ED_TIME, t);
 	}
 
 void CIP_Connect::OnTimer(UINT_PTR nIDEvent)
@@ -106,7 +124,7 @@ BOOL CIP_Connect::OnInitDialog()
 	// StartTimer();
 	// gbAssignedPAPNumber display ..if 8 put message unknown wall instrument number
 
-	// TODO:  Add extra initialization here -- get the ip connection info and wall instrument number
+	// TODO: Add extra initialization here -- get the ip connection info and wall instrument number
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // EXCEPTION: OCX Property Pages should return FALSE
@@ -119,7 +137,11 @@ void CIP_Connect::OnOK()
 
 	CDialogEx::OnOK(); 
 	//StopTimer();
-	gDlg.pIpConnect = 0;
+	if (gDlg.pIpConnect)
+		{
+		delete gDlg.pIpConnect;
+		gDlg.pIpConnect = 0;
+		}
 	}
 
 
@@ -127,8 +149,12 @@ void CIP_Connect::OnCancel()
 	{
 	// TODO: Add your specialized code here and/or call the base class
 
-	CDialogEx::OnCancel();
-	gDlg.pIpConnect = 0;
+	CDialogEx::OnCancel();  // same as clicking 'X' in top right corner of dialog
+	if (gDlg.pIpConnect)
+		{
+		delete gDlg.pIpConnect;
+		gDlg.pIpConnect = 0;
+		}
 	}
 
 

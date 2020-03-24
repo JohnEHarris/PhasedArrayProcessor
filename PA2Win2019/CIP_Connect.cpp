@@ -99,7 +99,11 @@ void CIP_Connect::RemoteTimer()
 	s = gsPAP2Wall_IP;
 	SetDlgItemText(IDC_ED_PAPSRV_GATES, s);
 
+	//PAP Server for pULSER
+	s = gsPAP2Pulser_IP;
+	SetDlgItemText(IDC_ED_PAPSRV_PLSR, s);
 
+	//PubExt CString gsPAP_AW2UUI_IP;
 
 	}
 

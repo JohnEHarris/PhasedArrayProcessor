@@ -200,15 +200,20 @@ PubExt BYTE gbAdcMsgIdErrorCntPAP;		// count number of times adc msg lost in PAP
 PubExt BYTE gbAdcMsgIdErrorCntADC;		// count number of times adc msg lost in ADC
 
 PubExt CString gsWall_IP;		//IP + port of Wall Instrument
+PubExt CString gsWall_Port;
 PubExt CString gsPulser_IP;     // IP + port of pulser
+PubExt CString gsPulser_Port;
 
-PubExt CString gsPAP2Wall_IP;
-PubExt CString gsPAP2Pulser_IP;
+PubExt CString gsPAP2Wall_IP;   // server to gate board
+PubExt CString gsPAP2Pulser_IP; // server to pulser board
 
-PubExt CString gsPAP_Nx2UUI_IP;
+PubExt CString gsPAP_Nx2UUI_IP;  // PAP client of UUI
+PubExt CString gsPAP_Nx2UUI_Port;
+
 PubExt CString gsPAP_AW2UUI_IP;
+PubExt CString gsPAP_AW2UUI_Port;
 
-PubExt CString gsUUI_PAP_NxIP;	//IP + port of UUI server connected to wall
+PubExt CString gsUUI_PAP_NxIP;	        //IP + port of UUI server connected to PAP
 PubExt CString gsUUI_PAP_AllWall_IP;	//IP + port of UUI server connected to all wall
 
 PubExt CString gsIniFilePath;      // ini file defines ip address of the inspection system

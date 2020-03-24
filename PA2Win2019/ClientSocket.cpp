@@ -348,12 +348,12 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		if (m_pCCM->m_nMyConnection == 0)
 			{
 			s.Format(_T("PAG client IP = %s:%d connected to PAG server = %s:%d \n"), s1, uCPort, s0, uSPort);
-			gsWall_IP.Format(_T("%s : %d"),s1,uCPort); // client Nx IP and port
+			gsPAP_Nx2UUI_IP.Format(_T("%s : %d"),s1,uCPort); // client Nx IP and port
 			gsUUI_PAP_NxIP.Format(_T("%s : %d"),s0,uSPort); // UUI IP and port
 			}
 		else if (m_pCCM->m_nMyConnection == 1)
 			{
-			s.Format(_T("PAG client IP = %s:%d connected to PAG_AW server = %s:%d \n"), s1, uCPort, s0, uSPort);
+						s.Format(_T("PAG client IP = %s:%d connected to PAG_AW server = %s:%d \n"), s1, uCPort, s0, uSPort);
 			gsPAP_AW2UUI_IP.Format(_T("%s : %d"),s1,uCPort); // client Nx IP and port
 			gsUUI_PAP_AllWall_IP.Format(_T("%s : %d"),s0,uSPort); // UUI IP and port
 			}

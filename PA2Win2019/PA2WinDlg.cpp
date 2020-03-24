@@ -1284,7 +1284,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			pCCM_PAG->SetServerIp( sServerIp );
 			pCCM_PAG->SetServerName( sServerName );	// url of server, e.g. srvhouapp67
 			pCCM_PAG->SetServerPort( uServerPort );
-			gsPAP_Nx2UUI_IP = sClientIP;
+			//gsPAP_Nx2UUI_IP = sClientIP;
 			gsUUI_PAP_NxIP = sServerIp + _T(" : ");
 			_itoa(uServerPort, txt,10);
 			s = txt;

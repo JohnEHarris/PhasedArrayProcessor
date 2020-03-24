@@ -121,7 +121,7 @@ BOOL CServerSocketOwnerThread::InitInstance()
 	//m_pConnectionSocket->m_pElapseTimer = new CHwTimer(); done by new 
 	m_pSCC->szSocketName.Format(_T("ServerSocket Connection Skt[%d][%d]\n"),  m_nMyServer, m_nClientIndex);
 
-	#ifdef I_AM_PAP
+#ifdef I_AM_PAP
 	m_pSCC->sClientName.Format(_T("Instrument[%d] on PAP Server[%d]\n"), m_nClientIndex, m_nMyServer);
 #else
 	m_pSCC->sClientName.Format(_T("PAP Client[%d] on PAG Server[%d]\n"), m_nClientIndex, m_nMyServer);

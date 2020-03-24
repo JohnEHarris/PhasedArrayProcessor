@@ -103,7 +103,12 @@ void CIP_Connect::RemoteTimer()
 	s = gsPAP2Pulser_IP;
 	SetDlgItemText(IDC_ED_PAPSRV_PLSR, s);
 
-	//PubExt CString gsPAP_AW2UUI_IP;
+	// Nx client of UUI
+	s = gsPAP_Nx2UUI_IP; 
+	SetDlgItemText(IDC_PAP_NX_CLIENT, s);
+
+	s = gsPAP_AW2UUI_IP;
+	SetDlgItemText(IDC_ED_AW_CLIENT, s);
 
 	}
 

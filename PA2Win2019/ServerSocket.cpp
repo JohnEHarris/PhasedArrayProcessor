@@ -902,7 +902,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 #endif
 
 		UINT uPortS, uPortC;
-		int nClientPortIndex;					// which client are we connecting to? Derive from IP address
+		int nClientPortIndex;			// which client are we connecting to? Derive from IP address
 		UINT uClientBaseAddress;		// what is the 32 bit index of the 1st PA Master?
 		WORD wClientBaseAddress[8];
 		char *pIpBase = gServerArray[m_nMyServer].ClientBaseIp;
@@ -944,6 +944,8 @@ void CServerSocket::OnAccept(int nErrorCode)
 			s.Format(_T("InetPton success client %s:%d connected to server %s:%d******\n"),
 				Ip4C, uPortC, Ip4S, uPortS);
 			TRACE(s);
+			// choose a global structure base on the server. Then we know which client we are serving
+
 			ntmp = ntohl(*(u_long*)&wClientBaseAddress);
 			}
 

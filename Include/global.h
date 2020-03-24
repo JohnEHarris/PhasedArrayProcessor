@@ -207,11 +207,9 @@ PubExt CString gsPulser_Port;
 PubExt CString gsPAP2Wall_IP;   // server to gate board
 PubExt CString gsPAP2Pulser_IP; // server to pulser board
 
-PubExt CString gsPAP_Nx2UUI_IP;  // PAP client of UUI
-PubExt CString gsPAP_Nx2UUI_Port;
+PubExt CString gsPAP_Nx2UUI_IP;  // PAP Nx client of UUI + port
 
-PubExt CString gsPAP_AW2UUI_IP;
-PubExt CString gsPAP_AW2UUI_Port;
+PubExt CString gsPAP_AW2UUI_IP;  // PAP All wall client of UUI + port
 
 PubExt CString gsUUI_PAP_NxIP;	        //IP + port of UUI server connected to PAP
 PubExt CString gsUUI_PAP_AllWall_IP;	//IP + port of UUI server connected to all wall

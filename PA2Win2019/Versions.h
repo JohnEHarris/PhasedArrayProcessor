@@ -18,7 +18,7 @@
 
 /*
 Show the version number of this program. Newest version on TOP
-1.0.027 2020-03-25 IP connections shown in office except for pulser (no input source)
+1.0.027 2020-03-25 IP connections shown in office except for pulser (no input source)   
 1.0.026 2020-03-19 Add connectivity dialog to PAP - show IP connections and Wall Instrument number
 1.0.025 2019-10-31 Delete vChnls on ADC disconnect and shut down of PAP.	Quits w/o mem leaks
 1.0.024 2019-10-30 Debugging PAP crash when we think PT disconnects

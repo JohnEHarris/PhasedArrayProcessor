@@ -109,7 +109,14 @@ void CIP_Connect::RemoteTimer()
 
 	s = gsPAP_AW2UUI_IP;
 	SetDlgItemText(IDC_ED_AW_CLIENT, s);
-
+	
+	// Gate board client of PAP
+	s = gsWall_IP;
+	SetDlgItemText(IDC_ED_GATEBRD_Nx, s);
+	
+	// PUlser board client OF PAP
+	s = gsPulser_IP;
+	SetDlgItemText(IDC_ED_PULSER, s);
 	}
 
 void CIP_Connect::UpdateTime(CString t)

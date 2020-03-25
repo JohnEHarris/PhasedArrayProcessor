@@ -944,8 +944,26 @@ void CServerSocket::OnAccept(int nErrorCode)
 			s.Format(_T("InetPton success client %s:%d connected to server %s:%d******\n"),
 				Ip4C, uPortC, Ip4S, uPortS);
 			TRACE(s);
-			// choose a global structure base on the server. Then we know which client we are serving
-
+			// choose a global structure based on the server. Then we know which client we are serving
+			// For now (3/25/2020 cheat.. Gate/ADC board connects to 7502
+			// pulser connects to 7602
+			// get these server port numbers from ini file
+			// could also use sub net numbers, adc = .10, pulser uses .12
+			if (uPortS == pSCM[0]->GetServerPort())// should be 7502
+				{// client is Gate board aka ADC
+				gsPAP2Wall_IP.Format(_T("%s : %d"), Ip4S, uPortS);
+				gsWall_IP.Format(_T("%s : %d"), Ip4C, uPortC);
+				}
+			else if (uPortS == pSCM[1]->GetServerPort())  // should be 7602
+				{// client is pulser
+				gsPAP2Pulser_IP.Format(_T("%s : %d"), Ip4S, uPortS);
+				gsPulser_IP.Format(_T("%s : %d"), Ip4C, uPortC);
+				}
+			else
+				{
+				// this is an unknown client
+				TRACE(_T("Unknown server port -- thus unknown client\n"));
+				}
 			ntmp = ntohl(*(u_long*)&wClientBaseAddress);
 			}
 

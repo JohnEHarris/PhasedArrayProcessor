@@ -200,9 +200,9 @@ PubExt BYTE gbAdcMsgIdErrorCntPAP;		// count number of times adc msg lost in PAP
 PubExt BYTE gbAdcMsgIdErrorCntADC;		// count number of times adc msg lost in ADC
 
 PubExt CString gsWall_IP;		//IP + port of Wall Instrument
-PubExt CString gsWall_Port;
+//PubExt CString gsWall_Port;
 PubExt CString gsPulser_IP;     // IP + port of pulser
-PubExt CString gsPulser_Port;
+//PubExt CString gsPulser_Port;
 
 PubExt CString gsPAP2Wall_IP;   // server to gate board
 PubExt CString gsPAP2Pulser_IP; // server to pulser board

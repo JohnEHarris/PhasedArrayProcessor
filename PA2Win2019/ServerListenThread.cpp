@@ -164,6 +164,12 @@ afx_msg void CServerListenThread::InitListnerThread(WPARAM w, LPARAM lParam)
 		pDlg = (MAIN_DLG_NAME *) AfxGetMainWnd();
 		ASSERT (pDlg != NULL);
 		pDlg->MessageBox(_T("Failed to Create Listening Socket"),_T("MMI to Master Connection Impossible"));
+		Sleep(2000);
+		pDlg->OnBnClickedOk();
+
+
+
+
 #endif
 		s = _T("Failed to Create Listening Socket--Master to Instrument Connection Impossible\n");
 		TRACE(s);

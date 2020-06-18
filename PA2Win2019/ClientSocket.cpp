@@ -47,8 +47,7 @@ CClientSocket::CClientSocket( CClientConnectionManagement *pCCM	)
 		// this is a copy of the socket pointer in ClientCommunicationThread
 		if (m_pCCM->m_pstCCM)
 			m_pCCM->m_pstCCM->pSocket = this;
-		m_nAsyncSocketCnt = gnAsyncSocketCnt = 0;
-		//m_nAsyncSocketCnt = 0;
+		m_nAsyncSocketCnt = gnAsyncSocketCnt++;
 		m_nOwningThreadId = AfxGetThread()->m_nThreadID;
 		s.Format(_T("Valid CCM ptr, use OnReceive1(), Socket# =%d, CreateThread = %d\n"),
 			m_nAsyncSocketCnt, m_nOwningThreadId);

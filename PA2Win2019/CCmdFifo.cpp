@@ -40,6 +40,13 @@ CCmdFifo::CCmdFifo(int PacketSize, char CS, int nWhichCS, int nClient)
 
 CCmdFifo::~CCmdFifo()
 	{
+	CString s;
+#if 0
+	SHUTDOWN_DEBUG  threw exception
+	s.Format(_T("~CCmdFifo() EXECUTED, type = %s, mType, Client = %d, m_SrvClientNum\n"));
+	TRACE(s);
+#endif
+
 	delete m_pCS;
 	};
 

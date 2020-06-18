@@ -118,7 +118,7 @@ CServerSocket::~CServerSocket()
 	i = j = 0;
 	DWORD nId = AfxGetThread()->m_nThreadID;
 	// for listener socket, m_pSCC is null
-	t.Format(_T("Thread Id=%d - m_pSCC= %x "), nId, m_pSCC);
+	t.Format(_T("Thread Id=%d - m_pSCC= %x "), nId, (UINT)m_pSCC);
 
 	if (m_pSCM == nullptr)
 		ASSERT( 0 );
@@ -573,7 +573,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	Asocket.GetPeerName(Ip4C,uPortC);	// connecting clients info??
 	s.Format(_T("Client side socket %s : %d\n"), Ip4C, uPortC);
 	TRACE(s);
-	int ntmp = 0;
+	long ntmp = 0;
 	s = Ip4C;
 	if (1 != InetPton(AF_INET, s, &wClientBaseAddress) )
 		{	TRACE(_T("InetPton error\n"));		return;		}

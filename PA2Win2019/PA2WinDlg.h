@@ -40,6 +40,7 @@ using namespace std;
 #define	MAX_CLIENTS				8
 #else
 #define	MAX_CLIENTS				8
+// In GUI, client can be a number like 4, in fact normally is 4   2020/04/3
 #endif
 
 // Usefull defines for entire project
@@ -198,6 +199,7 @@ public:
 	void GetAllIP4AddrForThisMachine(void);		// Fills in the array sThisMachineIP4Addr[]
 	CString sThisMachineIP4Addr[20];			// doubtfull this machine will have 20 "NIC's"
 	UINT uThisMachineIP4Addr[20];				// 32 bit ulong representation of ip4
+	int gnNumberOfNics;
 	
 	// on screen graph in PA2Win dialot of server rows with connected client IP addresses
 	CString sConnectedClients[MAX_SERVERS][MAX_CLIENTS_PER_SERVER];	// 2018-08-07

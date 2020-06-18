@@ -756,13 +756,16 @@ BOOL CPA2WinDlg::OnInitDialog()
 
 	Sleep(50);
 	//PAP will get its PAP number (0-7) by reading a memory stick -- not a very reliable way
-	//PAP will get its IP address via DHCP. Hence, PAP number will not be tied to IP address
+	//PAP will get its IP address via DHCP. Hence, PAP number will not be tied to IP address --NO DOES NOT WORK THIS WAY 4/3/2020
 	// At present (2018-08-13) both servers use the same NIC for PAP
 //#ifdef I_AM_PAP
 	ReadPAPnumber();
 //#endif
 	GetAllIP4AddrForThisMachine();	
 	InitializeClientConnectionManagement();	// moved from after thread list creation
+	// If the PAG does not have a NIC for the PAP to connect to, program crashes.
+	// check IP address discovered on the PAG and stop the program if none of the IP addresses
+	// match the required address in the ini file.
 	InitializeServerConnectionManagement();
 
 	StructSizes();
@@ -1088,7 +1091,7 @@ void CPA2WinDlg::GetAllIP4AddrForThisMachine()
 	// getaddrinfo() is preferred way to get this info... but realy complex. Use help to find getaddrinfo
 	// Developers are encouraged to use the GetAddrInfoW Unicode function rather than the getaddrinfo ANSI function.
 
-	// make sure we found something
+	// make sure we found something 
 	if (hostent != NULL)
 		{
 		// jeh code to show all hosts.. from help system for hostent structure
@@ -1104,6 +1107,7 @@ void CPA2WinDlg::GetAllIP4AddrForThisMachine()
 			// After all 'real' IP4 added, add loopback into table
 			uThisMachineIP4Addr[i]		= 0x0100007f;
 			sThisMachineIP4Addr[i++]	= _T("127.0.0.1");
+			gnNumberOfNics = i;
 			}
 		}
 	}
@@ -1373,8 +1377,8 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 // a client program on another port.
 void CPA2WinDlg::InitializeServerConnectionManagement(void)
 	{
-	int i, j;
-	CString s;
+	int i, j, k;
+	CString sCln, t, sSrv, s;
 	UINT uPort;
 	int nError;
 
@@ -1394,19 +1398,38 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			j = sizeof(CServerConnectionManagement);	//12
 			if (pSCM[i])
 				{
-				s = gServerArray[i].Ip;			// a global static table of ip addresses
-				pSCM[i]->SetServerIP4(s);		// if PAP _T("192.168.10.10")); if PAG _T("192.168.11.20")
+				sSrv = t =gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(sSrv);		// if PAP _T("192.168.10.10")); if PAG _T("192.168.11.20")
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7501);
 				pSCM[i]->SetServerType(ePhaseArrayMaster);
-				s = gServerArray[i].ClientBaseIp;
-				pSCM[i]->SetClientBaseIp(s);
+				sCln = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(sCln);
 				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
 				// start the listen thread which will create a listener socket
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
 				// the connection socket's OnReceive will populate the input data linked list and post messages
 				// to the main dlg/application to process the data.
 				pSCM[i]->m_pstSCM->nServerIsListening = 0;
+				// If server IP from INI file does not find physical IP in system -put up message box and then close program
+				UINT uSrvAdd;
+				CString m1, err;
+				char iptxt[32];
+				CstringToChar(sSrv, iptxt);
+				uSrvAdd = inet_addr(iptxt);
+				for (k = 0; k < gnNumberOfNics; k++)
+					{
+					if (uThisMachineIP4Addr[k] == uSrvAdd) goto OK_ADDR;
+					}
+				m1 = _T("No IP address on this machine	matches the SERVER address required in the INI file  ");
+				err = _T("Error");
+				MessageBox( m1, err);
+				m1 += _T(" ") + err + _T("\n");
+				TRACE(m1);
+
+				return;
+
+OK_ADDR:
 
 				nError = pSCM[i]->StartListenerThread(i);
 				if (nError)
@@ -1444,13 +1467,13 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			j = sizeof(CServerConnectionManagement);
 			if (pSCM[i])
 				{
-				s = gServerArray[i].Ip;			// a global static table of ip addresses
-				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.20"));
+				sSrv = gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(sSrv);		// _T("192.168.10.20"));
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7520);
 				pSCM[i]->SetServerType(ePAP_AllWall_server);
-				s = gServerArray[i].ClientBaseIp;
-				pSCM[i]->SetClientBaseIp(s);
+				sCln = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(sCln);
 				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
 				// start the listen thread which will create a listener socket
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
@@ -1476,13 +1499,13 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			j = sizeof(CServerConnectionManagement);
 			if (pSCM[i])
 				{
-				s = gServerArray[i].Ip;			// a global static table of ip addresses
-				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.10"));
+				sSrv = gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(sSrv);		// _T("192.168.10.10"));
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7602);
 				pSCM[i]->SetServerType(ePhaseArrayMaster);
-				s = gServerArray[i].ClientBaseIp;
-				pSCM[i]->SetClientBaseIp(s);
+				sCln = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(sCln);
 				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
 				// start the listen thread which will create a listener socket
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
@@ -2998,6 +3021,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the 
 		// check for already existing dialog. If not existing
 		// use new to create new dialog
 	// TODO: Add your command handler code here
+#ifdef I_AM_PAP
 	if (gDlg.pIpConnect == NULL) 
 		{
 		gDlg.pIpConnect = new CIP_Connect();
@@ -3007,4 +3031,9 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the 
 			}
 		}
 	else gDlg.pIpConnect->SetFocus();
+		
+#else
+		MessageBox(_T("Connectivity Dialog only available from Phased Array Processor"), _T("Error"), MB_OK);
+#endif
 		}
+

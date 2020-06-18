@@ -173,10 +173,10 @@ typedef struct
 // keep data synchronized with location information
 typedef struct	// IDATA_FROM_HW
 	{
-	//BYTE bMsgID;		// Commands are word length, data returned is byte length
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID
-	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256
-	WORD wByteCount;	// Number of bytes in this packet. Make it even number		
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID.. PAP will modify before sending data
+	// modified MsgID will show missed commands in high byte
+	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256	
+	WORD wByteCount;
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
 	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
@@ -231,8 +231,8 @@ typedef struct	// IDATA_FROM_HW
 // Estimated 13 uSec to copy header into Wiznet
 typedef struct	// IDATA_FROM_HW_HDR
 	{
-	//BYTE bMsgID;		// Commands are word length, data returned is byte length
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID.. PAP will modify before sending data
+	// modified MsgID will show missed commands in high byte
 	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256
 	WORD wByteCount;	// Number of bytes in this packet. Make it even number		
 	UINT uSync;			// 0x5CEBDAAD													
@@ -335,9 +335,9 @@ typedef struct // stPeakChnlNIOS
 
 typedef struct // IDATA_PAP
 	{
-	//BYTE bMsgID;		// Commands are word length, data returned is byte length
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID
-	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID.. PAP will modify before sending data
+	// modified MsgID will show missed commands in high byte
+	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256	
 	WORD wByteCount;	// Number of bytes in this packet. Make it even number		
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
@@ -392,8 +392,8 @@ typedef struct // IDATA_PAP
 
 typedef struct // IDATA_PAP_HDR
 	{
-	//BYTE bMsgID;		// Commands are word length, data returned is byte length
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID.. PAP will modify before sending data
+	// modified MsgID will show missed commands in high byte
 	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256
 	WORD wByteCount;	// Number of bytes in this packet. Make it even number		
 	UINT uSync;			// 0x5CEBDAAD													
@@ -458,7 +458,8 @@ typedef struct // ASCAN_DATA
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
-	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
+	BYTE bBoardType;	// what kind of inspection device 1= wall 2 = socomate
+	BYTE bBoardStatus;
 	BYTE bSeqNumber;
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
 						//BYTE bMsgSubMux;	

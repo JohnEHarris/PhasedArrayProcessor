@@ -60,6 +60,7 @@ CNcNx::~CNcNx()
 	{
 	TRACE( _T( "CNcNx::~CNcNx()\n" ) );
 	gDlg.pNcNx = 0;
+	//MFC\dlgcore.cpp(137) : AppMsg - 	OnDestroy or PostNcDestroy in derived class will not be called.
 	}
 
 void CNcNx::DoDataExchange(CDataExchange* pDX)
@@ -127,7 +128,7 @@ BOOL CNcNx::OnInitDialog()
 	CString s;
 
 	// TODO:  Add extra initialization here
-	PositionWindow();
+	//PositionWindow();
 	m_nPAP = m_nBoard = m_nSeq = m_nCh = m_nGate = m_nParam	= 0;
 	guAscanMsgCnt = 0;
 	guIdataMsgCnt = 0;

@@ -86,13 +86,12 @@ PubExt BYTE gbFakeDataCnt;
 PubExt WORD gwAscanCntLast, gwAscanCntPrevious;	// test to see if Ascans are running
 PubExt WORD gwWarmStart;
 
-
-
 #else	// not the instrument
 
 class CTuboIni;
 class CPA2WinDlg;
 class CPA2WinApp;
+class CTuboIni;
 class CNcNx;
 class CIP_Connect;
 

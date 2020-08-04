@@ -1040,6 +1040,36 @@ afx_msg void CClientCommunicationThread::RestartTcpComDlg(WPARAM w, LPARAM lPara
 	}
 #endif
 
+void CClientCommunicationThread::UpdateTOF_File()
+	{
+	char TOFOut[200], *pCh;
+	pCh = &TOFOut[0];
+	memset(pCh, 0, 50);
+	// gLastAscanPap is static memory holding last AScan data sent to UUI/PAG
+	// gTofDebug is a buffer usually the previous Ascan buffer.
+
+	if ((gTofDebug.wLineCount > 50) || (gTofDebug.SEQ_OLD != gLastAscanPap.bSeqNumber) || (gTofDebug.CH_OLD != gLastAscanPap.bVChnlNumber))
+		{
+		sprintf(pCh, "\r\n\nSeq    Ch     Start  Stop   Delta\n" );
+		gTofDebug.wLineCount = 0;
+		pCh += 37;
+		gTofDebug.SEQ_OLD = gLastAscanPap.bSeqNumber;
+		gTofDebug.CH_OLD = gLastAscanPap.bVChnlNumber;
+		}
+
+
+	sprintf(pCh, "%04d   %04d   %04d   %04d   %04d\n",
+		gLastAscanPap.bSeqNumber, gLastAscanPap.bVChnlNumber, gLastAscanPap.TOF[0],
+		gLastAscanPap.TOF[1], (gLastAscanPap.TOF[1] - gLastAscanPap.TOF[0]) );
+		gTofDebug.wLineCount++;
+
+	// write to log file. This proc not called unless the file exists
+	pMainDlg->SaveTOF_RecordLog(TOFOut);
+	}
+
+
+
+
 // When the managing CCM wants to send a packet to a server, it queues  the packet
 // into a linked list. Then it sends or posts a thread message to the Send Thread
 // instructing the thread to check the linked list and send all queued messages.
@@ -1265,9 +1295,17 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 					break;
 
 				case 2:
+					// Always copy the Ascan message to internal memory for debugging
 					memcpy((void *)&gLastAscanPap, (void *)pSendPkt, sizeof(ASCAN_DATA));
 					guAscanMsgCnt++;
 					m_nConsecutiveFailedXmit = 0;
+
+					//2020-07-24 Output Ascan data to TOF_Catch for debugging if flag set
+					if (gbTofRecord && gbTofFileExists)
+						{
+						// check for changes in selected Ascan channel and for new lines if 50 lines already output
+						UpdateTOF_File( );
+						}
 					break;
 				case 3:
 					memcpy((void *)&gLastRdBkPap, (void *)pSendPkt, pSendPkt->wByteCount);

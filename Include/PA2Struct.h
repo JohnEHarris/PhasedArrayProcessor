@@ -460,7 +460,7 @@ typedef struct // ASCAN_DATA
 						// 192.168.10.200+boardNumber  range is .200-.215
 	BYTE bBoardType;	// what kind of inspection device 1= wall 2 = socomate
 	BYTE bBoardStatus;
-	BYTE bSeqNumber;
+	BYTE bSeqNumber;	// bit field of gates
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
 						//BYTE bMsgSubMux;	
 						//BYTE bNiosFeedback[7]****;	8 byte change
@@ -583,6 +583,21 @@ typedef struct // READBACK_DATA
 	} READBACK_DATA;		// sizeof() = 1088
 
 
+// Diagnostic TOF capture packets... debug tof jitter on screen
+typedef struct
+	{
+	BYTE TOF_SEQ;	//SEQUENCE number of captured data  0-2
+	BYTE SEQ_OLD;
+	BYTE TOF_CH;	// 0-7
+	BYTE CH_OLD;
+	WORD wStart;	// start of tof since trigger
+	WORD wStop;		// stop time
+	WORD wSpan;		// stop-start
+	WORD wXloc;		// where on pipe from start
+	WORD wClock;	//angular posit
+	WORD wLineCount;	// after 50 lines of same Seq & Chnl add two blank lines.
+	// Add 2 blank lines when sequence or channel changes
+	} TOF_DEBUG;
 							// A packet of data sent from the Pulser to the PAP server updating pulser status
 typedef struct // PULSER_DATA
 	{

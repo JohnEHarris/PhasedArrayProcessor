@@ -88,6 +88,7 @@ public:
 	void StartTCPCommunication();
 	void MyMessageBox( CString s );
 	void DebugMsg(CString s);
+	void UpdateTOF_File( );		// debugging scope trace on UUI
 
 // Implementation
 protected:

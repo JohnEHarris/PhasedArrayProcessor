@@ -204,6 +204,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	CString DeBug;	// another debug file to catch printf statements since vs2015 does not output to monitor screen
 	CString Commands;	// catch commands from PAG to PAP
 	CString ReadBack;	// intercept read back message and write to file
+	CString TOF_LOG;    // show start & stop time in clock counts after main bang or trigger
 
 	t = GetCommandLine();	// shows ""D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\PhasedArrayMasterVS2010.exe" -i -d"
 	i = t.Find(_T(".exe"));
@@ -222,6 +223,9 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	DeBug = t + _T("Debug.log");
 	Commands = t + _T("Commands.log");
 	ReadBack = t + _T("ReadBack.log");
+	TOF_LOG = t + _T("TOF_Catch.log");
+	gbTofRecord = 0;
+
 	// shows "D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\"
 	// The name of the App becomes an implicit part of the key
 	// We only write Tuboscope, but clever windows makes a subregistry entry of AdpMMI
@@ -250,7 +254,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	//m_pTuboIni = new CTuboIni(t);
 	//i = sizeof (CTuboIni);
 
-	m_nFakeDataExists = m_nDebugLogExists = m_mCommandLogExists = m_nReadBackExists = 0;
+	m_nFakeDataExists = m_nDebugLogExists = m_mCommandLogExists = m_nReadBackExists = m_TofLogExists = 0;
 
 	CFileException fileException;
   
@@ -288,6 +292,15 @@ void CPA2WinDlg::MakeDebugFiles(void)
 			ReadBack, fileException.m_cause);
 		}
 	else m_nReadBackExists = 1;
+
+    // Time of Flight start, stop clock locations
+	if (!m_TofFile.Open(TOF_LOG, CFile::modeCreate |
+		CFile::modeReadWrite | CFile::shareDenyNone, &fileException))
+		{
+		TRACE(_T("Can't open file %s, error = %u\n"),
+			TOF_LOG, fileException.m_cause);
+		}
+	else m_TofLogExists = gbTofFileExists = 1;
 
 
 	}
@@ -335,6 +348,9 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	InitializeCriticalSectionAndSpinCount(pCSSaveCommands, 4);
 	pCSSaveReadBack = new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pCSSaveReadBack, 4);
+
+	pCSSaveTofFile = new CRITICAL_SECTION();	// not deleting this info on shut down 7/24/20
+	InitializeCriticalSectionAndSpinCount(pCSSaveTofFile, 4);
 
 	MakeDebugFiles();
 
@@ -424,6 +440,10 @@ CPA2WinDlg::~CPA2WinDlg()
 		delete pCSSaveReadBack;
 	pCSSaveReadBack = 0;
 
+	if (pCSSaveTofFile)
+		delete pCSSaveTofFile;
+	pCSSaveTofFile = 0;
+
 	if (gDlg.pNcNx)
 		{
 		delete gDlg.pNcNx;
@@ -455,6 +475,7 @@ BEGIN_MESSAGE_MAP(CPA2WinDlg, CDialogEx)
 	ON_BN_CLICKED( IDC_BN_SHUTDOWN, &CPA2WinDlg::OnBnClickedBnShutdown )
 	ON_LBN_SELCHANGE(IDC_LIST1, &CPA2WinDlg::OnLbnSelchangeList1)
 	ON_COMMAND(ID_CONNECTIVITY_SHOW, &CPA2WinDlg::OnConnectivityShow)
+	ON_COMMAND(ID_DEBUG_TOFSHOW, &CPA2WinDlg::OnDebugTofshow)
 END_MESSAGE_MAP()
 
 
@@ -2177,6 +2198,52 @@ void CPA2WinDlg::CloseReadBackLog(void)
 	m_nReadBackExists = 0;
 	}
 
+/********  TOF Debug File *********/
+void CPA2WinDlg::SaveTOF_RecordLog(char *ch)
+	{
+	//char ch[1600];
+	if (0 == m_TofLogExists)
+		{
+		TRACE(_T("TOF debug log file not available\n"));
+		return;
+		}
+
+	if (m_TofFile.m_hFile > 0)
+		{
+		EnterCriticalSection(pCSSaveTofFile);
+		try
+			{
+			//CstringToChar(s, ch, 800);
+			m_TofFile.Write(ch, (int)strlen(ch));	// I want to see ASCII in the file
+			//m_DebugLog.Flush(); -- not needed. Kills Nc Nx processing time
+			}
+		catch (CFileException* e)
+			{
+			e->ReportError();
+			e->Delete();
+			}
+		LeaveCriticalSection(pCSSaveTofFile);
+		}
+	}
+
+void CPA2WinDlg::CloseTOF_RecordLog(void)
+	{
+	if (0 == m_TofLogExists)
+		{
+		TRACE(_T("TOF debug log file not available\n"));
+		return;
+		}
+	try
+		{
+		m_TofFile.Close();
+		}
+	catch (CFileException* e)
+		{
+		e->ReportError();
+		e->Delete();
+		}
+	m_TofLogExists = 0;
+	}
 
 
 // This timer only runs the PA2WinDlg screen.
@@ -2619,7 +2686,7 @@ int CPA2WinDlg::GetAdcCmdQ(void)		// return number of commands queued for ADC
 	{
 	// ADC command q serviced by SRV[0]
 	int i = 0;
-	if (stSCM[0].pClientConnection[0]->pSendPktList)
+	if (stSCM[0].pClientConnection[0]->pSendPktList)     // this showed instrument[1] instead of [0] at break- 2020-07-23
 		{
 		i = stSCM[0].pClientConnection[0]->pSendPktList->GetCount();
 		}
@@ -3037,3 +3104,23 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the 
 #endif
 		}
 
+
+
+	void CPA2WinDlg::OnDebugTofshow( )
+		{
+		// TODO: Add your command handler code here
+#ifdef I_AM_PAP
+		if (gDlg.pTofCatch == NULL)
+			{
+			gDlg.pTofCatch = new TOF_Catch( );
+			if (gDlg.pTofCatch)
+				{
+				gDlg.pTofCatch->Create(IDD_DLG_TOF_RECORD);
+				}
+			}
+		else gDlg.pTofCatch->SetFocus( );
+#else
+
+		MessageBox(_T("TOF Record Dialog only available from Phased Array Processor"), _T("Error"), MB_OK);
+#endif
+		}

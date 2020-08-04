@@ -114,6 +114,9 @@
     <ClInclude Include="CIP_Connect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TOF_Catch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PA2Win.cpp">
@@ -180,6 +183,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CIP_Connect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TOF_Catch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

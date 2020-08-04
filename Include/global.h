@@ -21,6 +21,7 @@ Revised:
 
 #include "PA2Struct.h"
 #include "Cmds.h"
+#include "TOF_Catch.h"
 
 // The MAC and IP addresses of the instrument are modified by board switch setting or
 // by backplane board slot address when implemented.
@@ -94,6 +95,7 @@ class CPA2WinApp;
 class CTuboIni;
 class CNcNx;
 class CIP_Connect;
+class TOF_Catch;
 
 typedef struct 
 	{
@@ -103,6 +105,7 @@ typedef struct
 	CTuboIni *pTuboIni;		// not actually a dialog, but no harm, no foul
 	CNcNx *pNcNx;			// Nc Nx test dialog
 	CIP_Connect* pIpConnect; // generate a dialog showing IP connections/ports and wall instrument number
+	TOF_Catch *pTofCatch;
 	}	GLOBAL_DLG_PTRS;
 
 PubExt GLOBAL_DLG_PTRS gDlg;
@@ -115,6 +118,8 @@ PubExt ST_TCG_BEAM_GAIN_READBACK_DATA gLastBeamGainReadBack;
 PubExt ST_TCG_SEQ_GAIN_READBACK_DATA gLastSeqGainReadBack;
 PubExt ST_SMALL_CMD gLastCmd;	// sized for small cmds, used for both adc commands on PAP screen
 PubExt WORD gwMax0, gwMin0, gwMin1_0, gwMin2_0, gwZeroCnt, gwNot0;	// max and min of seq0, chnl 0
+PubExt TOF_DEBUG gTofDebug;
+PubExt BYTE gbTofDbgIndx;	// always 0 or 1
 #endif
 
 PubExt int gMaxChnlsPerMainBang;
@@ -184,6 +189,8 @@ PubExt UINT guPktAttempts[2][10];	//[0]=Nx, [1]=All wall count number of attempt
 								//[][0] is 1st attempt, [][1] is 2nd etc
 PubExt UINT guCmdsProcessed;	// number of commands processed by the ADC board
 PubExt BYTE gbDebugMode;		// if not 0, print message info as they are executed.
+PubExt BYTE gbTofRecord;	// Check box to enable/disable tof recording
+PubExt BYTE gbTofFileExists;
 
 // Pulser global variables
 PubExt WORD gwPulserCmds;

@@ -150,18 +150,21 @@ public:
 	CRITICAL_SECTION *pCSSaveDebug;	// control access to debug output 
 	CRITICAL_SECTION *pCSSaveCommands;	// control access to Commands output 
 	CRITICAL_SECTION *pCSSaveReadBack;
+	CRITICAL_SECTION *pCSSaveTofFile;
 	CFile m_FakeData;
 	CFile m_DebugLog;
 	CFile m_CommandLog;
 	CFile m_ReadBackLog;
 	CFile m_PapNumberFile;
 	CFile m_AltPapNumberFile;	// file store on C drive in \LocalAppExes\MyID
+	CFile m_TofFile;
 	int m_nMsgSeqCnt;
 
 	int m_nFakeDataExists;
 	int m_nDebugLogExists;
 	int m_mCommandLogExists;
 	int m_nReadBackExists;
+	int m_TofLogExists;
 
 	void SaveFakeData(CString& s);
 	void CloseFakeData(void);
@@ -171,8 +174,15 @@ public:
 	// Verify Commands are received by PAP
 	void SaveCommandLog(CString& s);
 	void CloseCommandLog(void);
-	void CPA2WinDlg::SaveReadBackLog(CString& s);
-	void CPA2WinDlg::CloseReadBackLog(void);
+
+	void SaveReadBackLog(CString& s);
+	void CloseReadBackLog(void);
+
+	// Debug TOF jitter
+	void SaveTOF_RecordLog(char  *s);
+	void CloseTOF_RecordLog(void);
+
+
 
 	void ReadPAPnumber(void);
 	void DeleteOldPapNumbers(int nNewPap);
@@ -278,4 +288,5 @@ public:
 	afx_msg void OnBnClickedBnShutdown();
 	afx_msg void OnLbnSelchangeList1();
 	afx_msg void OnConnectivityShow();
+	afx_msg void OnDebugTofshow( );
 };

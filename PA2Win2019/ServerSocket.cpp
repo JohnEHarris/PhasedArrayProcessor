@@ -1217,6 +1217,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 	void *pPacket = 0;
 	int nPacketSize;
 	WORD wByteCnt;
+	BYTE bPulserPacket = 0;
 	GenericPacketHeader *pHeader;
 
 	int n;
@@ -1242,6 +1243,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 	if (m_pSCM->m_pstSCM->uServerPort == 7602)
 		{
 		s = _T("Getting Pulser Status Messages");
+		bPulserPacket = 1;
 		}
 	// A real hardware FIFO would shift data to the output side instantly
 	m_pFifo->Shift();
@@ -1355,9 +1357,9 @@ void CServerSocket::OnReceive(int nErrorCode)
 			IDATA_FROM_HW *pIdataPacket = (IDATA_FROM_HW *) pB;
 			// Debugging
 #ifdef I_AM_PAP
-			if (nPacketSize != sizeof(IDATA_FROM_HW))
+			if ( (nPacketSize != sizeof(IDATA_FROM_HW)) && (bPulserPacket == 0))
 				{
-				s.Format(_T("Expected packet size = %d, but got %d"), nPacketSize, sizeof(IDATA_FROM_HW));
+				s.Format(_T("Expected packet size = %d, but got %d"), sizeof(IDATA_FROM_HW) , nPacketSize);
 				TRACE(s);
 				}
 #endif

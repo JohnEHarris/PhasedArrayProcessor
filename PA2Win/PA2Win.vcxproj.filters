@@ -111,6 +111,9 @@
     <ClInclude Include="VersionsPag.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CIP_Connect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PA2Win.cpp">
@@ -174,6 +177,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TestThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CIP_Connect.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

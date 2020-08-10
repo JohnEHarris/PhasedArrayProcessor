@@ -197,6 +197,7 @@ int CClientCommunicationThread::ExitInstance()
 		TRACE(_T("Rcvr Com thread ExitInstance()\n"));
 		if (NULL == m_pMyCCM)				break;
 		if (NULL == m_pstCCM)				break;
+		if (0 == m_pstCCM->hWnd)            break;
 		if (NULL == m_pstCCM->pCSRcvPkt)	break;
 		m_pMyCCM->SetConnectionState(0);
 		EnterCriticalSection(m_pstCCM->pCSRcvPkt);
@@ -223,6 +224,7 @@ int CClientCommunicationThread::ExitInstance()
 		m_pstCCM->pRcvPktPacketList = 0;
 		m_pstCCM->pCSRcvPkt = 0;
 		// repeat for other lists and sections
+		if (0 == m_pstCCM->hWnd)            break;
 
 		if (m_pstCCM->pCSDebugIn)
 			{
@@ -242,6 +244,7 @@ int CClientCommunicationThread::ExitInstance()
 		m_pstCCM->pInDebugMessageList = 0;
 		m_pstCCM->pCSDebugIn = 0;
 
+		if (0 == m_pstCCM->hWnd)            break;
 		EnterCriticalSection(m_pstCCM->pCSDebugOut);
 		while (m_pstCCM->pOutDebugMessageList->GetCount())
 			{
@@ -592,6 +595,7 @@ void CClientCommunicationThread::ConnectSocket(WPARAM w, LPARAM lParam)
 	{
 	CString s,t;
 	BOOL rtn;
+	int i = 0;
 	if ((int)w != 1)
 		{
 		TRACE( _T( "ConnectSocket request of wrong thread type. Must be Receiver thread\n" ) );
@@ -624,6 +628,8 @@ void CClientCommunicationThread::ConnectSocket(WPARAM w, LPARAM lParam)
 			s.Format(_T("Connect Error = %d ...waiting to connect to server %s at %s : %d\n"), 
 				m_pstCCM->nOnConnectError, m_pstCCM->sServerName,
 				m_pstCCM->sServerIP4, m_nPort);
+			// only way to distinguish Nx and all wall is by socket name at this point (3/23/20). Depends on ini file
+
 			t = GetTimeString();
 			t += _T("\n");
 			s += t;
@@ -1231,6 +1237,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 			else 
 				guPktAttempts[1][i]++;	// All wall data
 
+			// modify the packet header for Robert's new status info 2020-03-11
 			nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
 			if (nSent == pSendPkt->wByteCount)
 				{

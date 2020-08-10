@@ -49,6 +49,7 @@ CNcNx::CNcNx(CWnd* pParent /*=NULL*/)
 , m_PulserCmdTxt(_T(""))
 , m_SmallTxt(_T(""))
 , m_LargeTxt(_T(""))
+// Using ini file for dialog location, next items are keys for ini file
 	{
 	m_DlgLocationKey = _T("NC_NX_PA2");
 	m_DlgLocationSection = _T("Dialog Locations");	// Section is always this string for all dlgs
@@ -59,6 +60,7 @@ CNcNx::~CNcNx()
 	{
 	TRACE( _T( "CNcNx::~CNcNx()\n" ) );
 	gDlg.pNcNx = 0;
+	//MFC\dlgcore.cpp(137) : AppMsg - 	OnDestroy or PostNcDestroy in derived class will not be called.
 	}
 
 void CNcNx::DoDataExchange(CDataExchange* pDX)
@@ -126,7 +128,7 @@ BOOL CNcNx::OnInitDialog()
 	CString s;
 
 	// TODO:  Add extra initialization here
-	PositionWindow();
+	//PositionWindow();
 	m_nPAP = m_nBoard = m_nSeq = m_nCh = m_nGate = m_nParam	= 0;
 	guAscanMsgCnt = 0;
 	guIdataMsgCnt = 0;
@@ -528,6 +530,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			case 13: s = _T("ProcNull");								break;
 			case 21: s.Format(_T("Ascan Sample Rate = %d"), m_nParam);		break;	// ticks between a/d sampling
 			//case 9: s.Format(_T("Nx = %d"), m_nParam);				break;
+			case 26: s.Format(_T("AscanGateOutput = 0x%x"), m_nParam);	break;
 			case 27: s.Format(_T("AscanRepRate (ms) = %d"), m_nParam);	break;
 			case 28: s.Format(_T("Wall Nx = %d"), m_nParam);		break;
 			case 30: s.Format(_T("ReadBk SubCmd %d"), m_nParam);	break;
@@ -582,6 +585,7 @@ void CNcNx::OnCbnSelchangeCbCmds()
 					Blast(m_nPAP, m_nBoard);						break;
 				case 13:
 					ProcNull(m_nPAP, m_nBoard, m_nPAP, m_nBoard);	break;
+				case 26:
 				case 27:
 					GenericSmall(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 					break;
@@ -788,6 +792,7 @@ void CNcNx::GenericSmall(int nPap, int nBoard, int nSeq, int nCh, int nGate, int
 	CString s, t, sym;
 	switch (nCmd)
 		{
+		case SET_ASCAN_GATE_OUTPUT_ID: sym = _T("SetAscanGates: ");		break;	// UUI ASCAN_SCOPE
 		case ASCAN_REP_RATE_ID:	sym = _T("AscanRepRate: ");		break;	// UUI ASCAN_SCOPE
 
 		default:	sym = _T("???");		return;

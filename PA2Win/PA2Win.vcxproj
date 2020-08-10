@@ -92,7 +92,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;I_AM_PAP;_WINSOCK_DEPRECATED_NO_WARNINGS;_AFXDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;I_AM_PAG;_WINSOCK_DEPRECATED_NO_WARNINGS;_AFXDLL;SHUTDOWN_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <StructMemberAlignment>1Byte</StructMemberAlignment>
     </ClCompile>
@@ -200,6 +200,7 @@
     <ClInclude Include="..\Include\PA2Struct.h" />
     <ClInclude Include="CCmdFifo.h" />
     <ClInclude Include="CCM_PAG.h" />
+    <ClInclude Include="CIP_Connect.h" />
     <ClInclude Include="ClientCommunicationThread.h" />
     <ClInclude Include="ClientConnectionManagement.h" />
     <ClInclude Include="ClientSocket.h" />
@@ -230,6 +231,7 @@
   <ItemGroup>
     <ClCompile Include="CCmdFifo.cpp" />
     <ClCompile Include="CCM_PAG.cpp" />
+    <ClCompile Include="CIP_Connect.cpp" />
     <ClCompile Include="ClientCommunicationThread.cpp" />
     <ClCompile Include="ClientConnectionManagement.cpp" />
     <ClCompile Include="ClientSocket.cpp" />

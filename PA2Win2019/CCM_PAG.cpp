@@ -353,6 +353,10 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 							// SHOW something on PAG output screen
 							if ((is == 0) && (ic == 0))
 								{
+								s.Format(_T("Nx = %d, Max = %4d, Min = %4d, Drop = %2d\n"),
+									pCmdS->wNx,pCmdS->wMax, pCmdS->wMin, pCmdS->wDropCount);
+								DebugOut(s);
+								pMainDlg->SaveCommandLog(s);
 								}
 							}
 					delete pMmiCmd;
@@ -475,6 +479,7 @@ int CCCM_PAG::FindDisplayChannel(int nArray, int nArrayCh)
 //void CInstMsgProcess::SetChannelInfo(void)
 
 // I doubt that this works correctly  --- 2018-03-23 jeh --- don't use
+// Instead see    case SET_WALL_NX_CMD_ID: in ProcessReceivedMessage in CCM_pag line 324
 void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	{
 	int nPam, nInst, nSeq, nCh, msgcnt;
@@ -548,11 +553,12 @@ void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 // 2018-03-23 Executes only on PAP
 // Sets all wall processing variable for each channel to the same value.
 
+#if 0
+
 void CCCM_PAG::WallNx(void)
 	{
 	}
 
-#if 0
 // Send the same message to all Instruments
 BOOL CCCM_PAG::SendSlaveMsgToAll(ST_LARGE_CMD *pCmd)
 	{

@@ -112,10 +112,10 @@ CServerSocket::~CServerSocket()
 	{
 	CString s,t,u;
 	void *pv = 0;
-	int i, j;
+	int i, j, kill_chnls;
 	int nDummy;
 	SOCKET hThis;
-	i = j = 0;
+	i = j = kill_chnls = 0;
 	DWORD nId = AfxGetThread()->m_nThreadID;
 	// for listener socket, m_pSCC is null
 	t.Format(_T("Thread Id=%d - m_pSCC= %x "), nId, m_pSCC);
@@ -123,46 +123,105 @@ CServerSocket::~CServerSocket()
 	if (m_pSCM == nullptr)
 		ASSERT( 0 );
 	if (m_pSCM->m_pstSCM == nullptr)
-		ASSERT( 0 );
+		goto KILL_VCHANNELS; //ASSERT(0);
 
 	hThis = this->m_hSocket;
+	if (hThis == 0xffffffff)
+		{
+		kill_chnls = 1;
+		goto KILL_VCHANNELS;
+		}
+
+
 	switch (m_nOwningThreadType)
 		{
-		
-	case eListener:
-		s = _T( "Listener Socket Destructor called\n" );	// called when Asocket on stack disappears in OnAccept
-		t += s;
-		TRACE( t );
-		pMainDlg->SaveDebugLog(t);
-		s.Format( _T( " Socket# =%d, CreateThread = %d\n" ),
-			m_nAsyncSocketCnt, nId );
-		TRACE( s );
-		//try    ............ debugger says invalid m_pstSCM
-		if (m_pSCM->m_pstSCM->pServerListenSocket == 0)
-			{
-			TRACE( _T( "m_pSCM->m_pstSCM->pServerListenSocket = 0\n" ) );
-			s.Format(_T("Server Socket %d Listener Destructor exit\n"), hThis);
+
+		case eListener:
+			s = _T("Listener Socket Destructor called\n");	// called when Asocket on stack disappears in OnAccept
+			t += s;
+			TRACE(t);
+			pMainDlg->SaveDebugLog(t);
+			s.Format(_T(" Socket# =%d, CreateThread = %d\n"),
+				m_nAsyncSocketCnt, nId);
+			TRACE(s);
+			//try    ............ debugger says invalid m_pstSCM
+			if (m_pSCM->m_pstSCM->pServerListenSocket == 0)
+				{
+				TRACE(_T("m_pSCM->m_pstSCM->pServerListenSocket = 0\n"));
+				s.Format(_T("Server Socket %d Listener Destructor exit\n"), hThis);
+				TRACE(s);
+				return;
+				}
+			// catch()
+
+			else
+				{
+				i = (int)m_pSCM->m_pstSCM->pServerListenSocket->m_hSocket;
+				if (i > 0)
+					{
+					m_pSCM->m_pstSCM->pServerListenSocket->Close(); // necessary or else KillReceiverThread does not run
+					//CAsyncSocket::Close();
+					m_pSCM->m_pstSCM->pServerListenSocket = 0;
+					//Sleep( 10 );
+					}
+
+				if (m_pElapseTimer)
+					{
+					strcat(m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n");
+					s = m_pElapseTimer->tag;
+					TRACE(s);
+					pMainDlg->SaveDebugLog(s);
+					delete m_pElapseTimer;
+					m_pElapseTimer = NULL;
+					}
+
+				if (m_pFifo != NULL)
+					{
+					u.Format(_T("\n~CServerSocket() Fifo cnt=%d,  ThreadID=%d\n"),
+						m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId);
+					s += u;
+					TRACE(s);
+					strcat(m_pFifo->tag, "Kill fifo SrvSkt\n");
+					s = m_pFifo->tag;
+					TRACE(s);
+					pMainDlg->SaveDebugLog(s);
+					delete m_pFifo;
+					m_pFifo = 0;
+					}
+				}	// pServerListenSocket != 0
+
+			m_pSCM->m_pstSCM->pServerListenSocket = 0;
+			s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
 			TRACE(s);
 			return;
-			}
-		// catch()
 
-		else
-			{
-			i = (int)m_pSCM->m_pstSCM->pServerListenSocket->m_hSocket;
-			if (i > 0)
-				{
-				m_pSCM->m_pstSCM->pServerListenSocket->Close(); // necessary or else KillReceiverThread does not run
-				//CAsyncSocket::Close();
-				m_pSCM->m_pstSCM->pServerListenSocket = 0;
-				//Sleep( 10 );
-				}
+		case eOnStack:
+			s = _T("Temporary socket to create ServerConnection\n");
+			t += s;
+			TRACE(t);
+			s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
+			TRACE(s);
+			return;	// don't want to proceed and delete all we just built
+
+		case eServerConnection:
+			if ((m_nClientIndex < 0) || (m_nClientIndex >= gnMaxClientsPerServer))
+				ASSERT(0);
+			if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == nullptr)
+				ASSERT(0);
+
+			m_pSCC = GetpSCC();
+			s += _T("\n");
+			t += s;
+			s.Format(_T(" sizeof(CmdFifo) = %d Socket# =%d, CreateThread = %d\n"),
+				sizeof(CCmdFifo), m_nAsyncSocketCnt, m_nOwningThreadId);
+			t += s;
+			TRACE(t);
 
 			if (m_pElapseTimer)
 				{
-				strcat( m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n" );
+				strcat(m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n");
 				s = m_pElapseTimer->tag;
-				TRACE( s );
+				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
 				delete m_pElapseTimer;
 				m_pElapseTimer = NULL;
@@ -170,85 +229,39 @@ CServerSocket::~CServerSocket()
 
 			if (m_pFifo != NULL)
 				{
-				u.Format( _T( "\n~CServerSocket() Fifo cnt=%d,  ThreadID=%d\n" ),
-					m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId );
+				u.Format(_T("\n~CServerSocket() Fifo cnt=%d,  ThreadID=%d\n"),
+					m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId);
 				s += u;
-				TRACE( s );
-				strcat( m_pFifo->tag, "Kill fifo SrvSkt\n" );
+				TRACE(s);
+				strcat(m_pFifo->tag, "Kill fifo SrvSkt\n");
 				s = m_pFifo->tag;
-				TRACE( s );
+				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
 				delete m_pFifo;
 				m_pFifo = 0;
 				}
-			}	// pServerListenSocket != 0
+//			}	// pServerListenSocket != 0
 
-		m_pSCM->m_pstSCM->pServerListenSocket = 0;
-		s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
-		TRACE(s);
-		return;
+			// Kill all the virtual channels
+KILL_VCHANNELS:
+			if ((m_nClientIndex >= 0) && (m_nClientIndex < MAX_CLIENTS_PER_SERVER))
+				{   // valid chnl
 
-	case eOnStack:
-		s = _T( "Temporary socket to create ServerConnection\n" );
-		t += s;
-		TRACE( t );
-		s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
-		TRACE(s);
-		return;	// don't want to proceed and delete all we just built
-
-	case eServerConnection:
-		if ((m_nClientIndex < 0) || (m_nClientIndex >= gnMaxClientsPerServer))
-			ASSERT( 0 );
-		if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == nullptr)
-			ASSERT( 0 );
-		
-		m_pSCC = GetpSCC();
-		s += _T( "\n" );
-		t += s;
-		s.Format( _T( " sizeof(CmdFifo) = %d Socket# =%d, CreateThread = %d\n" ),
-			sizeof( CCmdFifo ), m_nAsyncSocketCnt, m_nOwningThreadId );
-		t += s;
-		TRACE( t );
-
-		if (m_pElapseTimer)
-			{
-			strcat( m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n" );
-			s = m_pElapseTimer->tag;
-			TRACE( s );
-			pMainDlg->SaveDebugLog(s);
-			delete m_pElapseTimer;
-			m_pElapseTimer = NULL;
-			}
-
-		if (m_pFifo != NULL)
-			{
-			u.Format( _T( "\n~CServerSocket() Fifo cnt=%d,  ThreadID=%d\n" ),
-				m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId );
-			s += u;
-			TRACE( s );
-			strcat( m_pFifo->tag, "Kill fifo SrvSkt\n" );
-			s = m_pFifo->tag;
-			TRACE( s );
-			pMainDlg->SaveDebugLog(s);
-			delete m_pFifo;
-			m_pFifo = 0;
-			}		
-	
-		// Kill all the virtual channels
 #ifdef I_AM_PAP
-		if (m_pstSCM->pClientConnection[m_nClientIndex]->bOwnVChnls)
-			{
-			for (j = 0; j < MAX_SEQ_COUNT; j++)
+			
+			if (m_pstSCM->pClientConnection[m_nClientIndex]->bOwnVChnls)
 				{
-				for (i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
+				for (j = 0; j < MAX_SEQ_COUNT; j++)
 					{
-					delete m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[j][i];
-					m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[j][i] = 0;
+					for (i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
+						{
+						delete m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[j][i];
+						m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[j][i] = 0;
+						}
 					}
+				m_pstSCM->pClientConnection[m_nClientIndex] = 0;
+				m_pstSCM->pClientConnection[m_nClientIndex]->bOwnVChnls = 0;
 				}
-			m_pstSCM->pClientConnection[m_nClientIndex] = 0;
-			m_pstSCM->pClientConnection[m_nClientIndex]->bOwnVChnls = 0;
-			}
 #endif
 
 
@@ -257,16 +270,9 @@ CServerSocket::~CServerSocket()
 		ST_SERVERS_CLIENT_CONNECTION *m_pCheckSCC;
 		nDummy = 5;	// this had to be declared at the top of the procedure
 		// or we get error saying dummy init skipped by default;
-		m_pCheckSCC = m_pstSCM->pClientConnection[m_nClientIndex];
-		if (m_pCheckSCC == m_pSCC)
-			{
-			nDummy = 4;
 
-			i = (int)m_pSCC->pSocket->m_hSocket;
-			if (i > 0)
-				{
-				i = m_pSCC->pSocket->ShutDown();
-				if ((i > 0) && (bAppIsClosing == 0))
+			m_pCheckSCC = m_pstSCM->pClientConnection[m_nClientIndex];
+			if (m_pCheckSCC == m_pSCC)
 					{
 					try
 						{
@@ -279,27 +285,44 @@ CServerSocket::~CServerSocket()
 						CSocket::Close();
 #endif
 						}
-					catch (CException *e)
+					catch (CException * e)
 						{
-						e->ReportError();
-						e->Delete();
+						i = m_pSCC->pSocket->ShutDown();
+						if ((i > 0) && (bAppIsClosing == 0))
+							{
+							try
+								{
+								//if the app is closing, dont try to close the socket 3-15-18
+
+								m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
+#ifdef I_AM_PAP
+								CAsyncSocket::Close();
+#else
+								CSocket::Close();
+#endif
+								}
+							catch (CException * e)
+								{
+								e->ReportError();
+								e->Delete();
+								}
+							}
+						Sleep(10);
 						}
 					}
-				Sleep( 10 );
-				}
-			}
-		else
-			{
-			nDummy = 4;	// debugging multiple disconnects of client before shutdown
-			}
+			else
+					{
+					nDummy = 4;	// debugging multiple disconnects of client before shutdown
+					}
 
-		if (m_pCheckSCC == m_pSCC)
-			{
-			m_pSCC->bConnected = 0;
-			m_pSCC->pSocket = 0;
-			}
+			if (m_pCheckSCC == m_pSCC)
+				{
+				m_pSCC->bConnected = 0;
+				m_pSCC->pSocket = 0;
+				}
 			break;
 
+				}    // valid connection?
 
 		// end of eServerConnection case
 
@@ -310,7 +333,7 @@ CServerSocket::~CServerSocket()
 		s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
 		TRACE(s);
 		return;
-		}
+		}     //switch (m_nOwningThreadType)
 
 
 	// only get here if socket type is eServerConnection
@@ -567,7 +590,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	Asocket.GetPeerName(Ip4C,uPortC);	// connecting clients info??
 	s.Format(_T("Client side socket %s : %d\n"), Ip4C, uPortC);
 	TRACE(s);
-	int ntmp = 0;
+	long ntmp = 0;
 	s = Ip4C;
 	if (1 != InetPton(AF_INET, s, &wClientBaseAddress) )
 		{	TRACE(_T("InetPton error\n"));		return;		}
@@ -896,7 +919,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 #endif
 
 		UINT uPortS, uPortC;
-		int nClientPortIndex;					// which client are we connecting to? Derive from IP address
+		int nClientPortIndex;			// which client are we connecting to? Derive from IP address
 		UINT uClientBaseAddress;		// what is the 32 bit index of the 1st PA Master?
 		WORD wClientBaseAddress[8];
 		char *pIpBase = gServerArray[m_nMyServer].ClientBaseIp;
@@ -938,6 +961,26 @@ void CServerSocket::OnAccept(int nErrorCode)
 			s.Format(_T("InetPton success client %s:%d connected to server %s:%d******\n"),
 				Ip4C, uPortC, Ip4S, uPortS);
 			TRACE(s);
+			// choose a global structure based on the server. Then we know which client we are serving
+			// For now (3/25/2020 cheat.. Gate/ADC board connects to 7502
+			// pulser connects to 7602
+			// get these server port numbers from ini file
+			// could also use sub net numbers, adc = .10, pulser uses .12
+			if (uPortS == pSCM[0]->GetServerPort())// should be 7502
+				{// client is Gate board aka ADC
+				gsPAP2Wall_IP.Format(_T("%s : %d"), Ip4S, uPortS);
+				gsWall_IP.Format(_T("%s : %d"), Ip4C, uPortC);
+				}
+			else if (uPortS == pSCM[1]->GetServerPort())  // should be 7602
+				{// client is pulser
+				gsPAP2Pulser_IP.Format(_T("%s : %d"), Ip4S, uPortS);
+				gsPulser_IP.Format(_T("%s : %d"), Ip4C, uPortC);
+				}
+			else
+				{
+				// this is an unknown client
+				TRACE(_T("Unknown server port -- thus unknown client\n"));
+				}
 			ntmp = ntohl(*(u_long*)&wClientBaseAddress);
 			}
 

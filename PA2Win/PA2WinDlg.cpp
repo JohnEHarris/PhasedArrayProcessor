@@ -22,6 +22,7 @@
 #include "ServerConnectionManagement.h"
 #include <synchapi.h>	// get/set system clock interval in ms
 #include <timeapi.h>
+#include "CIP_Connect.h"
 
 
 
@@ -41,6 +42,7 @@ I AM THE PHASED ARRAY PROCESSOR
 */
 #endif
 
+class CIP_CONNECT;
 class CClientConnectionManagement *pCCM[MAX_CLIENTS];	// global, static ptrs to class instances defined outside of the class definition.
 class CServerConnectionManagement *pSCM[MAX_SERVERS];	// global, static ptrs to class instances define outside of the class definition.
 												//  -- not created with 'new'
@@ -227,16 +229,16 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	// SetRegistryKey(_T("Tuboscope"));	// gen HKEY_CUR_USR\Software\Tuboscope\AdpMMI  key
 
 #ifdef I_AM_PAG
-	// The GUI also know as PAG
+	// The GUI also know as PAG  aka Phased Array GUI
 	t += _T("HardwareConfig_GUI.ini"); // shows "D:\PhasedArrayGenerator\PA_Master_VS2010\.\Debug\HardwareConfig.ini"
 	// t = _T("D:\\PhasedArrayGenerator\\PA_Master_VS2010\\Debug\\HardwareConfig.ini");
 	// m_pszProfileName=_tcsdup(t); // File in the exe directory whether \Debug or \Release
 #else
-	// Was called Service App. Now known as PAP
+	// Was called Service App. Now known as PAP  aka Phased Array Processor
 	t += _T("HardwareConfig_PAP.ini");
 	TRACE(_T("Using ini file: %s\n"), t);
 #endif
-
+	gsIniFilePath = t;
 	// To use an INI file instead, set m_pszProfileName to the ini file path
 	// First free the string allocated by MFC at CWinApp startup.
 	// The string is allocated before InitInstance is called.
@@ -299,9 +301,13 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	m_ptheApp = (CPA2WinApp *) AfxGetApp();
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	gDlg.pUIDlg = this;
+	gDlg.pIpConnect = 0;
+	gDlg.pNcNx = 0;
+	gDlg.pTuboIni = 0;
 	nShutDown = 0;
 	m_nMsgSeqCnt = 0;
-
+	gnAsyncSocketCnt = 0;
+	m_uStatTimer = 0;
 	g_hTimerTick = ::CreateEvent(0, TRUE, FALSE, 0);
 	//memset((void*)stSCM, 0, sizeof(stSCM)*MAX_SERVERS);
 	//memset((void*)stCCM, 0, sizeof(stCCM)*MAX_CLIENTS);
@@ -377,6 +383,18 @@ CPA2WinDlg::~CPA2WinDlg()
 	// lower thread priority to allow signaled thread chance to exit
 	AfxGetThread()->SetThreadPriority( THREAD_PRIORITY_BELOW_NORMAL );
 
+	if (gDlg.pTuboIni)
+		{
+		delete gDlg.pTuboIni;
+		gDlg.pTuboIni = 0;
+		}
+
+	if (gDlg.pIpConnect)
+		{
+		delete gDlg.pIpConnect;
+		gDlg.pIpConnect = 0;
+		}
+
 	// KIll the test thread
 	if (m_pTestThread)
 		{
@@ -441,6 +459,7 @@ BEGIN_MESSAGE_MAP(CPA2WinDlg, CDialogEx)
 	ON_BN_CLICKED( IDC_BN_ERASE_DBG, &CPA2WinDlg::OnBnClickedBnEraseDbg )
 	ON_BN_CLICKED( IDC_BN_SHUTDOWN, &CPA2WinDlg::OnBnClickedBnShutdown )
 	ON_LBN_SELCHANGE(IDC_LIST1, &CPA2WinDlg::OnLbnSelchangeList1)
+	ON_COMMAND(ID_CONNECTIVITY_SHOW, &CPA2WinDlg::OnConnectivityShow)
 END_MESSAGE_MAP()
 
 
@@ -534,6 +553,7 @@ void CPA2WinDlg::ReadPAPnumber(void)
 				s.Format(_T("Found file %s\n"), sPath);
 				TRACE(s);
 				gbAssignedPAPNumber = FileName[3] - '0';	// map char 1-8 to binary  1-8 
+				gsWallAssignPath = sPath;
 				m_PapNumberFile.Close();
 				// create the same file name in C:\\ for default when memory stick is missing
 				if (FileName[0] == 'C')
@@ -649,6 +669,7 @@ void CPA2WinDlg::GetPAPFromCDrive(void)
 			{	// found it on C drive
 			s.Format(_T("Found file %s\n"), sPath);
 			TRACE(s);
+			gsWallAssignPath = sPath;
 			gbAssignedPAPNumber = PathName[i] - '0';	// map char 1-8 to binary  1-8 
 			m_PapNumberFile.Close();
 			// create the same file name in C:\\ for default when memory stick is missing
@@ -687,6 +708,7 @@ BOOL CPA2WinDlg::OnInitDialog()
 	#else
 	sDlgName = _T( "PA2Win -- Phase Array Processor Version -- PAP " );
 #endif
+	gsWall_IP = _T("");
 	bAppIsClosing = 0;	// just started
 	sDlgName += s;
 	SetWindowText(sDlgName);
@@ -739,13 +761,16 @@ BOOL CPA2WinDlg::OnInitDialog()
 
 	Sleep(50);
 	//PAP will get its PAP number (0-7) by reading a memory stick -- not a very reliable way
-	//PAP will get its IP address via DHCP. Hence, PAP number will not be tied to IP address
+	//PAP will get its IP address via DHCP. Hence, PAP number will not be tied to IP address --NO DOES NOT WORK THIS WAY 4/3/2020
 	// At present (2018-08-13) both servers use the same NIC for PAP
 //#ifdef I_AM_PAP
 	ReadPAPnumber();
 //#endif
 	GetAllIP4AddrForThisMachine();	
 	InitializeClientConnectionManagement();	// moved from after thread list creation
+	// If the PAG does not have a NIC for the PAP to connect to, program crashes.
+	// check IP address discovered on the PAG and stop the program if none of the IP addresses
+	// match the required address in the ini file.
 	InitializeServerConnectionManagement();
 
 	StructSizes();
@@ -1071,7 +1096,7 @@ void CPA2WinDlg::GetAllIP4AddrForThisMachine()
 	// getaddrinfo() is preferred way to get this info... but realy complex. Use help to find getaddrinfo
 	// Developers are encouraged to use the GetAddrInfoW Unicode function rather than the getaddrinfo ANSI function.
 
-	// make sure we found something
+	// make sure we found something 
 	if (hostent != NULL)
 		{
 		// jeh code to show all hosts.. from help system for hostent structure
@@ -1087,6 +1112,7 @@ void CPA2WinDlg::GetAllIP4AddrForThisMachine()
 			// After all 'real' IP4 added, add loopback into table
 			uThisMachineIP4Addr[i]		= 0x0100007f;
 			sThisMachineIP4Addr[i++]	= _T("127.0.0.1");
+			gnNumberOfNics = i;
 			}
 		}
 	}
@@ -1228,6 +1254,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	// 	All these connections are tcp/ip clients and the other end is a tcp/ip server.
 	CString sClientIP,  sServerIp, sServerName, s;	// sServerName use the url for this server
 	UINT uServerPort = 0;
+	char txt[10];
 
 	for ( i = 0; i < gnMaxClients; i++)
 		{
@@ -1241,6 +1268,7 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			sServerIp = GetServerIP( i );
 			sServerName = GetServerName( i );
 			uServerPort = GetServerPort( i ) & 0xffff;	// port on the PAG server that we will try to connect to
+			
 			// Make a specific child class of CCM to handle the Phased Array GUI - PAG
 			pCCM_PAG = (CCCM_PAG *) new CCCM_PAG( i );
 			pCCM[i] = (CClientConnectionManagement *)pCCM_PAG;
@@ -1265,6 +1293,11 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			pCCM_PAG->SetServerIp( sServerIp );
 			pCCM_PAG->SetServerName( sServerName );	// url of server, e.g. srvhouapp67
 			pCCM_PAG->SetServerPort( uServerPort );
+			//gsPAP_Nx2UUI_IP = sClientIP;
+			gsUUI_PAP_NxIP = sServerIp + _T(" : ");
+			_itoa(uServerPort, txt,10);
+			s = txt;
+			gsUUI_PAP_NxIP += s;
 
 
 			pCCM_PAG->m_pstCCM->nReceivePriority	= THREAD_PRIORITY_ABOVE_NORMAL;
@@ -1314,6 +1347,10 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			pCCM_PAG_AW->SetServerName(sServerName);	// url of server, e.g. srvhouapp67
 			pCCM_PAG_AW->SetServerPort(uServerPort);
 
+			gsUUI_PAP_AllWall_IP = sServerIp + _T(" : ");
+			_itoa(uServerPort, txt,10);
+			s = txt;
+			gsUUI_PAP_AllWall_IP += s;
 
 			pCCM_PAG_AW->m_pstCCM->nReceivePriority = THREAD_PRIORITY_ABOVE_NORMAL;
 			pCCM_PAG_AW->m_pstCCM->nSendPriority = THREAD_PRIORITY_BELOW_NORMAL;
@@ -1345,8 +1382,8 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 // a client program on another port.
 void CPA2WinDlg::InitializeServerConnectionManagement(void)
 	{
-	int i, j;
-	CString s;
+	int i, j, k;
+	CString sCln, t, sSrv, s;
 	UINT uPort;
 	int nError;
 
@@ -1366,19 +1403,38 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			j = sizeof(CServerConnectionManagement);	//12
 			if (pSCM[i])
 				{
-				s = gServerArray[i].Ip;			// a global static table of ip addresses
-				pSCM[i]->SetServerIP4(s);		// if PAP _T("192.168.10.10")); if PAG _T("192.168.11.20")
+				sSrv = t =gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(sSrv);		// if PAP _T("192.168.10.10")); if PAG _T("192.168.11.20")
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7501);
 				pSCM[i]->SetServerType(ePhaseArrayMaster);
-				s = gServerArray[i].ClientBaseIp;
-				pSCM[i]->SetClientBaseIp(s);
+				sCln = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(sCln);
 				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
 				// start the listen thread which will create a listener socket
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
 				// the connection socket's OnReceive will populate the input data linked list and post messages
 				// to the main dlg/application to process the data.
 				pSCM[i]->m_pstSCM->nServerIsListening = 0;
+				// If server IP from INI file does not find physical IP in system -put up message box and then close program
+				UINT uSrvAdd;
+				CString m1, err;
+				char iptxt[32];
+				CstringToChar(sSrv, iptxt);
+				uSrvAdd = inet_addr(iptxt);
+				for (k = 0; k < gnNumberOfNics; k++)
+					{
+					if (uThisMachineIP4Addr[k] == uSrvAdd) goto OK_ADDR;
+					}
+				m1 = _T("No IP address on this machine	matches the SERVER address required in the INI file  ");
+				err = _T("Error");
+				MessageBox( m1, err);
+				m1 += _T(" ") + err + _T("\n");
+				TRACE(m1);
+
+				return;
+
+OK_ADDR:
 
 				nError = pSCM[i]->StartListenerThread(i);
 				if (nError)
@@ -1416,13 +1472,13 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			j = sizeof(CServerConnectionManagement);
 			if (pSCM[i])
 				{
-				s = gServerArray[i].Ip;			// a global static table of ip addresses
-				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.20"));
+				sSrv = gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(sSrv);		// _T("192.168.10.20"));
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7520);
 				pSCM[i]->SetServerType(ePAP_AllWall_server);
-				s = gServerArray[i].ClientBaseIp;
-				pSCM[i]->SetClientBaseIp(s);
+				sCln = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(sCln);
 				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
 				// start the listen thread which will create a listener socket
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
@@ -1448,13 +1504,13 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			j = sizeof(CServerConnectionManagement);
 			if (pSCM[i])
 				{
-				s = gServerArray[i].Ip;			// a global static table of ip addresses
-				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.10"));
+				sSrv = gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(sSrv);		// _T("192.168.10.10"));
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7602);
 				pSCM[i]->SetServerType(ePhaseArrayMaster);
-				s = gServerArray[i].ClientBaseIp;
-				pSCM[i]->SetClientBaseIp(s);
+				sCln = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(sCln);
 				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
 				// start the listen thread which will create a listener socket
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
@@ -2155,6 +2211,15 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 		}
 
 #ifdef I_AM_PAP
+	if (gDlg.pIpConnect)
+		{
+		gDlg.pIpConnect->RemoteTimer();
+		}
+#endif
+
+
+
+#ifdef I_AM_PAP
 	if (gDlg.pNcNx)	return;		// don't show when NcNx dialog on screen
 	// update last Idata packet to list box.
 	// All this to save processing time in displaying data on screen
@@ -2195,12 +2260,18 @@ bool CPA2WinDlg::UpdateTimeDate(time_t *tNow)
 
 	/* Convert to time structure  */
 	today = localtime( tNow );
-	if (today ==0) return TRUE;
+	if (today == 0) return TRUE;
 		{
 		t.Format(_T("%02d:%02d:%02d"), today->tm_hour, today->tm_min, today->tm_sec);
 		SetDlgItemText(IDC_STAT_TIME, t);
+		// update  time on connectivity dialog if it is open
+#ifdef I_AM_PAP
+		if (gDlg.pIpConnect)
+			gDlg.pIpConnect->UpdateTime(t);
+
 		t.Format(_T("%02d/%02d/%02d"), today->tm_mon+1, today->tm_mday, (today->tm_year % 100) );
 		SetDlgItemText(IDC_STAT_DATE, t);
+#endif
 		}
 
 	// when the text is drawn, onctlcolor intercepts before the draw and picks the color
@@ -2952,3 +3023,27 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the 
 	{
 		// TODO: Add your control notification handler code here
 	}
+
+
+	void CPA2WinDlg::OnConnectivityShow()
+		{
+		// TODO: Add your command handler code here
+		// check for already existing dialog. If not existing
+		// use new to create new dialog
+	// TODO: Add your command handler code here
+#ifdef I_AM_PAP
+	if (gDlg.pIpConnect == NULL) 
+		{
+		gDlg.pIpConnect = new CIP_Connect();
+		if (gDlg.pIpConnect)
+			{
+			gDlg.pIpConnect->Create(IDD_IP_CONNECT);
+			}
+		}
+	else gDlg.pIpConnect->SetFocus();
+		
+#else
+		MessageBox(_T("Connectivity Dialog only available from Phased Array Processor"), _T("Error"), MB_OK);
+#endif
+		}
+

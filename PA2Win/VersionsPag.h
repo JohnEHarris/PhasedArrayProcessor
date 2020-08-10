@@ -2,7 +2,7 @@
 
 // I AM PAG  *******************
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			23
+#define BUILD_VERSION			27
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -18,6 +18,11 @@
 
 /*
 Show the version number of this program. Newest version on TOP
+1.0.027 2020-08-04 Debug dialog in PAP allows for catching Ascan transmit data. Other changes in PAG
+1.0.026 2020-06-11 Detect than no NIC/connection available to PAG. Stop crash when on client to server
+// no change, just force commit after makin new origin
+1.0.025 2020-04-13 PAG/PAP now can resize main dlg. PAP exits w/o lost memory
+1.0.024 2020-03-18 Prototyping Connectivity dialog for PAP. May mod to use for PAG as well
 1.0.023 2020-02-26 Header file for Idata/Cmds is now different. Cmds header is unchanged
 1.0.022 2019-08-23 Change Versions.h to VersionsPag.h. Add X_Loc divider command 36
 1.0.021 2019-06-27 Command log has TCG Seq Gain and TCG Beam Gain text. Blast300 does 900 small, 1000 large cmds

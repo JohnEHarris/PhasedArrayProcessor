@@ -26,9 +26,36 @@ CCmdProcessThread::CCmdProcessThread()
 
 CCmdProcessThread::~CCmdProcessThread()
 	{
-	if (NULL == m_pstCCM)						return;
-	if (NULL == m_pstCCM->pCmdProcessThread)	return;
-	m_pstCCM->pCmdProcessThread = 0;
+	CString s, t, u;
+	s = t = _T("");
+	u = _T("~CCmdProcessThread() ");
+	if (NULL == m_pstCCM)
+		{
+		s = _T("m_pstCCM = NULL ");
+		goto SHUTDOWN;
+		}
+	else s.Format(_T("m_pstCCM = %x "), m_pstCCM);    //hWnd is 0. can no longer resize main dialog 2020-04-09 on PAP or PAG
+		
+	if (m_pstCCM->hWnd == 0)
+		return;
+
+	if (NULL == m_pstCCM->pCmdProcessThread)
+		{
+		t = _T("m_pstCCM->pCmdProcessThread = NULL ");
+		goto SHUTDOWN;
+		}
+	else
+		{
+		delete m_pstCCM->pCmdProcessThread;
+		m_pstCCM->pCmdProcessThread = 0;
+		}
+SHUTDOWN:
+	u = s;   // fix compiler error, label with no following code.
+#ifdef SHUTDOWN_DEBUG
+	u += s;
+	u += t;
+	TRACE(u);
+#endif
 	}
 
 BOOL CCmdProcessThread::InitInstance()

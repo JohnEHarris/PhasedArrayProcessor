@@ -2,7 +2,7 @@
 
 // I AM PAP  ******************* GUI has its own version file
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			29
+#define BUILD_VERSION			32
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -19,8 +19,10 @@
 /*
 Show the version number of this program. Newest version on TOP
 
-
-1.0.029 2020-07-24 Capture TOF data values to log file to debug jitter in TOF display
+1.0.032 2020-08-06 Fix Nx command (28) and output to Debug log
+1.0.031	2020-08-05 Debugged version catches Ascan setting into TOF log
+1.0.030 2020-08-04 Catch AScan commands into TOF log file. Still use Debug dialog to enable TOF file logging
+1.0.030 2020-07-24 Capture TOF data values to log file to debug jitter in TOF display
 1.0.028 2020-04-13 Restore ability to resize main dialog like PAG
 1.0.027 2020-03-25 IP connections shown in office except for pulser (no input source)   
 1.0.026 2020-03-19 Add connectivity dialog to PAP - show IP connections and Wall Instrument number

@@ -678,6 +678,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				{
 				CommandLogMsg(pCmdS);
 				nMsgSize = pCmd->wByteCount;
+#ifdef I_AM_PAP
 				// log ascan control commands here. cmds 21-26
 				// check to see if debugging enables for Ascans
 				if ((gbTofRecord) && (gbTofFileExists))	// are we capturing TOF data to a file
@@ -733,6 +734,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 						}
 					}
 				break;
+#endif
 				}
 			else
 				{

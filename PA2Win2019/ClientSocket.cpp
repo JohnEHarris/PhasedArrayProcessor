@@ -344,6 +344,7 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		//GetPeerName(m_pCCM->m_pstCCM->sServerIP4, m_pCCM->m_pstCCM->uServerPort);
 		GetPeerName(s0, uSPort);
 		GetSockName(s1, uCPort);	// my ip and port
+//ifdef I_AM_PAP
 		if (m_pCCM->m_nMyConnection == 0)
 			{
 			s.Format(_T("PAG client IP = %s:%d connected to PAG server = %s:%d \n"), s1, uCPort, s0, uSPort);
@@ -357,9 +358,9 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 			gsUUI_PAP_AllWall_IP.Format(_T("%s : %d"),s0,uSPort); // UUI IP and port
 			}
 		//DebugOutMessage(s);
-#ifdef I_AM_PAP
+
 		//pMainDlg->SetMy_PAP_Number(s1, uCPort);
-#endif
+//endif
 		// may need to replace this with some sort of call to MakeConnectionDetail
 		// changed when CLIENT_IDENTITY_DETAIL removed from structure ST_CLIENT_CONNECTION_MANAGEMENT
 		//if (m_pCCM)	m_pCCM->MakeConnectionDetail(s0, uSPort, s1,uCPort); // where server moves from 127.0.0.1 to 10.101.10.190

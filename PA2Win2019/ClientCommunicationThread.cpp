@@ -1040,6 +1040,7 @@ afx_msg void CClientCommunicationThread::RestartTcpComDlg(WPARAM w, LPARAM lPara
 	}
 #endif
 
+#ifdef I_AM_PAP
 void CClientCommunicationThread::UpdateTOF_File()
 	{
 	char TOFOut[200], *pCh;
@@ -1067,7 +1068,7 @@ void CClientCommunicationThread::UpdateTOF_File()
 	pMainDlg->SaveTOF_RecordLog(TOFOut);
 	}
 
-
+#endif
 
 
 // When the managing CCM wants to send a packet to a server, it queues  the packet
@@ -1299,6 +1300,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 					memcpy((void *)&gLastAscanPap, (void *)pSendPkt, sizeof(ASCAN_DATA));
 					guAscanMsgCnt++;
 					m_nConsecutiveFailedXmit = 0;
+#ifdef I_AM_PAP
 
 					//2020-07-24 Output Ascan data to TOF_Catch for debugging if flag set
 					if (gbTofRecord && gbTofFileExists)
@@ -1306,6 +1308,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 						// check for changes in selected Ascan channel and for new lines if 50 lines already output
 						UpdateTOF_File( );
 						}
+#endif
 					break;
 				case 3:
 					memcpy((void *)&gLastRdBkPap, (void *)pSendPkt, pSendPkt->wByteCount);

@@ -41,7 +41,7 @@ class CServerSocket : public CAsyncSocket
 #else
 class CServerSocket : public CSocket
 #endif
-{
+	{
 public:
 	CServerSocket();
 	CServerSocket(CServerConnectionManagement *pSCM, int nOwningThreadType);

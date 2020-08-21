@@ -204,6 +204,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	CString DeBug;	// another debug file to catch printf statements since vs2015 does not output to monitor screen
 	CString Commands;	// catch commands from PAG to PAP
 	CString ReadBack;	// intercept read back message and write to file
+
 	CString TOF_LOG;    // show start & stop time in clock counts after main bang or trigger
 
 	t = GetCommandLine();	// shows ""D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\PhasedArrayMasterVS2010.exe" -i -d"
@@ -223,8 +224,10 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	DeBug = t + _T("Debug.log");
 	Commands = t + _T("Commands.log");
 	ReadBack = t + _T("ReadBack.log");
+#ifdef I_AM_PAP
 	TOF_LOG = t + _T("TOF_Catch.log");
 	gbTofRecord = 0;
+#endif
 
 	// shows "D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\"
 	// The name of the App becomes an implicit part of the key
@@ -233,12 +236,12 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	// SetRegistryKey(_T("Tuboscope"));	// gen HKEY_CUR_USR\Software\Tuboscope\AdpMMI  key
 
 #ifdef I_AM_PAG
-	// The GUI also know as PAG
+	// The GUI also know as PAG  aka Phased Array GUI
 	t += _T("HardwareConfig_GUI.ini"); // shows "D:\PhasedArrayGenerator\PA_Master_VS2010\.\Debug\HardwareConfig.ini"
 	// t = _T("D:\\PhasedArrayGenerator\\PA_Master_VS2010\\Debug\\HardwareConfig.ini");
 	// m_pszProfileName=_tcsdup(t); // File in the exe directory whether \Debug or \Release
 #else
-	// Was called Service App. Now known as PAP
+	// Was called Service App. Now known as PAP  aka Phased Array Processor
 	t += _T("HardwareConfig_PAP.ini");
 	TRACE(_T("Using ini file: %s\n"), t);
 #endif
@@ -254,7 +257,10 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	//m_pTuboIni = new CTuboIni(t);
 	//i = sizeof (CTuboIni);
 
-	m_nFakeDataExists = m_nDebugLogExists = m_mCommandLogExists = m_nReadBackExists = m_TofLogExists = 0;
+	m_nFakeDataExists = m_nDebugLogExists = m_mCommandLogExists = m_nReadBackExists = 0;
+#ifdef I_AM_PAP
+	m_TofLogExists = 0;
+#endif
 
 	CFileException fileException;
   
@@ -293,6 +299,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 		}
 	else m_nReadBackExists = 1;
 
+#ifdef I_AM_PAP
     // Time of Flight start, stop clock locations
 	if (!m_TofFile.Open(TOF_LOG, CFile::modeCreate |
 		CFile::modeReadWrite | CFile::shareDenyNone, &fileException))
@@ -302,7 +309,7 @@ void CPA2WinDlg::MakeDebugFiles(void)
 		}
 	else m_TofLogExists = gbTofFileExists = 1;
 
-
+#endif
 	}
 
 
@@ -314,6 +321,7 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	m_ptheApp = (CPA2WinApp *) AfxGetApp();
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	gDlg.pUIDlg = this;
+#ifdef I_AM_PAP
 	gDlg.pIpConnect = 0;
 	gDlg.pNcNx = 0;
 	gDlg.pTuboIni = 0;
@@ -321,6 +329,10 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	m_nMsgSeqCnt = 0;
 	gnAsyncSocketCnt = 0;
 	m_uStatTimer = 0;
+#endif
+	nShutDown = 0;
+	m_nMsgSeqCnt = 0;
+
 	g_hTimerTick = ::CreateEvent(0, TRUE, FALSE, 0);
 	//memset((void*)stSCM, 0, sizeof(stSCM)*MAX_SERVERS);
 	//memset((void*)stCCM, 0, sizeof(stCCM)*MAX_CLIENTS);
@@ -349,9 +361,10 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	pCSSaveReadBack = new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pCSSaveReadBack, 4);
 
+#ifdef I_AM_PAP
 	pCSSaveTofFile = new CRITICAL_SECTION();	// not deleting this info on shut down 7/24/20
 	InitializeCriticalSectionAndSpinCount(pCSSaveTofFile, 4);
-
+#endif
 	MakeDebugFiles();
 
 /***********************************************************************
@@ -440,14 +453,22 @@ CPA2WinDlg::~CPA2WinDlg()
 		delete pCSSaveReadBack;
 	pCSSaveReadBack = 0;
 
+#ifdef I_AM_PAP
 	if (pCSSaveTofFile)
 		delete pCSSaveTofFile;
 	pCSSaveTofFile = 0;
+
+#endif
 
 	if (gDlg.pNcNx)
 		{
 		delete gDlg.pNcNx;
 		gDlg.pNcNx = 0;
+		}
+	if (gDlg.pTuboIni)
+		{
+		delete gDlg.pTuboIni;
+		gDlg.pTuboIni = 0;
 		}
 
 
@@ -475,7 +496,10 @@ BEGIN_MESSAGE_MAP(CPA2WinDlg, CDialogEx)
 	ON_BN_CLICKED( IDC_BN_SHUTDOWN, &CPA2WinDlg::OnBnClickedBnShutdown )
 	ON_LBN_SELCHANGE(IDC_LIST1, &CPA2WinDlg::OnLbnSelchangeList1)
 	ON_COMMAND(ID_CONNECTIVITY_SHOW, &CPA2WinDlg::OnConnectivityShow)
+#ifdef I_AM_PAP
 	ON_COMMAND(ID_DEBUG_TOFSHOW, &CPA2WinDlg::OnDebugTofshow)
+#endif
+
 END_MESSAGE_MAP()
 
 
@@ -721,10 +745,11 @@ BOOL CPA2WinDlg::OnInitDialog()
 	i = sizeof(IDATA_FROM_HW);
 #ifdef I_AM_PAG
 	sDlgName = _T( "PA2Win -- Phase Array GUI Version -- PAG " );
-	#else
+#else
 	sDlgName = _T( "PA2Win -- Phase Array Processor Version -- PAP " );
-#endif
 	gsWall_IP = _T("");
+#endif
+
 	bAppIsClosing = 0;	// just started
 	sDlgName += s;
 	SetWindowText(sDlgName);
@@ -1112,7 +1137,7 @@ void CPA2WinDlg::GetAllIP4AddrForThisMachine()
 	// getaddrinfo() is preferred way to get this info... but realy complex. Use help to find getaddrinfo
 	// Developers are encouraged to use the GetAddrInfoW Unicode function rather than the getaddrinfo ANSI function.
 
-	// make sure we found something 
+	// make sure we found something
 	if (hostent != NULL)
 		{
 		// jeh code to show all hosts.. from help system for hostent structure
@@ -1134,6 +1159,7 @@ void CPA2WinDlg::GetAllIP4AddrForThisMachine()
 	}
 
 #ifdef I_AM_PAG
+
 void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	{
 	int i, j;
@@ -1224,9 +1250,10 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			// craft CODE in FindClientSideIP to find another ip address to link with the database.
 			if (stCCM[0].sClientIP4.GetLength() > 6)
 						sClientIP = stCCM[0].sClientIP4;	// use case 0 for syscp
-					else
-						{	// try something else. If that fails, abort since we can't hook up with the data base
-						}
+			else
+				{	// try something else. If that fails, abort since we can't hook up with the data base
+				i = 0;
+				}
 
 #if 0
 			// Make a specific child class of CCM to handle the GDP
@@ -1309,12 +1336,14 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			pCCM_PAG->SetServerIp( sServerIp );
 			pCCM_PAG->SetServerName( sServerName );	// url of server, e.g. srvhouapp67
 			pCCM_PAG->SetServerPort( uServerPort );
+
+#ifdef I_AM_PAP
 			//gsPAP_Nx2UUI_IP = sClientIP;
 			gsUUI_PAP_NxIP = sServerIp + _T(" : ");
 			_itoa(uServerPort, txt,10);
 			s = txt;
 			gsUUI_PAP_NxIP += s;
-
+#endif
 
 			pCCM_PAG->m_pstCCM->nReceivePriority	= THREAD_PRIORITY_ABOVE_NORMAL;
 			pCCM_PAG->m_pstCCM->nSendPriority		= THREAD_PRIORITY_BELOW_NORMAL;
@@ -1363,10 +1392,12 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			pCCM_PAG_AW->SetServerName(sServerName);	// url of server, e.g. srvhouapp67
 			pCCM_PAG_AW->SetServerPort(uServerPort);
 
+#ifdef I_AM_PAP
 			gsUUI_PAP_AllWall_IP = sServerIp + _T(" : ");
 			_itoa(uServerPort, txt,10);
 			s = txt;
 			gsUUI_PAP_AllWall_IP += s;
+#endif
 
 			pCCM_PAG_AW->m_pstCCM->nReceivePriority = THREAD_PRIORITY_ABOVE_NORMAL;
 			pCCM_PAG_AW->m_pstCCM->nSendPriority = THREAD_PRIORITY_BELOW_NORMAL;
@@ -2198,6 +2229,7 @@ void CPA2WinDlg::CloseReadBackLog(void)
 	m_nReadBackExists = 0;
 	}
 
+#ifdef I_AM_PAP
 /********  TOF Debug File *********/
 void CPA2WinDlg::SaveTOF_RecordLog(char *ch)
 	{
@@ -2245,6 +2277,7 @@ void CPA2WinDlg::CloseTOF_RecordLog(void)
 	m_TofLogExists = 0;
 	}
 
+#endif
 
 // This timer only runs the PA2WinDlg screen.
 // Timed connection attempts to PAG if this is PAP are done by pings from the TestThread
@@ -2272,13 +2305,15 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 		wVerH = wVerS = 0;	// kill warning in PAG
 		}
 
+#ifdef I_AM_PAP
+
 	if (gDlg.pIpConnect)
 		{
 		gDlg.pIpConnect->RemoteTimer();
 		}
 
 
-#ifdef I_AM_PAP
+
 	if (gDlg.pNcNx)	return;		// don't show when NcNx dialog on screen
 	// update last Idata packet to list box.
 	// All this to save processing time in displaying data on screen
@@ -2324,11 +2359,14 @@ bool CPA2WinDlg::UpdateTimeDate(time_t *tNow)
 		t.Format(_T("%02d:%02d:%02d"), today->tm_hour, today->tm_min, today->tm_sec);
 		SetDlgItemText(IDC_STAT_TIME, t);
 		// update  time on connectivity dialog if it is open
+#ifdef I_AM_PAP
+		// update  time on connectivity dialog if it is open
 		if (gDlg.pIpConnect)
 			gDlg.pIpConnect->UpdateTime(t);
 
 		t.Format(_T("%02d/%02d/%02d"), today->tm_mon+1, today->tm_mday, (today->tm_year % 100) );
 		SetDlgItemText(IDC_STAT_DATE, t);
+#endif
 		}
 
 	// when the text is drawn, onctlcolor intercepts before the draw and picks the color
@@ -2808,7 +2846,7 @@ void CPA2WinDlg::ShowIdata(void)
 			for (i = 0; i < 8; i++)
 				{
 				mn = gLastIdataPap.PeakChnl[j * 8 + i].wTofMin;
-				if (mn > 999) mn = 999;
+				if (mn > 9999) mn = 9999;
 				mx = gLastIdataPap.PeakChnl[j * 8 + i].wTofMax;
 				s.Format(_T("Min=%04d  Max=%04d    "), 
 					mn, mx );
@@ -2833,7 +2871,7 @@ void CPA2WinDlg::ShowIdata(void)
 		for (i = 0; i < 8; i++)
 			{
 			mn = gLastAllWall.Seq[j].vChnl[i].wTof;
-			if (mn > 999) mn = 999;
+			if (mn > 9999) mn = 9999;
 
 			s.Format(_T("AllWall[0][%d]=%04d    "), i,mn);
 			t += s;

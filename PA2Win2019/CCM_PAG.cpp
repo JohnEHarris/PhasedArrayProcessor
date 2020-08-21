@@ -351,6 +351,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 							// cmd word [0]=Nx [1]=Max [2]=Min [3]=Drop
 							pChannel->WFifoInit((BYTE)pCmdS->wNx, pCmdS->wMax, pCmdS->wMin, pCmdS->wDropCount);
 							// SHOW something on PAG output screen
+#ifdef I_AM_PAP
 							if ((is == 0) && (ic == 0))
 								{
 								s.Format(_T("Nx = %d, Max = %4d, Min = %4d, Drop = %2d\n"),
@@ -358,6 +359,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 								DebugOut(s);
 								pMainDlg->SaveCommandLog(s);
 								}
+#endif
 							}
 					delete pMmiCmd;
 					break;

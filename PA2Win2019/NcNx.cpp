@@ -530,6 +530,10 @@ void CNcNx::OnCbnSelchangeCbCmds()
 			case 13: s = _T("ProcNull");								break;
 			case 21: s.Format(_T("Ascan Sample Rate = %d"), m_nParam);		break;	// ticks between a/d sampling
 			//case 9: s.Format(_T("Nx = %d"), m_nParam);				break;
+			case 23: s.Format(_T("Ascan Peak Mode  = %d"), m_nParam);		break;	// Ascan or gates
+			case 24: s.Format(_T("Ascan RF beam select  = %d"), m_nParam);		break;
+			case 25: s.Format(_T("Ascan Beam Seq Setup  = %d"), m_nParam);		break;
+			case 26: s.Format(_T("AscanGateOutput = 0x%x"), m_nParam);	break;
 			case 27: s.Format(_T("AscanRepRate (ms) = %d"), m_nParam);	break;
 			case 28: s.Format(_T("Wall Nx = %d"), m_nParam);		break;
 			case 30: s.Format(_T("ReadBk SubCmd %d"), m_nParam);	break;
@@ -584,7 +588,13 @@ void CNcNx::OnCbnSelchangeCbCmds()
 					Blast(m_nPAP, m_nBoard);						break;
 				case 13:
 					ProcNull(m_nPAP, m_nBoard, m_nPAP, m_nBoard);	break;
-				case 27:
+				case 21:
+				case 22:
+				case 23:
+				case 24:
+				case 25:
+				case 26:
+				case 27:	// Ascan control commands
 					GenericSmall(m_nPAP, m_nBoard, m_nSeq, m_nCh, m_nGate, m_nCmdId, m_nParam);
 					break;
 				case 28:
@@ -790,9 +800,15 @@ void CNcNx::GenericSmall(int nPap, int nBoard, int nSeq, int nCh, int nGate, int
 	CString s, t, sym;
 	switch (nCmd)
 		{
-		case ASCAN_REP_RATE_ID:	sym = _T("AscanRepRate: ");		break;	// UUI ASCAN_SCOPE
+		case 21:	sym = _T("AscanSampleRate: ");	break;	// sample rate
+		case 22:	sym = _T("AscanDelay: ");	break;		// delay
+		case 23:	sym = _T("AscanWaveForm: ");	break;	// rf wave form
+		case 24:	sym = _T("AscanBeamSel: ");	break;		// rf beam select
+		case 25:	sym = _T("AscanBeamSeq: ");	break;		// beam seq... bit or's
+		case SET_ASCAN_GATE_OUTPUT_ID: sym = _T("SetAscanGates: ");		break;	// UUI ASCAN_SCOPE 26
+		case ASCAN_REP_RATE_ID:	sym = _T("AscanRepRate: ");		break;	// UUI ASCAN_SCOPE 27
 
-		default:	sym = _T("???");		return;
+		default:	sym = _T("???");		return;	// this kills the process of sending these commands
 		}
 
 	memset(&m_GenericSmallCmd, 0, sizeof(ST_SMALL_CMD));

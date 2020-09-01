@@ -275,7 +275,7 @@ KILL_VCHANNELS:
 				{
 				nDummy = 4;
 
-				i = (int)m_pSCC->pSocket->m_hSocket;
+				i = (int) m_pSCC->pSocket->m_hSocket;
 				if (i > 0)
 					{
 					i = m_pSCC->pSocket->ShutDown();

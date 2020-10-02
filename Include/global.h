@@ -21,7 +21,9 @@ Revised:
 
 #include "PA2Struct.h"
 #include "Cmds.h"
-#include "TOF_Catch.h"
+#ifdef I_AM_PAP
+#include "TOF_Catch.h" 
+#endif
 
 // The MAC and IP addresses of the instrument are modified by board switch setting or
 // by backplane board slot address when implemented.
@@ -95,7 +97,9 @@ class CPA2WinApp;
 class CTuboIni;
 class CNcNx;
 class CIP_Connect;
-class TOF_Catch;
+#ifdef I_AM_PAP
+//class TOF_Catch;
+#endif
 
 typedef struct 
 	{
@@ -105,12 +109,15 @@ typedef struct
 	CTuboIni *pTuboIni;		// not actually a dialog, but no harm, no foul
 	CNcNx *pNcNx;			// Nc Nx test dialog
 	CIP_Connect* pIpConnect; // generate a dialog showing IP connections/ports and wall instrument number
+#ifdef I_AM_PAP
 	TOF_Catch *pTofCatch;
+#endif
 	}	GLOBAL_DLG_PTRS;
 
 PubExt GLOBAL_DLG_PTRS gDlg;
 PubExt IDATA_PAP gLastIdataPap;		// data sent to down stream systems from PAP
 PubExt ASCAN_DATA gLastAscanPap;
+PubExt ASCAN_DATA gPriorAscanPap;
 PubExt ST_GATE_READBACK_DATA gLastRdBkPap;
 PubExt IDATA_FROM_HW gLastAllWall;
 PubExt ST_GATE_READBACK_DATA gLastGateCmd;

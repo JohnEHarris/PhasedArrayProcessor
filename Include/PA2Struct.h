@@ -493,14 +493,14 @@ typedef struct // ASCAN_DATA
 	WORD G2[2];			// start,stop location
 	WORD G3[2];			// start,stop location
 	WORD G4[2];			// start,stop location
-	WORD TOF[2];		// start,stop locatio
+	WORD TOF[2];		// start,stop location
 
 	WORD wLargeCmds;	// number of large commands since reset
 	WORD wSmallCmds;	// number of small commands since reset
 	WORD wPulserCmds;	// number of pulser commands since reset
 	WORD wFPGA_VersionP;	// Pulser fpga version
 	WORD wNIOS_VersionP;	// Pulser NIOS version
-	WORD wCPU_TempP;		// Pulser cpu temp - could be a byte
+	WORD wCPU_TempP;		// Pulser cpu temp - could be a byte    64 byte header
 	char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA;		// sizeof() = 1088

@@ -138,7 +138,10 @@ BOOL CServerRcvListThread::InitInstance()
 	TRACE(s);
 	TRACE(m_ConnectionSocket.m_pSCC->szSocketName);
 #endif
-	m_pElapseTimer = new CHwTimer();
+	if (m_pElapseTimer == 0)
+		{
+		m_pElapseTimer = new CHwTimer( );
+		}
 	i = sizeof(CHwTimer);		// 364
 	m_FDstartSeq = m_FDstartCh = 0;	// Fake data simulator state variables
 	return TRUE;

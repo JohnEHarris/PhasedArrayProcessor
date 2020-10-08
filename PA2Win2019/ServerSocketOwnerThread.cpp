@@ -599,7 +599,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	ST_SMALL_CMD *pCmdS;
 	//CServerSocket *pSocket = m_pConnectionSocket;
 
-
+	t[0] = 0;
 	// if there are any packets in the linked list, extract and send using socket interface
 	if ( m_pSCC->pSocket == NULL )
 		{

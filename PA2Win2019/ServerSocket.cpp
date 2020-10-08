@@ -30,7 +30,7 @@ extern char *GetTimeStringPtr(void);
 
 CServerSocket::CServerSocket(CServerConnectionManagement *pSCM, int nOwningThreadType)
 	{
-	CString s;
+	CString s, t;
 	Init();
 	m_pSCM = pSCM;
 	m_pstSCM = pSCM->m_pstSCM;
@@ -40,13 +40,14 @@ CServerSocket::CServerSocket(CServerConnectionManagement *pSCM, int nOwningThrea
 		//m_pFifo = new CCmdFifo( INSTRUMENT_PACKET_SIZE );		// FIFO control for receiving instrument packets
 		m_pFifo = new CCmdFifo(INSTRUMENT_PACKET_SIZE, 'S', m_nMyServer,0);	// set nClient when client connects
 		m_pFifo->m_nOwningThreadId = AfxGetThread()->m_nThreadID;
-		strcpy( m_pFifo->tag, "New m_pFifoSrvSkt 48\n" );
-		s = m_pFifo->tag;
-		TRACE( s );
+		strcpy( m_pFifo->tag, "New m_pFifoSrvSkt ServerSocket43  " );
+		s = t = m_pFifo->tag;
+		//TRACE( s );
 
 		m_pElapseTimer = new CHwTimer();
-		strcpy( m_pElapseTimer->tag, "CServerSocket55 " );
-
+		strcpy( m_pElapseTimer->tag, "CServerSocket48 " );
+		s = m_pElapseTimer->tag;
+		t += s;
 		m_nSeqIndx = m_wLastSeqCnt = 0;
 		memset( &m_nSeqCntDbg[0], 0, sizeof( m_nSeqCntDbg ) );
 		m_nListCount = m_nListCountChanged = 0;
@@ -55,12 +56,13 @@ CServerSocket::CServerSocket(CServerConnectionManagement *pSCM, int nOwningThrea
 		s.Format( _T( "Server Fifo cnt=%d, Async cnt=%d, ThreadID=%d\n" ),
 			m_pFifo->m_nFifoCnt, m_nAsyncSocketCnt, m_nOwningThreadId );
 		//m_wLastSeqCnt = 0xffff;
+		t += s;
 		}
 	else
 		{
-		s = _T( "Listener or OnStack temporary socket\n" );
+		t = _T( "Listener or OnStack temporary socket\n" );
 		}
-	TRACE(s);
+	TRACE(t);
 	}
 
 // ServerRcvListThread calls this constructor so don't make a new fifo or timer
@@ -96,6 +98,7 @@ void CServerSocket::Init(void)
 	m_dbg_cnt		= 0;
 	m_pElapseTimer	= 0;
 	m_pFifo			= 0;
+	m_nAsyncSocketCnt = gnAsyncSocketCnt++;
 	}
 
 ST_SERVERS_CLIENT_CONNECTION * CServerSocket::GetpSCC( void )
@@ -124,6 +127,17 @@ CServerSocket::~CServerSocket()
 		ASSERT( 0 );
 	if (m_pSCM->m_pstSCM == nullptr)
 		goto KILL_VCHANNELS; //ASSERT(0);
+
+	if (m_pElapseTimer)
+		{
+		delete m_pElapseTimer;
+		m_pElapseTimer = 0;
+		}
+	if (m_pFifo)
+		{
+		delete m_pFifo;
+		m_pFifo = 0;
+		}
 
 	hThis = this->m_hSocket;
 	if (hThis == 0xffffffff)
@@ -165,7 +179,7 @@ CServerSocket::~CServerSocket()
 				m_pSCM->m_pstSCM->pServerListenSocket = 0;
 				//Sleep( 10 );
 				}
-
+#if 0
 			if (m_pElapseTimer)
 				{
 				strcat(m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n");
@@ -189,6 +203,7 @@ CServerSocket::~CServerSocket()
 				delete m_pFifo;
 				m_pFifo = 0;
 				}
+#endif
 
 			m_pSCM->m_pstSCM->pServerListenSocket = 0;
 			s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
@@ -242,6 +257,7 @@ CServerSocket::~CServerSocket()
 				m_pFifo = 0;
 				}
 
+
 			// Kill all the virtual channels
 KILL_VCHANNELS:
 			if ((m_nClientIndex >= 0) && (m_nClientIndex < MAX_CLIENTS_PER_SERVER))
@@ -275,7 +291,7 @@ KILL_VCHANNELS:
 				{
 				nDummy = 4;
 
-				i = (int) m_pSCC->pSocket->m_hSocket;
+				i = (int)m_pSCC->pSocket->m_hSocket;
 				if (i > 0)
 					{
 					i = m_pSCC->pSocket->ShutDown();
@@ -391,9 +407,9 @@ KILL_VCHANNELS:
 		m_pSCC->pSocket = 0;
 	s.Format(_T("Server Socket %d Destructor exit\n"), m_nClientIndex);
 	TRACE(s);
-	for (i = 0; i < 100; i++)
+	for (i = 0; i < 10; i++)
 		nDummy++;
-	}
+	}	// ~CServerSocket()
 
 // CServerSocket member functions
 
@@ -406,6 +422,9 @@ int CServerSocket::OnAcceptPrep(void)
 	int nMyServer;
 	CString s;
 	DWORD hMyThreadID = GetCurrentThreadId();
+
+	if (bAppIsClosing)
+		return 0;
 
 	// look at all the servers and see if I am in the list
 	for (nMyServer = 0; nMyServer < MAX_SERVERS; nMyServer++)

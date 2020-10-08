@@ -135,8 +135,8 @@ class CPA2WinDlg : public CDialogEx
 public:
 	CPA2WinDlg(CWnd* pParent = NULL);	// standard constructor
 	~CPA2WinDlg();
-	CPA2WinApp	*m_ptheApp;
-	CTestThread *m_pTestThread;
+	CPA2WinApp	*m_ptheApp = 0;
+	CTestThread *m_pTestThread = 0;
 
 	void MakeDebugFiles(void);
 	void GetServerConnectionManagementInfo( void );
@@ -156,7 +156,7 @@ public:
 	CFile m_CommandLog;
 	CFile m_ReadBackLog;
 	CFile m_PapNumberFile;
-	CFile m_AltPapNumberFile;	// file store on C drive in \LocalAppExes\MyID
+	CFile m_AltPapNumberFile;	// file stored on C drive in \LocalAppExes\MyID
 	CFile m_TofFile;
 	int m_nMsgSeqCnt;
 

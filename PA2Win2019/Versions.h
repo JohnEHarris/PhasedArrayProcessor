@@ -2,7 +2,7 @@
 
 // I AM PAP  ******************* GUI has its own version file
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			32
+#define BUILD_VERSION			34
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -19,6 +19,8 @@
 /*
 Show the version number of this program. Newest version on TOP
 
+1.0.034 2020-09-16 Solved the code exception in shut down (ServerSocket::OnAcceptPrep(void))
+1.0.033 2020-08-13 Show changes in Ascan gate reading from one update to the next
 1.0.032 2020-08-06 Fix Nx command (28) and output to Debug log
 1.0.031	2020-08-05 Debugged version catches Ascan setting into TOF log
 1.0.030 2020-08-04 Catch AScan commands into TOF log file. Still use Debug dialog to enable TOF file logging

@@ -108,7 +108,7 @@ CClientCommunicationThread::~CClientCommunicationThread()
 		{
 		strcat(m_pElapseTimer->tag, "CComThrd102\n");
 		s = m_pElapseTimer->tag;
-		//TRACE(s);
+		TRACE(s);
 		delete m_pElapseTimer;
 		m_pElapseTimer = 0;
 		}
@@ -221,6 +221,7 @@ int CClientCommunicationThread::ExitInstance()
 		LeaveCriticalSection(m_pstCCM->pCSRcvPkt);
 		delete m_pstCCM->pRcvPktPacketList;
 		delete m_pstCCM->pCSRcvPkt;
+		delete m_pElapseTimer;
 		m_pstCCM->pRcvPktPacketList = 0;
 		m_pstCCM->pCSRcvPkt = 0;
 		// repeat for other lists and sections
@@ -1045,24 +1046,36 @@ void CClientCommunicationThread::UpdateTOF_File()
 	{
 	char TOFOut[200], *pCh;
 	pCh = &TOFOut[0];
-	memset(pCh, 0, 50);
+	memset(pCh, 0,190);
 	// gLastAscanPap is static memory holding last AScan data sent to UUI/PAG
 	// gTofDebug is a buffer usually the previous Ascan buffer.
 
 	if ((gTofDebug.wLineCount > 50) || (gTofDebug.SEQ_OLD != gLastAscanPap.bSeqNumber) || (gTofDebug.CH_OLD != gLastAscanPap.bVChnlNumber))
 		{
-		sprintf(pCh, "\r\n\nSeq    Ch     Start  Stop   Delta\n" );
+		sprintf(pCh, "\r\n\nSeq    Ch     Start  Stop   Delta  0Beg   0End   1Beg   1End   2Beg   2End   3Beg   3End\n"),
 		gTofDebug.wLineCount = 0;
-		pCh += 37;
+		pCh += 96;
 		gTofDebug.SEQ_OLD = gLastAscanPap.bSeqNumber;
 		gTofDebug.CH_OLD = gLastAscanPap.bVChnlNumber;
 		}
 
+	//                                               G1            start  stop   G3     G3   
+	//                                               stArt stoP    G2     G2    stArt   stoP   G4     G4 stoP 
+	sprintf(pCh, "%04d   %04d   %04d   %04d   %04d   %04d   %04d   %04d   %04d   %04d   %04d   %04d   %04d\n",
+		gLastAscanPap.bSeqNumber, gLastAscanPap.bVChnlNumber, gLastAscanPap.TOF[0],	gLastAscanPap.TOF[1], 
+		(gLastAscanPap.TOF[1] - gLastAscanPap.TOF[0]),
 
-	sprintf(pCh, "%04d   %04d   %04d   %04d   %04d\n",
-		gLastAscanPap.bSeqNumber, gLastAscanPap.bVChnlNumber, gLastAscanPap.TOF[0],
-		gLastAscanPap.TOF[1], (gLastAscanPap.TOF[1] - gLastAscanPap.TOF[0]) );
+		gLastAscanPap.G1[0] - gPriorAscanPap.G1[0],
+		gLastAscanPap.G1[1] - gPriorAscanPap.G1[1],
+		gLastAscanPap.G2[0] - gPriorAscanPap.G2[0],
+		gLastAscanPap.G2[0] - gPriorAscanPap.G2[0],
+		gLastAscanPap.G3[0] - gPriorAscanPap.G3[0],
+		gLastAscanPap.G3[0] - gPriorAscanPap.G3[0],
+		gLastAscanPap.G4[0] - gPriorAscanPap.G4[0],
+		gLastAscanPap.G4[0] - gPriorAscanPap.G4[0]  );
+	
 		gTofDebug.wLineCount++;
+		memcpy(&gPriorAscanPap, &gLastAscanPap, 64);
 
 	// write to log file. This proc not called unless the file exists
 	pMainDlg->SaveTOF_RecordLog(TOFOut);
@@ -1401,8 +1414,10 @@ afx_msg void CClientCommunicationThread::OnTimer( WPARAM w, LPARAM lParam )
 		// we are targeting the PAG client to SysCp Server connection
 		case eRestartPAGtoSysCp:
 			// debug feature to prove we can reconnect to SysCp
-			if (NULL == m_pMyCCM)	return;
-			if (NULL == m_pMyCCM->m_pstCCM)	return;
+			if (NULL == m_pMyCCM)	
+				return;
+			if (NULL == m_pMyCCM->m_pstCCM)	
+				return;
 
 			if (m_uLastPacketsReceived != m_pMyCCM->m_pstCCM->uPacketsReceived)
 				{

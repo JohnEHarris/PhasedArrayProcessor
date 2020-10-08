@@ -48,7 +48,7 @@ class CServerConnectionManagement *pSCM[MAX_SERVERS];	// global, static ptrs to 
 												//  -- not created with 'new'
 // C code callable from any class
 //pointer objects deleted, but not nulled
-// Since we are using poiter to pointer, setting pointer to 0 only sets argument pointer
+// Since we are using pointer to pointer, setting pointer to 0 only sets argument pointer
 // eg, pCritSec and not the pointer that pCritSec points to 
 int KillLinkedList( CRITICAL_SECTION *pCritSec, CPtrList *pList )
 	{
@@ -327,9 +327,9 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	gDlg.pTuboIni = 0;
 	nShutDown = 0;
 	m_nMsgSeqCnt = 0;
-	gnAsyncSocketCnt = 0;
 	m_uStatTimer = 0;
 #endif
+	gnAsyncSocketCnt = 0;
 	nShutDown = 0;
 	m_nMsgSeqCnt = 0;
 
@@ -418,6 +418,14 @@ CPA2WinDlg::~CPA2WinDlg()
 		gDlg.pTuboIni = 0;
 		}
 
+	CloseFakeData();
+	CloseDebugLog();
+	CloseCommandLog();
+	CloseReadBackLog();
+#ifdef I_AM_PAP
+	CloseTOF_RecordLog();
+#endif
+
 	if (gDlg.pIpConnect)
 		{
 		delete gDlg.pIpConnect;
@@ -434,11 +442,6 @@ CPA2WinDlg::~CPA2WinDlg()
 
 	DestroyCCM();
 	DestroySCM();
-		
-	CloseFakeData();
-	CloseDebugLog();
-	CloseCommandLog();
-	CloseReadBackLog();
 
 	Sleep( 100 );
 	if (pCSSaveDebug)
@@ -1977,12 +1980,10 @@ void CPA2WinDlg::OnBnClickedBnShutdown()
 		
 	CloseFakeData();
 	CloseDebugLog();
-	m_nFakeDataExists = m_nDebugLogExists = 0;
+	CloseCommandLog();
+	CloseReadBackLog();
+	m_nFakeDataExists = m_nDebugLogExists = 0;	// should have happened in Closexxx
 	Sleep( 100 );
-	if (pCSSaveDebug)
-		delete pCSSaveDebug;
-	pCSSaveDebug = 0;
-
 	}
 
 void CPA2WinDlg::OnFileExit()
@@ -2082,6 +2083,9 @@ void CPA2WinDlg::CloseDebugLog(void)
 		e->Delete();
 		}
 	m_nDebugLogExists = 0;
+	if (pCSSaveDebug)
+		delete pCSSaveDebug;
+	pCSSaveDebug = 0;
 	}
 
 /********  Command File *********/
@@ -2131,6 +2135,9 @@ void CPA2WinDlg::CloseCommandLog(void)
 		e->ReportError();
 		e->Delete();
 		}
+	if (pCSSaveCommands)
+		delete pCSSaveCommands;
+	pCSSaveCommands = 0;
 	m_mCommandLogExists = 0;
 	}
 
@@ -2227,6 +2234,9 @@ void CPA2WinDlg::CloseReadBackLog(void)
 		e->Delete();
 		}
 	m_nReadBackExists = 0;
+	if (pCSSaveReadBack)
+		delete pCSSaveReadBack;
+	pCSSaveReadBack = 0;
 	}
 
 #ifdef I_AM_PAP
@@ -2665,29 +2675,29 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(CRITICAL_SECTION);		// 24
 	i = sizeof(CPtrList);					// 28
 	i = sizeof(CClientConnectionManagement);//16
-	i = sizeof(CClientCommunicationThread);//168
+	i = sizeof(CClientCommunicationThread);//166
 	i = sizeof(CClientSocket);				//36
 	i = sizeof(CCmdProcessThread);			//76
 	i = sizeof(CCCM_PAG);					//32
-	i = sizeof(CHwTimer);	// 496
+	i = sizeof(CHwTimer);	// 492
 	i = sizeof( CIniFile );	// 12
 	i = sizeof( CInspState ); // 12
-	i = sizeof(CNcNx);	// 2800
+	i = sizeof(CNcNx);	// 3224
 	i = sizeof(CServerConnectionManagement);	// 12
 	i = sizeof(CServerListenThread);	// 80
-	i = sizeof(CServerRcvListThread);	// 220
-	i = sizeof(CServerSocket);	// 4276
-	i = sizeof(CServerSocketOwnerThread);	// 108
-	i = sizeof(CvChannel);	// 160
-	i = sizeof(CTestThread); // 72
+	i = sizeof(CServerRcvListThread);	// 217
+	i = sizeof(CServerSocket);	// 4286
+	i = sizeof(CServerSocketOwnerThread);	// 107
+	i = sizeof(CvChannel);	// 153
+	i = sizeof(CTestThread); // 584
 	i = sizeof(CTuboIni); // 12
-	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 640
+	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 235
 	i = sizeof( ST_SERVER_CONNECTION_MANAGEMENT ); // 160
-	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 172
+	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 167
 	i = sizeof( CPA2WinApp );	// 204
-	i = sizeof( CPA2WinDlg );	// 720
+	i = sizeof( CPA2WinDlg );	// 812
 	i = sizeof( Nc_FIFO );	// 24 but 3 copies
-	i = sizeof( Nx_FIFO );	// 52
+	i = sizeof( Nx_FIFO );	// 48
 	i = sizeof( PAP_INST_CHNL_NCNX );	// 1056
 	i = sizeof( CIniSectionA );	// 44
 	i = sizeof( CIniKeyA );	// 60

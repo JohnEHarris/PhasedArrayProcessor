@@ -126,7 +126,7 @@ void CstringToTChar( CString &s, _TCHAR *p, int nSizeOfArray );
 void CstringToChar( CString &s, char *p, int nSizeOfArray );
 char *GetTimeStringPtr( void );
 CString GetTimeString( void );
-
+ST_SERVERS_CLIENT_CONNECTION *GetServerClientConnection(int nSrvNum, int nClient);
 
 // CPA2WinDlg dialog
 class CPA2WinDlg : public CDialogEx

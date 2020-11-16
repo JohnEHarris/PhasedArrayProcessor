@@ -41,7 +41,7 @@ enum CallSource {eMain, eInterrupt};
 // Read Back data replaces AScan data when read back is requested
 //
 enum Arria {eRawInspID = 1};	// hardware flaw/wall data for every chnl and seq
-enum IdataTypes { eNcNxInspID = 1, eAscanID = 2, eReadBackID = 3, eAdcIdataID = 4, eKeepAliveID = 0xff };
+enum IdataTypes { eFakeDataID = 0, eNcNxInspID = 1, eAscanID = 2, eReadBackID = 3, eAdcIdataID = 4, eKeepAliveID = 0xff };
 enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
 #define NC_NX_IDATA_ID				1		// PAP processed inspection data sent to PAG/Receiver system
 #define ASCAN_DATA_ID				2

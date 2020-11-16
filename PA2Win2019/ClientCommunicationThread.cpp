@@ -1196,11 +1196,9 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		// 0 connection is NcNx data, 1 is All Wall data
 		switch (m_pMyCCM->m_nMyConnection)
 			{
-		case 0:
 		default:
-			// NcNx data
-
-			gwMsgSeqCnt = 
+			case 0:			// NcNx data
+			gwIdataMsgSeqCnt = 
 				pSendPkt->wMsgSeqCnt = m_wMsgSeqCount++;
 			// debug look at Ascan data 
 			if (pSendPkt->wMsgID == eAscanID)
@@ -1211,13 +1209,34 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				// wStatus bits 0-2 PAP cmd count != NIOS cmd count
 				//gLastAscanPap.wSmallCmds, gLastAscanPap.wLargeCmds, gLastAscanPap.wPulserCmd
 				//gwPapSmallCmds, gwPapLargeCmds, gwPapPulserCmds
-				pSendPkt->wStatus &= 0xfff8;	// clear low 3 bits of status
+				// 2020-10-13 add wall disconnect and pulser disconnect
+				pSendPkt->wStatus &= 0xff00;	// clear low 5 bits of status
 				if (gLastAscanPap.wSmallCmds != gwPapSmallCmds)		pSendPkt->wStatus |= 1;
 				if (gLastAscanPap.wLargeCmds != gwPapLargeCmds)		pSendPkt->wStatus |= 2;
 				if (gLastAscanPap.wPulserCmds != gwPapPulserCmds)	pSendPkt->wStatus |= 4;
-				if (pSendPkt->wStatus & 7)
+				// 8 is sequence error
+				pSendPkt->wStatus |= gbWallDisconnected;	// 16
+				pSendPkt->wStatus |= gbPulserDisconnected;	//32
+				// is this fake data or real NcNx data ? //
+				// by the time we are in this thread, the globals can be changed
+				// but the packet status has not
+				if (pSendPkt->wStatus & 0x30)
+					pSendPkt->wMsgID = eFakeDataID;
+				else
+					pSendPkt->wMsgID = eNcNxInspID;	// what about all-wall data??
+
+				// Once we have registered disconnects, zero until next time out
+				// this assumes that TestThread is lower priority and these changes will occur
+				// while TestThread is not sampling these global variables.
+				gbWallDisconnected = gbPulserDisconnected = 0;
+
+				if (pSendPkt->wStatus & 0x3f)
 					j = 4;	// break pt test
 				gwStatus = pSendPkt->wStatus;	// status of Idata sent to UUI/PAG
+				pSendPkt->bPapStatus = (BYTE) gwStatus & 0x3f;	//lower 5  bits shown above
+				// If gate board disconnects, no more data will be sent from PAP
+				// Let TestThread task resend last known IdataPap
+				memcpy((void*)&gLastIdataPap, pSendPkt, sizeof(gLastIdataPap));
 				}
 
 
@@ -1238,6 +1257,8 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 					gPksPerSec[0].uPktsSent = m_pstCCM->uPacketsSent;
 					gPksPerSec[0].nTrigger = 1;	// cause main dlg to display. Main dlg clears
 				}
+
+			// Make a copy of the last sent packet
 			break;
 
 
@@ -1282,6 +1303,8 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				guPktAttempts[1][i]++;	// All wall data
 
 			// modify the packet header for Robert's new status info 2020-03-11
+			// Once the packet is sent, the timeout variables can be reset
+
 			nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
 			if (nSent == pSendPkt->wByteCount)
 				{
@@ -1304,8 +1327,12 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				switch (pSendPkt->wMsgID)
 					{
 				case 0:
-				default:
+				case 1:
 					m_nConsecutiveFailedXmit = 0;
+					// reset status bits and packet type to NcNx data type with no errors
+					gLastIdataPap.wStatus &= 0xff00;	// clear possible error bits
+					gLastIdataPap.wMsgID = eNcNxInspID;// assume next xmit will be good data
+					gbWallDisconnected = gbPulserDisconnected = 0;
 					break;
 
 				case 2:
@@ -1339,7 +1366,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				pSendPkt = 0;
 				pIdataHw = 0;
 				break;	// break from for loop
-				}	//if (nSent == pSendPkt->wByteCount)
+				}	//if (nSent == pSendPkt->wByteCount  -- msg was sent OK)
 
 			Sleep(10);
 			j = m_pstCCM->pSendPktList->GetCount();

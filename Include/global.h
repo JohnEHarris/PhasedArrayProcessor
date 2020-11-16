@@ -138,7 +138,7 @@ PubExt int gMaxSeqCount;
 PubExt int gnMaxServers, gnMaxClientsPerServer;		// Server Connection Management
 PubExt int gnMaxClients;							// Client Connection Management
 PubExt int gnFifoCnt, gnAsyncSocketCnt;
-PubExt WORD gwMsgSeqCnt;		// increments when Idata or Ascan sent
+PubExt WORD gwIdataMsgSeqCnt;		// increments when Idata or Ascan sent
 PubExt BYTE gbStartSeqNumber;	// starting sequence number for next Idata packet
 PubExt BYTE gbStartSeqNumberIncrement;
 PubExt WORD gwLastCmdId;	// keep cmd ID of last command executed by NIOS
@@ -212,10 +212,12 @@ PubExt WORD gwPapPulserCmds, gwPapLargeCmds, gwPapSmallCmds;		// count commands 
 PubExt BYTE gbAdcMsgIdErrorCntPAP;		// count number of times adc msg lost in PAP
 PubExt BYTE gbAdcMsgIdErrorCntADC;		// count number of times adc msg lost in ADC
 
-PubExt CString gsWall_IP;		//IP + port of Wall Instrument
-//PubExt CString gsWall_Port;
+PubExt CString gsWall_IP;		//IP + port of Wall Instrument - may have to make this an array if more than 1 gate board
+PubExt BYTE gbWallDisconnected;	// 16
+
 PubExt CString gsPulser_IP;     // IP + port of pulser
-//PubExt CString gsPulser_Port;
+PubExt BYTE gbPulserDisconnected;	// 32
+
 
 PubExt CString gsPAP2Wall_IP;   // server to gate board
 PubExt CString gsPAP2Pulser_IP; // server to pulser board

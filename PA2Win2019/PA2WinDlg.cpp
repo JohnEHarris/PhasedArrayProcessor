@@ -45,7 +45,20 @@ I AM THE PHASED ARRAY PROCESSOR
 class CIP_CONNECT;
 class CClientConnectionManagement *pCCM[MAX_CLIENTS];	// global, static ptrs to class instances defined outside of the class definition.
 class CServerConnectionManagement *pSCM[MAX_SERVERS];	// global, static ptrs to class instances define outside of the class definition.
-												//  -- not created with 'new'
+														//  -- not created with 'new'
+
+//global 'C' function to get server-clientconnection
+// Return a pointer to the client connected to the Server SrvNum
+ST_SERVERS_CLIENT_CONNECTION *GetServerClientConnection(int nSrvNum, int nClient)
+	{
+	// return value often called m_pSCC
+	if (nSrvNum >= MAX_SERVERS) return NULL;
+	if (nClient >= MAX_CLIENTS)	return NULL;
+	return (ST_SERVERS_CLIENT_CONNECTION *) stSCM[nSrvNum].pClientConnection[nClient];
+	}
+
+
+
 // C code callable from any class
 //pointer objects deleted, but not nulled
 // Since we are using pointer to pointer, setting pointer to 0 only sets argument pointer
@@ -334,8 +347,13 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	m_nMsgSeqCnt = 0;
 
 	g_hTimerTick = ::CreateEvent(0, TRUE, FALSE, 0);
-	//memset((void*)stSCM, 0, sizeof(stSCM)*MAX_SERVERS);
-	//memset((void*)stCCM, 0, sizeof(stCCM)*MAX_CLIENTS);
+//	memset((void*)stSCM, 0, sizeof(stSCM)*MAX_SERVERS);	// 2020-10-23 useful for TestThread assistance in sending empty packets
+//	memset((void*)stCCM, 0, sizeof(stCCM)*MAX_CLIENTS);
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+		{
+		stCCM[i].uServerPort = 0;
+		}
 
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{		
@@ -751,6 +769,8 @@ BOOL CPA2WinDlg::OnInitDialog()
 #else
 	sDlgName = _T( "PA2Win -- Phase Array Processor Version -- PAP " );
 	gsWall_IP = _T("");
+	gbWallDisconnected = 0;		// eGateOff;	// bit 4
+	gbPulserDisconnected = 0;	//ePulserOff;	// bit 5  // turned off when no pulser in dev system
 #endif
 
 	bAppIsClosing = 0;	// just started
@@ -2734,9 +2754,12 @@ int CPA2WinDlg::GetAdcCmdQ(void)		// return number of commands queued for ADC
 	{
 	// ADC command q serviced by SRV[0]
 	int i = 0;
-	if (stSCM[0].pClientConnection[0]->pSendPktList)     // this showed instrument[1] instead of [0] at break- 2020-07-23
+	if (stSCM[0].pClientConnection[0])
 		{
-		i = stSCM[0].pClientConnection[0]->pSendPktList->GetCount();
+		if (stSCM[0].pClientConnection[0]->pSendPktList)
+			{
+			i = stSCM[0].pClientConnection[0]->pSendPktList->GetCount();
+			}
 		}
 	return i;
 	}
@@ -2759,6 +2782,7 @@ int CPA2WinDlg::GetPulserCmdQ(void)
 
 // Show Idata on Pa2win dlg when running as PAP
 // CALLED FROM 1 SECOND TIMER
+// 2020-11-05 had to test for FakeDataID as well as eNcNx or else stuck and no ShowIdata
 void CPA2WinDlg::ShowIdata(void)
 	{
 #ifdef I_AM_PAP
@@ -2766,7 +2790,7 @@ void CPA2WinDlg::ShowIdata(void)
 	int i,j,mn, mx;
 	int hd, pp, ie;
 	UINT uGood, uLost;
-	if (gLastIdataPap.wMsgID == eNcNxInspID)
+	if ((gLastIdataPap.wMsgID == eNcNxInspID) | (gLastIdataPap.wMsgID == eFakeDataID))
 		{
 #ifdef SHOW_CH0_ALL_SEQ
 			s.Format(_T("Idata-to-PT WMin=%d, G1=%d, G2=%d, Raw[0][0] = %4d,  Raw[1][0] = %4d, Raw[2][0] = %4d, MsgSeqCnt= %d, ZeroCnt = %3d, Not 0 = %d"),
@@ -2777,7 +2801,7 @@ void CPA2WinDlg::ShowIdata(void)
 			m_lbOutput.AddString(s);
 			//gwMin0 = 0xffff;
 			gwMax0 = gwZeroCnt = gwNot0 = 0;
-			m_nMsgSeqCnt = gwMsgSeqCnt;
+			m_nMsgSeqCnt = gwIdataMsgSeqCnt;
 #else
 
 
@@ -2900,7 +2924,7 @@ void CPA2WinDlg::ShowIdata(void)
 		t = s;
 		//m_lbOutput.AddString(t);	// show top line
 		//s.Format(_T("    MsgCnt = %d, GlitchCnt = %d  CmdId  1stWord"),
-		//	gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
+		//	gwIdataMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
 		//	gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd);
 		//t += s;
 		m_lbOutput.AddString(t);
@@ -2909,7 +2933,7 @@ void CPA2WinDlg::ShowIdata(void)
 			gLastIdataPap.wPeriod, gLastIdataPap.wRotationCnt );
 		t = s;
 		s.Format(_T("         %05d   %03d     %03d/%05d  %05d    %02d   %02d    %02d"),
-			gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
+			gwIdataMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
 			//gLastCmd.wMsgID, gLastCmd.wMsgSeqCnt, gLastIdataPap.w1stWordCmd,
 			gwLastCmdId, gwLastCmdSeqCnt, gw1stWordCmd,
 			(gLastIdataPap.bCmdSeq % 10), (gLastIdataPap.bCmdChnl % 10), gLastIdataPap.bCmdGate&3);
@@ -2917,8 +2941,8 @@ void CPA2WinDlg::ShowIdata(void)
 		// count of commands received by ADC & Pulser board, then wStatus value
 		s.Format(_T("          %05d %05d  %05d"), gLastAscanPap.wSmallCmds, gLastAscanPap.wLargeCmds, gLastAscanPap.wPulserCmds);
 		t += s;
-		// Show number of cmds received by PAP 
-		s.Format(_T("        %05d %05d  %05d   %04x"), gwPapSmallCmds, gwPapLargeCmds, gwPapPulserCmds, gwStatus);
+		// Show number of cmds received by PAP 10/13/2020 gwStatus now had more bits
+		s.Format(_T("        %05d %05d  %05d   %04x"), gwPapSmallCmds, gwPapLargeCmds, gwPapPulserCmds, (gwStatus & 7) );
 		t += s;
 		m_lbOutput.AddString(t);
 

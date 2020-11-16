@@ -89,8 +89,8 @@ public:
 	// is is the client connection number
 	void SetpSCC( ST_SERVERS_CLIENT_CONNECTION* p ) { m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  p; }
 	void NullpSCC(void)								{m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] =  0;}
-	
-	
+	void RcvAndQueue(GenericPacketHeader *pPacket);
+
 	// variables
 	CServerConnectionManagement *m_pSCM;		// ptr to the controlling class
 	ST_SERVERS_CLIENT_CONNECTION *m_pSCC;		// ptr to my connection info/statistics/objects

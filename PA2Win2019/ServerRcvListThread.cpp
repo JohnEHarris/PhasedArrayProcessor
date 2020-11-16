@@ -204,41 +204,53 @@ END_MESSAGE_MAP()
 
 #ifdef I_AM_PAP
 // Receives inspection packets from inspection machines and status info from pulser
-afx_msg void CServerRcvListThread::ProcessRcvList( WPARAM w, LPARAM lParam )
+// maybe need wparam to be server number, lparam to be client
+// then m_pSCC = GetServerClientconnection(Server, Client)
+afx_msg void CServerRcvListThread::ProcessRcvList(WPARAM Server, LPARAM Client)
 	{
 	void *pV;
 	int i;
 	IDATA_FROM_HW *pIdata;
 
-	//m_pSCC = GetpSCC(); receive list does not have to know about the rest of the structures
+	//m_pSCC = GetpSCC(Server,Client);
 	if (m_pSCC)
 		{
-		if (m_pSCC->pSocket)
+		// don't need the socket. socket could be closed but lists still exist
+//		if (m_pSCC->pSocket)
+//			{
+		if (m_pSCC->pCSRcvPkt)
 			{
-			m_pSCC->pSocket->LockRcvPktList();
-		while (i = m_pSCC->pRcvPktList->GetCount() )
-			{
-			pV = m_pSCC->pRcvPktList->RemoveHead();
-			m_pSCC->pSocket->UnLockRcvPktList();
-			pIdata = (IDATA_FROM_HW *)pV;
-			if (pIdata->wMsgID >= 0x300)
+			EnterCriticalSection(m_pSCC->pCSRcvPkt);
+			while (i = m_pSCC->pRcvPktList->GetCount( ))
 				{
-				CString s;
-				PULSER_DATA *pPulserData = (PULSER_DATA *)pIdata;
-				s = _T("Pulser Feedback Data");
-				ProcessPulserData(pPulserData);
-				}
-			else
-				ProcessInstrumentData(pIdata);	// local call to this class memeber
-			
-			if (pIdata)	
-				delete pIdata;
-			m_pSCC->pSocket->LockRcvPktList();
+				pV = m_pSCC->pRcvPktList->RemoveHead( );
+				LeaveCriticalSection(m_pSCC->pCSRcvPkt);
+				pIdata = (IDATA_FROM_HW *) pV;
+				if (pIdata->wMsgID >= 0x300)
+					{
+					CString s;
+					PULSER_DATA *pPulserData = (PULSER_DATA *) pIdata;
+					s = _T("Pulser Feedback Data");
+					ProcessPulserData(pPulserData);
+					}
+				else
+					ProcessInstrumentData(pIdata);	// local call to this class memeber
+
+				if (pIdata)
+					delete pIdata;
+				EnterCriticalSection(m_pSCC->pCSRcvPkt);
+				}	// while data
+			LeaveCriticalSection(m_pSCC->pCSRcvPkt);
+			}// if (m_pSCC->pCSRcvPkt)
+		else // no connection
+			{
+			TRACE(_T("ProcessRcvList Failed\n"));
+			i = 1;
 			}
-		m_pSCC->pSocket->UnLockRcvPktList();
-			}
-		}
+		}	// if (m_pSCC)
 	}
+
+
 #else
 // PAG
 
@@ -435,8 +447,9 @@ void CServerRcvListThread:: AddToIdataPacket(CvChannel *pChannel, IDATA_FROM_HW 
 			i, j, nSeq, pIData->Seq[nSeq].vChnl->bAmp3 );
 		TRACE( s );
 #endif
-
-		m_pIdataPacket->wMsgID = eNcNxInspID;
+		// Let ID 0 slip thru
+		if (m_pIdataPacket->wMsgID != eFakeDataID)
+			m_pIdataPacket->wMsgID = eNcNxInspID;
 		//m_pIdataPacket->wByteCount = sizeof(IDATA_PAP);
 		m_pIdataPacket->wByteCount = pIData->bSeqModulo * pIData->bMaxVChnlsPerSequence * sizeof(stPeakChnlPAP) + sizeof(IDATA_FROM_HW_HDR);
 		m_pIdataPacket->uSync = SYNC;
@@ -547,6 +560,7 @@ void CServerRcvListThread::IncStartSeq(void)
 // and then commands the CCM_PAG component to empty the linked list thru
 // the client socket to the PHASED ARRAY GUI - PAG
 // 2018/06/18 now 2 client communication threads. 0 is NcNx wll, 1 is all wall ie raw adc data
+//
 void CServerRcvListThread::SendIdataToPag(GenericPacketHeader *pIdata, int nWhichClient)
 	{
 #ifdef I_AM_PAP
@@ -715,12 +729,18 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 	int i, j, k,l;
 	int nLastSeq, nStartSeq;
 	int iSeqPkt, nPkt;
+	int nFakeId = 99;
 	BYTE bGateTmp2, bGateTmp3;
 	WORD wTOFSum;
 	CvChannel *pChannel;
 	CString s;
 	IDATA_FROM_HW *pIdataHw;
+	//WORD wID;	//distinguish between NcNx and Fake data
 
+	if (pIData->wMsgID == eFakeDataID)
+		{
+		i = 0;	// debug test
+		}
 
 	// After 16 Ascans, send Max/Min wall and Nc qualified flaw values for 2 gates.
 	//After AUG 2017 Only ID, OD, MinWall sent to PAG
@@ -729,13 +749,23 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 		{
 		switch(pIData->wMsgID)
 			{
+		case eFakeDataID:
+			nFakeId = pIData->wMsgID;
+			i = pIData->wByteCount;	// testing/debugging
+			// Force an all-wall type packet
+			pIData->wByteCount = 1088;
+			pIdataHw = new(IDATA_FROM_HW);	//faking it
+			pIdataHw->wMsgID = eFakeDataID;
+			memcpy((void *) pIdataHw, (void *)pIData, sizeof(IDATA_FROM_HW));
+			SendIdataToPag((GenericPacketHeader *)pIdataHw, 0);	// send to client 0
+			break;
 		case eNcNxInspID:
 			{
 			// For all wall if full packet queue now to All Wall Processor
-			if (pIData->wByteCount = 1088) // and All Wall Flag ON
+			if (pIData->wByteCount == 1088) // and All Wall Flag ON
 				{
 				pIdataHw = new(IDATA_FROM_HW);
-				pIdataHw->wMsgID = eAdcIdataID;
+				pIdataHw->wMsgID = eAdcIdataID;		// All Wall data
 				memcpy((void*)pIdataHw, (void*)pIData, sizeof(IDATA_FROM_HW));
 				memcpy((void*) &gLastAllWall, (void*)pIData, sizeof(IDATA_FROM_HW));
 				SendIdataToPag((GenericPacketHeader *)pIdataHw, 1);	// send to client 1
@@ -1072,7 +1102,7 @@ void CServerRcvListThread::ProcessInstrumentData(IDATA_FROM_HW *pIData)
 		default:
 			s.Format(_T("ProcessInstrumentData unknown MsgId, %d\n"), pIData->wMsgID);
 			//delete pIData;	// done in caller function
-			}
+			}	// switch(pIData->wMsgID)
 		}	// pIData->wByteCount >= 256
 
 	else

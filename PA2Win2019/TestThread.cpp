@@ -64,10 +64,20 @@ afx_msg void CTestThread::Bail(WPARAM w, LPARAM lParam)
 	}
 
 
+
 afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually added jeh 10-24-2012
 	{
 	CString s;
-	int i, j, k;	// , n;
+	int i, j, k, n = 0;
+	gnNoData = 0;	// make array if more than 1 gate board
+	// Use ClientCommunicationThread to send fake data
+	CRITICAL_SECTION *pCSSendPkt = 0;	// control access to output (send) list - commands
+	CRITICAL_SECTION *pCSRcvPkt = 0;
+	CPtrList* pSendPktList = 0;	// list containing packets to send..commands
+	CPtrList* pRcvPktList = 0;	// Idata put into this list
+	UINT uLoopCnt = 0;		// make sure TestThread runs for a while before checking on No Idata
+	IDATA_PAP *pB;
+
 #ifdef _DEBUG
 	printf("Hello World from Test Thread\n");
 	cout << "Hello World from Test Thread using std\n" << endl;
@@ -87,21 +97,37 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 	//TestNc();
 	TestNx();
 	TestAdcFifo();
+	Sleep(3000);	// 3 second sleep while rest of code gets initialized
+
+
+	m_wLastIdataSeq[0] = 0;	//used to track stalled/stuck/disconnected wall instrument
+							// scripted [] in case more than 1 gate board
+
+	ST_CLIENT_CONNECTION_MANAGEMENT *pCCM = &stCCM[0];	// a static array of client connection info
+	if (pCCM->uServerPort > 100 )	// important to zero out stCCM on start. uServerPort from 2017-2020 is 7501 for Nx wall
+		{
+		pSendPktList = pCCM->pSendPktList;
+		pCSSendPkt = pCCM->pCSSendPkt;
+		pRcvPktList = pCCM->pRcvPktPacketList;
+		pCSRcvPkt = pCCM->pCSRcvPkt;
+		}
 	
 	// Infinite loop waiting on handle which never gets set
 	// Wakes every 100 ms and post msg to client threads primarily
 	// in PAG this same functionality is called PA2WinDlg::TimerTickToThreads(void)
+
+	m_pSCC = GetServerClientConnection(0, 0);
 	//
 	// waiting for ServiceApp::ShutDown to issue ::SetEvent(m_pTestThread->g_hTimerTick);
 	//
 	while( (::WaitForSingleObject(g_hTimerTick, 100) != WAIT_OBJECT_0 ) /*&& (nShutDown == 0)*/ )
-		{	// while
+		{	// while wait
 #ifdef I_AM_PAP
 		for ( i = 0; i < MAX_CLIENTS; i++)
 			{
 			switch (i & 1)
 				{
-			case 0:		// the client connection to PAG
+			case 0:		// the client connection to PAG for Nx data
 				// force connection by Normal Nx data processing first so that
 				// PAG/UUI WILL see the first connection as client connection 0
 				// do this by not waking the All Wall connection until the Nx connection
@@ -111,9 +137,11 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 					{
 					pCCM_PAG->TimerTick(eRestartPAPtoPAG);
 					Sleep(20);
+					m_pSCC = GetServerClientConnection(0, 0);
 					}
 				break;
 			case 1:
+				// the client connection for All-Wall data
 				if (pCCM_PAG == NULL) break;	// must connect Nx process first.
 				if (pCCM_PAG->m_pstCCM->bConnected)
 					{
@@ -131,8 +159,8 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 				}	// switch end
 			}	// for ( i = 0; i < MAX_CLIENTS; i++)
 #endif
-		// Sometimes messages stagnate in linked lists
-		// Check linked list for stored messages and post messages 
+		// Sometimes commands may stagnate in linked lists
+		// Check linked list for stored commands and post commands 
 		// to thread with waiting linked lists
 		// Start with server to send commands to clients (ADC & Pulser)
 		for (i = 0; i < MAX_SERVERS; i++)
@@ -140,7 +168,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 			for ( j = 0; j < MAX_CLIENTS_PER_SERVER; j++)
 				{ 
 				if (stSCM[i].pClientConnection[j])
-					{
+					{	//connected
 					if (stSCM[i].pClientConnection[j]->pSendPktList)	
 						{
 						if (k = stSCM[i].pClientConnection[j]->pSendPktList->GetCount())	//there are packets to send
@@ -153,7 +181,7 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 								TRACE(s);
 								break;
 								}
-							// invoke CServerSocketOwnerThread::TransmitPackets()
+							// invoke CServerSocketOwnerThread::TransmitPackets()  -- SEND A COMMAND
 							pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
 							s.Format( _T("Command from Srv%d sent to Client%d from idle loop, GetCount = %d\n"), i,j, k);
 							TRACE(s);
@@ -162,7 +190,89 @@ afx_msg void CTestThread::ThreadHelloWorld(WPARAM w, LPARAM lParam)	// manually 
 					}	// if (stSCM[i].pClientConnection[j])
 				}	// j loop on clients
 			}	// i loop on servers
-		}	// while
+
+		// check to see if no input from gate board or pulser
+		// if no input, generate fake data to keep packets going to PT/UUI
+		// check gLastIdataPap.wMsgSeqCnt
+		// MAX-CLIENTS  would include all-wall. For now 2020-10-28 only look at Nx packets
+		// Inspection data from gate board is caught by Server using ServerSocket. Server Socket
+		// puts data into linked list
+		for (i = 0; i < 1; i++)	// (i = 0; i < MAX_CLIENTS; i++)
+			{ 
+//			m_pstCCM = &stCCM[i];			
+//			if (m_pstCCM == NULL)
+//				break;
+			m_pSCC = GetServerClientConnection(0, 0);	// NcNx wall, first gate board
+			// If more than 1 client connection, would have to have timeout counter for each client
+			// now, 2020-10-21 assume only one PAP. Thus only one local variable to sense when Gate Board(s) has quit
+			if (m_wLastIdataSeq[0] != gwIdataMsgSeqCnt)// for more than 1 gate board, gwIdataMsgSeqCnt needs to be an array
+				{
+				m_wLastIdataSeq[0] = gwIdataMsgSeqCnt;
+				gnNoData = 0;	// also needs to be an array if > 1 gate board
+				gbWallDisconnected = 0;
+				gbPulserDisconnected = 0;				// Inspection data is being sent
+				gLastIdataPap.wMsgID = eNcNxInspID;
+				}
+			else
+				{
+				// if 4 seconds passes AND Nx data has previously been sent, then send fake data message
+				if ((uLoopCnt > 50 ) && (gLastIdataPap.wMsgSeqCnt > 10))
+					gnNoData++;
+				if (gnNoData > 40)
+					{
+					pB = new IDATA_PAP;
+					// normal Idata goes into mpscc->pRcvPKList
+					// Set m_pSCC to a valid value
+					gLastIdataPap.wMsgID = eFakeDataID;	// 0
+					gbWallDisconnected = eGateOff;
+					gbPulserDisconnected = ePulserOff;
+					gLastIdataPap.wStatus |= gbWallDisconnected | gbPulserDisconnected;
+					gLastIdataPap.bPapStatus |= gbWallDisconnected | gbPulserDisconnected;
+					// copy code from ServerSocket::OnReceive
+					memcpy((void *) pB, &gLastIdataPap, gLastIdataPap.wByteCount);	// move all data to the new buffer
+					EnterCriticalSection(m_pSCC->pCSRcvPkt);
+					if (m_pSCC)
+						{
+						if (m_pSCC->pServerRcvListThread)
+							{	  //put the new fake data into the Nx data buffer
+							m_pSCC->pRcvPktList->AddTail(pB);
+							m_pSCC->bConnected = 2;
+							}
+						else
+							{
+							delete pB;
+							pB = 0;
+							}
+						}
+					LeaveCriticalSection(m_pSCC->pCSRcvPkt);
+
+					//pRcvPktList = pCCM->pRcvPktPacketList;
+					// Send fake data or last Idata with changed status to UUI/PAG
+					// gLastIdataPap with modifided status bits.
+					// emulate operation of ServerSocket::On Receive. Assumes that 
+					// m_pSCC exists. = m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex];
+					n++;	// testing code... remove and replace with FakeData msg
+					// place fake data into transmit queue and invoke TransmitPackets()
+					// Send Fake data and reset gnNoData
+
+				// causes CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam) to run
+					m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED, 
+						(WORD) m_pSCC->m_nClientIndex, 0L);
+
+					Sleep(50);
+					gnNoData = 0;
+					// reset last Idata packet to normal operation
+					//gLastIdataPap.wMsgID = eNcNxInspID;
+					//gbWallDisconnected = 0;
+					//gbPulserDisconnected = 0;
+					}	// if (gnNoData > 40)
+				}					
+
+			}
+		uLoopCnt++;
+		if (uLoopCnt > 0xfffffff8)
+			uLoopCnt = 500;
+		}	// while wait
 	s = _T("Exit Hello World\n");
 	TRACE(s);
 	nShutDown = 2;

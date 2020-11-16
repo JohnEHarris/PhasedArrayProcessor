@@ -488,6 +488,10 @@ void CClientConnectionManagement::SendPacket(BYTE *pB, int nBytes, int nDeleteFl
 	stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[nBytes+sizeof(int)];	// space for packet + pkt length variable
 	// debug pBuf = 0x39b7910
 	memcpy((void *) &pBuf->Msg[0], (void *) pB, nBytes);
+	IDATA_FROM_HW *pIdata = (IDATA_FROM_HW*) &pBuf->Msg[0];
+	// fix sync word
+	pIdata->uSync = 0x5CEBDAAD;
+//	pIdata->bPapStatus |= 0x30;	// NO gate board, no pulser board
 //	*(int *) pBuf = nBytes;			// 1st 4 bytes are packet length
 	pBuf->nLength = nBytes;			// 1st 4 bytes are packet length
 	LockSendPktList();

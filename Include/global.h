@@ -214,6 +214,7 @@ PubExt BYTE gbAdcMsgIdErrorCntADC;		// count number of times adc msg lost in ADC
 
 PubExt CString gsWall_IP;		//IP + port of Wall Instrument - may have to make this an array if more than 1 gate board
 PubExt BYTE gbWallDisconnected;	// 16
+PubExt int gnNoData;
 
 PubExt CString gsPulser_IP;     // IP + port of pulser
 PubExt BYTE gbPulserDisconnected;	// 32

@@ -2,7 +2,7 @@
 
 // I AM PAP  ******************* GUI has its own version file
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			37
+#define BUILD_VERSION			39
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -19,6 +19,8 @@
 /*
 Show the version number of this program. Newest version on TOP
 
+1.0.039 2020-11-13 Send Nx command to gate board so msg count the same for PAP & Gate board
+1.0.038 2020-11-10 Identify 'command ID's which are not valid commands
 1.0.037 2020-10-23 Use TestThread to create fake data after about 4 seconds if no data packets arrive from Gate Board
 					This condition happens if Pulser doesn't fire or GateBoard is inoperative.
 					Code assumes a server port > 100 is the destination for dummy Idata packets

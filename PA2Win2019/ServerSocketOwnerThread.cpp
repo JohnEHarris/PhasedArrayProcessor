@@ -921,7 +921,15 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case 14: MsgPrint(pCmd, "SetTcgClockRate<14> wCmd=step time");	break;
 	case 15: MsgPrint(pCmd, "TCGTriggerDelay<15> wCmd=delay time");	break;
 	case 16: MsgPrint(pCmd, "Pow2Gain<16> wCmd=gain");				break;
-	//17-20 are null
+	case 17:
+	case 18:
+	case 19:
+	case 20:
+	case 31:
+	case 33:
+	case 34:
+	case 35:
+		MsgPrint(pCmd, "Cmd 17-20,31,33-36 not a command");			break;
 	case 21: MsgPrint(pCmd, "AscanScopeSampleRate<21> wCmd=sample rate");	break;
 	case 22: MsgPrint(pCmd, "SetAscanDelay<22> wCmd=delay clocks");	break;
 	case 23: MsgPrint(pCmd, "SelectAscanWaveForm<23>");				break;
@@ -972,7 +980,7 @@ void CServerSocketOwnerThread::MsgPrint(ST_SMALL_CMD *pCmd, char *msg)
 		if (pGate->bChnl > 7)   { u = _T("Bad Chnl ");	goto NOT_A_GATE; }
 		if (pGate->bGateNumber > 3) { u = _T("Bad Gate ");	goto NOT_A_GATE; }
 		}
-
+	// if no gate problem, u is null so getlength is 0
 	NOT_A_GATE:
 	s.Format(_T("ID=%d "),pCmd->wMsgID);	//, msg, pwCmd->bSeq, pwCmd->bChnl, pwCmd->bGateNumber, pwCmd->wCmd);
 	if (u.GetLength()) // put bad 'something' in front of command values
@@ -980,8 +988,7 @@ void CServerSocketOwnerThread::MsgPrint(ST_SMALL_CMD *pCmd, char *msg)
 		u += s;
 		s = u;
 		}
-	s += t;
-	t = s;
+	s += t;	// message appended here, then t is reused
 	t.Format(_T(" Seq=%d, Ch=%d, Gate=%d, wCmd=%d\n"),	 
 		pwCmd->bSeq, pwCmd->bChnl, pwCmd->bGateNumber, pwCmd->wCmd);
 

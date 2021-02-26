@@ -43,6 +43,7 @@ enum CallSource {eMain, eInterrupt};
 enum Arria {eRawInspID = 1};	// hardware flaw/wall data for every chnl and seq
 enum IdataTypes { eFakeDataID = 0, eNcNxInspID = 1, eAscanID = 2, eReadBackID = 3, eAdcIdataID = 4, eKeepAliveID = 0xff };
 enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
+enum eErrors {eSmallCmd = 1, eLargeCmd = 2, ePulserCmd = 4, eSeqErr = 8, eGateOff = 16, ePulserOff = 32};
 #define NC_NX_IDATA_ID				1		// PAP processed inspection data sent to PAG/Receiver system
 #define ASCAN_DATA_ID				2
 #define READBACK_DATA_ID			3

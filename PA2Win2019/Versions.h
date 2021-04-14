@@ -16,6 +16,8 @@
 #define MINVER(n)	((n >> 8)  & 0xf)
 #define BLDVER(n)	( n & 0xff)
 
+// add a comment here to check interaction with github
+
 /*
 Show the version number of this program. Newest version on TOP
 

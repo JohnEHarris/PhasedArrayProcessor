@@ -10,6 +10,7 @@ class CIP_Connect : public CDialogEx
 public:
 	CIP_Connect(CWnd* pParent = nullptr);   // standard constructor
 	virtual ~CIP_Connect();
+#ifdef I_AM_PAP
 	void PositionWindow();
 	void OnTimer(UINT_PTR nIDEvent);
 	void StartTimer();
@@ -23,6 +24,7 @@ public:
 	CString m_DlgLocationKey;				// Include in all dialogs. Names the entry for the registry to hold location
 	CString m_DlgLocationSection;			// Section name, for dialog locations this is "Dialog Locations"
 
+#endif
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_CIP_Connect };
 #endif

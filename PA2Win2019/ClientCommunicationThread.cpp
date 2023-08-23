@@ -108,7 +108,7 @@ CClientCommunicationThread::~CClientCommunicationThread()
 		{
 		strcat(m_pElapseTimer->tag, "CComThrd102\n");
 		s = m_pElapseTimer->tag;
-		//TRACE(s);
+		TRACE(s);
 		delete m_pElapseTimer;
 		m_pElapseTimer = 0;
 		}
@@ -197,6 +197,7 @@ int CClientCommunicationThread::ExitInstance()
 		TRACE(_T("Rcvr Com thread ExitInstance()\n"));
 		if (NULL == m_pMyCCM)				break;
 		if (NULL == m_pstCCM)				break;
+		if (0 == m_pstCCM->hWnd)            break;
 		if (NULL == m_pstCCM->pCSRcvPkt)	break;
 		m_pMyCCM->SetConnectionState(0);
 		EnterCriticalSection(m_pstCCM->pCSRcvPkt);
@@ -220,9 +221,11 @@ int CClientCommunicationThread::ExitInstance()
 		LeaveCriticalSection(m_pstCCM->pCSRcvPkt);
 		delete m_pstCCM->pRcvPktPacketList;
 		delete m_pstCCM->pCSRcvPkt;
+		delete m_pElapseTimer;
 		m_pstCCM->pRcvPktPacketList = 0;
 		m_pstCCM->pCSRcvPkt = 0;
 		// repeat for other lists and sections
+		if (0 == m_pstCCM->hWnd)            break;
 
 		if (m_pstCCM->pCSDebugIn)
 			{
@@ -242,6 +245,7 @@ int CClientCommunicationThread::ExitInstance()
 		m_pstCCM->pInDebugMessageList = 0;
 		m_pstCCM->pCSDebugIn = 0;
 
+		if (0 == m_pstCCM->hWnd)            break;
 		EnterCriticalSection(m_pstCCM->pCSDebugOut);
 		while (m_pstCCM->pOutDebugMessageList->GetCount())
 			{
@@ -592,7 +596,7 @@ void CClientCommunicationThread::ConnectSocket(WPARAM w, LPARAM lParam)
 	{
 	CString s,t;
 	BOOL rtn;
-	int i;
+	int i = 0;
 	if ((int)w != 1)
 		{
 		TRACE( _T( "ConnectSocket request of wrong thread type. Must be Receiver thread\n" ) );
@@ -1037,6 +1041,49 @@ afx_msg void CClientCommunicationThread::RestartTcpComDlg(WPARAM w, LPARAM lPara
 	}
 #endif
 
+#ifdef I_AM_PAP
+void CClientCommunicationThread::UpdateTOF_File()
+	{
+	char TOFOut[200], *pCh;
+	pCh = &TOFOut[0];
+	memset(pCh, 0,190);
+	// gLastAscanPap is static memory holding last AScan data sent to UUI/PAG
+	// gTofDebug is a buffer usually the previous Ascan buffer.
+
+	if ((gTofDebug.wLineCount > 50) || (gTofDebug.SEQ_OLD != gLastAscanPap.bSeqNumber) || (gTofDebug.CH_OLD != gLastAscanPap.bVChnlNumber))
+		{
+		sprintf(pCh, "\r\n\nSeq    Ch     Start  Stop   Delta  0Beg   0End   1Beg   1End   2Beg   2End   3Beg   3End\n"),
+		gTofDebug.wLineCount = 0;
+		pCh += 96;
+		gTofDebug.SEQ_OLD = gLastAscanPap.bSeqNumber;
+		gTofDebug.CH_OLD = gLastAscanPap.bVChnlNumber;
+		}
+
+	//                                               G1            start  stop   G3     G3   
+	//                                               stArt stoP    G2     G2    stArt   stoP   G4     G4 stoP 
+	sprintf(pCh, "%04d   %04d   %04d   %04d   %04d   %04d   %04d   %04d   %04d   %04d   %04d   %04d   %04d\n",
+		gLastAscanPap.bSeqNumber, gLastAscanPap.bVChnlNumber, gLastAscanPap.TOF[0],	gLastAscanPap.TOF[1], 
+		(gLastAscanPap.TOF[1] - gLastAscanPap.TOF[0]),
+
+		gLastAscanPap.G1[0] - gPriorAscanPap.G1[0],
+		gLastAscanPap.G1[1] - gPriorAscanPap.G1[1],
+		gLastAscanPap.G2[0] - gPriorAscanPap.G2[0],
+		gLastAscanPap.G2[0] - gPriorAscanPap.G2[0],
+		gLastAscanPap.G3[0] - gPriorAscanPap.G3[0],
+		gLastAscanPap.G3[0] - gPriorAscanPap.G3[0],
+		gLastAscanPap.G4[0] - gPriorAscanPap.G4[0],
+		gLastAscanPap.G4[0] - gPriorAscanPap.G4[0]  );
+	
+		gTofDebug.wLineCount++;
+		memcpy(&gPriorAscanPap, &gLastAscanPap, 64);
+
+	// write to log file. This proc not called unless the file exists
+	pMainDlg->SaveTOF_RecordLog(TOFOut);
+	}
+
+#endif
+
+
 // When the managing CCM wants to send a packet to a server, it queues  the packet
 // into a linked list. Then it sends or posts a thread message to the Send Thread
 // instructing the thread to check the linked list and send all queued messages.
@@ -1149,11 +1196,9 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 		// 0 connection is NcNx data, 1 is All Wall data
 		switch (m_pMyCCM->m_nMyConnection)
 			{
-		case 0:
 		default:
-			// NcNx data
-
-			gwMsgSeqCnt = 
+			case 0:			// NcNx data
+			gwIdataMsgSeqCnt = 
 				pSendPkt->wMsgSeqCnt = m_wMsgSeqCount++;
 			// debug look at Ascan data 
 			if (pSendPkt->wMsgID == eAscanID)
@@ -1164,13 +1209,34 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				// wStatus bits 0-2 PAP cmd count != NIOS cmd count
 				//gLastAscanPap.wSmallCmds, gLastAscanPap.wLargeCmds, gLastAscanPap.wPulserCmd
 				//gwPapSmallCmds, gwPapLargeCmds, gwPapPulserCmds
-				pSendPkt->wStatus &= 0xfff8;	// clear low 3 bits of status
+				// 2020-10-13 add wall disconnect and pulser disconnect
+				pSendPkt->wStatus &= 0xff00;	// clear low 5 bits of status
 				if (gLastAscanPap.wSmallCmds != gwPapSmallCmds)		pSendPkt->wStatus |= 1;
 				if (gLastAscanPap.wLargeCmds != gwPapLargeCmds)		pSendPkt->wStatus |= 2;
 				if (gLastAscanPap.wPulserCmds != gwPapPulserCmds)	pSendPkt->wStatus |= 4;
-				if (pSendPkt->wStatus & 7)
+				// 8 is sequence error
+				pSendPkt->wStatus |= gbWallDisconnected;	// 16
+				pSendPkt->wStatus |= gbPulserDisconnected;	//32
+				// is this fake data or real NcNx data ? //
+				// by the time we are in this thread, the globals can be changed
+				// but the packet status has not
+				if (pSendPkt->wStatus & 0x30)
+					pSendPkt->wMsgID = eFakeDataID;
+				else
+					pSendPkt->wMsgID = eNcNxInspID;	// what about all-wall data??
+
+				// Once we have registered disconnects, zero until next time out
+				// this assumes that TestThread is lower priority and these changes will occur
+				// while TestThread is not sampling these global variables.
+				gbWallDisconnected = gbPulserDisconnected = 0;
+
+				if (pSendPkt->wStatus & 0x3f)
 					j = 4;	// break pt test
 				gwStatus = pSendPkt->wStatus;	// status of Idata sent to UUI/PAG
+				pSendPkt->bPapStatus = (BYTE) gwStatus & 0x3f;	//lower 5  bits shown above
+				// If gate board disconnects, no more data will be sent from PAP
+				// Let TestThread task resend last known IdataPap
+				memcpy((void*)&gLastIdataPap, pSendPkt, sizeof(gLastIdataPap));
 				}
 
 
@@ -1191,6 +1257,8 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 					gPksPerSec[0].uPktsSent = m_pstCCM->uPacketsSent;
 					gPksPerSec[0].nTrigger = 1;	// cause main dlg to display. Main dlg clears
 				}
+
+			// Make a copy of the last sent packet
 			break;
 
 
@@ -1235,6 +1303,8 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				guPktAttempts[1][i]++;	// All wall data
 
 			// modify the packet header for Robert's new status info 2020-03-11
+			// Once the packet is sent, the timeout variables can be reset
+
 			nSent = m_pstCCM->pSocket->Send(pSendPkt, (int)pSendPkt->wByteCount);
 			if (nSent == pSendPkt->wByteCount)
 				{
@@ -1257,14 +1327,28 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				switch (pSendPkt->wMsgID)
 					{
 				case 0:
-				default:
+				case 1:
 					m_nConsecutiveFailedXmit = 0;
+					// reset status bits and packet type to NcNx data type with no errors
+					gLastIdataPap.wStatus &= 0xff00;	// clear possible error bits
+					gLastIdataPap.wMsgID = eNcNxInspID;// assume next xmit will be good data
+					gbWallDisconnected = gbPulserDisconnected = 0;
 					break;
 
 				case 2:
+					// Always copy the Ascan message to internal memory for debugging
 					memcpy((void *)&gLastAscanPap, (void *)pSendPkt, sizeof(ASCAN_DATA));
 					guAscanMsgCnt++;
 					m_nConsecutiveFailedXmit = 0;
+#ifdef I_AM_PAP
+
+					//2020-07-24 Output Ascan data to TOF_Catch for debugging if flag set
+					if (gbTofRecord && gbTofFileExists)
+						{
+						// check for changes in selected Ascan channel and for new lines if 50 lines already output
+						UpdateTOF_File( );
+						}
+#endif
 					break;
 				case 3:
 					memcpy((void *)&gLastRdBkPap, (void *)pSendPkt, pSendPkt->wByteCount);
@@ -1282,7 +1366,7 @@ afx_msg void CClientCommunicationThread::TransmitPackets(WPARAM w, LPARAM l)
 				pSendPkt = 0;
 				pIdataHw = 0;
 				break;	// break from for loop
-				}	//if (nSent == pSendPkt->wByteCount)
+				}	//if (nSent == pSendPkt->wByteCount  -- msg was sent OK)
 
 			Sleep(10);
 			j = m_pstCCM->pSendPktList->GetCount();
@@ -1357,8 +1441,10 @@ afx_msg void CClientCommunicationThread::OnTimer( WPARAM w, LPARAM lParam )
 		// we are targeting the PAG client to SysCp Server connection
 		case eRestartPAGtoSysCp:
 			// debug feature to prove we can reconnect to SysCp
-			if (NULL == m_pMyCCM)	return;
-			if (NULL == m_pMyCCM->m_pstCCM)	return;
+			if (NULL == m_pMyCCM)	
+				return;
+			if (NULL == m_pMyCCM->m_pstCCM)	
+				return;
 
 			if (m_uLastPacketsReceived != m_pMyCCM->m_pstCCM->uPacketsReceived)
 				{

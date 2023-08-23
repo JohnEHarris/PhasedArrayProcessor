@@ -45,10 +45,23 @@ I AM THE PHASED ARRAY PROCESSOR
 class CIP_CONNECT;
 class CClientConnectionManagement *pCCM[MAX_CLIENTS];	// global, static ptrs to class instances defined outside of the class definition.
 class CServerConnectionManagement *pSCM[MAX_SERVERS];	// global, static ptrs to class instances define outside of the class definition.
-												//  -- not created with 'new'
+														//  -- not created with 'new'
+
+//global 'C' function to get server-clientconnection
+// Return a pointer to the client connected to the Server SrvNum
+ST_SERVERS_CLIENT_CONNECTION *GetServerClientConnection(int nSrvNum, int nClient)
+	{
+	// return value often called m_pSCC
+	if (nSrvNum >= MAX_SERVERS) return NULL;
+	if (nClient >= MAX_CLIENTS)	return NULL;
+	return (ST_SERVERS_CLIENT_CONNECTION *) stSCM[nSrvNum].pClientConnection[nClient];
+	}
+
+
+
 // C code callable from any class
 //pointer objects deleted, but not nulled
-// Since we are using poiter to pointer, setting pointer to 0 only sets argument pointer
+// Since we are using pointer to pointer, setting pointer to 0 only sets argument pointer
 // eg, pCritSec and not the pointer that pCritSec points to 
 int KillLinkedList( CRITICAL_SECTION *pCritSec, CPtrList *pList )
 	{
@@ -205,6 +218,8 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	CString Commands;	// catch commands from PAG to PAP
 	CString ReadBack;	// intercept read back message and write to file
 
+	CString TOF_LOG;    // show start & stop time in clock counts after main bang or trigger
+
 	t = GetCommandLine();	// shows ""D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\PhasedArrayMasterVS2010.exe" -i -d"
 	i = t.Find(_T(".exe"));
 	if ( i > 0)
@@ -222,6 +237,11 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	DeBug = t + _T("Debug.log");
 	Commands = t + _T("Commands.log");
 	ReadBack = t + _T("ReadBack.log");
+#ifdef I_AM_PAP
+	TOF_LOG = t + _T("TOF_Catch.log");
+	gbTofRecord = 0;
+#endif
+
 	// shows "D:\PhasedArrayGenerator\PA_Master_VS2010\Debug\"
 	// The name of the App becomes an implicit part of the key
 	// We only write Tuboscope, but clever windows makes a subregistry entry of AdpMMI
@@ -229,12 +249,12 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	// SetRegistryKey(_T("Tuboscope"));	// gen HKEY_CUR_USR\Software\Tuboscope\AdpMMI  key
 
 #ifdef I_AM_PAG
-	// The GUI also know as PAG
+	// The GUI also know as PAG  aka Phased Array GUI
 	t += _T("HardwareConfig_GUI.ini"); // shows "D:\PhasedArrayGenerator\PA_Master_VS2010\.\Debug\HardwareConfig.ini"
 	// t = _T("D:\\PhasedArrayGenerator\\PA_Master_VS2010\\Debug\\HardwareConfig.ini");
 	// m_pszProfileName=_tcsdup(t); // File in the exe directory whether \Debug or \Release
 #else
-	// Was called Service App. Now known as PAP
+	// Was called Service App. Now known as PAP  aka Phased Array Processor
 	t += _T("HardwareConfig_PAP.ini");
 	TRACE(_T("Using ini file: %s\n"), t);
 #endif
@@ -251,6 +271,9 @@ void CPA2WinDlg::MakeDebugFiles(void)
 	//i = sizeof (CTuboIni);
 
 	m_nFakeDataExists = m_nDebugLogExists = m_mCommandLogExists = m_nReadBackExists = 0;
+#ifdef I_AM_PAP
+	m_TofLogExists = 0;
+#endif
 
 	CFileException fileException;
   
@@ -289,7 +312,17 @@ void CPA2WinDlg::MakeDebugFiles(void)
 		}
 	else m_nReadBackExists = 1;
 
+#ifdef I_AM_PAP
+    // Time of Flight start, stop clock locations
+	if (!m_TofFile.Open(TOF_LOG, CFile::modeCreate |
+		CFile::modeReadWrite | CFile::shareDenyNone, &fileException))
+		{
+		TRACE(_T("Can't open file %s, error = %u\n"),
+			TOF_LOG, fileException.m_cause);
+		}
+	else m_TofLogExists = gbTofFileExists = 1;
 
+#endif
 	}
 
 
@@ -301,16 +334,26 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	m_ptheApp = (CPA2WinApp *) AfxGetApp();
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	gDlg.pUIDlg = this;
+#ifdef I_AM_PAP
 	gDlg.pIpConnect = 0;
 	gDlg.pNcNx = 0;
 	gDlg.pTuboIni = 0;
 	nShutDown = 0;
 	m_nMsgSeqCnt = 0;
-	gnAsyncSocketCnt = 0;
 	m_uStatTimer = 0;
+#endif
+	gnAsyncSocketCnt = 0;
+	nShutDown = 0;
+	m_nMsgSeqCnt = 0;
+
 	g_hTimerTick = ::CreateEvent(0, TRUE, FALSE, 0);
-	//memset((void*)stSCM, 0, sizeof(stSCM)*MAX_SERVERS);
-	//memset((void*)stCCM, 0, sizeof(stCCM)*MAX_CLIENTS);
+//	memset((void*)stSCM, 0, sizeof(stSCM)*MAX_SERVERS);	// 2020-10-23 useful for TestThread assistance in sending empty packets
+//	memset((void*)stCCM, 0, sizeof(stCCM)*MAX_CLIENTS);
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+		{
+		stCCM[i].uServerPort = 0;
+		}
 
 	for ( i = 0; i < MAX_SERVERS; i++)
 		{		
@@ -336,6 +379,10 @@ CPA2WinDlg::CPA2WinDlg(CWnd* pParent /*=NULL*/)
 	pCSSaveReadBack = new CRITICAL_SECTION();
 	InitializeCriticalSectionAndSpinCount(pCSSaveReadBack, 4);
 
+#ifdef I_AM_PAP
+	pCSSaveTofFile = new CRITICAL_SECTION();	// not deleting this info on shut down 7/24/20
+	InitializeCriticalSectionAndSpinCount(pCSSaveTofFile, 4);
+#endif
 	MakeDebugFiles();
 
 /***********************************************************************
@@ -389,6 +436,14 @@ CPA2WinDlg::~CPA2WinDlg()
 		gDlg.pTuboIni = 0;
 		}
 
+	CloseFakeData();
+	CloseDebugLog();
+	CloseCommandLog();
+	CloseReadBackLog();
+#ifdef I_AM_PAP
+	CloseTOF_RecordLog();
+#endif
+
 	if (gDlg.pIpConnect)
 		{
 		delete gDlg.pIpConnect;
@@ -405,11 +460,6 @@ CPA2WinDlg::~CPA2WinDlg()
 
 	DestroyCCM();
 	DestroySCM();
-		
-	CloseFakeData();
-	CloseDebugLog();
-	CloseCommandLog();
-	CloseReadBackLog();
 
 	Sleep( 100 );
 	if (pCSSaveDebug)
@@ -424,10 +474,22 @@ CPA2WinDlg::~CPA2WinDlg()
 		delete pCSSaveReadBack;
 	pCSSaveReadBack = 0;
 
+#ifdef I_AM_PAP
+	if (pCSSaveTofFile)
+		delete pCSSaveTofFile;
+	pCSSaveTofFile = 0;
+
+#endif
+
 	if (gDlg.pNcNx)
 		{
 		delete gDlg.pNcNx;
 		gDlg.pNcNx = 0;
+		}
+	if (gDlg.pTuboIni)
+		{
+		delete gDlg.pTuboIni;
+		gDlg.pTuboIni = 0;
 		}
 
 
@@ -455,6 +517,10 @@ BEGIN_MESSAGE_MAP(CPA2WinDlg, CDialogEx)
 	ON_BN_CLICKED( IDC_BN_SHUTDOWN, &CPA2WinDlg::OnBnClickedBnShutdown )
 	ON_LBN_SELCHANGE(IDC_LIST1, &CPA2WinDlg::OnLbnSelchangeList1)
 	ON_COMMAND(ID_CONNECTIVITY_SHOW, &CPA2WinDlg::OnConnectivityShow)
+#ifdef I_AM_PAP
+	ON_COMMAND(ID_DEBUG_TOFSHOW, &CPA2WinDlg::OnDebugTofshow)
+#endif
+
 END_MESSAGE_MAP()
 
 
@@ -700,10 +766,13 @@ BOOL CPA2WinDlg::OnInitDialog()
 	i = sizeof(IDATA_FROM_HW);
 #ifdef I_AM_PAG
 	sDlgName = _T( "PA2Win -- Phase Array GUI Version -- PAG " );
-	#else
+#else
 	sDlgName = _T( "PA2Win -- Phase Array Processor Version -- PAP " );
-#endif
 	gsWall_IP = _T("");
+	gbWallDisconnected = 0;		// eGateOff;	// bit 4
+	gbPulserDisconnected = 0;	//ePulserOff;	// bit 5  // turned off when no pulser in dev system
+#endif
+
 	bAppIsClosing = 0;	// just started
 	sDlgName += s;
 	SetWindowText(sDlgName);
@@ -756,13 +825,16 @@ BOOL CPA2WinDlg::OnInitDialog()
 
 	Sleep(50);
 	//PAP will get its PAP number (0-7) by reading a memory stick -- not a very reliable way
-	//PAP will get its IP address via DHCP. Hence, PAP number will not be tied to IP address
+	//PAP will get its IP address via DHCP. Hence, PAP number will not be tied to IP address --NO DOES NOT WORK THIS WAY 4/3/2020
 	// At present (2018-08-13) both servers use the same NIC for PAP
 //#ifdef I_AM_PAP
 	ReadPAPnumber();
 //#endif
 	GetAllIP4AddrForThisMachine();	
 	InitializeClientConnectionManagement();	// moved from after thread list creation
+	// If the PAG does not have a NIC for the PAP to connect to, program crashes.
+	// check IP address discovered on the PAG and stop the program if none of the IP addresses
+	// match the required address in the ini file.
 	InitializeServerConnectionManagement();
 
 	StructSizes();
@@ -1104,11 +1176,13 @@ void CPA2WinDlg::GetAllIP4AddrForThisMachine()
 			// After all 'real' IP4 added, add loopback into table
 			uThisMachineIP4Addr[i]		= 0x0100007f;
 			sThisMachineIP4Addr[i++]	= _T("127.0.0.1");
+			gnNumberOfNics = i;
 			}
 		}
 	}
 
 #ifdef I_AM_PAG
+
 void CPA2WinDlg::InitializeClientConnectionManagement(void)
 	{
 	int i, j;
@@ -1199,9 +1273,10 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			// craft CODE in FindClientSideIP to find another ip address to link with the database.
 			if (stCCM[0].sClientIP4.GetLength() > 6)
 						sClientIP = stCCM[0].sClientIP4;	// use case 0 for syscp
-					else
-						{	// try something else. If that fails, abort since we can't hook up with the data base
-						}
+			else
+				{	// try something else. If that fails, abort since we can't hook up with the data base
+				i = 0;
+				}
 
 #if 0
 			// Make a specific child class of CCM to handle the GDP
@@ -1284,12 +1359,14 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			pCCM_PAG->SetServerIp( sServerIp );
 			pCCM_PAG->SetServerName( sServerName );	// url of server, e.g. srvhouapp67
 			pCCM_PAG->SetServerPort( uServerPort );
+
+#ifdef I_AM_PAP
 			//gsPAP_Nx2UUI_IP = sClientIP;
 			gsUUI_PAP_NxIP = sServerIp + _T(" : ");
 			_itoa(uServerPort, txt,10);
 			s = txt;
 			gsUUI_PAP_NxIP += s;
-
+#endif
 
 			pCCM_PAG->m_pstCCM->nReceivePriority	= THREAD_PRIORITY_ABOVE_NORMAL;
 			pCCM_PAG->m_pstCCM->nSendPriority		= THREAD_PRIORITY_BELOW_NORMAL;
@@ -1338,10 +1415,12 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 			pCCM_PAG_AW->SetServerName(sServerName);	// url of server, e.g. srvhouapp67
 			pCCM_PAG_AW->SetServerPort(uServerPort);
 
+#ifdef I_AM_PAP
 			gsUUI_PAP_AllWall_IP = sServerIp + _T(" : ");
 			_itoa(uServerPort, txt,10);
 			s = txt;
 			gsUUI_PAP_AllWall_IP += s;
+#endif
 
 			pCCM_PAG_AW->m_pstCCM->nReceivePriority = THREAD_PRIORITY_ABOVE_NORMAL;
 			pCCM_PAG_AW->m_pstCCM->nSendPriority = THREAD_PRIORITY_BELOW_NORMAL;
@@ -1373,8 +1452,8 @@ void CPA2WinDlg::InitializeClientConnectionManagement(void)
 // a client program on another port.
 void CPA2WinDlg::InitializeServerConnectionManagement(void)
 	{
-	int i, j;
-	CString s;
+	int i, j, k;
+	CString sCln, t, sSrv, s;
 	UINT uPort;
 	int nError;
 
@@ -1394,19 +1473,38 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			j = sizeof(CServerConnectionManagement);	//12
 			if (pSCM[i])
 				{
-				s = gServerArray[i].Ip;			// a global static table of ip addresses
-				pSCM[i]->SetServerIP4(s);		// if PAP _T("192.168.10.10")); if PAG _T("192.168.11.20")
+				sSrv = t =gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(sSrv);		// if PAP _T("192.168.10.10")); if PAG _T("192.168.11.20")
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7501);
 				pSCM[i]->SetServerType(ePhaseArrayMaster);
-				s = gServerArray[i].ClientBaseIp;
-				pSCM[i]->SetClientBaseIp(s);
+				sCln = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(sCln);
 				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
 				// start the listen thread which will create a listener socket
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
 				// the connection socket's OnReceive will populate the input data linked list and post messages
 				// to the main dlg/application to process the data.
 				pSCM[i]->m_pstSCM->nServerIsListening = 0;
+				// If server IP from INI file does not find physical IP in system -put up message box and then close program
+				UINT uSrvAdd;
+				CString m1, err;
+				char iptxt[32];
+				CstringToChar(sSrv, iptxt);
+				uSrvAdd = inet_addr(iptxt);
+				for (k = 0; k < gnNumberOfNics; k++)
+					{
+					if (uThisMachineIP4Addr[k] == uSrvAdd) goto OK_ADDR;
+					}
+				m1 = _T("No IP address on this machine	matches the SERVER address required in the INI file  ");
+				err = _T("Error");
+				MessageBox( m1, err);
+				m1 += _T(" ") + err + _T("\n");
+				TRACE(m1);
+
+				return;
+
+OK_ADDR:
 
 				nError = pSCM[i]->StartListenerThread(i);
 				if (nError)
@@ -1444,13 +1542,13 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			j = sizeof(CServerConnectionManagement);
 			if (pSCM[i])
 				{
-				s = gServerArray[i].Ip;			// a global static table of ip addresses
-				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.20"));
+				sSrv = gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(sSrv);		// _T("192.168.10.20"));
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7520);
 				pSCM[i]->SetServerType(ePAP_AllWall_server);
-				s = gServerArray[i].ClientBaseIp;
-				pSCM[i]->SetClientBaseIp(s);
+				sCln = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(sCln);
 				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
 				// start the listen thread which will create a listener socket
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
@@ -1476,13 +1574,13 @@ void CPA2WinDlg::InitializeServerConnectionManagement(void)
 			j = sizeof(CServerConnectionManagement);
 			if (pSCM[i])
 				{
-				s = gServerArray[i].Ip;			// a global static table of ip addresses
-				pSCM[i]->SetServerIP4(s);		// _T("192.168.10.10"));
+				sSrv = gServerArray[i].Ip;			// a global static table of ip addresses
+				pSCM[i]->SetServerIP4(sSrv);		// _T("192.168.10.10"));
 				uPort = gServerArray[i].uPort;
 				pSCM[i]->SetServerPort(uPort);	// 7602);
 				pSCM[i]->SetServerType(ePhaseArrayMaster);
-				s = gServerArray[i].ClientBaseIp;
-				pSCM[i]->SetClientBaseIp(s);
+				sCln = gServerArray[i].ClientBaseIp;
+				pSCM[i]->SetClientBaseIp(sCln);
 				// m_pstSCM->nListenThreadPriority = THREAD_PRIORITY_NORMAL; in SCM constructor
 				// start the listen thread which will create a listener socket
 				// the listener socket's OnAccept() function will create the connection thread, dialog and socket
@@ -1902,12 +2000,10 @@ void CPA2WinDlg::OnBnClickedBnShutdown()
 		
 	CloseFakeData();
 	CloseDebugLog();
-	m_nFakeDataExists = m_nDebugLogExists = 0;
+	CloseCommandLog();
+	CloseReadBackLog();
+	m_nFakeDataExists = m_nDebugLogExists = 0;	// should have happened in Closexxx
 	Sleep( 100 );
-	if (pCSSaveDebug)
-		delete pCSSaveDebug;
-	pCSSaveDebug = 0;
-
 	}
 
 void CPA2WinDlg::OnFileExit()
@@ -2007,6 +2103,9 @@ void CPA2WinDlg::CloseDebugLog(void)
 		e->Delete();
 		}
 	m_nDebugLogExists = 0;
+	if (pCSSaveDebug)
+		delete pCSSaveDebug;
+	pCSSaveDebug = 0;
 	}
 
 /********  Command File *********/
@@ -2056,6 +2155,9 @@ void CPA2WinDlg::CloseCommandLog(void)
 		e->ReportError();
 		e->Delete();
 		}
+	if (pCSSaveCommands)
+		delete pCSSaveCommands;
+	pCSSaveCommands = 0;
 	m_mCommandLogExists = 0;
 	}
 
@@ -2152,9 +2254,60 @@ void CPA2WinDlg::CloseReadBackLog(void)
 		e->Delete();
 		}
 	m_nReadBackExists = 0;
+	if (pCSSaveReadBack)
+		delete pCSSaveReadBack;
+	pCSSaveReadBack = 0;
 	}
 
+#ifdef I_AM_PAP
+/********  TOF Debug File *********/
+void CPA2WinDlg::SaveTOF_RecordLog(char *ch)
+	{
+	//char ch[1600];
+	if (0 == m_TofLogExists)
+		{
+		TRACE(_T("TOF debug log file not available\n"));
+		return;
+		}
 
+	if (m_TofFile.m_hFile > 0)
+		{
+		EnterCriticalSection(pCSSaveTofFile);
+		try
+			{
+			//CstringToChar(s, ch, 800);
+			m_TofFile.Write(ch, (int)strlen(ch));	// I want to see ASCII in the file
+			//m_DebugLog.Flush(); -- not needed. Kills Nc Nx processing time
+			}
+		catch (CFileException* e)
+			{
+			e->ReportError();
+			e->Delete();
+			}
+		LeaveCriticalSection(pCSSaveTofFile);
+		}
+	}
+
+void CPA2WinDlg::CloseTOF_RecordLog(void)
+	{
+	if (0 == m_TofLogExists)
+		{
+		TRACE(_T("TOF debug log file not available\n"));
+		return;
+		}
+	try
+		{
+		m_TofFile.Close();
+		}
+	catch (CFileException* e)
+		{
+		e->ReportError();
+		e->Delete();
+		}
+	m_TofLogExists = 0;
+	}
+
+#endif
 
 // This timer only runs the PA2WinDlg screen.
 // Timed connection attempts to PAG if this is PAP are done by pings from the TestThread
@@ -2182,13 +2335,15 @@ void CPA2WinDlg::OnTimer( UINT_PTR nIDEvent )
 		wVerH = wVerS = 0;	// kill warning in PAG
 		}
 
+#ifdef I_AM_PAP
+
 	if (gDlg.pIpConnect)
 		{
 		gDlg.pIpConnect->RemoteTimer();
 		}
 
 
-#ifdef I_AM_PAP
+
 	if (gDlg.pNcNx)	return;		// don't show when NcNx dialog on screen
 	// update last Idata packet to list box.
 	// All this to save processing time in displaying data on screen
@@ -2234,11 +2389,14 @@ bool CPA2WinDlg::UpdateTimeDate(time_t *tNow)
 		t.Format(_T("%02d:%02d:%02d"), today->tm_hour, today->tm_min, today->tm_sec);
 		SetDlgItemText(IDC_STAT_TIME, t);
 		// update  time on connectivity dialog if it is open
+#ifdef I_AM_PAP
+		// update  time on connectivity dialog if it is open
 		if (gDlg.pIpConnect)
 			gDlg.pIpConnect->UpdateTime(t);
 
 		t.Format(_T("%02d/%02d/%02d"), today->tm_mon+1, today->tm_mday, (today->tm_year % 100) );
 		SetDlgItemText(IDC_STAT_DATE, t);
+#endif
 		}
 
 	// when the text is drawn, onctlcolor intercepts before the draw and picks the color
@@ -2537,29 +2695,29 @@ void CPA2WinDlg::StructSizes( void )
 	i = sizeof(CRITICAL_SECTION);		// 24
 	i = sizeof(CPtrList);					// 28
 	i = sizeof(CClientConnectionManagement);//16
-	i = sizeof(CClientCommunicationThread);//168
+	i = sizeof(CClientCommunicationThread);//166
 	i = sizeof(CClientSocket);				//36
 	i = sizeof(CCmdProcessThread);			//76
 	i = sizeof(CCCM_PAG);					//32
-	i = sizeof(CHwTimer);	// 496
+	i = sizeof(CHwTimer);	// 492
 	i = sizeof( CIniFile );	// 12
 	i = sizeof( CInspState ); // 12
-	i = sizeof(CNcNx);	// 2800
+	i = sizeof(CNcNx);	// 3224
 	i = sizeof(CServerConnectionManagement);	// 12
 	i = sizeof(CServerListenThread);	// 80
-	i = sizeof(CServerRcvListThread);	// 220
-	i = sizeof(CServerSocket);	// 4276
-	i = sizeof(CServerSocketOwnerThread);	// 108
-	i = sizeof(CvChannel);	// 160
-	i = sizeof(CTestThread); // 72
+	i = sizeof(CServerRcvListThread);	// 217
+	i = sizeof(CServerSocket);	// 4286
+	i = sizeof(CServerSocketOwnerThread);	// 107
+	i = sizeof(CvChannel);	// 153
+	i = sizeof(CTestThread); // 584
 	i = sizeof(CTuboIni); // 12
-	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 640
+	i = sizeof( ST_SERVERS_CLIENT_CONNECTION ); // 235
 	i = sizeof( ST_SERVER_CONNECTION_MANAGEMENT ); // 160
-	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 172
+	i = sizeof( ST_CLIENT_CONNECTION_MANAGEMENT ); // 167
 	i = sizeof( CPA2WinApp );	// 204
-	i = sizeof( CPA2WinDlg );	// 720
+	i = sizeof( CPA2WinDlg );	// 812
 	i = sizeof( Nc_FIFO );	// 24 but 3 copies
-	i = sizeof( Nx_FIFO );	// 52
+	i = sizeof( Nx_FIFO );	// 48
 	i = sizeof( PAP_INST_CHNL_NCNX );	// 1056
 	i = sizeof( CIniSectionA );	// 44
 	i = sizeof( CIniKeyA );	// 60
@@ -2596,9 +2754,12 @@ int CPA2WinDlg::GetAdcCmdQ(void)		// return number of commands queued for ADC
 	{
 	// ADC command q serviced by SRV[0]
 	int i = 0;
-	if (stSCM[0].pClientConnection[0]->pSendPktList)
+	if (stSCM[0].pClientConnection[0])
 		{
-		i = stSCM[0].pClientConnection[0]->pSendPktList->GetCount();
+		if (stSCM[0].pClientConnection[0]->pSendPktList)
+			{
+			i = stSCM[0].pClientConnection[0]->pSendPktList->GetCount();
+			}
 		}
 	return i;
 	}
@@ -2621,6 +2782,7 @@ int CPA2WinDlg::GetPulserCmdQ(void)
 
 // Show Idata on Pa2win dlg when running as PAP
 // CALLED FROM 1 SECOND TIMER
+// 2020-11-05 had to test for FakeDataID as well as eNcNx or else stuck and no ShowIdata
 void CPA2WinDlg::ShowIdata(void)
 	{
 #ifdef I_AM_PAP
@@ -2628,7 +2790,7 @@ void CPA2WinDlg::ShowIdata(void)
 	int i,j,mn, mx;
 	int hd, pp, ie;
 	UINT uGood, uLost;
-	if (gLastIdataPap.wMsgID == eNcNxInspID)
+	if ((gLastIdataPap.wMsgID == eNcNxInspID) | (gLastIdataPap.wMsgID == eFakeDataID))
 		{
 #ifdef SHOW_CH0_ALL_SEQ
 			s.Format(_T("Idata-to-PT WMin=%d, G1=%d, G2=%d, Raw[0][0] = %4d,  Raw[1][0] = %4d, Raw[2][0] = %4d, MsgSeqCnt= %d, ZeroCnt = %3d, Not 0 = %d"),
@@ -2639,7 +2801,7 @@ void CPA2WinDlg::ShowIdata(void)
 			m_lbOutput.AddString(s);
 			//gwMin0 = 0xffff;
 			gwMax0 = gwZeroCnt = gwNot0 = 0;
-			m_nMsgSeqCnt = gwMsgSeqCnt;
+			m_nMsgSeqCnt = gwIdataMsgSeqCnt;
 #else
 
 
@@ -2718,7 +2880,7 @@ void CPA2WinDlg::ShowIdata(void)
 			for (i = 0; i < 8; i++)
 				{
 				mn = gLastIdataPap.PeakChnl[j * 8 + i].wTofMin;
-				if (mn > 999) mn = 999;
+				if (mn > 9999) mn = 9999;
 				mx = gLastIdataPap.PeakChnl[j * 8 + i].wTofMax;
 				s.Format(_T("Min=%04d  Max=%04d    "), 
 					mn, mx );
@@ -2743,7 +2905,7 @@ void CPA2WinDlg::ShowIdata(void)
 		for (i = 0; i < 8; i++)
 			{
 			mn = gLastAllWall.Seq[j].vChnl[i].wTof;
-			if (mn > 999) mn = 999;
+			if (mn > 9999) mn = 9999;
 
 			s.Format(_T("AllWall[0][%d]=%04d    "), i,mn);
 			t += s;
@@ -2762,7 +2924,7 @@ void CPA2WinDlg::ShowIdata(void)
 		t = s;
 		//m_lbOutput.AddString(t);	// show top line
 		//s.Format(_T("    MsgCnt = %d, GlitchCnt = %d  CmdId  1stWord"),
-		//	gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
+		//	gwIdataMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
 		//	gLastIdataPap.wLastCmdId, gLastIdataPap.w1stWordCmd);
 		//t += s;
 		m_lbOutput.AddString(t);
@@ -2771,7 +2933,7 @@ void CPA2WinDlg::ShowIdata(void)
 			gLastIdataPap.wPeriod, gLastIdataPap.wRotationCnt );
 		t = s;
 		s.Format(_T("         %05d   %03d     %03d/%05d  %05d    %02d   %02d    %02d"),
-			gwMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
+			gwIdataMsgSeqCnt, gLastIdataPap.bNiosGlitchCnt, 
 			//gLastCmd.wMsgID, gLastCmd.wMsgSeqCnt, gLastIdataPap.w1stWordCmd,
 			gwLastCmdId, gwLastCmdSeqCnt, gw1stWordCmd,
 			(gLastIdataPap.bCmdSeq % 10), (gLastIdataPap.bCmdChnl % 10), gLastIdataPap.bCmdGate&3);
@@ -2779,8 +2941,8 @@ void CPA2WinDlg::ShowIdata(void)
 		// count of commands received by ADC & Pulser board, then wStatus value
 		s.Format(_T("          %05d %05d  %05d"), gLastAscanPap.wSmallCmds, gLastAscanPap.wLargeCmds, gLastAscanPap.wPulserCmds);
 		t += s;
-		// Show number of cmds received by PAP 
-		s.Format(_T("        %05d %05d  %05d   %04x"), gwPapSmallCmds, gwPapLargeCmds, gwPapPulserCmds, gwStatus);
+		// Show number of cmds received by PAP 10/13/2020 gwStatus now had more bits
+		s.Format(_T("        %05d %05d  %05d   %04x"), gwPapSmallCmds, gwPapLargeCmds, gwPapPulserCmds, (gwStatus & 7) );
 		t += s;
 		m_lbOutput.AddString(t);
 
@@ -2998,6 +3160,7 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the 
 		// check for already existing dialog. If not existing
 		// use new to create new dialog
 	// TODO: Add your command handler code here
+#ifdef I_AM_PAP
 	if (gDlg.pIpConnect == NULL) 
 		{
 		gDlg.pIpConnect = new CIP_Connect();
@@ -3007,4 +3170,29 @@ BOOL CPA2WinDlg::SendMsgToPAP(int nClientNumber, int nMsgID, void *pMsg)	// the 
 			}
 		}
 	else gDlg.pIpConnect->SetFocus();
+		
+#else
+		MessageBox(_T("Connectivity Dialog only available from Phased Array Processor"), _T("Error"), MB_OK);
+#endif
+		}
+
+
+
+	void CPA2WinDlg::OnDebugTofshow( )
+		{
+		// TODO: Add your command handler code here
+#ifdef I_AM_PAP
+		if (gDlg.pTofCatch == NULL)
+			{
+			gDlg.pTofCatch = new TOF_Catch( );
+			if (gDlg.pTofCatch)
+				{
+				gDlg.pTofCatch->Create(IDD_DLG_TOF_RECORD);
+				}
+			}
+		else gDlg.pTofCatch->SetFocus( );
+#else
+
+		MessageBox(_T("TOF Record Dialog only available from Phased Array Processor"), _T("Error"), MB_OK);
+#endif
 		}

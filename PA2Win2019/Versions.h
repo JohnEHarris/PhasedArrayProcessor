@@ -2,7 +2,7 @@
 
 // I AM PAP  ******************* GUI has its own version file
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			27
+#define BUILD_VERSION			39
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -16,8 +16,25 @@
 #define MINVER(n)	((n >> 8)  & 0xf)
 #define BLDVER(n)	( n & 0xff)
 
+// add a comment here to check interaction with github
+
 /*
 Show the version number of this program. Newest version on TOP
+
+1.0.039 2020-11-13 Send Nx command to gate board so msg count the same for PAP & Gate board
+1.0.038 2020-11-10 Identify 'command ID's which are not valid commands
+1.0.037 2020-10-23 Use TestThread to create fake data after about 4 seconds if no data packets arrive from Gate Board
+					This condition happens if Pulser doesn't fire or GateBoard is inoperative.
+					Code assumes a server port > 100 is the destination for dummy Idata packets
+1.0.036 2020-10-21 TestThread detects no packets being sent, Creates & sends a FakeData packet
+1.0.035 2020-10-13 Set error byte in header to PAG/UUI
+1.0.034 2020-09-16 Solved the code exception in shut down (ServerSocket::OnAcceptPrep(void))
+1.0.033 2020-08-13 Show changes in Ascan gate reading from one update to the next
+1.0.032 2020-08-06 Fix Nx command (28) and output to Debug log
+1.0.031	2020-08-05 Debugged version catches Ascan setting into TOF log
+1.0.030 2020-08-04 Catch AScan commands into TOF log file. Still use Debug dialog to enable TOF file logging
+1.0.030 2020-07-24 Capture TOF data values to log file to debug jitter in TOF display
+1.0.028 2020-04-13 Restore ability to resize main dialog like PAG
 1.0.027 2020-03-25 IP connections shown in office except for pulser (no input source)   
 1.0.026 2020-03-19 Add connectivity dialog to PAP - show IP connections and Wall Instrument number
 1.0.025 2019-10-31 Delete vChnls on ADC disconnect and shut down of PAP.	Quits w/o mem leaks

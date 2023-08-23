@@ -21,6 +21,9 @@ Revised:
 
 #include "PA2Struct.h"
 #include "Cmds.h"
+#ifdef I_AM_PAP
+#include "TOF_Catch.h" 
+#endif
 
 // The MAC and IP addresses of the instrument are modified by board switch setting or
 // by backplane board slot address when implemented.
@@ -86,15 +89,17 @@ PubExt BYTE gbFakeDataCnt;
 PubExt WORD gwAscanCntLast, gwAscanCntPrevious;	// test to see if Ascans are running
 PubExt WORD gwWarmStart;
 
-
-
 #else	// not the instrument
 
 class CTuboIni;
 class CPA2WinDlg;
 class CPA2WinApp;
+class CTuboIni;
 class CNcNx;
 class CIP_Connect;
+#ifdef I_AM_PAP
+//class TOF_Catch;
+#endif
 
 typedef struct 
 	{
@@ -104,11 +109,15 @@ typedef struct
 	CTuboIni *pTuboIni;		// not actually a dialog, but no harm, no foul
 	CNcNx *pNcNx;			// Nc Nx test dialog
 	CIP_Connect* pIpConnect; // generate a dialog showing IP connections/ports and wall instrument number
+#ifdef I_AM_PAP
+	TOF_Catch *pTofCatch;
+#endif
 	}	GLOBAL_DLG_PTRS;
 
 PubExt GLOBAL_DLG_PTRS gDlg;
 PubExt IDATA_PAP gLastIdataPap;		// data sent to down stream systems from PAP
 PubExt ASCAN_DATA gLastAscanPap;
+PubExt ASCAN_DATA gPriorAscanPap;
 PubExt ST_GATE_READBACK_DATA gLastRdBkPap;
 PubExt IDATA_FROM_HW gLastAllWall;
 PubExt ST_GATE_READBACK_DATA gLastGateCmd;
@@ -116,6 +125,8 @@ PubExt ST_TCG_BEAM_GAIN_READBACK_DATA gLastBeamGainReadBack;
 PubExt ST_TCG_SEQ_GAIN_READBACK_DATA gLastSeqGainReadBack;
 PubExt ST_SMALL_CMD gLastCmd;	// sized for small cmds, used for both adc commands on PAP screen
 PubExt WORD gwMax0, gwMin0, gwMin1_0, gwMin2_0, gwZeroCnt, gwNot0;	// max and min of seq0, chnl 0
+PubExt TOF_DEBUG gTofDebug;
+PubExt BYTE gbTofDbgIndx;	// always 0 or 1
 #endif
 
 PubExt int gMaxChnlsPerMainBang;
@@ -127,7 +138,7 @@ PubExt int gMaxSeqCount;
 PubExt int gnMaxServers, gnMaxClientsPerServer;		// Server Connection Management
 PubExt int gnMaxClients;							// Client Connection Management
 PubExt int gnFifoCnt, gnAsyncSocketCnt;
-PubExt WORD gwMsgSeqCnt;		// increments when Idata or Ascan sent
+PubExt WORD gwIdataMsgSeqCnt;		// increments when Idata or Ascan sent
 PubExt BYTE gbStartSeqNumber;	// starting sequence number for next Idata packet
 PubExt BYTE gbStartSeqNumberIncrement;
 PubExt WORD gwLastCmdId;	// keep cmd ID of last command executed by NIOS
@@ -185,6 +196,8 @@ PubExt UINT guPktAttempts[2][10];	//[0]=Nx, [1]=All wall count number of attempt
 								//[][0] is 1st attempt, [][1] is 2nd etc
 PubExt UINT guCmdsProcessed;	// number of commands processed by the ADC board
 PubExt BYTE gbDebugMode;		// if not 0, print message info as they are executed.
+PubExt BYTE gbTofRecord;	// Check box to enable/disable tof recording
+PubExt BYTE gbTofFileExists;
 
 // Pulser global variables
 PubExt WORD gwPulserCmds;
@@ -199,10 +212,13 @@ PubExt WORD gwPapPulserCmds, gwPapLargeCmds, gwPapSmallCmds;		// count commands 
 PubExt BYTE gbAdcMsgIdErrorCntPAP;		// count number of times adc msg lost in PAP
 PubExt BYTE gbAdcMsgIdErrorCntADC;		// count number of times adc msg lost in ADC
 
-PubExt CString gsWall_IP;		//IP + port of Wall Instrument
-//PubExt CString gsWall_Port;
+PubExt CString gsWall_IP;		//IP + port of Wall Instrument - may have to make this an array if more than 1 gate board
+PubExt BYTE gbWallDisconnected;	// 16
+PubExt int gnNoData;
+
 PubExt CString gsPulser_IP;     // IP + port of pulser
-//PubExt CString gsPulser_Port;
+PubExt BYTE gbPulserDisconnected;	// 32
+
 
 PubExt CString gsPAP2Wall_IP;   // server to gate board
 PubExt CString gsPAP2Pulser_IP; // server to pulser board

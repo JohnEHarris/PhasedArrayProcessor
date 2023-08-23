@@ -41,8 +41,9 @@ enum CallSource {eMain, eInterrupt};
 // Read Back data replaces AScan data when read back is requested
 //
 enum Arria {eRawInspID = 1};	// hardware flaw/wall data for every chnl and seq
-enum IdataTypes { eNcNxInspID = 1, eAscanID = 2, eReadBackID = 3, eAdcIdataID = 4, eKeepAliveID = 0xff };
+enum IdataTypes { eFakeDataID = 0, eNcNxInspID = 1, eAscanID = 2, eReadBackID = 3, eAdcIdataID = 4, eKeepAliveID = 0xff };
 enum DmaBlocks { eIdataBlock = 3, eAscanBlock = 0x83};
+enum eErrors {eSmallCmd = 1, eLargeCmd = 2, ePulserCmd = 4, eSeqErr = 8, eGateOff = 16, ePulserOff = 32};
 #define NC_NX_IDATA_ID				1		// PAP processed inspection data sent to PAG/Receiver system
 #define ASCAN_DATA_ID				2
 #define READBACK_DATA_ID			3
@@ -173,10 +174,10 @@ typedef struct
 // keep data synchronized with location information
 typedef struct	// IDATA_FROM_HW
 	{
-	//BYTE bMsgID;		// Commands are word length, data returned is byte length
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID
-	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256
-	WORD wByteCount;	// Number of bytes in this packet. Make it even number		
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID.. PAP will modify before sending data
+	// modified MsgID will show missed commands in high byte
+	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256	
+	WORD wByteCount;
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
 	BYTE bPapNumber;	// One PAP per transducer array. NO longer tied to IP address. Now assigned from file read
@@ -231,8 +232,8 @@ typedef struct	// IDATA_FROM_HW
 // Estimated 13 uSec to copy header into Wiznet
 typedef struct	// IDATA_FROM_HW_HDR
 	{
-	//BYTE bMsgID;		// Commands are word length, data returned is byte length
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID.. PAP will modify before sending data
+	// modified MsgID will show missed commands in high byte
 	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256
 	WORD wByteCount;	// Number of bytes in this packet. Make it even number		
 	UINT uSync;			// 0x5CEBDAAD													
@@ -335,9 +336,9 @@ typedef struct // stPeakChnlNIOS
 
 typedef struct // IDATA_PAP
 	{
-	//BYTE bMsgID;		// Commands are word length, data returned is byte length
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID
-	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID.. PAP will modify before sending data
+	// modified MsgID will show missed commands in high byte
+	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256	
 	WORD wByteCount;	// Number of bytes in this packet. Make it even number		
 	UINT uSync;			// 0x5CEBDAAD													
 	WORD wMsgSeqCnt;	// counter to sequence command stream or data stream 0-0xffff	
@@ -392,8 +393,8 @@ typedef struct // IDATA_PAP
 
 typedef struct // IDATA_PAP_HDR
 	{
-	//BYTE bMsgID;		// Commands are word length, data returned is byte length
-	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID
+	WORD wMsgID;		// commands and data are identified by their ID	= eNcNxInspID.. PAP will modify before sending data
+	// modified MsgID will show missed commands in high byte
 	//BYTE bSeqError;		// number of missed commands  -- wraps around at 256
 	WORD wByteCount;	// Number of bytes in this packet. Make it even number		
 	UINT uSync;			// 0x5CEBDAAD													
@@ -458,8 +459,9 @@ typedef struct // ASCAN_DATA
 	BYTE bBoardNumber;	// which PAP network device (pulser, phase array board) is the intended target
 						// this is the last 2 digits of the IP4 address of the board 
 						// 192.168.10.200+boardNumber  range is .200-.215
-	WORD wBoardType;	// what kind of inspection device 1= wall 2 = socomate
-	BYTE bSeqNumber;
+	BYTE bBoardType;	// what kind of inspection device 1= wall 2 = socomate
+	BYTE bBoardStatus;
+	BYTE bSeqNumber;	// bit field of gates
 	BYTE bVChnlNumber;	// what channel of the sequence is this data for?
 						//BYTE bMsgSubMux;	
 						//BYTE bNiosFeedback[7]****;	8 byte change
@@ -492,14 +494,14 @@ typedef struct // ASCAN_DATA
 	WORD G2[2];			// start,stop location
 	WORD G3[2];			// start,stop location
 	WORD G4[2];			// start,stop location
-	WORD TOF[2];		// start,stop locatio
+	WORD TOF[2];		// start,stop location
 
 	WORD wLargeCmds;	// number of large commands since reset
 	WORD wSmallCmds;	// number of small commands since reset
 	WORD wPulserCmds;	// number of pulser commands since reset
 	WORD wFPGA_VersionP;	// Pulser fpga version
 	WORD wNIOS_VersionP;	// Pulser NIOS version
-	WORD wCPU_TempP;		// Pulser cpu temp - could be a byte
+	WORD wCPU_TempP;		// Pulser cpu temp - could be a byte    64 byte header
 	char ascan[1024];	// 1024 8-bit scope amplitude samples
 
 	} ASCAN_DATA;		// sizeof() = 1088
@@ -582,6 +584,21 @@ typedef struct // READBACK_DATA
 	} READBACK_DATA;		// sizeof() = 1088
 
 
+// Diagnostic TOF capture packets... debug tof jitter on screen
+typedef struct
+	{
+	BYTE TOF_SEQ;	//SEQUENCE number of captured data  0-2
+	BYTE SEQ_OLD;
+	BYTE TOF_CH;	// 0-7
+	BYTE CH_OLD;
+	WORD wStart;	// start of tof since trigger
+	WORD wStop;		// stop time
+	WORD wSpan;		// stop-start
+	WORD wXloc;		// where on pipe from start
+	WORD wClock;	//angular posit
+	WORD wLineCount;	// after 50 lines of same Seq & Chnl add two blank lines.
+	// Add 2 blank lines when sequence or channel changes
+	} TOF_DEBUG;
 							// A packet of data sent from the Pulser to the PAP server updating pulser status
 typedef struct // PULSER_DATA
 	{

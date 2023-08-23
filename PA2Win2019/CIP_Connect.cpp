@@ -42,6 +42,9 @@ CIP_Connect::~CIP_Connect()
 		gDlg.pIpConnect = 0;
 		}
 #endif
+#ifdef SHUTDOWN_DEBUG
+	TRACE(_T("CIP_Connect::~CIP_Connect() called\n"));
+#endif
 	}
 
 void CIP_Connect::DoDataExchange(CDataExchange* pDX)
@@ -135,7 +138,7 @@ void CIP_Connect::OnTimer(UINT_PTR nIDEvent)
 BOOL CIP_Connect::OnInitDialog()
 	{
 	CDialogEx::OnInitDialog();
-	PositionWindow();
+	//PositionWindow();
 	// Start 1 second timer
 	// StartTimer();
 	// gbAssignedPAPNumber display ..if 8 put message unknown wall instrument number

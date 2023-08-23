@@ -198,6 +198,8 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	{
 	void *pV = 0;
 	int i, n = 0;
+	int nWait = 100;
+	CString s;
 
 	// if the socket is not closed, close it and terminate the threads
 	if (m_pstCCM->pSocket)
@@ -215,27 +217,28 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 
 		// Receive thread closes and destroys socket
 		m_pstCCM->pReceiveThread->PostThreadMessage(WM_USER_KILL_RECV_THREAD,0,0l);
-		for ( i = 0; i < 100; i++)	// wait a little while for listener to go away
+		for ( i = 0; i < nWait; i++)	// wait a little while for listener to go away
 			{
 			if (m_pstCCM->pReceiveThread == NULL)		break;
 			Sleep(10);
 			}
-		if ( i == 100)
+		if ( i == nWait)
 			{
 			TRACE(_T("pReceiveThread Exit routine didn't run or didn't NULL pReceiveThread\n"));
 			}
+
 		}
 
 	if (m_pstCCM->pSendThread)
 		{
 		// Receive thread closes and destroys socket
 		m_pstCCM->pSendThread->PostThreadMessage(WM_USER_KILL_SEND_THREAD,0,0l);
-		for ( i = 0; i < 100; i++)	// wait a little while for listener to go away
+		for ( i = 0; i < nWait; i++)	// wait a little while for listener to go away
 			{
 			if (m_pstCCM->pSendThread == NULL)		break;
 			Sleep(10);
 			}
-		if ( i == 100)
+		if ( i == nWait)
 			{
 			TRACE(_T("pSendThread Exit routine didn't run or didn't NULL pSendThread\n"));
 			}	
@@ -245,12 +248,12 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 	if (m_pstCCM->pCmdProcessThread)
 		{
 		m_pstCCM->pCmdProcessThread->PostThreadMessage(WM_USER_KILL_CMD_PROCESS_THREAD,0,0l);
-		for ( i = 0; i < 100; i++)	// wait a little while for listener to go away
+		for ( i = 0; i < nWait; i++)	// wait a little while for listener to go away
 			{
 			if (m_pstCCM->pCmdProcessThread == NULL)		break;
 			Sleep(10);
 			}
-		if ( i == 100)
+		if ( i == nWait)
 			{
 			TRACE(_T("pCmdProcessThread Exit routine didn't run or didn't NULL pCmdProcessThread\n"));
 			}		
@@ -288,7 +291,10 @@ CClientConnectionManagement::~CClientConnectionManagement(void)
 		else { m_pstCCM->pCSDebugOut = 0;  m_pstCCM->pOutDebugMessageList = 0; }
 		}
 
-	TRACE(_T("Destructor Ran\n"));
+#ifdef SHUTDOWN_DEBUG
+		s =_T("~CClientConnectionManagement executed\n");
+		TRACE(s);
+#endif	
 	}
 
 // Begin the Receive Thread
@@ -482,6 +488,10 @@ void CClientConnectionManagement::SendPacket(BYTE *pB, int nBytes, int nDeleteFl
 	stSEND_PACKET *pBuf = (stSEND_PACKET *) new BYTE[nBytes+sizeof(int)];	// space for packet + pkt length variable
 	// debug pBuf = 0x39b7910
 	memcpy((void *) &pBuf->Msg[0], (void *) pB, nBytes);
+	IDATA_FROM_HW *pIdata = (IDATA_FROM_HW*) &pBuf->Msg[0];
+	// fix sync word
+	pIdata->uSync = 0x5CEBDAAD;
+//	pIdata->bPapStatus |= 0x30;	// NO gate board, no pulser board
 //	*(int *) pBuf = nBytes;			// 1st 4 bytes are packet length
 	pBuf->nLength = nBytes;			// 1st 4 bytes are packet length
 	LockSendPktList();

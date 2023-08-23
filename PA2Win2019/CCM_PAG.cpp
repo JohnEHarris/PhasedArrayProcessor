@@ -236,10 +236,10 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 		/*       PULSER COMMAND SECTION ENDS    */
 
-		/*     ADC Board Commands BEGIN         */
+		/*     Gate Board Commands BEGIN         */
 		
 		else
-			{	// command for ADC board
+			{	// command for Gate board
 
 			if (stSCM[0].pClientConnection[pMmiCmd->bBoardNumber] == nullptr)
 				{
@@ -299,7 +299,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 
 				case NC_NX_CMD_ID:
 #if 0
-					// The only message as of 2016-06-27
+					// The only message as of 2016-06-27  -- 0x201
 					// Does not get sent to instruments, sets Nc and Nx parameters for the PAM to use
 					i = sizeof(PAP_INST_CHNL_NCNX);
 					pPamChnlInfo = (PAP_INST_CHNL_NCNX *)pMmiCmd;
@@ -324,12 +324,14 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 				case SET_WALL_NX_CMD_ID:	// cmd 28
 					// Only executes on PAP... all wall processing has same parameters for every wall channel
 					// virtual channels exist in Server side structure only
-					// Server side connects to Adc and other hardware data sources
+					// Server side connects to gate board and other hardware data sources
 					pCmdS = (ST_NX_CMD *)pMmiCmd;	// cast this message to Nx command format
 					nInst = pCmdS->bBoardNumber;	// which instrument
 
-					// For now server[0] connects to Adc clients
+					// For now server[0] connects to gate clients
 					// Not going to send info to client, but does process that clients data with these parameters
+					// 2020-11-13 must send to gate board or else cmd count between PAP and Gate board not the same
+					// see line 276 above
 					pSCC = stSCM[0].pClientConnection[nInst];
 					if (pSCC == NULL)
 						{
@@ -337,6 +339,7 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 						TRACE(s);
 						DebugOut(s);
 						pMainDlg->SaveDebugLog(s);
+						gwPapSmallCmds--;	// undo the count in line 276
 						delete pMmiCmd;
 						break;
 						}
@@ -351,14 +354,29 @@ void CCCM_PAG::ProcessReceivedMessage(void)
 							// cmd word [0]=Nx [1]=Max [2]=Min [3]=Drop
 							pChannel->WFifoInit((BYTE)pCmdS->wNx, pCmdS->wMax, pCmdS->wMin, pCmdS->wDropCount);
 							// SHOW something on PAG output screen
+#ifdef I_AM_PAP
 							if ((is == 0) && (ic == 0))
 								{
+								s.Format(_T("Nx = %d, Max = %4d, Min = %4d, Drop = %2d\n"),
+									pCmdS->wNx,pCmdS->wMax, pCmdS->wMin, pCmdS->wDropCount);
+								DebugOut(s);
+								pMainDlg->SaveCommandLog(s);
 								}
+#endif
 							}
-					delete pMmiCmd;
+					// if deleted here, does not count in gate board
+					// then small cmd gate board <> small cmd in PAP
+					// Send to gate board just to get cmd counts the same
+
+					pSocket->LockSendPktList();	// server sockets linked list for sending
+					pSocket->AddTailSendPkt(pMmiCmd);
+					pSocket->UnLockSendPktList();
+
+					// Thread msg causes CServerSocketOwnerThread::TransmitPackets() to execute
+					pThread->PostThreadMessage(WM_USER_SERVER_SEND_PACKET, 0, 0L);
 					break;
 
-					//case 2-8:	// Gate commands from PAG TO PAP then PAP to Board
+					//rest of the gate board commands	// Gate commands from PAG TO PAP then PAP to Board
 
 				default:
 					// Add the command to the linked list associated with/belonging to the socket
@@ -475,6 +493,7 @@ int CCCM_PAG::FindDisplayChannel(int nArray, int nArrayCh)
 //void CInstMsgProcess::SetChannelInfo(void)
 
 // I doubt that this works correctly  --- 2018-03-23 jeh --- don't use
+// Instead see    case SET_WALL_NX_CMD_ID: in ProcessReceivedMessage in CCM_pag line 324
 void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 	{
 	int nPam, nInst, nSeq, nCh, msgcnt;
@@ -548,11 +567,12 @@ void CCCM_PAG::SetChannelInfo(PAP_INST_CHNL_NCNX *pPamInstChnlInfo)
 // 2018-03-23 Executes only on PAP
 // Sets all wall processing variable for each channel to the same value.
 
+#if 0
+
 void CCCM_PAG::WallNx(void)
 	{
 	}
 
-#if 0
 // Send the same message to all Instruments
 BOOL CCCM_PAG::SendSlaveMsgToAll(ST_LARGE_CMD *pCmd)
 	{

@@ -30,7 +30,7 @@ extern char *GetTimeStringPtr(void);
 
 CServerSocket::CServerSocket(CServerConnectionManagement *pSCM, int nOwningThreadType)
 	{
-	CString s;
+	CString s, t;
 	Init();
 	m_pSCM = pSCM;
 	m_pstSCM = pSCM->m_pstSCM;
@@ -40,13 +40,14 @@ CServerSocket::CServerSocket(CServerConnectionManagement *pSCM, int nOwningThrea
 		//m_pFifo = new CCmdFifo( INSTRUMENT_PACKET_SIZE );		// FIFO control for receiving instrument packets
 		m_pFifo = new CCmdFifo(INSTRUMENT_PACKET_SIZE, 'S', m_nMyServer,0);	// set nClient when client connects
 		m_pFifo->m_nOwningThreadId = AfxGetThread()->m_nThreadID;
-		strcpy( m_pFifo->tag, "New m_pFifoSrvSkt 48\n" );
-		s = m_pFifo->tag;
-		TRACE( s );
+		strcpy( m_pFifo->tag, "New m_pFifoSrvSkt ServerSocket43  " );
+		s = t = m_pFifo->tag;
+		//TRACE( s );
 
 		m_pElapseTimer = new CHwTimer();
-		strcpy( m_pElapseTimer->tag, "CServerSocket55 " );
-
+		strcpy( m_pElapseTimer->tag, "CServerSocket48 " );
+		s = m_pElapseTimer->tag;
+		t += s;
 		m_nSeqIndx = m_wLastSeqCnt = 0;
 		memset( &m_nSeqCntDbg[0], 0, sizeof( m_nSeqCntDbg ) );
 		m_nListCount = m_nListCountChanged = 0;
@@ -55,12 +56,13 @@ CServerSocket::CServerSocket(CServerConnectionManagement *pSCM, int nOwningThrea
 		s.Format( _T( "Server Fifo cnt=%d, Async cnt=%d, ThreadID=%d\n" ),
 			m_pFifo->m_nFifoCnt, m_nAsyncSocketCnt, m_nOwningThreadId );
 		//m_wLastSeqCnt = 0xffff;
+		t += s;
 		}
 	else
 		{
-		s = _T( "Listener or OnStack temporary socket\n" );
+		t = _T( "Listener or OnStack temporary socket\n" );
 		}
-	TRACE(s);
+	TRACE(t);
 	}
 
 // ServerRcvListThread calls this constructor so don't make a new fifo or timer
@@ -96,6 +98,7 @@ void CServerSocket::Init(void)
 	m_dbg_cnt		= 0;
 	m_pElapseTimer	= 0;
 	m_pFifo			= 0;
+	m_nAsyncSocketCnt = gnAsyncSocketCnt++;
 	}
 
 ST_SERVERS_CLIENT_CONNECTION * CServerSocket::GetpSCC( void )
@@ -112,20 +115,38 @@ CServerSocket::~CServerSocket()
 	{
 	CString s,t,u;
 	void *pv = 0;
-	int i, j;
+	int i, j, kill_chnls;
 	int nDummy;
 	SOCKET hThis;
-	i = j = 0;
+	i = j = kill_chnls = 0;
 	DWORD nId = AfxGetThread()->m_nThreadID;
 	// for listener socket, m_pSCC is null
-	t.Format(_T("Thread Id=%d - m_pSCC= %x "), nId, m_pSCC);
+	t.Format(_T("Thread Id=%d - m_pSCC= %x "), nId, (UINT)m_pSCC);
 
 	if (m_pSCM == nullptr)
 		ASSERT( 0 );
 	if (m_pSCM->m_pstSCM == nullptr)
-		ASSERT( 0 );
+		goto KILL_VCHANNELS; //ASSERT(0);
+
+	if (m_pElapseTimer)
+		{
+		delete m_pElapseTimer;
+		m_pElapseTimer = 0;
+		}
+	if (m_pFifo)
+		{
+		delete m_pFifo;
+		m_pFifo = 0;
+		}
 
 	hThis = this->m_hSocket;
+	if (hThis == 0xffffffff)
+		{
+		kill_chnls = 1;
+		goto KILL_VCHANNELS;
+		}
+
+
 	switch (m_nOwningThreadType)
 		{
 		
@@ -139,22 +160,17 @@ CServerSocket::~CServerSocket()
 		TRACE( s );
 //		try  //    ............ debugger says invalid m_pstSCM
 //			{
-			if (m_pSCM->m_pstSCM->pServerListenSocket == 0)
-				{
-				TRACE(_T("m_pSCM->m_pstSCM->pServerListenSocket = 0\n"));
-				s.Format(_T("Server Socket %d Listener Destructor exit\n"), hThis);
-				TRACE(s);
-				return;
-				}
-//			}
-//		catch (CException)
-//			{
-//			e->ReportError();
-//			e->Delete();
-//			}
+		if (m_pSCM->m_pstSCM->pServerListenSocket == 0)
+			{
+			TRACE(_T("m_pSCM->m_pstSCM->pServerListenSocket = 0\n"));
+			s.Format(_T("Server Socket %d Listener Destructor exit\n"), hThis);
+			TRACE(s);
+			return;
+			}
+			// catch()
 
 		else
-			{
+			{	// else #1
 			i = (int)m_pSCM->m_pstSCM->pServerListenSocket->m_hSocket;
 			if (i > 0)
 				{
@@ -163,12 +179,12 @@ CServerSocket::~CServerSocket()
 				m_pSCM->m_pstSCM->pServerListenSocket = 0;
 				//Sleep( 10 );
 				}
-
+#if 0
 			if (m_pElapseTimer)
 				{
-				strcat( m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n" );
+				strcat(m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n");
 				s = m_pElapseTimer->tag;
-				TRACE( s );
+				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
 				delete m_pElapseTimer;
 				m_pElapseTimer = NULL;
@@ -176,136 +192,162 @@ CServerSocket::~CServerSocket()
 
 			if (m_pFifo != NULL)
 				{
-				u.Format( _T( "\n~CServerSocket() Fifo cnt=%d,  ThreadID=%d\n" ),
-					m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId );
+				u.Format(_T("\n~CServerSocket() Fifo cnt=%d,  ThreadID=%d\n"),
+					m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId);
 				s += u;
-				TRACE( s );
-				strcat( m_pFifo->tag, "Kill fifo SrvSkt\n" );
+				TRACE(s);
+				strcat(m_pFifo->tag, "Kill fifo SrvSkt\n");
 				s = m_pFifo->tag;
-				TRACE( s );
+				TRACE(s);
 				pMainDlg->SaveDebugLog(s);
 				delete m_pFifo;
 				m_pFifo = 0;
 				}
-			}	// pServerListenSocket != 0
+#endif
 
-		m_pSCM->m_pstSCM->pServerListenSocket = 0;
-		s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
-		TRACE(s);
-		return;
+			m_pSCM->m_pstSCM->pServerListenSocket = 0;
+			s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
+			TRACE(s);
+			return;
+			}	// else #1 pServerListenSocket != 0
 
-	case eOnStack:
-		s = _T( "Temporary socket to create ServerConnection\n" );
-		t += s;
-		TRACE( t );
-		s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
-		TRACE(s);
-		return;	// don't want to proceed and delete all we just built
+		case eOnStack:
+			s = _T("Temporary socket to create ServerConnection\n");
+			t += s;
+			TRACE(t);
+			s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
+			TRACE(s);
+			return;	// don't want to proceed and delete all we just built
 
-	case eServerConnection:
-		if ((m_nClientIndex < 0) || (m_nClientIndex >= gnMaxClientsPerServer))
-			ASSERT( 0 );
-		if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == nullptr)
-			ASSERT( 0 );
-		
-		m_pSCC = GetpSCC();
-		s += _T( "\n" );
-		t += s;
-		s.Format( _T( " sizeof(CmdFifo) = %d Socket# =%d, CreateThread = %d\n" ),
-			sizeof( CCmdFifo ), m_nAsyncSocketCnt, m_nOwningThreadId );
-		t += s;
-		TRACE( t );
+		case eServerConnection:
+			if ((m_nClientIndex < 0) || (m_nClientIndex >= gnMaxClientsPerServer))
+				ASSERT(0);
+			if (m_pSCM->m_pstSCM->pClientConnection[m_nClientIndex] == nullptr)
+				ASSERT(0);
 
-		if (m_pElapseTimer)
-			{
-			strcat( m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n" );
-			s = m_pElapseTimer->tag;
-			TRACE( s );
-			pMainDlg->SaveDebugLog(s);
-			delete m_pElapseTimer;
-			m_pElapseTimer = NULL;
-			}
+			m_pSCC = GetpSCC();  // CRASHED HERE 10-30-20
+			s += _T("\n");
+			t += s;
+			s.Format(_T(" sizeof(CmdFifo) = %d Socket# =%d, CreateThread = %d\n"),
+				sizeof(CCmdFifo), m_nAsyncSocketCnt, m_nOwningThreadId);
+			t += s;
+			TRACE(t);
 
-		if (m_pFifo != NULL)
-			{
-			u.Format( _T( "\n~CServerSocket() Fifo cnt=%d,  ThreadID=%d\n" ),
-				m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId );
-			s += u;
-			TRACE( s );
-			strcat( m_pFifo->tag, "Kill fifo SrvSkt\n" );
-			s = m_pFifo->tag;
-			TRACE( s );
-			pMainDlg->SaveDebugLog(s);
-			delete m_pFifo;
-			m_pFifo = 0;
-			}		
-	
-		// Kill all the virtual channels
-#ifdef I_AM_PAP
-		if (m_pstSCM->pClientConnection[m_nClientIndex]->bOwnVChnls)
-			{
-			for (j = 0; j < MAX_SEQ_COUNT; j++)
+			if (m_pElapseTimer)
 				{
-				for (i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
-					{
-					delete m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[j][i];
-					m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[j][i] = 0;
-					}
+				strcat(m_pElapseTimer->tag, "KIll HWTimer SrvSkt\n");
+				s = m_pElapseTimer->tag;
+				TRACE(s);
+				pMainDlg->SaveDebugLog(s);
+				delete m_pElapseTimer;
+				m_pElapseTimer = NULL;
 				}
-			m_pstSCM->pClientConnection[m_nClientIndex] = 0;
-			m_pstSCM->pClientConnection[m_nClientIndex]->bOwnVChnls = 0;
-			}
+
+			if (m_pFifo != NULL)
+				{
+				u.Format(_T("\n~CServerSocket() Fifo cnt=%d,  ThreadID=%d\n"),
+					m_pFifo->m_nFifoCnt, m_pFifo->m_nOwningThreadId);
+				s += u;
+				TRACE(s);
+				strcat(m_pFifo->tag, "Kill fifo SrvSkt\n");
+				s = m_pFifo->tag;
+				TRACE(s);
+				pMainDlg->SaveDebugLog(s);
+				delete m_pFifo;
+				m_pFifo = 0;
+				}
+
+
+			// Kill all the virtual channels
+KILL_VCHANNELS:
+			if ((m_nClientIndex >= 0) && (m_nClientIndex < MAX_CLIENTS_PER_SERVER))
+				{   // valid connection
+
+#ifdef I_AM_PAP
+			
+			if (m_pstSCM->pClientConnection[m_nClientIndex]->bOwnVChnls)
+				{
+				for (j = 0; j < MAX_SEQ_COUNT; j++)
+					{				
+					for (i = 0; i < MAX_CHNLS_PER_MAIN_BANG; i++)
+						{
+						delete m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[j][i];
+						m_pstSCM->pClientConnection[m_nClientIndex]->pvChannel[j][i] = 0;
+						}
+					}
+				m_pstSCM->pClientConnection[m_nClientIndex]->bOwnVChnls = 0;
+				m_pstSCM->pClientConnection[m_nClientIndex] = 0;
+				}
 #endif
 
 
 
-		// safety check from testing operations
-		ST_SERVERS_CLIENT_CONNECTION *m_pCheckSCC;
-		nDummy = 5;	// this had to be declared at the top of the procedure
-		// or we get error saying dummy init skipped by default;
-		m_pCheckSCC = m_pstSCM->pClientConnection[m_nClientIndex];
-		if (m_pCheckSCC == m_pSCC)
-			{
-			nDummy = 4;
-
-			i = (int)m_pSCC->pSocket->m_hSocket;
-			if (i > 0)
+			// safety check from testing operations
+			ST_SERVERS_CLIENT_CONNECTION *m_pCheckSCC;
+			nDummy = 5;	// this had to be declared at the top of the procedure
+			// or we get error saying dummy init skipped by default;
+			m_pCheckSCC = m_pstSCM->pClientConnection[m_nClientIndex];
+			if (m_pCheckSCC == m_pSCC)
 				{
-				i = m_pSCC->pSocket->ShutDown();
-				if ((i > 0) && (bAppIsClosing == 0))
-					{
-					try
-						{
-						//if the app is closing, dont try to close the socket 3-15-18
+				nDummy = 4;
 
-						m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
-#ifdef I_AM_PAP
-						CAsyncSocket::Close();
-#else
-						CSocket::Close();
-#endif
-						}
-					catch (CException *e)
+				i = (int)m_pSCC->pSocket->m_hSocket;
+				if (i > 0)
+					{
+					i = m_pSCC->pSocket->ShutDown();
+					if ((i > 0) && (bAppIsClosing == 0))
 						{
-						e->ReportError();
-						e->Delete();
+						try
+							{
+							//if the app is closing, dont try to close the socket 3-15-18
+
+							m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
+	#ifdef I_AM_PAP
+							CAsyncSocket::Close();
+	#else
+							CSocket::Close();
+	#endif
+							}
+						catch (CException * e)
+							{	//1st try
+							i = m_pSCC->pSocket->ShutDown();
+							e->ReportError();
+							e->Delete();
+							if ((i > 0) && (bAppIsClosing == 0))
+								{
+								try
+									{
+									//if the app is closing, dont try to close the socket 3-15-18
+
+									m_pSCC->pSocket->Close(); // necessary or else KillReceiverThread does not run
+	#ifdef I_AM_PAP
+									CAsyncSocket::Close();
+	#else
+									CSocket::Close();
+	#endif
+									}
+								catch (CException * e)
+									{	//  2nd try
+									e->ReportError();
+									e->Delete();
+									}
+								}
+							Sleep(10);
+							}
+						}
+					else
+						{
+						nDummy = 4;	// debugging multiple disconnects of client before shutdown
 						}
 					}
-				Sleep( 10 );
+
+					m_pSCC->bConnected = 0;
+					m_pSCC->pSocket = 0;
 				}
-			}
-		else
-			{
-			nDummy = 4;	// debugging multiple disconnects of client before shutdown
-			}
+				break;
+			
 
-		if (m_pCheckSCC == m_pSCC)
-			{
-			m_pSCC->bConnected = 0;
-			m_pSCC->pSocket = 0;
-			}
-			break;
-
+			}    // valid connection?
 
 		// end of eServerConnection case
 
@@ -316,7 +358,7 @@ CServerSocket::~CServerSocket()
 		s.Format(_T("Server Socket %d Destructor exit\n"), hThis);
 		TRACE(s);
 		return;
-		}
+		}     //switch (m_nOwningThreadType)
 
 
 	// only get here if socket type is eServerConnection
@@ -365,9 +407,9 @@ CServerSocket::~CServerSocket()
 		m_pSCC->pSocket = 0;
 	s.Format(_T("Server Socket %d Destructor exit\n"), m_nClientIndex);
 	TRACE(s);
-	for (i = 0; i < 100; i++)
+	for (i = 0; i < 10; i++)
 		nDummy++;
-	}
+	}	// ~CServerSocket()
 
 // CServerSocket member functions
 
@@ -380,6 +422,9 @@ int CServerSocket::OnAcceptPrep(void)
 	int nMyServer;
 	CString s;
 	DWORD hMyThreadID = GetCurrentThreadId();
+
+	if (bAppIsClosing)
+		return 0;
 
 	// look at all the servers and see if I am in the list
 	for (nMyServer = 0; nMyServer < MAX_SERVERS; nMyServer++)
@@ -573,7 +618,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 	Asocket.GetPeerName(Ip4C,uPortC);	// connecting clients info??
 	s.Format(_T("Client side socket %s : %d\n"), Ip4C, uPortC);
 	TRACE(s);
-	int ntmp = 0;
+	long ntmp = 0;
 	s = Ip4C;
 	if (1 != InetPton(AF_INET, s, &wClientBaseAddress) )
 		{	TRACE(_T("InetPton error\n"));		return;		}
@@ -944,6 +989,7 @@ void CServerSocket::OnAccept(int nErrorCode)
 			s.Format(_T("InetPton success client %s:%d connected to server %s:%d******\n"),
 				Ip4C, uPortC, Ip4S, uPortS);
 			TRACE(s);
+#ifdef I_AM_PAP
 			// choose a global structure based on the server. Then we know which client we are serving
 			// For now (3/25/2020 cheat.. Gate/ADC board connects to 7502
 			// pulser connects to 7602
@@ -953,17 +999,20 @@ void CServerSocket::OnAccept(int nErrorCode)
 				{// client is Gate board aka ADC
 				gsPAP2Wall_IP.Format(_T("%s : %d"), Ip4S, uPortS);
 				gsWall_IP.Format(_T("%s : %d"), Ip4C, uPortC);
+				gbWallDisconnected = 0;
 				}
 			else if (uPortS == pSCM[1]->GetServerPort())  // should be 7602
 				{// client is pulser
 				gsPAP2Pulser_IP.Format(_T("%s : %d"), Ip4S, uPortS);
 				gsPulser_IP.Format(_T("%s : %d"), Ip4C, uPortC);
+				gbPulserDisconnected = 0;
 				}
 			else
 				{
 				// this is an unknown client
 				TRACE(_T("Unknown server port -- thus unknown client\n"));
 				}
+#endif
 			ntmp = ntohl(*(u_long*)&wClientBaseAddress);
 			}
 
@@ -1199,17 +1248,15 @@ void CServerSocket::OnAccept(int nErrorCode)
 #endif
 
 
-	/******************************************************************************/
-	/******************************************************************************/
-
 	// Collect received data into expected packet lengths. That is
 	// reconstruct packet from received data.  Its a feature of TCPIP.
+
 
 // Servers receive data from clients and send commands to clients
 void CServerSocket::OnReceive(int nErrorCode)
 	{
 	// TODO: Add your specialized code here and/or call the base class
-	//BYTE Buf[MAX_PAM_BYTES+8];			// put it on the stack instead of the heap. Probably quicker
+	//BYTE Buf[MAX_PAM_BYTES+8];	// put it on the stack instead of the heap. Probably quicker
 	
 	int nWholePacketQty = 0;
 
@@ -1217,6 +1264,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 	void *pPacket = 0;
 	int nPacketSize;
 	WORD wByteCnt;
+	BYTE bPulserPacket = 0;
 	GenericPacketHeader *pHeader;
 
 	int n;
@@ -1224,7 +1272,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 
 	// If shutting down and stop send/receive set, throw away the data
 	if (m_pSCM->m_pstSCM == NULL)				return;	
-	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)	return;
+	if (m_pSCM->m_pstSCM->nSeverShutDownFlag)	return; // might put last. read packet into stack variable 2020-10-27
 	if (m_pSCC == NULL)							return;
 
 //	if (m_nClientIndex == 0)
@@ -1242,6 +1290,7 @@ void CServerSocket::OnReceive(int nErrorCode)
 	if (m_pSCM->m_pstSCM->uServerPort == 7602)
 		{
 		s = _T("Getting Pulser Status Messages");
+		bPulserPacket = 1;
 		}
 	// A real hardware FIFO would shift data to the output side instantly
 	m_pFifo->Shift();
@@ -1271,224 +1320,229 @@ void CServerSocket::OnReceive(int nErrorCode)
 			}
 #endif
 
-		while (1)	// total byte in FIFO. May be multiple packets.
-			{	// get packets
-			int bc;
-			wByteCnt = m_pFifo->GetFIFOByteCount();
-			if (wByteCnt == 672)
-				n = 672;
-			pHeader = (GenericPacketHeader*) m_pFifo->GetOutLoc();
-			bc = pHeader->wByteCount;
-			if (pHeader->uSync != SYNC)
-				bc = bc;
-			if (wByteCnt < sizeof(GenericPacketHeader))
-				{
-				//CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
-				//return;
-				break;	// check at bottom to see if need to signal RcvListThread
-				}
-			nPacketSize = m_pFifo->GetPacketSize();
-			if ((nPacketSize <= 0) || (wByteCnt < nPacketSize))
-				{
-#ifdef I_AM_PAP
-				CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
-#else
-				CSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
-#endif
-				return;
-				}
-
-			pPacket = m_pFifo->GetNextPacket();
-			if (pPacket == NULL)
-				{
-#ifdef I_AM_PAP
-				CAsyncSocket::OnReceive(nErrorCode);
-#else
-				CSocket::OnReceive(nErrorCode);
-#endif
-				return;
-				}
-			pHeader = (GenericPacketHeader *)pPacket;
-
-			// See if received messages are skipping MsgSeqCnt, ie. some packets not actually sent
-			memcpy((void*)&m_HeaderDbg[m_dbg_cnt++], (void *) pHeader, sizeof(GenericPacketHeader));
-			m_dbg_cnt &= 7;
-
-			// debugging to see if all packets are caught at some time, maybe out of order
-			s.Format(_T("OnReceive MsgSeqCnt = %5d\n"), pHeader->wMsgSeqCnt);
-			//pMainDlg->SaveDebugLog(s);
-
-			if ((pHeader->wMsgSeqCnt - (m_wLastSeqCnt+1)) != 0) 
-				{
-				WORD wLast1 =(WORD) (m_wLastSeqCnt+1); // last seq is 32 bit. casting to word cause 16 bit wrap around
-				if (wLast1 != pHeader->wMsgSeqCnt)
+			while (1)	// total byte in FIFO. May be multiple packets.
+				{	// get packets
+				int bc;
+				wByteCnt = m_pFifo->GetFIFOByteCount( );
+				if (wByteCnt == 672)
+					n = 672;
+				pHeader = (GenericPacketHeader *) m_pFifo->GetOutLoc( );
+				bc = pHeader->wByteCount;
+				if (pHeader->uSync != SYNC)
+					bc = bc;
+				if (wByteCnt < sizeof(GenericPacketHeader))
 					{
-					n = pHeader->wMsgSeqCnt - wLast1;
-					m_pSCC->uLostReceivedPackets += n;
-					n = m_nSeqIndx;
-					int j = GetRcvListCount();
-					s.Format(_T("Lost Packet, Socket %d OnReceive got MsgSeqCnt %d, expected %d..RcvList Count = %5d, Lost = %5d\n"),
-						m_pSCM->GetServerPort(), pHeader->wMsgSeqCnt, (m_wLastSeqCnt + 1), j, m_pSCC->uLostReceivedPackets);
-					TRACE(s);
-					pMainDlg->SaveDebugLog(s);
+					//CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
+					//return;
+					break;	// check at bottom to see if need to signal RcvListThread
 					}
-				}
+				nPacketSize = m_pFifo->GetPacketSize( );
+				if ((nPacketSize <= 0) || (wByteCnt < nPacketSize))
+					{
+#ifdef I_AM_PAP
+					CAsyncSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
+#else
+					CSocket::OnReceive(nErrorCode);	// wait for more bytes on next OnReceive
+#endif
+					return;
+					}
+
+				pPacket = m_pFifo->GetNextPacket( );
+				if (pPacket == NULL)
+					{
+#ifdef I_AM_PAP
+					CAsyncSocket::OnReceive(nErrorCode);
+#else
+					CSocket::OnReceive(nErrorCode);
+#endif
+					return;
+					}
+
+				pHeader = (GenericPacketHeader *) pPacket;
+
+				// See if received messages are skipping MsgSeqCnt, ie. some packets not actually sent
+				memcpy((void *) &m_HeaderDbg[m_dbg_cnt++], (void *) pHeader, sizeof(GenericPacketHeader));
+				m_dbg_cnt &= 7;
+
+				// debugging to see if all packets are caught at some time, maybe out of order
+				s.Format(_T("OnReceive MsgSeqCnt = %5d\n"), pHeader->wMsgSeqCnt);
+				//pMainDlg->SaveDebugLog(s);
+
+				if ((pHeader->wMsgSeqCnt - (m_wLastSeqCnt + 1)) != 0)
+					{
+					WORD wLast1 = (WORD) (m_wLastSeqCnt + 1); // last seq is 32 bit. casting to word cause 16 bit wrap around
+					if (wLast1 != pHeader->wMsgSeqCnt)
+						{
+						n = pHeader->wMsgSeqCnt - wLast1;
+						m_pSCC->uLostReceivedPackets += n;
+						n = m_nSeqIndx;
+						int j = GetRcvListCount( );
+						s.Format(_T("Lost Packet, Socket %d OnReceive got MsgSeqCnt %d, expected %d..RcvList Count = %5d, Lost = %5d\n"),
+							m_pSCM->GetServerPort( ), pHeader->wMsgSeqCnt, (m_wLastSeqCnt + 1), j, m_pSCC->uLostReceivedPackets);
+						TRACE(s);
+						pMainDlg->SaveDebugLog(s);
+						}
+					}
 
 #if 1
 			// connection order may not match PAP order since not using hard code IP address in real system
-			BYTE bClientIndex = (BYTE)m_pSCC->m_nClientIndex;	// the order in which the clients connected
-			BYTE bPap = pHeader->bPapNumber;	// the machine ID number from 0 to MAX_CLIENTS -1
-			// The client itself knows its client number, assigned by humans with a usb stick.
+				BYTE bClientIndex = (BYTE) m_pSCC->m_nClientIndex;	// the order in which the clients connected
+				BYTE bPap = pHeader->bPapNumber;	// the machine ID number from 0 to MAX_CLIENTS -1
+				// The client itself knows its client number, assigned by humans with a usb stick.
 
-			if ((bPap < MAX_CLIENTS) && (bClientIndex < MAX_CLIENTS))
-				m_pSCM->m_pstSCM->bActualClientConnection[bPap] = bClientIndex;
+				if ((bPap < MAX_CLIENTS) && (bClientIndex < MAX_CLIENTS))
+					m_pSCM->m_pstSCM->bActualClientConnection[bPap] = bClientIndex;
 
 #else
 			// This is PAG and its connection index number (in 2018 since only one PAP) is 0
-			if ((bPap < MAX_CLIENTS) && (bClientIndex < MAX_CLIENTS))
-				m_pSCM->m_pstSCM->bActualClientConnection[bPap] = bClientIndex;
+				if ((bPap < MAX_CLIENTS) && (bClientIndex < MAX_CLIENTS))
+					m_pSCM->m_pstSCM->bActualClientConnection[bPap] = bClientIndex;
 #endif
-			m_wLastSeqCnt = pHeader->wMsgSeqCnt;
-			pB =  new BYTE[nPacketSize];	// resize the buffer that will actually be used
-			memcpy( (void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
-			//InputRawDataPacket *pIdataPacket = (InputRawDataPacket *) pB;
-			IDATA_FROM_HW *pIdataPacket = (IDATA_FROM_HW *) pB;
-			// Debugging
+				m_wLastSeqCnt = pHeader->wMsgSeqCnt;
+				pB = new BYTE[nPacketSize];	// resize the buffer that will actually be used
+				memcpy((void *) pB, pPacket, nPacketSize);	// move all data to the new buffer
+				//InputRawDataPacket *pIdataPacket = (InputRawDataPacket *) pB;
+				IDATA_FROM_HW *pIdataPacket = (IDATA_FROM_HW *) pB;
+				// Debugging
 #ifdef I_AM_PAP
-			if (nPacketSize != sizeof(IDATA_FROM_HW))
-				{
-				s.Format(_T("Expected packet size = %d, but got %d"), nPacketSize, sizeof(IDATA_FROM_HW));
-				TRACE(s);
-				}
+				if ((nPacketSize != sizeof(IDATA_FROM_HW)) && (bPulserPacket == 0))
+					{
+					s.Format(_T("Expected packet size = %d, but got %d"), sizeof(IDATA_FROM_HW), nPacketSize);
+					TRACE(s);
+					}
 #endif
 #if 0
 			// detects correct seq 2,0,1,2,0,1
-			if (pIdataPacket->wMsgID == 1)
-				{
-				s.Format(_T("Idata Start Seq = %d\n"), pIdataPacket->bStartSeqNumber);
-				TRACE(s);
-				}
+				if (pIdataPacket->wMsgID == 1)
+					{
+					s.Format(_T("Idata Start Seq = %d\n"), pIdataPacket->bStartSeqNumber);
+					TRACE(s);
+					}
 #endif
 
 #if 0
-			if (pIdataPacket->wMsgID == 3)
-				{
-				s = _T("ReadBackData\n");
-				TRACE(s);
-				}
-#endif
-			
-			m_nSeqCntDbg[m_nSeqIndx++] = pIdataPacket->wMsgSeqCnt;
-			m_nSeqIndx &= 0x3ff;
-
-			LockRcvPktList();
-			if (m_pSCC)
-				{
-				if (m_pSCC->pServerRcvListThread)
+				if (pIdataPacket->wMsgID == 3)
 					{
-					AddTailRcvPkt(pB);	// put the buffer into the recd data linked list
-					nWholePacketQty++;
-					m_pSCC->bConnected = 2;
-					// WM_USER_SERVERSOCKET_PKT_RECEIVED
-					// the posted message will be processed by: CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
-					// ProcessRcvList needs to be of lower priority than OnReceive in order for OnReceive to quickly
-					// transfer data into a linked list and then exit.
-					// m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED,0,0L);
+					s = _T("ReadBackData\n");
+					TRACE(s);
+					}
+#endif
+
+				m_nSeqCntDbg[m_nSeqIndx++] = pIdataPacket->wMsgSeqCnt;
+				m_nSeqIndx &= 0x3ff;
+
+				LockRcvPktList( );
+				if (m_pSCC)
+					{
+					if (m_pSCC->pServerRcvListThread)
+						{
+						AddTailRcvPkt(pB);	// put the buffer into the recd data linked list
+						nWholePacketQty++;
+						m_pSCC->bConnected = 2;
+						// WM_USER_SERVERSOCKET_PKT_RECEIVED
+						// the posted message will be processed by: CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam)
+						// ProcessRcvList needs to be of lower priority than OnReceive in order for OnReceive to quickly
+						// transfer data into a linked list and then exit.
+						// m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED,0,0L);
+						}
+					else
+						{
+						delete pB;
+						pB = 0;
+						}
 					}
 				else
 					{
 					delete pB;
 					pB = 0;
+					TRACE(_T("CServerSocket::OnReceive - deleting data because no ServerRcvListThread\n"));
 					}
-				}
-			else
-				{
-				delete pB;
-				pB = 0;
-				TRACE(_T("CServerSocket::OnReceive - deleting data because no ServerRcvListThread\n"));
-				}
 
-			UnLockRcvPktList();
+				UnLockRcvPktList( );
 
-			if (m_pSCC && pB)
-				{
-				m_pSCC->uBytesReceived += nPacketSize;
-				m_pSCC->uPacketsReceived++;
-				if (m_pElapseTimer)
+				if (m_pSCC && pB)
 					{
-					if ((m_pSCC->uPacketsReceived & 0x7ff) == 0)	m_pElapseTimer->Start();
-					if ((m_pSCC->uPacketsReceived & 0x7ff) == 0x7ff)
+					m_pSCC->uBytesReceived += nPacketSize;
+					m_pSCC->uPacketsReceived++;
+					if (m_pElapseTimer)
 						{
-						m_nElapseTime = m_pElapseTimer->Stop(); // elapse time in uSec for 2048 packets
-						float fPksPerSec = 2048000000.0f/( (float) m_nElapseTime);
-						m_pSCC->uPacketsPerSecond = (UINT)fPksPerSec;
-						// move this info to main dialog and output on timer.. see if this stops loss of all wall data
-						// 2018-09-07
-
-						s.Format(_T("[%08d]Server[%d]Socket[%d]::OnReceive - [SeqCnt=%5d] Packets/sec = %6.1f\n"), 
-							m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nClientIndex, 
-							pIdataPacket->wMsgSeqCnt, fPksPerSec);
-						TRACE(s);
-						if ((m_pSCC->uPacketsReceived & 0x1fff) == 0x1fff)
-							pMainDlg->SaveDebugLog(s);
-#if 0
-						if ((m_pSCM->m_nMyServer < 2) && (m_pSCM->m_nMyServer >= 0) )
+						if ((m_pSCC->uPacketsReceived & 0x7ff) == 0)	m_pElapseTimer->Start( );
+						if ((m_pSCC->uPacketsReceived & 0x7ff) == 0x7ff)
 							{
-							gPksPerSec[m_pSCM->m_nMyServer].fPksPerSec = fPksPerSec;
-							gPksPerSec[m_pSCM->m_nMyServer].uPktsPerSec = m_pSCC->uPacketsPerSecond;
-							gPksPerSec[m_pSCM->m_nMyServer].nClientIndx = m_pSCC->m_nClientIndex;
-							gPksPerSec[m_pSCM->m_nMyServer].wMsgSeqCnt = pIdataPacket->wMsgSeqCnt;
-							gPksPerSec[m_pSCM->m_nMyServer].nElapseTime = m_nElapseTime;
-							gPksPerSec[m_pSCM->m_nMyServer].uPktsSent = m_pSCC->uPacketsReceived;
-							gPksPerSec[m_pSCM->m_nMyServer].nTrigger = 1;	// cause main dlg to display. Main dlg clears
-							}
+							m_nElapseTime = m_pElapseTimer->Stop( ); // elapse time in uSec for 2048 packets
+							float fPksPerSec = 2048000000.0f / ((float) m_nElapseTime);
+							m_pSCC->uPacketsPerSecond = (UINT) fPksPerSec;
+							// move this info to main dialog and output on timer.. see if this stops loss of all wall data
+							// 2018-09-07
+
+							s.Format(_T("[%08d]Server[%d]Socket[%d]::OnReceive - [SeqCnt=%5d] Packets/sec = %6.1f\n"),
+								m_pSCC->uPacketsReceived, m_pSCM->m_nMyServer, m_pSCC->m_nClientIndex,
+								pIdataPacket->wMsgSeqCnt, fPksPerSec);
+							TRACE(s);
+							if ((m_pSCC->uPacketsReceived & 0x1fff) == 0x1fff)
+								pMainDlg->SaveDebugLog(s);
+#if 0
+							if ((m_pSCM->m_nMyServer < 2) && (m_pSCM->m_nMyServer >= 0))
+								{
+								gPksPerSec[m_pSCM->m_nMyServer].fPksPerSec = fPksPerSec;
+								gPksPerSec[m_pSCM->m_nMyServer].uPktsPerSec = m_pSCC->uPacketsPerSecond;
+								gPksPerSec[m_pSCM->m_nMyServer].nClientIndx = m_pSCC->m_nClientIndex;
+								gPksPerSec[m_pSCM->m_nMyServer].wMsgSeqCnt = pIdataPacket->wMsgSeqCnt;
+								gPksPerSec[m_pSCM->m_nMyServer].nElapseTime = m_nElapseTime;
+								gPksPerSec[m_pSCM->m_nMyServer].uPktsSent = m_pSCC->uPacketsReceived;
+								gPksPerSec[m_pSCM->m_nMyServer].nTrigger = 1;	// cause main dlg to display. Main dlg clears
+								}
 #endif
 
+							}
 						}
-					}
-				}	// if (m_pSCC)
-			} 	// get packets
-				
-		//theApp.ReleaseInstrumentListAccess(m_pSCC->m_nClientIndex);
+					}	// if (m_pSCC)
+				} 	// get packets
 
-		// Post a message to someone who cares and let that routine/class/function deal with the packet
-		// Posted message goes to CServerRcvListThread::ProcessRcvList()
-		// which calls CServerRcvListThread::ProcessInstrumentData()
-		if (nWholePacketQty)
-			{
-			int i;
-			i = GetRcvListCount(); // how many whole packets in receive list
-			if (m_nListCount < i)
-				{	// count increased
-				m_nListCountChanged = 1;
-				m_nListCount = i;
-				s.Format(_T("Idata RcvPktList Count increased to = %d\n"), m_nListCount);
-				TRACE(s);
-				}
-			else if ((m_nListCountChanged) && (i < m_nListCount) )
+			//theApp.ReleaseInstrumentListAccess(m_pSCC->m_nClientIndex);
+
+			// Post a message to someone who cares and let that routine/class/function deal with the packet
+			// Posted message goes to CServerRcvListThread::ProcessRcvList()
+			// which calls CServerRcvListThread::ProcessInstrumentData()
+			if (nWholePacketQty)
 				{
-				s.Format(_T("Idata RcvPktList Count decreased from = %d to = %d\n"), m_nListCount, i);
-				TRACE(s);
-				m_nListCountChanged = 0;
+				int i;
+				i = GetRcvListCount( ); // how many whole packets in receive list
+				if (m_nListCount < i)
+					{	// count increased
+					m_nListCountChanged = 1;
+					m_nListCount = i;
+					s.Format(_T("Idata RcvPktList Count increased to = %d\n"), m_nListCount);
+					TRACE(s);
+					}
+				else if ((m_nListCountChanged) && (i < m_nListCount))
+					{
+					s.Format(_T("Idata RcvPktList Count decreased from = %d to = %d\n"), m_nListCount, i);
+					TRACE(s);
+					m_nListCountChanged = 0;
+					}
+				// causes CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam) to run
+				m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED, (WORD) m_pSCC->m_nClientIndex, 0L);
 				}
-			// causes CServerRcvListThread::ProcessRcvList(WPARAM w, LPARAM lParam) to run
-			m_pSCC->pServerRcvListThread->PostThreadMessage(WM_USER_SERVERSOCKET_PKT_RECEIVED,(WORD)m_pSCC->m_nClientIndex,0L);
-			}
 
-		if (m_pSCC)
-			{
-			if (m_pSCC->bConnected == (BYTE) eNotConnected)
-				m_pSCC->bConnected = (BYTE) eNotConfigured;
-			//if (m_pSCC->uMaxPacketReceived < (unsigned) m)	m_pSCC->uMaxPacketReceived = m;
-			}
+			if (m_pSCC)
+				{
+				if (m_pSCC->bConnected == (BYTE) eNotConnected)
+					m_pSCC->bConnected = (BYTE) eNotConfigured;
+				//if (m_pSCC->uMaxPacketReceived < (unsigned) m)	m_pSCC->uMaxPacketReceived = m;
+				}
 		}	// if ( n > 0)
-	else	
+	else
 		{	// if ( n < 0)
-		n = GetLastError();
-		s.Format( _T( "OnReceive caused error %d\n" ), n );
+		n = GetLastError( );
+		s.Format(_T("OnReceive caused error %d\n"), n);
 		TRACE(s);
 		pMainDlg->SaveDebugLog(s);
 		}
+
+		// end of proposed subroutine
+
+				//}
 
 #ifdef I_AM_PAP
 		CAsyncSocket::OnReceive(nErrorCode);
@@ -1505,12 +1559,58 @@ void CServerSocket::OnClose(int nErrorCode)
 	// KillpClientConnectionStruct();
 	int i = 0;
 	CString s;
+	CString Ip4S, t, sOut;
+	//UINT uPortS;
+	CAsyncSocket Asocket;
 
 	// kill the socket's thread  .. a partial shutdown
 	//CAsyncSocket::OnClose(nErrorCode);	//0x2745 on a restart of instrument = 10053
 	// #define WSAECONNABORTED                  10053L
 	// very different in PAP compared to PAG
 		
+// may need to have  ifdef I_AM_PAP
+	// get string IP address from gsWall_IP
+	// gsWall_IP.Format(_T("%s : %d"), Ip4C, uPortC);
+
+
+
+	if (m_pSCC)
+		{
+		s = gsWall_IP;
+		i = s.Find(_T(" ")); // find the space between IP4 address and port
+		s.Delete(i, 30);
+		if ((m_pSCC->sClientIP4) == s)	// ("192.168.10.200"))	// specific... need to genaralize for more clients and unknown ip addresses
+			{
+			gbWallDisconnected = eGateOff;		// bit 4
+			}
+		else
+			{
+			s = gsPulser_IP;
+			i = s.Find(_T(" "));
+			s.Delete(i, 30);
+			if ((m_pSCC->sClientIP4) == s)	//("192.168.12.220"))
+				{
+				gbPulserDisconnected = ePulserOff;	// bit 5
+				}
+			}
+		}
+
+#if 0
+	Asocket.GetSockName(Ip4S, uPortS);	// which server PORT are we connected to.
+	// Port 7502 is gate board server, 7602 is pulser server 2020-10-13  may change
+	s.Format(_T("Server side socket %s : %d\n"), Ip4S, uPortS);
+	if (uPortS == pSCM[0]->GetServerPort())	// should be 7502)
+		{
+		gbWallDisconnected = 16;		// bit 4
+		}
+	else if (uPortS == pSCM[1]->GetServerPort())
+		{
+		gbPulserDisconnected = 32;	// bit 5
+		}
+	// other wise no clue what is being shut down.
+#endif
+
+	// get the closing port's IP and port number. Match ports to find out if Gate board or Pulser
 	//CAsyncSocket::OnClose(nErrorCode);
 	if (i = this->ShutDown( 2 ))
 		{

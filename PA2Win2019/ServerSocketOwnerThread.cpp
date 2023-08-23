@@ -15,6 +15,7 @@ Revised:
 #ifdef I_AM_PAP
 //#include "PA2Win.h"
 #include "PA2WinDlg.h"
+#include "..\Include\global.h"
 #else
 #include "PA2Win.h"
 #include "PA2WinDlg.h"
@@ -588,6 +589,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	{
 	//int nClientIndex = (int) w;
 	CString s;
+	char t[200];
 	int nSent;
 	int nMsgSize;
 	int i = -1;
@@ -597,7 +599,7 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 	ST_SMALL_CMD *pCmdS;
 	//CServerSocket *pSocket = m_pConnectionSocket;
 
-
+	t[0] = 0;
 	// if there are any packets in the linked list, extract and send using socket interface
 	if ( m_pSCC->pSocket == NULL )
 		{
@@ -676,12 +678,68 @@ afx_msg void CServerSocketOwnerThread::TransmitPackets(WPARAM w, LPARAM lParam)
 				{
 				CommandLogMsg(pCmdS);
 				nMsgSize = pCmd->wByteCount;
+#ifdef I_AM_PAP
+				// log ascan control commands here. cmds 21-26
+				// check to see if debugging enables for Ascans
+				if ((gbTofRecord) && (gbTofFileExists))	// are we capturing TOF data to a file
+					{
+					switch (pCmd->wMsgID)
+						{
+					case ASCAN_SCOPE_SAMPLE_RATE_ID:
+						s.Format( _T( "ID= %3d, <ASCAN_SCOPE_SAMPLE_RATE<21> PAP= %d, Board= %d, seq=%2d, Clks/step= %d, PktListSize= %4d\n" ),
+						pCmdS->wMsgID, pCmdS->bPapNumber, pCmdS->bBoardNumber,
+						pCmdS->wMsgSeqCnt, pCmdS->wCmd[0] + 1, pCmdS->wByteCount );
+						CstringToChar(s, t);
+						pMainDlg->SaveTOF_RecordLog(t);
+						break;
+					case SET_ASCAN_SCOPE_DELAY_ID:
+						s.Format(_T("ID= %3d, <SetAscanDelay<22> %d delay clocks\n"),
+							pCmdS->wMsgID, pCmdS->wCmd[0]);
+						CstringToChar(s, t);
+						pMainDlg->SaveTOF_RecordLog(t);
+						break;					
+					case SET_ASCAN_PEAK_MODE_ID:
+						s.Format(_T("ID= %3d, <SelectAscanWaveForm<23> BeamType = %d\n"),
+							pCmdS->wMsgID, pCmdS->wCmd[0]);
+						CstringToChar(s, t);
+						pMainDlg->SaveTOF_RecordLog(t);
+						break;					
+					case SET_ASCAN_RF_BEAM_ID:
+						s.Format(_T("ID= %3d, SetAscanRfBeamSelect<24> beam = 0x%0x\n"),
+							pCmdS->wMsgID, pCmdS->wCmd[0]);
+						CstringToChar(s, t);
+						pMainDlg->SaveTOF_RecordLog(t);
+						break;					
+					case SET_ASCAN_BEAM_SEQ_ID:
+						s.Format(_T("ID= %3d, SetAscanSeqBeamReg<25> Reg = %d\n"),
+							pCmdS->wMsgID, pCmdS->wCmd[0]);
+						CstringToChar(s, t);
+						pMainDlg->SaveTOF_RecordLog(t);
+						break;						
+					case SET_ASCAN_GATE_OUTPUT_ID:
+						s.Format(_T("ID= %3d, SetAscanGateOut<26> Output = 0x%x\n"),
+							pCmdS->wMsgID, pCmdS->wCmd[0]);
+						CstringToChar(s, t);
+						pMainDlg->SaveTOF_RecordLog(t);
+						break;
+					case ASCAN_REP_RATE_ID:
+						s.Format(_T("ID= %3d,AscanRepRate<27> Output = 0x%x\n"),
+							pCmdS->wMsgID, pCmdS->wCmd[0]);
+						CstringToChar(s, t);
+						pMainDlg->SaveTOF_RecordLog(t);
+						break;
+
+					default:
+						break;
+						}
+					}
 				break;
+#endif
 				}
 			else
 				{
 				s.Format( _T( "Unrecognized CMD, ID= %d, seq=%2d, PktListSize= %3d\n" ),
-					pCmd->wMsgID, pCmd->wMsgSeqCnt, i );
+					pCmdS->wMsgID, pCmdS->wMsgSeqCnt, i );
 				//theApp.SaveDebugLog(s);
 				pMainDlg->SaveDebugLog( s );
 				goto DELETE_CMD;
@@ -863,7 +921,15 @@ void CServerSocketOwnerThread::CommandLogMsg(ST_SMALL_CMD *pCmd)
 	case 14: MsgPrint(pCmd, "SetTcgClockRate<14> wCmd=step time");	break;
 	case 15: MsgPrint(pCmd, "TCGTriggerDelay<15> wCmd=delay time");	break;
 	case 16: MsgPrint(pCmd, "Pow2Gain<16> wCmd=gain");				break;
-	//17-20 are null
+	case 17:
+	case 18:
+	case 19:
+	case 20:
+	case 31:
+	case 33:
+	case 34:
+	case 35:
+		MsgPrint(pCmd, "Cmd 17-20,31,33-36 not a command");			break;
 	case 21: MsgPrint(pCmd, "AscanScopeSampleRate<21> wCmd=sample rate");	break;
 	case 22: MsgPrint(pCmd, "SetAscanDelay<22> wCmd=delay clocks");	break;
 	case 23: MsgPrint(pCmd, "SelectAscanWaveForm<23>");				break;
@@ -914,7 +980,7 @@ void CServerSocketOwnerThread::MsgPrint(ST_SMALL_CMD *pCmd, char *msg)
 		if (pGate->bChnl > 7)   { u = _T("Bad Chnl ");	goto NOT_A_GATE; }
 		if (pGate->bGateNumber > 3) { u = _T("Bad Gate ");	goto NOT_A_GATE; }
 		}
-
+	// if no gate problem, u is null so getlength is 0
 	NOT_A_GATE:
 	s.Format(_T("ID=%d "),pCmd->wMsgID);	//, msg, pwCmd->bSeq, pwCmd->bChnl, pwCmd->bGateNumber, pwCmd->wCmd);
 	if (u.GetLength()) // put bad 'something' in front of command values
@@ -922,8 +988,7 @@ void CServerSocketOwnerThread::MsgPrint(ST_SMALL_CMD *pCmd, char *msg)
 		u += s;
 		s = u;
 		}
-	s += t;
-	t = s;
+	s += t;	// message appended here, then t is reused
 	t.Format(_T(" Seq=%d, Ch=%d, Gate=%d, wCmd=%d\n"),	 
 		pwCmd->bSeq, pwCmd->bChnl, pwCmd->bGateNumber, pwCmd->wCmd);
 

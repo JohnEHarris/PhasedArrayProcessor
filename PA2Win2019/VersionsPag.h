@@ -1,8 +1,8 @@
 #pragma once
 
-// I AM PAP  ******************* GUI has its own version file
+// I AM PAG  *******************
 #define CURRENT_VERSION		_T("Version 1.0")
-#define BUILD_VERSION			25
+#define BUILD_VERSION			30
 
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
@@ -18,15 +18,28 @@
 
 /*
 Show the version number of this program. Newest version on TOP
-1.0.025 2019-10-31 Delete vChnls on ADC disconnect and shut down of PAP.	Quits w/o mem leaks
-1.0.024 2019-10-30 Debugging PAP crash when we think PT disconnects
-1.0.023 2019-06-28 Command log shows Large command names.KillServerSocket catches the exceptions
-1.0.022 2019-06-10 Show small/large cmds already received during cmd download.
-1.0.021 2019-05-31 TcgSeqGains read back works
-1.0.020 2029-05-29 TCGBeam gain read back
-1.0.019 2019-05-24 Changes to display of last/ cmdId, msg cnt,  1st word
-1.0.018 2019-05-22 Implement TCGBeam Cmd and printing in ReadBack log
-1.0.017 2019-05-20 Correct diaplsy of last cmd/seq number 1st word aggument
+1.0.030 2020-09-28 Delete Elapse Timer and FIFO memory in sockets at beginning of destructor -
+					now works same way in client and server socket.
+1.0.029 2020-07-17 Modify crit sections/hwtimers in attempt to fix abandoned memory on closing -seems ok
+1.0.028 2020-09-15 Appears we got rid of 4 mb orphaned segments- perhaps by closing all debug/status
+					output files.
+1.0.027 2020-08-04 Debug dialog in PAP allows for catching Ascan transmit data. Other changes in PAG
+1.0.026 2020-06-11 Detect than no NIC/connection available to PAG. Stop crash when on client to server
+// no change, just force commit after makin new origin
+1.0.025 2020-04-13 PAG/PAP now can resize main dlg. PAP exits w/o lost memory
+1.0.024 2020-03-18 Prototyping Connectivity dialog for PAP. May mod to use for PAG as well
+1.0.023 2020-02-26 Header file for Idata/Cmds is now different. Cmds header is unchanged
+1.0.022 2019-08-23 Change Versions.h to VersionsPag.h. Add X_Loc divider command 36
+1.0.021 2019-06-27 Command log has TCG Seq Gain and TCG Beam Gain text. Blast300 does 900 small, 1000 large cmds
+					PAP version shows queue depth when sending to ADC
+1.0.020 2019-06-03 Blast TcgSeqGain.
+1.0.019 2019-05-29 Readback all gate data and all TCGBeamGain data in separate commands. PAP
+					outputs read back data to a read back log. Readback info also goes to 
+					PAP or UUI.
+1.0.018 2019-05-08 Test ADC Fifo's in test thread. Much easier to see variables and w/o
+					having to use a real ADC board + ByteBlaster
+1.0.017 2019-05-06 Add ReadBack log to PAP/PAG. Increase small cmds to 40. Add GateBlast cmd.
+					Reduce size of Blast300 cmd
 1.0.016 2019-04-22 Change NcNx window seq/chnl/gate with edit in addition to spinner. Change
 					gate cmds to begin with gate variable instead of gate number
 1.0.015 2019-04-12 Start testing Gate Cmd Read back from ADC board

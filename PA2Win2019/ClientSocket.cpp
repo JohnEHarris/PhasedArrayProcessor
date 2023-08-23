@@ -47,8 +47,7 @@ CClientSocket::CClientSocket( CClientConnectionManagement *pCCM	)
 		// this is a copy of the socket pointer in ClientCommunicationThread
 		if (m_pCCM->m_pstCCM)
 			m_pCCM->m_pstCCM->pSocket = this;
-		m_nAsyncSocketCnt = gnAsyncSocketCnt = 0;
-		//m_nAsyncSocketCnt = 0;
+		m_nAsyncSocketCnt = gnAsyncSocketCnt++;
 		m_nOwningThreadId = AfxGetThread()->m_nThreadID;
 		s.Format(_T("Valid CCM ptr, use OnReceive1(), Socket# =%d, CreateThread = %d\n"),
 			m_nAsyncSocketCnt, m_nOwningThreadId);
@@ -345,6 +344,7 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 		//GetPeerName(m_pCCM->m_pstCCM->sServerIP4, m_pCCM->m_pstCCM->uServerPort);
 		GetPeerName(s0, uSPort);
 		GetSockName(s1, uCPort);	// my ip and port
+#ifdef I_AM_PAP
 		if (m_pCCM->m_nMyConnection == 0)
 			{
 			s.Format(_T("PAG client IP = %s:%d connected to PAG server = %s:%d \n"), s1, uCPort, s0, uSPort);
@@ -358,7 +358,7 @@ void CClientSocket::OnConnect(int nErrorCode)   // CClientSocket is derived from
 			gsUUI_PAP_AllWall_IP.Format(_T("%s : %d"),s0,uSPort); // UUI IP and port
 			}
 		//DebugOutMessage(s);
-#ifdef I_AM_PAP
+
 		//pMainDlg->SetMy_PAP_Number(s1, uCPort);
 #endif
 		// may need to replace this with some sort of call to MakeConnectionDetail
